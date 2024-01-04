@@ -8,15 +8,57 @@ spring:
   codec:
     max-in-memory-size: 10MB
 
+  security:
+    oauth2:
+      resource-server:
+        jwt:
+          jwk-set-uri: ${api.base.url.oauth}/.well-known/jwks.json
+      client:
+        registration:
+          LOCATIONS_INSIDE_PRISON_API:
+            provider: hmpps-auth
+            client-id: ${locations_inside_prison.api.client.id}
+            client-secret: ${locations_inside_prison.api.client.secret}
+            authorization-grant-type: client_credentials
+        provider:
+          hmpps-auth:
+            token-uri: ${api.base.url.oauth}/oauth/token
   jackson:
-    date-format: "yyyy-MM-dd HH:mm:ss"
+    date-format: "yyyy-MM-dd'T'HH:mm:ssZ"
     serialization:
-      WRITE_DATES_AS_TIMESTAMPS: false
+      write-dates-as-timestamps: false
+      write-dates-with-context-time-zone: true
+      write-dates-with-zone-id: true
+    time-zone: "Europe/London"
 
   profiles:
     group:
+      dev:
+        - "localstack"
       test:
+        - "localstack"
         - "stdout"
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+    show-sql: false
+    generate-ddl: false
+    hibernate:
+      ddl-auto: none
+
+  flyway:
+    enabled: true
+
+  datasource:
+    url: 'jdbc:postgresql://${DATABASE_ENDPOINT}/${DATABASE_NAME}?sslmode=verify-full'
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      pool-name: LIP-DB-CP
+      maximum-pool-size: 10
+      connection-timeout: 1000
+      validation-timeout: 500
 
 server:
   port: 8080

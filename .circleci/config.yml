@@ -11,18 +11,35 @@ parameters:
     type: string
     default: dps-releases
 
+  java-version:
+    type: string
+    default: "21.0"
+  postgres-version:
+    type: string
+    default: "15"
+  localstack-version:
+    type: string
+    default: "3"
+
 jobs:
   validate:
     executor:
-      name: hmpps/java
-      tag: "21.0"
+      name: hmpps/java_localstack_postgres
+      jdk_tag: << pipeline.parameters.java-version >>
+      localstack_tag: << pipeline.parameters.localstack-version >>
+      services: "sns,sqs"
+      postgres_tag: << pipeline.parameters.postgres-version >>
+      postgres_username: "locations_inside_prison"
+      postgres_password: "locations_inside_prison"
     steps:
       - checkout
       - restore_cache:
           keys:
             - gradle-{{ checksum "build.gradle.kts" }}
             - gradle-
+      - hmpps/wait_till_ready_postgres
       - run:
+          name: Run check
           command: ./gradlew check
       - save_cache:
           paths:
@@ -113,7 +130,7 @@ workflows:
     jobs:
       - hmpps/gradle_owasp_dependency_check:
           cache_key: "v2_0"
-          jdk_tag: "21.0"
+          jdk_tag: << pipeline.parameters.java-version >>
           slack_channel: << pipeline.parameters.alerts-slack-channel >>
           context:
             - hmpps-common-vars
