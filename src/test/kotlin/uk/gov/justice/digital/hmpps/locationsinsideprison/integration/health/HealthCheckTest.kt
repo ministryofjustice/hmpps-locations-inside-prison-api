@@ -1,13 +1,13 @@
-package uk.gov.justice.digital.hmpps.hmppslocationsinsideprisonapi.integration.health
+package uk.gov.justice.digital.hmpps.locationsinsideprison.integration.health
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import uk.gov.justice.digital.hmpps.hmppslocationsinsideprisonapi.integration.IntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.function.Consumer
 
-class HealthCheckTest : IntegrationTestBase() {
+class HealthCheckTest : SqsIntegrationTestBase() {
 
   @Test
   fun `Health page reports ok`() {

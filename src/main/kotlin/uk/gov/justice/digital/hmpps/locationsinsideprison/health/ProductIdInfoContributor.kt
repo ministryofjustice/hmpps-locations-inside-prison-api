@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.hmppslocationsinsideprisonapi.health
+package uk.gov.justice.digital.hmpps.locationsinsideprison.health
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.actuate.info.Info
