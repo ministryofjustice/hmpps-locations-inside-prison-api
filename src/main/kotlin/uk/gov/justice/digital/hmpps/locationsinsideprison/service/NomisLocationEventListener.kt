@@ -19,7 +19,7 @@ class NomisLocationEventListener(
   }
 
   @SqsListener("locationsinsideprison", factory = "hmppsQueueContainerFactoryProxy")
-  @WithSpan(value = "locations-inside-prison-development-prisoner-event-queue", kind = SpanKind.SERVER)
+  @WithSpan(value = "locations-inside-prison-prisoner-event-queue", kind = SpanKind.SERVER)
   fun onEvent(requestJson: String) {
     val (message, messageAttributes) = mapper.readValue(requestJson, HMPPSMessage::class.java)
     val eventType = messageAttributes.eventType.Value
