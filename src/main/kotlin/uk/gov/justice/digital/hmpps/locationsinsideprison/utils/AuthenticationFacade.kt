@@ -6,11 +6,14 @@ import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.core.userdetails.UserDetails
 import org.springframework.stereotype.Component
+import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import java.util.*
 import java.util.stream.Collectors
 
 @Component
 class AuthenticationFacade {
+
+  fun getUserOrSystemInContext() = currentUsername ?: SYSTEM_USERNAME
 
   val authentication: Authentication
     get() = SecurityContextHolder.getContext().authentication

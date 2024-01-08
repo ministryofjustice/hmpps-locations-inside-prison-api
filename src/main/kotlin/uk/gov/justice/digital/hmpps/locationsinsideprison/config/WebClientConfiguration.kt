@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.config
 
+import io.netty.channel.ChannelOption
 import org.hibernate.validator.constraints.URL
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -26,9 +27,13 @@ class WebClientConfiguration(
 
   @Bean
   fun webClient(builder: WebClient.Builder): WebClient {
+    val httpClient = HttpClient.create()
+      .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 10000)
+
     return builder
       .baseUrl(authBaseUri)
       .filter(addAuthHeaderFilterFunction())
+      .clientConnector(ReactorClientHttpConnector(httpClient))
       .build()
   }
 
