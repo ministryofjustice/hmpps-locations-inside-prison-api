@@ -15,6 +15,8 @@ generic-service:
 # See https://user-guide.cloud-platform.service.justice.gov.uk/documentation/monitoring-an-app/how-to-create-alarms.html#creating-your-own-custom-alerts
 generic-prometheus-alerts:
   alertSeverity: digital-prison-service-dev
+  rdsAlertsDatabases:
+    cloud-platform-354c58598c277a2a: locations-inside-prison-api
   sqsAlertsQueueNames:
     - locations-inside-prison-preprod-prisoner-event-queue
     - locations-inside-prison-preprod-prisoner-event-dlq
