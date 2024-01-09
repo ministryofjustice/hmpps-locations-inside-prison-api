@@ -2,6 +2,8 @@ generic-service:
   nameOverride: hmpps-locations-inside-prison-api
   productId: "DPS039"
 
+  serviceAccountName: hmpps-locations-inside-prison-api
+
   replicaCount: 4
 
   image:
