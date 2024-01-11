@@ -65,7 +65,7 @@ class SnsService(hmppsQueueService: HmppsQueueService, private val objectMapper:
 
 data class AdditionalInformation(
   val id: UUID? = null,
-  val name: String? = null,
+  val key: String? = null,
   val source: InformationSource? = null,
 )
 

@@ -170,7 +170,24 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(LocationNotFoundException::class)
+  fun handleLocationNotFound(e: LocationNotFoundException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Location not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.LocationNotFound,
+          userMessage = "Location not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   companion object {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
 }
+
+class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
