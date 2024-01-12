@@ -16,11 +16,11 @@ data class Location(
   @Schema(description = "Prison ID", example = "MDI", required = true)
   val prisonId: String,
 
-  @Schema(description = "Location Code", example = "A-1-001", required = true)
+  @Schema(description = "Location Code", example = "001", required = true)
   val code: String,
 
-  @Schema(description = "Location Description", example = "Cell 001", required = false)
-  val description: String?,
+  @Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
+  val pathHierarchy: String,
 
   @Schema(description = "Location Type", example = "CELL", required = true)
   val locationType: LocationType,
@@ -34,7 +34,7 @@ data class Location(
 ) {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
   fun getKey(): String {
-    return "$prisonId-$code"
+    return "$prisonId-$pathHierarchy"
   }
 }
 
@@ -47,16 +47,12 @@ data class CreateLocationRequest(
   @field:Size(min = 3, message = "PrisonId cannot be blank")
   val prisonId: String,
 
-  @Schema(description = "Code of the location", required = true, example = "A-1-001", minLength = 1)
+  @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   val code: String,
 
   @Schema(description = "Location Type", example = "CELL", required = true)
   val locationType: LocationType,
-
-  @Schema(description = "Location Description", example = "Cell 001", required = false)
-  @field:Size(max = 255, message = "Description can not be longer than 255 characters")
-  val description: String?,
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   val parentId: UUID? = null,
@@ -68,10 +64,27 @@ data class CreateLocationRequest(
       prisonId = prisonId,
       code = code,
       locationType = locationType,
-      description = description ?: "$prisonId-$code",
+      pathHierarchy = code,
       updatedBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
       whenUpdated = LocalDateTime.now(clock),
     )
   }
 }
+
+/**
+ * Request format to create a location
+ */
+@Schema(description = "Request to update a location")
+data class UpdateLocationRequest(
+
+  @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
+  @field:Size(min = 1, message = "Code cannot be blank")
+  val code: String,
+
+  @Schema(description = "Location Type", example = "CELL", required = true)
+  val locationType: LocationType,
+
+  @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
+  val parentId: UUID? = null,
+)
