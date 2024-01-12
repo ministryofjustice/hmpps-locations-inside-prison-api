@@ -17,19 +17,21 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationDetail
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.services.InternalLocationDomainEventType
 import java.util.*
-
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 @RestController
 @Validated
 @RequestMapping("/locations", produces = [MediaType.APPLICATION_JSON_VALUE])
 @Tag(
   name = "Locations",
-  description = "Dummy endpoint",
+  description = "Returns location information",
 )
-class LocationResource : EventBaseResource() {
+class LocationResource(
+  private val locationService: LocationService,
+) : EventBaseResource() {
 
   @GetMapping("/{id}")
   @ResponseStatus(HttpStatus.OK)
@@ -58,8 +60,43 @@ class LocationResource : EventBaseResource() {
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
-  ): LocationDetail {
-    return auditWrapper(AuditType.LOCATION_RETRIEVED, id.toString()) { LocationDetail(id, "A-1-001") }
+  ): LocationDTO {
+    return auditWrapper(AuditType.LOCATION_RETRIEVED, id.toString()) {
+      locationService.getLocationById(id) ?: throw LocationNotFoundException(id.toString())
+    }
+  }
+
+  @GetMapping("/key/{key}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Returns location information for this key",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns location",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getLocationByKey(
+    @Schema(description = "Location Key", example = "MDI-A-1-001", required = true)
+    @PathVariable
+    key: String,
+  ): LocationDTO {
+    return auditWrapper(AuditType.LOCATION_RETRIEVED, key) {
+      locationService.getLocationByKey(key) ?: throw LocationNotFoundException(key)
+    }
   }
 
   @PostMapping("", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -94,7 +131,9 @@ class LocationResource : EventBaseResource() {
     @RequestBody
     @Validated
     createLocationRequest: CreateLocationRequest,
-  ): LocationDetail {
-    return eventPublishAndAuditWrapper(InternalLocationDomainEventType.LOCATION_CREATED) { LocationDetail(UUID.randomUUID(), createLocationRequest.name) }
+  ): LocationDTO {
+    return eventPublishAndAuditWrapper(InternalLocationDomainEventType.LOCATION_CREATED) {
+      locationService.createLocation(createLocationRequest)
+    }
   }
 }
