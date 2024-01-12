@@ -1,12 +1,12 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import org.springframework.stereotype.Service
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationDetail
 import uk.gov.justice.digital.hmpps.locationsinsideprison.services.AdditionalInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.services.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.services.SnsService
 import java.time.Clock
 import java.time.LocalDateTime
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
 @Service
 class EventPublishAndAuditService(
@@ -17,17 +17,17 @@ class EventPublishAndAuditService(
 
   fun publishEvent(
     event: InternalLocationDomainEventType,
-    locationDetail: LocationDetail,
+    locationDetail: LocationDTO,
     auditData: Any,
     source: InformationSource = InformationSource.DPS,
   ) {
     snsService.publishDomainEvent(
       event,
-      "${event.description} ${locationDetail.name}",
+      "${locationDetail.getKey()} ${event.description}",
       occurredAt = LocalDateTime.now(clock),
       AdditionalInformation(
         id = locationDetail.id,
-        name = locationDetail.name,
+        key = locationDetail.getKey(),
         source = source,
       ),
     )

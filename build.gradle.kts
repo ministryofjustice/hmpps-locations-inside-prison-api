@@ -24,20 +24,17 @@ dependencies {
   implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:1.32.0")
 
   implementation("org.flywaydb:flyway-core")
-  implementation("com.vladmihalcea:hibernate-types-60:2.21.1")
-  implementation("org.hibernate.orm:hibernate-community-dialects:6.4.1.Final")
   implementation("com.zaxxer:HikariCP:5.1.0")
   runtimeOnly("org.postgresql:postgresql:42.7.1")
 
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
-
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.0")
-
-  implementation("com.pauldijou:jwt-core_2.11:5.0.0")
 
   developmentOnly("org.springframework.boot:spring-boot-devtools")
 
   testImplementation("org.wiremock:wiremock-standalone:3.3.1")
+
+  testImplementation("com.pauldijou:jwt-core_2.11:5.0.0")
   testImplementation("org.awaitility:awaitility-kotlin:4.2.0")
   testImplementation("io.jsonwebtoken:jjwt-impl:0.12.3")
   testImplementation("io.jsonwebtoken:jjwt-jackson:0.12.3")
