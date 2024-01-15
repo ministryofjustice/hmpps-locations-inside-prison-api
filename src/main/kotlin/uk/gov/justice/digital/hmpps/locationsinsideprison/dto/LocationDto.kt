@@ -31,6 +31,9 @@ data class Location(
   @Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
   val topLevelId: UUID,
 
+  @Schema(description = "Child Locations", required = false)
+  val childLocations: List<Location>? = null,
+
 ) {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
   fun getKey(): String {

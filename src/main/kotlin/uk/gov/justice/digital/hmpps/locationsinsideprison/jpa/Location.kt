@@ -132,7 +132,7 @@ class Location(
     return leafLocations
   }
 
-  fun toDto(): LocationDTO {
+  fun toDto(includeChildren: Boolean = false): LocationDTO {
     return LocationDTO(
       id = id!!,
       code = code,
@@ -141,6 +141,7 @@ class Location(
       prisonId = prisonId,
       parentId = parent?.id,
       topLevelId = findTopLevelLocation().id!!,
+      childLocations = if (includeChildren) childLocations.map { it.toDto(true) } else null,
     )
   }
 

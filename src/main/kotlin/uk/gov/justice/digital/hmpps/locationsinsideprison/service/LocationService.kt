@@ -27,13 +27,14 @@ class LocationService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun getLocationById(id: UUID): LocationDTO? {
-    return locationRepository.findById(id).getOrNull()?.toDto()
+  fun getLocationById(id: UUID, includeChildren: Boolean = false): LocationDTO? {
+    val toDto = locationRepository.findById(id).getOrNull()?.toDto(includeChildren)
+    return toDto
   }
 
-  fun getLocationByKey(key: String): LocationDTO? {
-    val (prisonId, path) = key.split("-", limit = 2)
-    return locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, path)?.toDto()
+  fun getLocationByKey(key: String, includeChildren: Boolean = false): LocationDTO? {
+    val (prisonId, code) = key.split("-", limit = 2)
+    return locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code)?.toDto(includeChildren)
   }
 
   @Transactional

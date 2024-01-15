@@ -23,12 +23,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   lateinit var repository: LocationRepository
   lateinit var location: LocationJPA
   lateinit var landing1: LocationJPA
+  lateinit var wing: LocationJPA
 
   @BeforeEach
   fun setUp() {
     repository.deleteAll()
 
-    val wing = repository.save(buildLocation(pathHierarchy = "Z", locationType = LocationType.WING))
+    wing = repository.save(buildLocation(pathHierarchy = "Z", locationType = LocationType.WING))
     val landing = repository.save(buildLocation(pathHierarchy = "Z-1", locationType = LocationType.LANDING))
     val cell1 = repository.save(buildLocation(pathHierarchy = "Z-1-001"))
     val cell2 = repository.save(buildLocation(pathHierarchy = "Z-1-002"))
@@ -88,7 +89,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a location`() {
-        webTestClient.get().uri("/locations/${location.id}")
+        webTestClient.get().uri("/locations/${wing.id}?includeChildren=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
