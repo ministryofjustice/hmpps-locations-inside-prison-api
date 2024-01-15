@@ -29,12 +29,12 @@ class LocationRepositoryTest : TestBase() {
 
   @Test
   fun findCellsOnAWingTest() {
-    val wing = buildLocation("A", "Wing A", locationType = LocationType.WING)
-    val landing1 = buildLocation("A-1", "Landing 1 on Wing A", locationType = LocationType.LANDING)
-    val landing2 = buildLocation("A-2", "Landing 2 on Wing A", locationType = LocationType.LANDING)
-    val cell001L1 = buildLocation("A-1-001", "Cell 001 (Landing 1)", locationType = LocationType.CELL)
-    val cell002L1 = buildLocation("A-1-002", "Cell 002 (Landing 1)", locationType = LocationType.CELL)
-    val cell002L2 = buildLocation("A-2-001", "Cell 001 (Landing 2)", locationType = LocationType.CELL)
+    val wing = buildLocation("A", locationType = LocationType.WING)
+    val landing1 = buildLocation("1", locationType = LocationType.LANDING)
+    val landing2 = buildLocation("2", locationType = LocationType.LANDING)
+    val cell001L1 = buildLocation("001", locationType = LocationType.CELL)
+    val cell002L1 = buildLocation("002", locationType = LocationType.CELL)
+    val cell002L2 = buildLocation("001", locationType = LocationType.CELL)
 
     wing.addChildLocation(landing1)
     wing.addChildLocation(landing2)
@@ -47,22 +47,46 @@ class LocationRepositoryTest : TestBase() {
     TestTransaction.end()
     TestTransaction.start()
 
-    val location = repository.findOneByPrisonIdAndCode("MDI", "A") ?: throw Exception("Location not found")
+    val location = repository.findOneByPrisonIdAndPathHierarchy("MDI", "A") ?: throw Exception("Location not found")
 
     assertThat(location.findAllLeafLocations()).containsExactlyInAnyOrder(cell001L1, cell002L1, cell002L2)
-    assertThat(location.childLocations).containsExactlyInAnyOrder(landing1, landing2)
 
     TestTransaction.flagForCommit()
     TestTransaction.end()
     TestTransaction.start()
 
-    val cell2 = repository.findOneByPrisonIdAndCode(cell002L2.prisonId, cell002L2.code) ?: throw Exception("Location not found")
+    val cell2 = repository.findOneByPrisonIdAndPathHierarchy(cell002L2.prisonId, cell002L2.getPathHierarchy()) ?: throw Exception("Location not found")
     assertThat(cell2.findTopLevelLocation()).isEqualTo(wing)
+    assertThat(cell2.getPathHierarchy()).isEqualTo("A-2-001")
+
+    val landing1Retrieved = repository.findOneByPrisonIdAndPathHierarchy(landing1.prisonId, landing1.getPathHierarchy()) ?: throw Exception("Location not found")
+    cell2.setCode("003")
+    cell2.setParent(landing1Retrieved)
+
+    repository.save(landing1Retrieved)
+    repository.save(cell2)
+
+    TestTransaction.flagForCommit()
+    TestTransaction.end()
+    TestTransaction.start()
+
+    val cell3 = repository.findOneByPrisonIdAndPathHierarchy(cell2.prisonId, cell2.getPathHierarchy()) ?: throw Exception("Location not found")
+    assertThat(cell3.findTopLevelLocation()).isEqualTo(wing)
+    assertThat(cell3.getParent()?.getCode()).isEqualTo(landing1.getCode())
+
+    cell3.getParent()?.getParent()?.setCode("T")
+    repository.save(cell3)
+
+    TestTransaction.flagForCommit()
+    TestTransaction.end()
+    TestTransaction.start()
+
+    val cell3Renamed = repository.findOneByPrisonIdAndPathHierarchy(cell3.prisonId, cell3.getPathHierarchy()) ?: throw Exception("Location not found")
+    assertThat(cell3Renamed.getPathHierarchy()).isEqualTo("T-1-003")
   }
 
   private fun buildLocation(
     code: String,
-    description: String,
     prisonId: String = "MDI",
     locationType: LocationType = LocationType.CELL,
     active: Boolean = true,
@@ -71,7 +95,7 @@ class LocationRepositoryTest : TestBase() {
     val now = LocalDateTime.now(clock)
     return Location(
       code = code,
-      description = description,
+      pathHierarchy = code,
       prisonId = prisonId,
       locationType = locationType,
       active = active,
