@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateLocationRequest
@@ -63,9 +64,10 @@ class LocationResource(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
+    @RequestParam(name = "includeChildren", required = false, defaultValue = "false") includeChildren: Boolean = false,
   ): LocationDTO {
     return auditWrapper(AuditType.LOCATION_RETRIEVED, id.toString()) {
-      locationService.getLocationById(id) ?: throw LocationNotFoundException(id.toString())
+      locationService.getLocationById(id, includeChildren) ?: throw LocationNotFoundException(id.toString())
     }
   }
 
@@ -96,9 +98,10 @@ class LocationResource(
     @Schema(description = "Location Key", example = "MDI-A-1-001", required = true)
     @PathVariable
     key: String,
+    @RequestParam(name = "includeChildren", required = false, defaultValue = "false") includeChildren: Boolean = false,
   ): LocationDTO {
     return auditWrapper(AuditType.LOCATION_RETRIEVED, key) {
-      locationService.getLocationByKey(key) ?: throw LocationNotFoundException(key)
+      locationService.getLocationByKey(key, includeChildren) ?: throw LocationNotFoundException(key)
     }
   }
 
