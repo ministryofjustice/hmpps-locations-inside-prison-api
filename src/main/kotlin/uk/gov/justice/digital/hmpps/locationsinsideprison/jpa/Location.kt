@@ -28,23 +28,23 @@ class Location(
   @Column(name = "id", updatable = false, nullable = false)
   val id: UUID? = null,
 
-  val code: String,
+  private var code: String,
+
+  private var pathHierarchy: String,
 
   @Enumerated(EnumType.STRING)
   var locationType: LocationType,
-
-  var description: String,
 
   val prisonId: String,
 
   @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   @JoinColumn(name = "parent_id")
-  var parent: Location? = null,
+  private var parent: Location? = null,
 
   val active: Boolean = true,
 
-  @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  var childLocations: MutableList<Location> = mutableListOf(),
+  @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  private var childLocations: MutableList<Location> = mutableListOf(),
 
   var whenCreated: LocalDateTime,
   var whenUpdated: LocalDateTime,
@@ -55,21 +55,64 @@ class Location(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun addChildLocation(location: Location): Location {
-    location.parent = this
-    childLocations.add(location)
+  fun setCode(code: String) {
+    this.code = code
+    updateHierarchicalPath()
+  }
+
+  fun getPathHierarchy(): String {
+    return pathHierarchy
+  }
+
+  fun setParent(parent: Location) {
+    removeParent()
+    parent.addChildLocation(this)
+  }
+
+  private fun removeParent() {
+    parent?.removeChildLocation(this)
+    parent = null
+  }
+
+  fun getCode(): String {
+    return code
+  }
+
+  fun getParent(): Location? {
+    return parent
+  }
+
+  fun addChildLocation(childLocation: Location): Location {
+    childLocation.parent = this
+    childLocations.add(childLocation)
+    childLocation.updateHierarchicalPath()
+    return this
+  }
+
+  private fun removeChildLocation(childLocation: Location): Location {
+    childLocation.parent = null
+    childLocations.remove(childLocation)
+    childLocation.updateHierarchicalPath() // recalculate path hierarchy
     return this
   }
 
   fun findTopLevelLocation(): Location {
-    fun up(location: Location): Location {
-      return if (location.parent == null) {
-        location
-      } else {
-        up(location.parent!!)
-      }
+    return parent?.findTopLevelLocation() ?: this
+  }
+
+  private fun updateHierarchicalPath() {
+    pathHierarchy = getHierarchicalPath()
+    for (childLocation in childLocations) {
+      childLocation.updateHierarchicalPath()
     }
-    return up(this)
+  }
+
+  private fun getHierarchicalPath(): String {
+    return if (parent == null) {
+      code
+    } else {
+      "${parent!!.getHierarchicalPath()}-$code"
+    }
   }
 
   fun findAllLeafLocations(): List<Location> {
@@ -94,7 +137,7 @@ class Location(
       id = id!!,
       code = code,
       locationType = locationType,
-      description = description,
+      pathHierarchy = pathHierarchy,
       prisonId = prisonId,
       parentId = parent?.id,
       topLevelId = findTopLevelLocation().id!!,

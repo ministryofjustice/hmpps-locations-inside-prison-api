@@ -70,4 +70,6 @@ data class AuditEvent(
 enum class AuditType {
   LOCATION_RETRIEVED,
   LOCATION_CREATED,
+  LOCATION_AMENDED,
+  LOCATION_DELETED,
 }
