@@ -5,6 +5,12 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.ValidationException
+import org.springdoc.core.annotations.ParameterObject
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
+import org.springframework.data.web.PageableDefault
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
@@ -103,6 +109,46 @@ class LocationResource(
     return auditWrapper(AuditType.LOCATION_RETRIEVED, key) {
       locationService.getLocationByKey(key, includeChildren) ?: throw LocationNotFoundException(key)
     }
+  }
+
+  @GetMapping("")
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Get locations, filtered and paged",
+    description = "Requires VIEW_LOCATIONS role, max of 200 records per request",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "A page of locations are returned",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "When input parameters are not valid",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @Suppress("ktlint:standard:function-signature")
+  fun getLocations(
+    @ParameterObject
+    @PageableDefault(page = 0, size = 20, sort = ["id"], direction = Sort.Direction.ASC)
+    pageable: Pageable,
+  ): Page<LocationDTO> {
+    if (pageable.pageSize > 200) {
+      throw ValidationException("Page size must be 200 or less")
+    }
+    return locationService.getLocations(pageable)
   }
 
   @PostMapping("", produces = [MediaType.APPLICATION_JSON_VALUE])

@@ -53,7 +53,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     whenUpdated = LocalDateTime.now(clock),
   )
 
-  @DisplayName("GET /locations")
+  @DisplayName("GET /locations/{id}")
   @Nested
   inner class ViewLocationTest {
 
@@ -90,6 +90,51 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       @Test
       fun `can retrieve details of a location`() {
         webTestClient.get().uri("/locations/${wing.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+      }
+    }
+  }
+
+  @DisplayName("GET /locations")
+  @Nested
+  inner class ViewPagedLocationsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve details of a page of locations`() {
+        webTestClient.get().uri("/locations?size=10")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
