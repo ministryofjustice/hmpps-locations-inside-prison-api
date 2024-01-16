@@ -48,7 +48,7 @@ data class Location(
   @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
   val orderWithinParentLocation: Int? = null,
 
-  @Schema(description = "Indicates the location is available", example = "true", required = true)
+  @Schema(description = "Indicates the location is enabled", example = "true", required = true)
   val active: Boolean = true,
 
   @Schema(description = "Date the location was deactivated", example = "2023-01-23", required = false)

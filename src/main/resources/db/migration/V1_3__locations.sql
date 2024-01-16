@@ -1,16 +1,16 @@
 CREATE TABLE capacity
 (
-    id                   uuid not null
-        constraint capacity_pk primary key DEFAULT gen_random_uuid(),
-    capacity             int  not null     default 0,
-    operational_capacity int  not null     default 0,
-    current_occupancy    int  not null     default 0
+    id                   SERIAL not null
+        constraint capacity_pk primary key,
+    capacity             int    not null default 0,
+    operational_capacity int    not null default 0,
+    current_occupancy    int    not null default 0
 );
 
 CREATE TABLE certification
 (
-    id                         uuid    not null
-        constraint certification_pk primary key DEFAULT gen_random_uuid(),
+    id                         SERIAL  not null
+        constraint certification_pk primary key,
     certified                  boolean not null default false,
     capacity_of_certified_cell int     not null default 0
 );
@@ -33,8 +33,8 @@ CREATE TABLE location
     order_within_parent_location int          NULL,
 
     residential_housing_type     varchar(30)  NULL,
-    certification_id             uuid         NULL,
-    capacity_id                  uuid         NULL,
+    certification_id             bigint       NULL,
+    capacity_id                  bigint       NULL,
 
     active                       boolean      NOT NULL DEFAULT true,
     deactivated_date             date         NULL,
