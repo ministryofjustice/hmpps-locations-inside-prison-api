@@ -10,8 +10,12 @@ import org.springframework.test.context.transaction.TestTransaction
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 @DataJpaTest
@@ -49,7 +53,16 @@ class LocationRepositoryTest : TestBase() {
 
     val location = repository.findOneByPrisonIdAndPathHierarchy("MDI", "A") ?: throw Exception("Location not found")
 
+    location.findAllLeafLocations().forEach {
+      assertThat(it.capacity?.currentOccupancy).isEqualTo(0)
+      assertThat(it.certification?.capacityOfCertifiedCell).isEqualTo(1)
+    }
+
     assertThat(location.findAllLeafLocations()).containsExactlyInAnyOrder(cell001L1, cell002L1, cell002L2)
+    location.findAllLeafLocations().forEach {
+      it.capacity?.currentOccupancy = 1
+      it.certification?.capacityOfCertifiedCell = 2
+    }
 
     TestTransaction.flagForCommit()
     TestTransaction.end()
@@ -58,6 +71,8 @@ class LocationRepositoryTest : TestBase() {
     val cell2 = repository.findOneByPrisonIdAndPathHierarchy(cell002L2.prisonId, cell002L2.getPathHierarchy()) ?: throw Exception("Location not found")
     assertThat(cell2.findTopLevelLocation()).isEqualTo(wing)
     assertThat(cell2.getPathHierarchy()).isEqualTo("A-2-001")
+    assertThat(cell2.capacity?.currentOccupancy).isEqualTo(1)
+    assertThat(cell2.certification?.capacityOfCertifiedCell).isEqualTo(2)
 
     val landing1Retrieved = repository.findOneByPrisonIdAndPathHierarchy(landing1.prisonId, landing1.getPathHierarchy()) ?: throw Exception("Location not found")
     cell2.setCode("003")
@@ -103,6 +118,14 @@ class LocationRepositoryTest : TestBase() {
       whenUpdated = now,
       whenCreated = now,
       parent = parent,
+      capacity = if (locationType == LocationType.CELL) { Capacity(capacity = 1, operationalCapacity = 1, currentOccupancy = 0) } else { null },
+      certification = if (locationType == LocationType.CELL) { Certification(certified = true, capacityOfCertifiedCell = 1) } else { null },
+      description = "$locationType $code",
+      deactivatedDate = LocalDate.now(clock).minusYears(1),
+      reactivatedDate = LocalDate.now(clock).minusDays(1),
+      orderWithinParentLocation = 1,
+      residentialHousingType = if (locationType == LocationType.CELL) { ResidentialHousingType.NORMAL_ACCOMMODATION } else { null },
+      comments = "comments",
     )
   }
 }

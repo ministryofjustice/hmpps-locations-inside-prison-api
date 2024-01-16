@@ -11,11 +11,13 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
+import jakarta.persistence.OneToOne
 import org.hibernate.Hibernate
 import org.hibernate.annotations.GenericGenerator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.Serializable
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
@@ -41,12 +43,29 @@ class Location(
   @JoinColumn(name = "parent_id")
   private var parent: Location? = null,
 
+  val description: String? = null,
+
+  val comments: String? = null,
+
+  val orderWithinParentLocation: Int? = null,
+
   val active: Boolean = true,
+  var deactivatedDate: LocalDate? = null,
+  var deactivatedReason: DeactivatedReason? = null,
+  var reactivatedDate: LocalDate? = null,
+
+  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
+  val capacity: Capacity? = null,
+
+  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
+  val certification: Certification? = null,
+
+  var residentialHousingType: ResidentialHousingType? = null,
 
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   private var childLocations: MutableList<Location> = mutableListOf(),
 
-  var whenCreated: LocalDateTime,
+  val whenCreated: LocalDateTime,
   var whenUpdated: LocalDateTime,
   var updatedBy: String,
 ) : Serializable {
@@ -141,6 +160,19 @@ class Location(
       prisonId = prisonId,
       parentId = parent?.id,
       topLevelId = findTopLevelLocation().id!!,
+      description = description,
+      comments = comments,
+      orderWithinParentLocation = orderWithinParentLocation,
+      active = active,
+      deactivatedDate = deactivatedDate,
+      deactivatedReason = deactivatedReason,
+      reactivatedDate = reactivatedDate,
+      capacity = capacity?.capacity,
+      operationalCapacity = capacity?.operationalCapacity,
+      currentOccupancy = capacity?.currentOccupancy,
+      certified = certification?.certified,
+      capacityOfCertifiedCell = certification?.capacityOfCertifiedCell,
+      residentialHousingType = residentialHousingType,
       childLocations = if (includeChildren) childLocations.map { it.toDto(true) } else null,
     )
   }
@@ -165,5 +197,43 @@ class Location(
 }
 
 enum class LocationType {
-  WING, HOUSEBLOCK, LANDING, CELL, COURT, HOSPITAL, VISIT, OFFSITE, OTHER
+  WING, LANDING, CELL, SPUR,
+  OFFICE, ADMINISTRATION_AREA, RESIDENTIAL_UNIT, MEDICAL,
+  HOLDING_CELL, HOLDING_AREA, BOOTH, BOX,
+
+  CLASSROOM, TRAINING_AREA, TRAINING_ROOM,
+  EXERCISE_AREA, SPORTS, WORKSHOP,
+  INSIDE_PARTY, OUTSIDE_PARTY,
+
+  FAITH_AREA,
+
+  ADJUDICATION_ROOM, APPOINTMENTS, AREA, ASSOCIATION,
+  EXTERNAL_GROUNDS, GROUP, INTERNAL_GROUNDS, INTERVIEW,
+  LOCATION, MOVEMENT_AREA, POSITION, RETURN_TO_UNIT,
+  SHELF, STORE, TABLE, VIDEO_LINK, VISITS
+}
+
+enum class DeactivatedReason {
+  NEW_BUILDING,
+  CELL_RECLAIMS,
+  CHANGE_OF_USE,
+  REFURBISHMENT,
+  CLOSURE,
+  OTHER,
+  LOCAL_WORK,
+  STAFF_SHORTAGE,
+  MOTHBALLED,
+  DAMAGED,
+  OUT_OF_USE,
+  CELLS_RETURNING_TO_USE,
+}
+
+enum class ResidentialHousingType {
+  HEALTHCARE,
+  HOLDING_CELL,
+  NORMAL_ACCOMMODATION,
+  OTHER_USE,
+  RECEPTION,
+  SEGREGATION,
+  SPECIALIST_CELL,
 }

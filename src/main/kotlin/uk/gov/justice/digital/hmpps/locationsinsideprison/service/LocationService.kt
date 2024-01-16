@@ -3,10 +3,15 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import com.microsoft.applicationinsights.TelemetryClient
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.PageRequest
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
@@ -35,6 +40,10 @@ class LocationService(
   fun getLocationByKey(key: String, includeChildren: Boolean = false): LocationDTO? {
     val (prisonId, code) = key.split("-", limit = 2)
     return locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code)?.toDto(includeChildren)
+  }
+
+  fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LocationDTO> {
+    return locationRepository.findAll(pageable).map(Location::toDto)
   }
 
   @Transactional
