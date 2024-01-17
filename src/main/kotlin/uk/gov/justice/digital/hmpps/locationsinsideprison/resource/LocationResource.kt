@@ -333,7 +333,7 @@ class LocationResource(
     @PathVariable
     id: UUID,
   ): LocationDTO {
-    return eventPublishAndAuditWrapper(InternalLocationDomainEventType.LOCATION_DEACTIVATED) {
+    return eventPublishAndAuditWrapper(InternalLocationDomainEventType.LOCATION_REACTIVATED) {
       locationService.reactivateLocation(id)
     }
   }
