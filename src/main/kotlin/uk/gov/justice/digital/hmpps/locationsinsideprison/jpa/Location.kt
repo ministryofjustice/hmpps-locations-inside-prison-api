@@ -17,6 +17,7 @@ import org.hibernate.annotations.GenericGenerator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.Serializable
+import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
@@ -43,13 +44,13 @@ class Location(
   @JoinColumn(name = "parent_id")
   private var parent: Location? = null,
 
-  val description: String? = null,
+  var description: String? = null,
 
-  val comments: String? = null,
+  var comments: String? = null,
 
-  val orderWithinParentLocation: Int? = null,
+  var orderWithinParentLocation: Int? = null,
 
-  val active: Boolean = true,
+  var active: Boolean = true,
   var deactivatedDate: LocalDate? = null,
   var deactivatedReason: DeactivatedReason? = null,
   var reactivatedDate: LocalDate? = null,
@@ -193,6 +194,24 @@ class Location(
     var result = code.hashCode()
     result = 31 * result + prisonId.hashCode()
     return result
+  }
+
+  fun deactivate(deactivatedReason: DeactivatedReason, userOrSystemInContext: String, clock: Clock) {
+    this.active = false
+    this.deactivatedReason = deactivatedReason
+    this.deactivatedDate = LocalDate.now(clock)
+    this.reactivatedDate = null
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = LocalDateTime.now(clock)
+  }
+
+  fun reactivate(userOrSystemInContext: String, clock: Clock) {
+    this.active = true
+    this.deactivatedReason = null
+    this.deactivatedDate = null
+    this.reactivatedDate = LocalDate.now(clock)
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = LocalDateTime.now(clock)
   }
 }
 

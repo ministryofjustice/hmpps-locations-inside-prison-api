@@ -88,22 +88,32 @@ data class Location(
 @Schema(description = "Request to create a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateLocationRequest(
-  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3)
+  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 3)
   @field:Size(min = 3, message = "PrisonId cannot be blank")
+  @field:Size(max = 3, message = "PrisonId must be 3 characters")
   val prisonId: String,
 
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
+  @field:Size(max = 40, message = "Code must be less than 41 characters")
   val code: String,
 
   @Schema(description = "Location Type", example = "CELL", required = true)
   val locationType: LocationType,
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @field:Size(max = 80, message = "Description must be less than 81 characters")
   val description: String? = null,
 
   @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
   val residentialHousingType: ResidentialHousingType? = null,
+
+  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
+  @field:Size(max = 255, message = "Comments must be less than 256 characters")
+  val comments: String? = null,
+
+  @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
+  val orderWithinParentLocation: Int? = null,
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   val parentId: UUID? = null,
@@ -118,6 +128,8 @@ data class CreateLocationRequest(
       pathHierarchy = code,
       description = description,
       residentialHousingType = residentialHousingType,
+      comments = comments,
+      orderWithinParentLocation = orderWithinParentLocation,
       active = true,
       updatedBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
@@ -131,15 +143,53 @@ data class CreateLocationRequest(
  */
 @Schema(description = "Request to update a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-data class UpdateLocationRequest(
+data class PatchLocationRequest(
 
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
-  val code: String,
+  @field:Size(max = 40, message = "Code must be less than 41 characters")
+  val code: String? = null,
 
   @Schema(description = "Location Type", example = "CELL", required = true)
-  val locationType: LocationType,
+  val locationType: LocationType? = null,
+
+  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @field:Size(max = 80, message = "Description must be less than 81 characters")
+  val description: String? = null,
+
+  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
+  @field:Size(max = 255, message = "Comments must be less than 256 characters")
+  val comments: String? = null,
+
+  @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
+  val orderWithinParentLocation: Int? = null,
+
+  @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
+  val residentialHousingType: ResidentialHousingType? = null,
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   val parentId: UUID? = null,
 )
+
+/**
+ * Request format to create a location
+ */
+@Schema(description = "Request to deactivate a location")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class DeactivationLocationRequest(
+  @Schema(description = "Reason for deactivation", example = "DAMAGED", required = true)
+  val deactivationReason: DeactivatedReason,
+)
+
+fun LocationJPA.updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): LocationJPA {
+  setCode(patch.code ?: this.getCode())
+  this.locationType = patch.locationType ?: this.locationType
+  this.description = patch.description ?: this.description
+  this.comments = patch.comments ?: this.comments
+  this.orderWithinParentLocation = patch.orderWithinParentLocation ?: this.orderWithinParentLocation
+  this.residentialHousingType = patch.residentialHousingType ?: this.residentialHousingType
+  this.updatedBy = updatedBy
+  this.whenUpdated = LocalDateTime.now(clock)
+
+  return this
+}

@@ -10,13 +10,14 @@ import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.updateWith
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
-import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
@@ -71,22 +72,61 @@ class LocationService(
   }
 
   @Transactional
-  fun updateLocation(id: UUID, updateLocationRequest: UpdateLocationRequest): LocationDTO {
+  fun updateLocation(id: UUID, patchLocationRequest: PatchLocationRequest): LocationDTO {
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    updateLocationRequest.parentId?.let {
+    patchLocationRequest.parentId?.let {
       locationToUpdate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
     }
 
-    locationToUpdate.setCode(updateLocationRequest.code)
-    locationToUpdate.locationType = updateLocationRequest.locationType
-    locationToUpdate.updatedBy = authenticationFacade.getUserOrSystemInContext()
-    locationToUpdate.whenUpdated = LocalDateTime.now(clock)
+    locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
 
     log.info("Updated Location [$id]")
     telemetryClient.trackEvent(
       "Updated Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to locationToUpdate.prisonId,
+        "path" to locationToUpdate.getPathHierarchy(),
+      ),
+      null,
+    )
+
+    return locationToUpdate.toDto()
+  }
+
+  @Transactional
+  fun deactivateLocation(id: UUID, deactivatedReason: DeactivatedReason): LocationDTO {
+    val locationToUpdate = locationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    locationToUpdate.deactivate(deactivatedReason, authenticationFacade.getUserOrSystemInContext(), clock)
+
+    log.info("Deactivated Location [$id]")
+    telemetryClient.trackEvent(
+      "Deactivated Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to locationToUpdate.prisonId,
+        "path" to locationToUpdate.getPathHierarchy(),
+      ),
+      null,
+    )
+
+    return locationToUpdate.toDto()
+  }
+
+  @Transactional
+  fun reactivateLocation(id: UUID): LocationDTO {
+    val locationToUpdate = locationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    locationToUpdate.reactivate(authenticationFacade.getUserOrSystemInContext(), clock)
+
+    log.info("Re-activated Location [$id]")
+    telemetryClient.trackEvent(
+      "Re-activated Location",
       mapOf(
         "id" to id.toString(),
         "prisonId" to locationToUpdate.prisonId,
