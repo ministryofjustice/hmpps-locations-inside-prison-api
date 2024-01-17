@@ -93,6 +93,8 @@ data class HMPPSDomainEvent(
 enum class InternalLocationDomainEventType(val value: String, val description: String, val auditType: AuditType) {
   LOCATION_CREATED("location.inside.prison.created", "A location inside prison has been created: ", AuditType.LOCATION_CREATED),
   LOCATION_AMENDED("location.inside.prison.amended", "A location inside prison has been amended: ", AuditType.LOCATION_AMENDED),
+  LOCATION_DEACTIVATED("location.inside.prison.deactivated", "A location inside prison has been deactivated: ", AuditType.LOCATION_DEACTIVATED),
+  LOCATION_REACTIVATED("location.inside.prison.reactivated", "A location inside prison has been reactivated: ", AuditType.LOCATION_REACTIVATED),
   LOCATION_DELETED("location.inside.prison.deleted", "A location inside prison has been deleted: ", AuditType.LOCATION_DELETED),
 }
 
