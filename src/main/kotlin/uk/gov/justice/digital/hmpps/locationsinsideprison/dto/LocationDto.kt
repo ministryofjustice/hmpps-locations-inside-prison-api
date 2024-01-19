@@ -4,7 +4,10 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttributeType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import java.time.Clock
 import java.time.LocalDate
@@ -64,8 +67,6 @@ data class Location(
   var capacity: Int? = null,
   @Schema(description = "Operational capacity of the location", example = "2", required = false)
   var operationalCapacity: Int? = null,
-  @Schema(description = "Current occupancy number of this location", example = "1", required = false)
-  var currentOccupancy: Int? = null,
 
   @Schema(description = "Indicates that this location is certified for use as a residential location", example = "true", required = false)
   var certified: Boolean? = null,
@@ -75,12 +76,26 @@ data class Location(
   @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
   var residentialHousingType: ResidentialHousingType? = null,
 
+  @Schema(description = "Location Attributes", required = false)
+  var attributes: Map<LocationAttributeType, List<LocationAttributeValue>>? = null,
+
+  @Schema(description = "Location Usage", required = false)
+  var usage: List<LocationUsageDto>? = null,
+
 ) {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
   fun getKey(): String {
     return "$prisonId-$pathHierarchy"
   }
 }
+
+@Schema(description = "Location Usage")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class LocationUsageDto(
+  val usageType: LocationUsageType,
+  val capacity: Int? = null,
+  val sequence: Int = 99,
+)
 
 /**
  * Request format to create a location

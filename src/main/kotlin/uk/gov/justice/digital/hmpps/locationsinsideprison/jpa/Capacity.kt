@@ -13,16 +13,4 @@ class Capacity(
 
   var capacity: Int = 0,
   var operationalCapacity: Int = 0,
-  var currentOccupancy: Int = 0,
-) {
-
-  fun hasSpace(): Boolean {
-    val capacity: Int = getActualCapacity()
-    return currentOccupancy < capacity
-  }
-
-  private fun getActualCapacity(): Int {
-    val useOperationalCapacity = operationalCapacity != 0
-    return if (useOperationalCapacity) operationalCapacity else capacity
-  }
-}
+)

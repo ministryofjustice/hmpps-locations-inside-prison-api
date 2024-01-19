@@ -66,6 +66,12 @@ class Location(
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   private var childLocations: MutableList<Location> = mutableListOf(),
 
+  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  private var attributes: MutableList<LocationAttribute> = mutableListOf(),
+
+  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  private var usages: MutableList<LocationUsage> = mutableListOf(),
+
   val whenCreated: LocalDateTime,
   var whenUpdated: LocalDateTime,
   var updatedBy: String,
@@ -135,6 +141,15 @@ class Location(
     }
   }
 
+  fun addAttribute(type: LocationAttributeType, value: LocationAttributeValue) {
+    if (value.type != type) throw IllegalArgumentException("Value [$value] is not valid for type [$type]")
+    attributes.add(LocationAttribute(location = this, type = type, value = value))
+  }
+
+  fun addUsage(usageType: LocationUsageType) {
+    usages.add(LocationUsage(location = this, usageType = usageType))
+  }
+
   fun findAllLeafLocations(): List<Location> {
     val leafLocations = mutableListOf<Location>()
 
@@ -170,11 +185,12 @@ class Location(
       reactivatedDate = reactivatedDate,
       capacity = capacity?.capacity,
       operationalCapacity = capacity?.operationalCapacity,
-      currentOccupancy = capacity?.currentOccupancy,
       certified = certification?.certified,
       capacityOfCertifiedCell = certification?.capacityOfCertifiedCell,
       residentialHousingType = residentialHousingType,
       childLocations = if (includeChildren) childLocations.map { it.toDto(true) } else null,
+      attributes = attributes.groupBy { it.type }.mapValues { type -> type.value.map { it.value } },
+      usage = usages.map { it.toDto() },
     )
   }
 
@@ -215,44 +231,77 @@ class Location(
   }
 }
 
-enum class LocationType {
-  WING, LANDING, CELL, SPUR,
-  OFFICE, ADMINISTRATION_AREA, RESIDENTIAL_UNIT, MEDICAL,
-  HOLDING_CELL, HOLDING_AREA, BOOTH, BOX,
+enum class LocationType(
+  val description: String,
+) {
+  WING("Wing"),
+  LANDING("Landing"),
+  CELL("Cell"),
+  SPUR("Spur"),
+  OFFICE("Other"),
+  ADMINISTRATION_AREA("Administration Area"),
+  RESIDENTIAL_UNIT("Residential Unit"),
+  MEDICAL("Medical"),
+  HOLDING_CELL("Holding Cell"),
+  HOLDING_AREA("Holding Area"),
+  BOOTH("Booth"),
+  BOX("Box"),
+  RETURN_TO_UNIT("Return to Unit"),
 
-  CLASSROOM, TRAINING_AREA, TRAINING_ROOM,
-  EXERCISE_AREA, SPORTS, WORKSHOP,
-  INSIDE_PARTY, OUTSIDE_PARTY,
+  CLASSROOM("Classroom"),
+  TRAINING_AREA("Training Area"),
+  TRAINING_ROOM("Training Room"),
+  EXERCISE_AREA("Exercise Area"),
+  AREA("Area"),
+  SPORTS("Sports"),
+  WORKSHOP("Workshop"),
+  INSIDE_PARTY("Inside Party"),
+  OUTSIDE_PARTY("Outside Party"),
 
-  FAITH_AREA,
+  FAITH_AREA("Faith Area"),
 
-  ADJUDICATION_ROOM, APPOINTMENTS, AREA, ASSOCIATION,
-  EXTERNAL_GROUNDS, GROUP, INTERNAL_GROUNDS, INTERVIEW,
-  LOCATION, MOVEMENT_AREA, POSITION, RETURN_TO_UNIT,
-  SHELF, STORE, TABLE, VIDEO_LINK, VISITS
+  ADJUDICATION_ROOM("Adjudication Room"),
+  APPOINTMENTS("Appointments"),
+  VISITS("Visits"),
+  VIDEO_LINK("Video Link"),
+  ASSOCIATION("Association"),
+  EXTERNAL_GROUNDS("External Grounds"),
+  GROUP("Group"),
+  INTERNAL_GROUNDS("Internal Grounds"),
+  INTERVIEW("Interview"),
+  LOCATION("Location"),
+  MOVEMENT_AREA("Movement Area"),
+  POSITION("Position"),
+  SHELF("Shelf"),
+  STORE("Store"),
+  TABLE("Table"),
 }
 
-enum class DeactivatedReason {
-  NEW_BUILDING,
-  CELL_RECLAIMS,
-  CHANGE_OF_USE,
-  REFURBISHMENT,
-  CLOSURE,
-  OTHER,
-  LOCAL_WORK,
-  STAFF_SHORTAGE,
-  MOTHBALLED,
-  DAMAGED,
-  OUT_OF_USE,
-  CELLS_RETURNING_TO_USE,
+enum class DeactivatedReason(
+  val description: String,
+) {
+  NEW_BUILDING("New Building"),
+  CELL_RECLAIMS("Cell Reclaims"),
+  CHANGE_OF_USE("Change of Use"),
+  REFURBISHMENT("Refurbishment"),
+  CLOSURE("Closure"),
+  OTHER("Other"),
+  LOCAL_WORK("Local Work"),
+  STAFF_SHORTAGE("Staff Shortage"),
+  MOTHBALLED("Mothballed"),
+  DAMAGED("Damaged"),
+  OUT_OF_USE("Out of Use"),
+  CELLS_RETURNING_TO_USE("Cells Returning to Use"),
 }
 
-enum class ResidentialHousingType {
-  HEALTHCARE,
-  HOLDING_CELL,
-  NORMAL_ACCOMMODATION,
-  OTHER_USE,
-  RECEPTION,
-  SEGREGATION,
-  SPECIALIST_CELL,
+enum class ResidentialHousingType(
+  val description: String,
+) {
+  HEALTHCARE("Healthcare"),
+  HOLDING_CELL("Holding Cell"),
+  NORMAL_ACCOMMODATION("Normal Accommodation"),
+  OTHER_USE("Other Use"),
+  RECEPTION("Reception"),
+  SEGREGATION("Segregation"),
+  SPECIALIST_CELL("Specialist Cell"),
 }
