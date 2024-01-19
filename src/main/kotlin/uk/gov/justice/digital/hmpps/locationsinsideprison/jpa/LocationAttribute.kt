@@ -134,15 +134,3 @@ enum class LocationAttributeValue(
   Y(LocationAttributeType.SECURITY, "Yes"),
   Z(LocationAttributeType.SECURITY, "Unclass"),
 }
-
-/**
-Anti Barricade Door
-Auditable Cell Bell
-Fixed Bed
-Metal Door
-Movable Bed
-Privacy Curtain
-Privacy Screen
-Standard Cell Bell
-Separate Toilet
-Wooden Door */
