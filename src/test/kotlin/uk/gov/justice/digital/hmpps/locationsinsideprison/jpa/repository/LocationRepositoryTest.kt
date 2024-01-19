@@ -132,7 +132,7 @@ class LocationRepositoryTest : TestBase() {
     )
     location.addUsage(LocationUsageType.ADJUDICATION_HEARING)
     location.addUsage(LocationUsageType.APPOINTMENT)
-    location.addAttribute(LocationAttributeType.USED_FOR, LocationAttributeValue.U5)
+    location.addAttribute(LocationAttributeType.USED_FOR, LocationAttributeValue.UF_1)
     return location
   }
 }
