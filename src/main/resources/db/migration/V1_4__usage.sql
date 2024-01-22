@@ -1,6 +1,3 @@
-alter table capacity
-    drop column current_occupancy;
-
 CREATE TABLE location_usage
 (
     id          SERIAL      not null

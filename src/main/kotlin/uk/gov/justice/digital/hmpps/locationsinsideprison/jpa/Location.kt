@@ -52,6 +52,7 @@ class Location(
 
   var active: Boolean = true,
   var deactivatedDate: LocalDate? = null,
+  @Enumerated(EnumType.STRING)
   var deactivatedReason: DeactivatedReason? = null,
   var reactivatedDate: LocalDate? = null,
 
@@ -61,6 +62,7 @@ class Location(
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
   val certification: Certification? = null,
 
+  @Enumerated(EnumType.STRING)
   var residentialHousingType: ResidentialHousingType? = null,
 
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
