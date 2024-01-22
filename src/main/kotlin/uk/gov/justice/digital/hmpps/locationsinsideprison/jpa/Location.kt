@@ -52,6 +52,7 @@ class Location(
 
   var active: Boolean = true,
   var deactivatedDate: LocalDate? = null,
+  @Enumerated(EnumType.STRING)
   var deactivatedReason: DeactivatedReason? = null,
   var reactivatedDate: LocalDate? = null,
 
@@ -61,6 +62,7 @@ class Location(
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
   val certification: Certification? = null,
 
+  @Enumerated(EnumType.STRING)
   var residentialHousingType: ResidentialHousingType? = null,
 
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
@@ -141,9 +143,8 @@ class Location(
     }
   }
 
-  fun addAttribute(type: LocationAttributeType, value: LocationAttributeValue) {
-    if (value.type != type) throw IllegalArgumentException("Value [$value] is not valid for type [$type]")
-    attributes.add(LocationAttribute(location = this, type = type, value = value))
+  fun addAttribute(attribute: LocationAttributeValue) {
+    attributes.add(LocationAttribute(location = this, type = attribute.type, value = attribute))
   }
 
   fun addUsage(usageType: LocationUsageType) {

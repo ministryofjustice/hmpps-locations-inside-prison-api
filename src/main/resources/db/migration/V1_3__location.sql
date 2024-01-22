@@ -1,22 +1,3 @@
-CREATE TABLE capacity
-(
-    id                   SERIAL not null
-        constraint capacity_pk primary key,
-    capacity             int    not null default 0,
-    operational_capacity int    not null default 0,
-    current_occupancy    int    not null default 0
-);
-
-CREATE TABLE certification
-(
-    id                         SERIAL  not null
-        constraint certification_pk primary key,
-    certified                  boolean not null default false,
-    capacity_of_certified_cell int     not null default 0
-);
-
-DROP TABLE location;
-
 CREATE TABLE location
 (
     id                           uuid         not null
