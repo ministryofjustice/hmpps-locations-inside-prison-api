@@ -141,9 +141,8 @@ class Location(
     }
   }
 
-  fun addAttribute(type: LocationAttributeType, value: LocationAttributeValue) {
-    if (value.type != type) throw IllegalArgumentException("Value [$value] is not valid for type [$type]")
-    attributes.add(LocationAttribute(location = this, type = type, value = value))
+  fun addAttribute(attribute: LocationAttributeValue) {
+    attributes.add(LocationAttribute(location = this, type = attribute.type, value = attribute))
   }
 
   fun addUsage(usageType: LocationUsageType) {

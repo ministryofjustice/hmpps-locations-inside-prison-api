@@ -13,7 +13,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationUsageType
@@ -132,7 +131,7 @@ class LocationRepositoryTest : TestBase() {
     )
     location.addUsage(LocationUsageType.ADJUDICATION_HEARING)
     location.addUsage(LocationUsageType.APPOINTMENT)
-    location.addAttribute(LocationAttributeType.USED_FOR, LocationAttributeValue.UF_1)
+    location.addAttribute(LocationAttributeValue.UF_1)
     return location
   }
 }
