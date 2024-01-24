@@ -55,5 +55,6 @@ class EventPublishAndAuditService(
 }
 
 enum class InformationSource {
-  DPS, NOMIS
+  DPS,
+  NOMIS,
 }

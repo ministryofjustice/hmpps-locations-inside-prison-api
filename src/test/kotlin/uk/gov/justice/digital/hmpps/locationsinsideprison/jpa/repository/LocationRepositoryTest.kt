@@ -120,13 +120,25 @@ class LocationRepositoryTest : TestBase() {
       whenUpdated = now,
       whenCreated = now,
       parent = parent,
-      capacity = if (locationType == LocationType.CELL) { Capacity(capacity = 1, operationalCapacity = 1) } else { null },
-      certification = if (locationType == LocationType.CELL) { Certification(certified = true, capacityOfCertifiedCell = 1) } else { null },
+      capacity = if (locationType == LocationType.CELL) {
+        Capacity(capacity = 1, operationalCapacity = 1)
+      } else {
+        null
+      },
+      certification = if (locationType == LocationType.CELL) {
+        Certification(certified = true, capacityOfCertifiedCell = 1)
+      } else {
+        null
+      },
       description = "$locationType $code",
       deactivatedDate = LocalDate.now(clock).minusYears(1),
       reactivatedDate = LocalDate.now(clock).minusDays(1),
       orderWithinParentLocation = 1,
-      residentialHousingType = if (locationType == LocationType.CELL) { ResidentialHousingType.NORMAL_ACCOMMODATION } else { null },
+      residentialHousingType = if (locationType == LocationType.CELL) {
+        ResidentialHousingType.NORMAL_ACCOMMODATION
+      } else {
+        null
+      },
       comments = "comments",
     )
     location.addUsage(LocationUsageType.ADJUDICATION_HEARING)

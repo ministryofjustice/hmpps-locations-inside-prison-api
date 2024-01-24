@@ -29,6 +29,7 @@ class NomisLocationEventListener(
       LOCATION_UPSERT_TYPE -> {
         val locationEvent = mapper.readValue(message, HMPPSLocationDomainEvent::class.java)
         // DO SOMETHING HERE
+        log.info("Received location event $locationEvent")
       }
       else -> {
         log.debug("Ignoring message with type $eventType")
