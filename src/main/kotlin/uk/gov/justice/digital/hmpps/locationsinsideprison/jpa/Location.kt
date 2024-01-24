@@ -247,6 +247,7 @@ enum class LocationType(
   HOLDING_AREA("Holding Area"),
   BOOTH("Booth"),
   BOX("Box"),
+  ROOM("Room"),
   RETURN_TO_UNIT("Return to Unit"),
 
   CLASSROOM("Classroom"),
