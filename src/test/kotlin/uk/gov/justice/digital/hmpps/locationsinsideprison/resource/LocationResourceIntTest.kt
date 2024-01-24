@@ -22,9 +22,9 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 
-const val expectedUsername = "A_TEST_USER"
+const val EXPECTED_USERNAME = "A_TEST_USER"
 
-@WithMockUser(username = expectedUsername)
+@WithMockUser(username = EXPECTED_USERNAME)
 class LocationResourceIntTest : SqsIntegrationTestBase() {
 
   @TestConfiguration
@@ -63,7 +63,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     code = pathHierarchy.split("-").last(),
     pathHierarchy = pathHierarchy,
     locationType = locationType,
-    updatedBy = expectedUsername,
+    updatedBy = EXPECTED_USERNAME,
     whenCreated = LocalDateTime.now(clock),
     whenUpdated = LocalDateTime.now(clock),
   )
