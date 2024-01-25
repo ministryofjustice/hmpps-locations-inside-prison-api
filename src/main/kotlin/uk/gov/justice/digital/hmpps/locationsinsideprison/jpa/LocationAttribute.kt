@@ -53,7 +53,7 @@ enum class LocationAttributeType(
   val description: String,
 ) {
   USED_FOR("Used for"),
-  LOCATION_ATTRIBUTE("NonResidentialLocation attribute"),
+  LOCATION_ATTRIBUTE("Location attribute"),
   SANITATION_FITTINGS("Sanitation and fittings"),
   NON_ASSOCIATIONS("Non-associations"),
   SECURITY("Supervision and Security"),

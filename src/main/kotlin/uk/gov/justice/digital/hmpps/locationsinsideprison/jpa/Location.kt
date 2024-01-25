@@ -36,9 +36,9 @@ abstract class Location(
   @Column(name = "id", updatable = false, nullable = false)
   val id: UUID? = null,
 
-  var code: String,
+  private var code: String,
 
-  var pathHierarchy: String,
+  private var pathHierarchy: String,
 
   @Enumerated(EnumType.STRING)
   var locationType: LocationType,
@@ -47,7 +47,7 @@ abstract class Location(
 
   @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   @JoinColumn(name = "parent_id")
-  protected var parent: Location? = null,
+  private var parent: Location? = null,
 
   var description: String? = null,
 
@@ -258,7 +258,7 @@ enum class LocationType(
   GROUP("Group"),
   INTERNAL_GROUNDS("Internal Grounds"),
   INTERVIEW("Interview"),
-  LOCATION("NonResidentialLocation"),
+  LOCATION("Location"),
   MOVEMENT_AREA("Movement Area"),
   POSITION("Position"),
   SHELF("Shelf"),
