@@ -20,7 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
 
 const val EXPECTED_USERNAME = "A_TEST_USER"
 
@@ -36,9 +36,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: LocationRepository
-  lateinit var location: LocationJPA
-  lateinit var landing1: LocationJPA
-  lateinit var wing: LocationJPA
+  lateinit var location: ResidentialLocationJPA
+  lateinit var landing1: ResidentialLocationJPA
+  lateinit var wing: ResidentialLocationJPA
 
   @BeforeEach
   fun setUp() {
@@ -58,7 +58,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     prisonId: String = "MDI",
     pathHierarchy: String,
     locationType: LocationType = LocationType.CELL,
-  ) = LocationJPA(
+  ) = ResidentialLocationJPA(
     prisonId = prisonId,
     code = pathHierarchy.split("-").last(),
     pathHierarchy = pathHierarchy,
@@ -66,6 +66,19 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     updatedBy = EXPECTED_USERNAME,
     whenCreated = LocalDateTime.now(clock),
     whenUpdated = LocalDateTime.now(clock),
+    deactivatedDate = null,
+    deactivatedReason = null,
+    reactivatedDate = null,
+    childLocations = mutableListOf(),
+    parent = null,
+    active = true,
+    description = null,
+    comments = null,
+    orderWithinParentLocation = 99,
+    residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+    capacity = null,
+    certification = null,
+    id = null,
   )
 
   @DisplayName("GET /locations/{id}")
