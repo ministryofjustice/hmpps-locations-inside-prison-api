@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
+import org.hibernate.Hibernate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationUsageDto
 
 @Entity
@@ -31,6 +32,24 @@ class LocationUsage(
       capacity = capacity,
       sequence = sequence,
     )
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
+
+    other as LocationUsage
+
+    if (location != other.location) return false
+    if (usageType != other.usageType) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = location.hashCode()
+    result = 31 * result + usageType.hashCode()
+    return result
+  }
 }
 
 enum class LocationUsageType(
