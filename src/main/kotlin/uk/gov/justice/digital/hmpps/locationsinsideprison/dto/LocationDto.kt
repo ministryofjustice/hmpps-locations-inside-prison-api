@@ -14,6 +14,8 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
 
 @Schema(description = "Location Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -135,21 +137,50 @@ data class CreateLocationRequest(
 ) {
 
   fun toNewEntity(createdBy: String, clock: Clock): LocationJPA {
-    return LocationJPA(
-      id = null,
-      prisonId = prisonId,
-      code = code,
-      locationType = locationType,
-      pathHierarchy = code,
-      description = description,
-      residentialHousingType = residentialHousingType,
-      comments = comments,
-      orderWithinParentLocation = orderWithinParentLocation,
-      active = true,
-      updatedBy = createdBy,
-      whenCreated = LocalDateTime.now(clock),
-      whenUpdated = LocalDateTime.now(clock),
-    )
+    return if (residentialHousingType != null) {
+      ResidentialLocationJPA(
+        id = null,
+        prisonId = prisonId,
+        code = code,
+        locationType = locationType,
+        pathHierarchy = code,
+        description = description,
+        residentialHousingType = residentialHousingType,
+        comments = comments,
+        orderWithinParentLocation = orderWithinParentLocation,
+        active = true,
+        updatedBy = createdBy,
+        whenCreated = LocalDateTime.now(clock),
+        whenUpdated = LocalDateTime.now(clock),
+        deactivatedDate = null,
+        deactivatedReason = null,
+        reactivatedDate = null,
+        capacity = null,
+        certification = null,
+        childLocations = mutableListOf(),
+        parent = null,
+      )
+    } else {
+      NonResidentialLocationJPA(
+        id = null,
+        prisonId = prisonId,
+        code = code,
+        locationType = locationType,
+        pathHierarchy = code,
+        description = description,
+        comments = comments,
+        orderWithinParentLocation = orderWithinParentLocation,
+        active = true,
+        updatedBy = createdBy,
+        whenCreated = LocalDateTime.now(clock),
+        whenUpdated = LocalDateTime.now(clock),
+        deactivatedDate = null,
+        deactivatedReason = null,
+        reactivatedDate = null,
+        childLocations = mutableListOf(),
+        parent = null,
+      )
+    }
   }
 }
 
@@ -195,16 +226,3 @@ data class DeactivationLocationRequest(
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = true)
   val deactivationReason: DeactivatedReason,
 )
-
-fun LocationJPA.updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): LocationJPA {
-  setCode(patch.code ?: this.getCode())
-  this.locationType = patch.locationType ?: this.locationType
-  this.description = patch.description ?: this.description
-  this.comments = patch.comments ?: this.comments
-  this.orderWithinParentLocation = patch.orderWithinParentLocation ?: this.orderWithinParentLocation
-  this.residentialHousingType = patch.residentialHousingType ?: this.residentialHousingType
-  this.updatedBy = updatedBy
-  this.whenUpdated = LocalDateTime.now(clock)
-
-  return this
-}

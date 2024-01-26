@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.updateWith
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -52,7 +51,7 @@ class LocationService(
     val locationToCreate = createLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
 
     createLocationRequest.parentId?.let {
-      locationToCreate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
+      locationToCreate.setLocationParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
     }
 
     val location = locationRepository.save(locationToCreate).toDto()
@@ -77,7 +76,7 @@ class LocationService(
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     patchLocationRequest.parentId?.let {
-      locationToUpdate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
+      locationToUpdate.setLocationParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
     }
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
@@ -88,7 +87,7 @@ class LocationService(
       mapOf(
         "id" to id.toString(),
         "prisonId" to locationToUpdate.prisonId,
-        "path" to locationToUpdate.getPathHierarchy(),
+        "path" to locationToUpdate.getLocationPathHierarchy(),
       ),
       null,
     )
@@ -109,7 +108,7 @@ class LocationService(
       mapOf(
         "id" to id.toString(),
         "prisonId" to locationToUpdate.prisonId,
-        "path" to locationToUpdate.getPathHierarchy(),
+        "path" to locationToUpdate.getLocationPathHierarchy(),
       ),
       null,
     )
@@ -130,7 +129,7 @@ class LocationService(
       mapOf(
         "id" to id.toString(),
         "prisonId" to locationToUpdate.prisonId,
-        "path" to locationToUpdate.getPathHierarchy(),
+        "path" to locationToUpdate.getLocationPathHierarchy(),
       ),
       null,
     )

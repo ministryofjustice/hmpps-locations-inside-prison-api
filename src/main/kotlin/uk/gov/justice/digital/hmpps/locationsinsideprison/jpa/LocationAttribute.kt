@@ -10,6 +10,7 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
+import org.hibernate.Hibernate
 
 @Entity
 class LocationAttribute(
@@ -26,7 +27,27 @@ class LocationAttribute(
   @Enumerated(EnumType.STRING)
   @Column(name = "usage_value", nullable = false)
   val value: LocationAttributeValue,
-)
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
+
+    other as LocationAttribute
+
+    if (location != other.location) return false
+    if (type != other.type) return false
+    if (value != other.value) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = location.hashCode()
+    result = 31 * result + type.hashCode()
+    result = 31 * result + value.hashCode()
+    return result
+  }
+}
 
 enum class LocationAttributeType(
   val description: String,
@@ -68,9 +89,6 @@ enum class LocationAttributeValue(
   WA(LocationAttributeType.LOCATION_ATTRIBUTE, "Wheelchair Access"),
 
   UF_1(LocationAttributeType.USED_FOR, "Unconvicted Juveniles"),
-  UF_10(LocationAttributeType.USED_FOR, "Healthcare Centre"),
-  UF_11(LocationAttributeType.USED_FOR, "National Resource Hospital"),
-  UF_12(LocationAttributeType.USED_FOR, "Other (Please Specify)"),
   UF_2(LocationAttributeType.USED_FOR, "Sentenced Juveniles"),
   UF_3(LocationAttributeType.USED_FOR, "Unconvicted 18 to 20 year olds"),
   UF_4(LocationAttributeType.USED_FOR, "Sentenced 18 to 20 year olds"),
@@ -79,6 +97,9 @@ enum class LocationAttributeValue(
   UF_7(LocationAttributeType.USED_FOR, "Vulnerable Prisoner Unit"),
   UF_8(LocationAttributeType.USED_FOR, "Special Unit"),
   UF_9(LocationAttributeType.USED_FOR, "Resettlement Hostel"),
+  UF_10(LocationAttributeType.USED_FOR, "Healthcare Centre"),
+  UF_11(LocationAttributeType.USED_FOR, "National Resource Hospital"),
+  UF_12(LocationAttributeType.USED_FOR, "Other (Please Specify)"),
   UF_A(LocationAttributeType.USED_FOR, "Remand Centre"),
   UF_B(LocationAttributeType.USED_FOR, "Local Prison"),
   UF_C(LocationAttributeType.USED_FOR, "Closed Prison"),
@@ -117,7 +138,6 @@ enum class LocationAttributeValue(
   LOW(LocationAttributeType.SECURITY, "Low"),
   MED(LocationAttributeType.SECURITY, "Medium"),
   N(LocationAttributeType.SECURITY, "No"),
-  N_A(LocationAttributeType.SECURITY, "Not Applicable"),
   NA(LocationAttributeType.SECURITY, "Not Applicable"),
   P(LocationAttributeType.SECURITY, "Prov A"),
   PEND(LocationAttributeType.SECURITY, "Pending"),

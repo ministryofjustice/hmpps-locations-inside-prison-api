@@ -8,23 +8,28 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
+import jakarta.persistence.Inheritance
+import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
-import jakarta.persistence.OneToOne
 import org.hibernate.Hibernate
+import org.hibernate.annotations.DiscriminatorFormula
 import org.hibernate.annotations.GenericGenerator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import java.io.Serializable
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
 @Entity
-class Location(
+@DiscriminatorFormula("case when residential_housing_type IS NULL then 'NON_RESIDENTIAL' else 'RESIDENTIAL' end")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+abstract class Location(
   @Id
   @GeneratedValue(generator = "UUID")
   @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
@@ -56,23 +61,8 @@ class Location(
   var deactivatedReason: DeactivatedReason? = null,
   var reactivatedDate: LocalDate? = null,
 
-  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
-  val capacity: Capacity? = null,
-
-  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
-  val certification: Certification? = null,
-
-  @Enumerated(EnumType.STRING)
-  var residentialHousingType: ResidentialHousingType? = null,
-
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-  private var childLocations: MutableList<Location> = mutableListOf(),
-
-  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-  private var attributes: MutableList<LocationAttribute> = mutableListOf(),
-
-  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-  private var usages: MutableList<LocationUsage> = mutableListOf(),
+  protected var childLocations: MutableList<Location> = mutableListOf(),
 
   val whenCreated: LocalDateTime,
   var whenUpdated: LocalDateTime,
@@ -83,16 +73,16 @@ class Location(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun setCode(code: String) {
+  fun setLocationCode(code: String) {
     this.code = code
     updateHierarchicalPath()
   }
 
-  fun getPathHierarchy(): String {
+  fun getLocationPathHierarchy(): String {
     return pathHierarchy
   }
 
-  fun setParent(parent: Location) {
+  fun setLocationParent(parent: Location) {
     removeParent()
     parent.addChildLocation(this)
   }
@@ -102,11 +92,11 @@ class Location(
     parent = null
   }
 
-  fun getCode(): String {
+  fun getLocationCode(): String {
     return code
   }
 
-  fun getParent(): Location? {
+  fun getLocationParent(): Location? {
     return parent
   }
 
@@ -143,14 +133,6 @@ class Location(
     }
   }
 
-  fun addAttribute(attribute: LocationAttributeValue) {
-    attributes.add(LocationAttribute(location = this, type = attribute.type, value = attribute))
-  }
-
-  fun addUsage(usageType: LocationUsageType) {
-    usages.add(LocationUsage(location = this, usageType = usageType))
-  }
-
   fun findAllLeafLocations(): List<Location> {
     val leafLocations = mutableListOf<Location>()
 
@@ -168,8 +150,8 @@ class Location(
     return leafLocations
   }
 
-  fun toDto(includeChildren: Boolean = false): LocationDTO {
-    return LocationDTO(
+  open fun toDto(includeChildren: Boolean = false): LocationDto {
+    return LocationDto(
       id = id!!,
       code = code,
       locationType = locationType,
@@ -184,14 +166,7 @@ class Location(
       deactivatedDate = deactivatedDate,
       deactivatedReason = deactivatedReason,
       reactivatedDate = reactivatedDate,
-      capacity = capacity?.capacity,
-      operationalCapacity = capacity?.operationalCapacity,
-      certified = certification?.certified,
-      capacityOfCertifiedCell = certification?.capacityOfCertifiedCell,
-      residentialHousingType = residentialHousingType,
       childLocations = if (includeChildren) childLocations.map { it.toDto(true) } else null,
-      attributes = attributes.groupBy { it.type }.mapValues { type -> type.value.map { it.value } },
-      usage = usages.map { it.toDto() },
     )
   }
 
@@ -201,16 +176,28 @@ class Location(
 
     other as Location
 
-    if (code != other.code) return false
     if (prisonId != other.prisonId) return false
+    if (pathHierarchy != other.pathHierarchy) return false
 
     return true
   }
 
   override fun hashCode(): Int {
-    var result = code.hashCode()
-    result = 31 * result + prisonId.hashCode()
+    var result = prisonId.hashCode()
+    result = 31 * result + pathHierarchy.hashCode()
     return result
+  }
+
+  open fun updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): Location {
+    setLocationCode(patch.code ?: this.getLocationCode())
+    this.locationType = patch.locationType ?: this.locationType
+    this.description = patch.description ?: this.description
+    this.comments = patch.comments ?: this.comments
+    this.orderWithinParentLocation = patch.orderWithinParentLocation ?: this.orderWithinParentLocation
+    this.updatedBy = updatedBy
+    this.whenUpdated = LocalDateTime.now(clock)
+
+    return this
   }
 
   fun deactivate(deactivatedReason: DeactivatedReason, userOrSystemInContext: String, clock: Clock) {
