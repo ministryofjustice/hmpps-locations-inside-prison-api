@@ -34,39 +34,39 @@ abstract class Location(
   @GeneratedValue(generator = "UUID")
   @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
   @Column(name = "id", updatable = false, nullable = false)
-  val id: UUID? = null,
+  open val id: UUID? = null,
 
   private var code: String,
 
   private var pathHierarchy: String,
 
   @Enumerated(EnumType.STRING)
-  var locationType: LocationType,
+  open var locationType: LocationType,
 
-  val prisonId: String,
+  open val prisonId: String,
 
   @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   @JoinColumn(name = "parent_id")
   private var parent: Location? = null,
 
-  var description: String? = null,
+  open var description: String? = null,
 
-  var comments: String? = null,
+  open var comments: String? = null,
 
-  var orderWithinParentLocation: Int? = null,
+  open var orderWithinParentLocation: Int? = null,
 
-  var active: Boolean = true,
-  var deactivatedDate: LocalDate? = null,
+  open var active: Boolean = true,
+  open var deactivatedDate: LocalDate? = null,
   @Enumerated(EnumType.STRING)
-  var deactivatedReason: DeactivatedReason? = null,
-  var reactivatedDate: LocalDate? = null,
+  open var deactivatedReason: DeactivatedReason? = null,
+  open var reactivatedDate: LocalDate? = null,
 
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-  protected var childLocations: MutableList<Location> = mutableListOf(),
+  protected open var childLocations: MutableList<Location> = mutableListOf(),
 
-  val whenCreated: LocalDateTime,
-  var whenUpdated: LocalDateTime,
-  var updatedBy: String,
+  open val whenCreated: LocalDateTime,
+  open var whenUpdated: LocalDateTime,
+  open var updatedBy: String,
 ) : Serializable {
 
   companion object {
