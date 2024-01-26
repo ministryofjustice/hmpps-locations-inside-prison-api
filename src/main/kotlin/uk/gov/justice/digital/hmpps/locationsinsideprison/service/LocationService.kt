@@ -9,7 +9,8 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -47,18 +48,42 @@ class LocationService(
   }
 
   @Transactional
-  fun createLocation(createLocationRequest: CreateLocationRequest): LocationDTO {
-    val locationToCreate = createLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
+  fun createResidentialLocation(createResidentialLocationRequest: CreateResidentialLocationRequest): LocationDTO {
+    val locationToCreate = createResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
 
-    createLocationRequest.parentId?.let {
+    createResidentialLocationRequest.parentId?.let {
       locationToCreate.setLocationParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
     }
 
     val location = locationRepository.save(locationToCreate).toDto()
 
-    log.info("Created Location [${location.id}]")
+    log.info("Created Residential Location [${location.id}]")
     telemetryClient.trackEvent(
-      "Created Location",
+      "Created Residential Location",
+      mapOf(
+        "id" to location.id.toString(),
+        "prisonId" to location.prisonId,
+        "path" to location.pathHierarchy,
+      ),
+      null,
+    )
+
+    return location
+  }
+
+  @Transactional
+  fun createNonResidentialLocation(createNonResidentialLocationRequest: CreateNonResidentialLocationRequest): LocationDTO {
+    val locationToCreate = createNonResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
+
+    createNonResidentialLocationRequest.parentId?.let {
+      locationToCreate.setLocationParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
+    }
+
+    val location = locationRepository.save(locationToCreate).toDto()
+
+    log.info("Created Non Residential Location [${location.id}]")
+    telemetryClient.trackEvent(
+      "Created Non Residential Location",
       mapOf(
         "id" to location.id.toString(),
         "prisonId" to location.prisonId,

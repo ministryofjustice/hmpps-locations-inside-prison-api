@@ -13,10 +13,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import java.time.LocalDate
@@ -148,7 +148,7 @@ class LocationRepositoryTest : TestBase() {
       deactivatedReason = null,
       id = null,
     )
-    location.addAttribute(LocationAttributeValue.UF_1)
+    location.addAttribute(ResidentialAttributeValue.UF_1)
     return location
   }
 
@@ -179,7 +179,7 @@ class LocationRepositoryTest : TestBase() {
       deactivatedReason = null,
       id = null,
     )
-    location.addUsage(LocationUsageType.ADJUDICATION_HEARING)
+    location.addUsage(NonResidentialUsageType.ADJUDICATION_HEARING)
     return location
   }
 }
