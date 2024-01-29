@@ -58,6 +58,7 @@ class LocationService(
     val locationToCreate = createResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
 
     createResidentialLocationRequest.parentId?.let {
+      if (it == locationToCreate.id) throw IllegalArgumentException("Cannot set parent to self")
       locationToCreate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
     }
 
@@ -82,6 +83,7 @@ class LocationService(
     val locationToCreate = createNonResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
 
     createNonResidentialLocationRequest.parentId?.let {
+      if (it == locationToCreate.id) throw IllegalArgumentException("Cannot set parent to self")
       locationToCreate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
     }
 
@@ -106,7 +108,11 @@ class LocationService(
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
+    val hierarchyChanged = patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode() ||
+      patchLocationRequest.parentId != null && patchLocationRequest.parentId != locationToUpdate.getParent()?.id
+
     patchLocationRequest.parentId?.let {
+      if (it == id) throw IllegalArgumentException("Cannot set parent to self")
       locationToUpdate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
     }
 
@@ -123,7 +129,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto()
+    return locationToUpdate.toDto(includeChildren = hierarchyChanged)
   }
 
   @Transactional
