@@ -10,10 +10,10 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
 import org.hibernate.Hibernate
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationUsageDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 
 @Entity
-class LocationUsage(
+class NonResidentialUsage(
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   val id: Long? = null,
@@ -21,13 +21,13 @@ class LocationUsage(
   @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   val location: Location,
   @Enumerated(EnumType.STRING)
-  val usageType: LocationUsageType,
-  val capacity: Int? = null,
-  val sequence: Int = 99,
+  val usageType: NonResidentialUsageType,
+  var capacity: Int? = null,
+  var sequence: Int = 99,
 
 ) {
   fun toDto() =
-    LocationUsageDto(
+    NonResidentialUsageDto(
       usageType = usageType,
       capacity = capacity,
       sequence = sequence,
@@ -37,7 +37,7 @@ class LocationUsage(
     if (this === other) return true
     if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
 
-    other as LocationUsage
+    other as NonResidentialUsage
 
     if (location != other.location) return false
     if (usageType != other.usageType) return false
@@ -52,7 +52,7 @@ class LocationUsage(
   }
 }
 
-enum class LocationUsageType(
+enum class NonResidentialUsageType(
   val description: String,
 ) {
   APPOINTMENT("Appointment"),

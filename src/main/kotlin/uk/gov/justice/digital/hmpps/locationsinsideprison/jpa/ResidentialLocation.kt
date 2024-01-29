@@ -40,13 +40,13 @@ class ResidentialLocation(
   var residentialHousingType: ResidentialHousingType,
 
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
-  val capacity: Capacity? = null,
+  var capacity: Capacity? = null,
 
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
-  val certification: Certification? = null,
+  var certification: Certification? = null,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-  private var attributes: MutableList<LocationAttribute> = mutableListOf(),
+  private var attributes: MutableSet<ResidentialAttribute> = mutableSetOf(),
 
 ) : Location(
   id = id,
@@ -68,25 +68,31 @@ class ResidentialLocation(
   updatedBy = updatedBy,
 ) {
 
-  fun addAttribute(attribute: LocationAttributeValue) {
-    attributes.add(LocationAttribute(location = this, type = attribute.type, value = attribute))
+  fun addAttribute(attribute: ResidentialAttributeValue) {
+    attributes.add(ResidentialAttribute(location = this, attributeType = attribute.type, attributeValue = attribute))
   }
 
   override fun updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): ResidentialLocation {
     super.updateWith(patch, updatedBy, clock)
     this.residentialHousingType = patch.residentialHousingType ?: this.residentialHousingType
-
+    this.capacity = patch.capacity?.toNewEntity() ?: this.capacity
+    this.certification = patch.certification?.toNewEntity() ?: this.certification
+    if (patch.attributes != null) {
+      patch.attributes!!.map { attributeGroup ->
+        attributeGroup.value.map { attribute ->
+          this.addAttribute(attribute)
+        }
+      }
+    }
     return this
   }
 
   override fun toDto(includeChildren: Boolean): LocationDto {
     return super.toDto(includeChildren).copy(
-      capacity = capacity?.capacity,
-      operationalCapacity = capacity?.operationalCapacity,
-      certified = certification?.certified,
-      capacityOfCertifiedCell = certification?.capacityOfCertifiedCell,
+      capacity = capacity?.toDto(),
+      certification = certification?.toDto(),
       residentialHousingType = residentialHousingType,
-      attributes = attributes.groupBy { it.type }.mapValues { type -> type.value.map { it.value } },
+      attributes = attributes.groupBy { it.attributeType }.mapValues { type -> type.value.map { it.attributeValue } },
     )
   }
 }

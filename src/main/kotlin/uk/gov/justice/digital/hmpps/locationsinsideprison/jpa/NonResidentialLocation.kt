@@ -5,6 +5,8 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
@@ -32,7 +34,7 @@ class NonResidentialLocation(
   updatedBy: String,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-  private var usages: MutableList<LocationUsage> = mutableListOf(),
+  private var nonResidentialUsages: MutableSet<NonResidentialUsage> = mutableSetOf(),
 
 ) : Location(
   id = id,
@@ -54,13 +56,29 @@ class NonResidentialLocation(
   updatedBy = updatedBy,
 ) {
 
-  fun addUsage(usageType: LocationUsageType) {
-    usages.add(LocationUsage(location = this, usageType = usageType))
+  fun addUsage(usageType: NonResidentialUsageType, capacity: Int? = null, sequence: Int = 99) {
+    val existingUsage = nonResidentialUsages.find { it.usageType == usageType }
+    if (existingUsage != null) {
+      existingUsage.capacity = capacity
+      existingUsage.sequence = sequence
+    } else {
+      nonResidentialUsages.add(NonResidentialUsage(location = this, usageType = usageType, capacity = capacity, sequence = sequence))
+    }
   }
 
   override fun toDto(includeChildren: Boolean): LocationDto {
     return super.toDto(includeChildren).copy(
-      usage = usages.map { it.toDto() },
+      usage = nonResidentialUsages.map { it.toDto() },
     )
+  }
+
+  override fun updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): NonResidentialLocation {
+    super.updateWith(patch, updatedBy, clock)
+    if (patch.usage != null) {
+      patch.usage!!.map { nonResUsage ->
+        this.addUsage(nonResUsage.usageType, nonResUsage.capacity, nonResUsage.sequence)
+      }
+    }
+    return this
   }
 }
