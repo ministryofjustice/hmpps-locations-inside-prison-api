@@ -52,7 +52,7 @@ class LocationService(
     val locationToCreate = createResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
 
     createResidentialLocationRequest.parentId?.let {
-      locationToCreate.setLocationParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
+      locationToCreate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
     }
 
     val location = locationRepository.save(locationToCreate).toDto()
@@ -76,7 +76,7 @@ class LocationService(
     val locationToCreate = createNonResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
 
     createNonResidentialLocationRequest.parentId?.let {
-      locationToCreate.setLocationParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
+      locationToCreate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
     }
 
     val location = locationRepository.save(locationToCreate).toDto()
@@ -101,7 +101,7 @@ class LocationService(
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     patchLocationRequest.parentId?.let {
-      locationToUpdate.setLocationParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
+      locationToUpdate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
     }
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
