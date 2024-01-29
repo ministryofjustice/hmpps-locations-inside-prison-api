@@ -73,12 +73,14 @@ abstract class Location(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
+  fun getKey() = "$prisonId-${getPathHierarchy()}"
+
   fun setCode(code: String) {
     this.code = code
     updateHierarchicalPath()
   }
 
-  fun getLocationPathHierarchy(): String {
+  fun getPathHierarchy(): String {
     return pathHierarchy
   }
 
@@ -219,7 +221,7 @@ abstract class Location(
   }
 
   override fun toString(): String {
-    return "Location(pathHierarchy='$pathHierarchy', prisonId='$prisonId')"
+    return getKey()
   }
 }
 

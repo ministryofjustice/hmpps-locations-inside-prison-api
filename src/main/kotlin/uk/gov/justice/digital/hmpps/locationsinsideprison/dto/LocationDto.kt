@@ -72,7 +72,7 @@ data class Location(
   @Schema(description = "Capacity details of the location", required = false)
   var capacity: Capacity? = null,
 
-  @Schema(description = "Indicates that this location is certified for use as a residential location", example = "true", required = false)
+  @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
   var certification: Certification? = null,
 
   @Schema(description = "Location Attributes", required = false)
@@ -204,15 +204,15 @@ data class CreateNonResidentialLocationRequest(
   @field:Size(max = 3, message = "PrisonId must be 3 characters")
   val prisonId: String,
 
-  @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
+  @Schema(description = "Code of the location", required = true, example = "ADJ", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 40, message = "Code must be less than 41 characters")
   val code: String,
 
-  @Schema(description = "Location Type", example = "CELL", required = true)
+  @Schema(description = "Location Type", example = "ADJUDICATION_ROOM", required = true)
   val locationType: LocationType,
 
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @Schema(description = "Alternative description to display for location", example = "Adj Room", required = false)
   @field:Size(max = 80, message = "Description must be less than 81 characters")
   val description: String? = null,
 
@@ -285,7 +285,7 @@ data class PatchLocationRequest(
   @Schema(description = "Capacity details of the location", required = false)
   var capacity: Capacity? = null,
 
-  @Schema(description = "Indicates that this location is certified for use as a residential location", example = "true", required = false)
+  @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
   var certification: Certification? = null,
 
   @Schema(description = "Location Attributes", required = false)

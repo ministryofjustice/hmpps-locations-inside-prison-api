@@ -38,7 +38,13 @@ class LocationService(
     return toDto
   }
 
+  fun getLocationByPrison(prisonId: String): List<LocationDTO> = locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId).map {
+    it.toDto()
+  }
+
   fun getLocationByKey(key: String, includeChildren: Boolean = false): LocationDTO? {
+    if (!key.contains("-")) throw LocationNotFoundException(key)
+
     val (prisonId, code) = key.split("-", limit = 2)
     return locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code)?.toDto(includeChildren)
   }
@@ -112,7 +118,7 @@ class LocationService(
       mapOf(
         "id" to id.toString(),
         "prisonId" to locationToUpdate.prisonId,
-        "path" to locationToUpdate.getLocationPathHierarchy(),
+        "path" to locationToUpdate.getPathHierarchy(),
       ),
       null,
     )
@@ -133,7 +139,7 @@ class LocationService(
       mapOf(
         "id" to id.toString(),
         "prisonId" to locationToUpdate.prisonId,
-        "path" to locationToUpdate.getLocationPathHierarchy(),
+        "path" to locationToUpdate.getPathHierarchy(),
       ),
       null,
     )
@@ -154,7 +160,7 @@ class LocationService(
       mapOf(
         "id" to id.toString(),
         "prisonId" to locationToUpdate.prisonId,
-        "path" to locationToUpdate.getLocationPathHierarchy(),
+        "path" to locationToUpdate.getPathHierarchy(),
       ),
       null,
     )
