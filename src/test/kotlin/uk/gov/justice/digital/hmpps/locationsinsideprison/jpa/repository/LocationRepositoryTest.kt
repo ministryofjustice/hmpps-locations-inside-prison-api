@@ -13,10 +13,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import java.time.LocalDate
@@ -85,8 +85,8 @@ class LocationRepositoryTest : TestBase() {
     assertThat(cell2.certification?.capacityOfCertifiedCell).isEqualTo(2)
 
     val landing1Retrieved = repository.findOneByPrisonIdAndPathHierarchy(landing1.prisonId, landing1.getLocationPathHierarchy()) ?: throw Exception("Location not found")
-    cell2.setLocationCode("003")
-    cell2.setLocationParent(landing1Retrieved)
+    cell2.setCode("003")
+    cell2.setParent(landing1Retrieved)
 
     repository.save(landing1Retrieved)
     repository.save(cell2)
@@ -97,9 +97,9 @@ class LocationRepositoryTest : TestBase() {
 
     val cell3 = repository.findOneByPrisonIdAndPathHierarchy(cell2.prisonId, cell2.getLocationPathHierarchy()) ?: throw Exception("Location not found")
     assertThat(cell3.findTopLevelLocation()).isEqualTo(wing)
-    assertThat(cell3.getLocationParent()?.getLocationCode()).isEqualTo(landing1.getLocationCode())
+    assertThat(cell3.getParent()?.getCode()).isEqualTo(landing1.getCode())
 
-    cell3.getLocationParent()?.getLocationParent()?.setLocationCode("T")
+    cell3.getParent()?.getParent()?.setCode("T")
     repository.save(cell3)
 
     TestTransaction.flagForCommit()
@@ -148,7 +148,7 @@ class LocationRepositoryTest : TestBase() {
       deactivatedReason = null,
       id = null,
     )
-    location.addAttribute(LocationAttributeValue.UF_1)
+    location.addAttribute(ResidentialAttributeValue.UF_1)
     return location
   }
 
@@ -179,7 +179,7 @@ class LocationRepositoryTest : TestBase() {
       deactivatedReason = null,
       id = null,
     )
-    location.addUsage(LocationUsageType.ADJUDICATION_HEARING)
+    location.addUsage(NonResidentialUsageType.ADJUDICATION_HEARING)
     return location
   }
 }
