@@ -222,6 +222,291 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("GET /locations/key/{key}")
+  @Nested
+  inner class ViewLocationByKeyTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/key/${location.getKey()}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/key/${location.getKey()}")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/key/${location.getKey()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve details of a location by key`() {
+        webTestClient.get().uri("/locations/key/${wing.getKey()}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                    {
+                      "prisonId": "MDI",
+                      "code": "Z",
+                      "pathHierarchy": "Z",
+                      "locationType": "WING",
+                      "childLocations": [
+                        {
+                          "prisonId": "MDI",
+                          "code": "VISIT",
+                          "pathHierarchy": "Z-VISIT",
+                          "locationType": "VISITS",
+                          "orderWithinParentLocation": 99,
+                          "active": true,
+                          "usage": [
+                            {
+                              "usageType": "VISIT",
+                              "capacity": 15,
+                              "sequence": 1
+                            }
+                          ],
+                          "isResidential": false,
+                          "key": "MDI-Z-VISIT"
+                        },
+                        {
+                          "prisonId": "MDI",
+                          "code": "1",
+                          "pathHierarchy": "Z-1",
+                          "locationType": "LANDING",
+                          "childLocations": [
+                            {
+                              "prisonId": "MDI",
+                              "code": "001",
+                              "pathHierarchy": "Z-1-001",
+                              "locationType": "CELL",
+                              "orderWithinParentLocation": 99,
+                              "active": true,
+                              "residentialHousingType": "NORMAL_ACCOMMODATION",
+                              "capacity": {
+                                "capacity": 2,
+                                "operationalCapacity": 2
+                              },
+                              "certification": {
+                                "certified": true,
+                                "capacityOfCertifiedCell": 2
+                              },
+                              "attributes": {
+                                "LOCATION_ATTRIBUTE": [
+                                  "DO"
+                                ],
+                                "SECURITY": [
+                                  "CAT_B"
+                                ]
+                              },
+                              "isResidential": true,
+                              "key": "MDI-Z-1-001"
+                            },
+                            {
+                              "prisonId": "MDI",
+                              "code": "002",
+                              "pathHierarchy": "Z-1-002",
+                              "locationType": "CELL",
+                              "orderWithinParentLocation": 99,
+                              "active": true,
+                              "residentialHousingType": "NORMAL_ACCOMMODATION",
+                              "capacity": {
+                                "capacity": 2,
+                                "operationalCapacity": 2
+                              },
+                              "certification": {
+                                "certified": true,
+                                "capacityOfCertifiedCell": 2
+                              },
+                              "attributes": {
+                                "LOCATION_ATTRIBUTE": [
+                                  "DO"
+                                ],
+                                "SECURITY": [
+                                  "CAT_B"
+                                ]
+                              },
+                              "isResidential": true,
+                              "key": "MDI-Z-1-002"
+                            }
+                          ],
+                          "orderWithinParentLocation": 99,
+                          "active": true,
+                          "residentialHousingType": "NORMAL_ACCOMMODATION",
+                          "capacity": {
+                            "capacity": 2,
+                            "operationalCapacity": 2
+                          },
+                          "certification": {
+                            "certified": true,
+                            "capacityOfCertifiedCell": 2
+                          },
+                          "attributes": {
+                            "LOCATION_ATTRIBUTE": [
+                              "DO"
+                            ],
+                            "SECURITY": [
+                              "CAT_B"
+                            ]
+                          },
+                          "isResidential": true,
+                          "key": "MDI-Z-1"
+                        }
+                      ],
+                      "orderWithinParentLocation": 99,
+                      "active": true,
+                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "capacity": {
+                        "capacity": 2,
+                        "operationalCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      },
+                      "attributes": {
+                        "SECURITY": [
+                          "CAT_B"
+                        ],
+                        "LOCATION_ATTRIBUTE": [
+                          "DO"
+                        ]
+                      },
+                      "isResidential": true,
+                      "key": "MDI-Z"
+                    }
+                        """,
+            false,
+          )
+      }
+    }
+  }
+
+  @DisplayName("GET /locations/prison/{prisonId}")
+  @Nested
+  inner class ViewLocationByPrisonTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/${location.prisonId}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/${location.prisonId}")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/${location.prisonId}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve details of a location`() {
+        webTestClient.get().uri("/locations/prison/${wing.prisonId}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             [
+                {
+                  "prisonId": "MDI",
+                  "code": "Z",
+                  "pathHierarchy": "Z",
+                  "locationType": "WING",
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "isResidential": true,
+                  "key": "MDI-Z"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "1",
+                  "pathHierarchy": "Z-1",
+                  "locationType": "LANDING",
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "isResidential": true,
+                  "key": "MDI-Z-1"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "001",
+                  "pathHierarchy": "Z-1-001",
+                  "locationType": "CELL",
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "isResidential": true,
+                  "key": "MDI-Z-1-001"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "002",
+                  "pathHierarchy": "Z-1-002",
+                  "locationType": "CELL",
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "isResidential": true,
+                  "key": "MDI-Z-1-002"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "isResidential": false,
+                  "key": "MDI-Z-VISIT"
+                }
+              ]
+          """,
+            false,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /locations")
   @Nested
   inner class ViewPagedLocationsTest {

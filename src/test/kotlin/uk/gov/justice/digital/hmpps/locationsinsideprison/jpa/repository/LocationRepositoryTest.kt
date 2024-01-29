@@ -77,14 +77,14 @@ class LocationRepositoryTest : TestBase() {
     TestTransaction.end()
     TestTransaction.start()
 
-    val cell2 = repository.findOneByPrisonIdAndPathHierarchy(cell002L2.prisonId, cell002L2.getLocationPathHierarchy()) ?: throw Exception("Location not found")
+    val cell2 = repository.findOneByPrisonIdAndPathHierarchy(cell002L2.prisonId, cell002L2.getPathHierarchy()) ?: throw Exception("Location not found")
     assertThat(cell2.findTopLevelLocation()).isEqualTo(wing)
-    assertThat(cell2.getLocationPathHierarchy()).isEqualTo("A-2-001")
+    assertThat(cell2.getPathHierarchy()).isEqualTo("A-2-001")
     cell2 as ResidentialLocation
     assertThat(cell2.capacity?.operationalCapacity).isEqualTo(2)
     assertThat(cell2.certification?.capacityOfCertifiedCell).isEqualTo(2)
 
-    val landing1Retrieved = repository.findOneByPrisonIdAndPathHierarchy(landing1.prisonId, landing1.getLocationPathHierarchy()) ?: throw Exception("Location not found")
+    val landing1Retrieved = repository.findOneByPrisonIdAndPathHierarchy(landing1.prisonId, landing1.getPathHierarchy()) ?: throw Exception("Location not found")
     cell2.setCode("003")
     cell2.setParent(landing1Retrieved)
 
@@ -95,7 +95,7 @@ class LocationRepositoryTest : TestBase() {
     TestTransaction.end()
     TestTransaction.start()
 
-    val cell3 = repository.findOneByPrisonIdAndPathHierarchy(cell2.prisonId, cell2.getLocationPathHierarchy()) ?: throw Exception("Location not found")
+    val cell3 = repository.findOneByPrisonIdAndPathHierarchy(cell2.prisonId, cell2.getPathHierarchy()) ?: throw Exception("Location not found")
     assertThat(cell3.findTopLevelLocation()).isEqualTo(wing)
     assertThat(cell3.getParent()?.getCode()).isEqualTo(landing1.getCode())
 
@@ -106,8 +106,8 @@ class LocationRepositoryTest : TestBase() {
     TestTransaction.end()
     TestTransaction.start()
 
-    val cell3Renamed = repository.findOneByPrisonIdAndPathHierarchy(cell3.prisonId, cell3.getLocationPathHierarchy()) ?: throw Exception("Location not found")
-    assertThat(cell3Renamed.getLocationPathHierarchy()).isEqualTo("T-1-003")
+    val cell3Renamed = repository.findOneByPrisonIdAndPathHierarchy(cell3.prisonId, cell3.getPathHierarchy()) ?: throw Exception("Location not found")
+    assertThat(cell3Renamed.getPathHierarchy()).isEqualTo("T-1-003")
   }
 
   private fun buildResLocation(

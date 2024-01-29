@@ -124,6 +124,40 @@ class LocationResource(
     }
   }
 
+  @GetMapping("/prison/{prisonId}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return locations for this prison",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns locations",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getLocationForPrison(
+    @Schema(description = "Prison Id", example = "MDI", required = true)
+    @PathVariable
+    prisonId: String,
+  ): List<LocationDTO> = locationService.getLocationByPrison(prisonId)
+
   @GetMapping("")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @ResponseStatus(HttpStatus.OK)

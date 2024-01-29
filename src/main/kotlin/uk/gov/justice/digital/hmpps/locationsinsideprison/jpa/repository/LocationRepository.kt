@@ -7,5 +7,7 @@ import java.util.UUID
 
 @Repository
 interface LocationRepository : JpaRepository<Location, UUID> {
+  fun findAllByPrisonIdOrderByPathHierarchy(prisonId: String): List<Location>
+
   fun findOneByPrisonIdAndPathHierarchy(prisonId: String, pathHierarchy: String): Location?
 }
