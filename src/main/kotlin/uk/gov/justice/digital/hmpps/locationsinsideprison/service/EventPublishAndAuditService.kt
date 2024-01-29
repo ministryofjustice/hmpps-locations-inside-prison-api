@@ -21,16 +21,18 @@ class EventPublishAndAuditService(
     auditData: Any,
     source: InformationSource = InformationSource.DPS,
   ) {
-    snsService.publishDomainEvent(
-      event,
-      "${locationDetail.getKey()} ${event.description}",
-      occurredAt = LocalDateTime.now(clock),
-      AdditionalInformation(
-        id = locationDetail.id,
-        key = locationDetail.getKey(),
-        source = source,
-      ),
-    )
+    locationDetail.getLocationAndSubLocations().forEach {
+      snsService.publishDomainEvent(
+        event,
+        "${it.getKey()} ${event.description}",
+        occurredAt = LocalDateTime.now(clock),
+        AdditionalInformation(
+          id = it.id,
+          key = it.getKey(),
+          source = source,
+        ),
+      )
+    }
 
     auditEvent(
       event.auditType,

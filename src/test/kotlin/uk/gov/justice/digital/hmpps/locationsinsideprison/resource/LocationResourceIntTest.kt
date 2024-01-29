@@ -921,7 +921,25 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "pathHierarchy": "Z-2",
               "locationType": "LANDING",
               "active": true,
-              "key": "MDI-Z-2"
+              "key": "MDI-Z-2",
+              "childLocations": [
+                {
+                  "prisonId": "MDI",
+                  "code": "001",
+                  "pathHierarchy": "Z-2-001",
+                  "locationType": "CELL",
+                  "active": true,
+                  "key": "MDI-Z-2-001"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "002",
+                  "pathHierarchy": "Z-2-002",
+                  "locationType": "CELL",
+                  "active": true,
+                  "key": "MDI-Z-2-002"
+                }
+              ]
             }
           """,
             false,
