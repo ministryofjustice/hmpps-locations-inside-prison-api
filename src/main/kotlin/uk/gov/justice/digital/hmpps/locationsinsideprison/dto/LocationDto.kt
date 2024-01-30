@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Size
@@ -90,6 +91,21 @@ data class Location(
   @Schema(description = "Indicates if the location is a residential location", example = "true", required = true)
   fun isResidential(): Boolean {
     return residentialHousingType != null
+  }
+
+  @JsonIgnore
+  fun getLocationAndSubLocations(): List<Location> {
+    val locations = mutableListOf<Location>()
+
+    fun traverse(location: Location) {
+      locations.add(location)
+      location.childLocations?.forEach { childLocation ->
+        traverse(childLocation)
+      }
+    }
+
+    traverse(this)
+    return locations
   }
 }
 
