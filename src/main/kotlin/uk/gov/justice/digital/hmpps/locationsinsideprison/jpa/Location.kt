@@ -223,15 +223,19 @@ abstract class Location(
   override fun toString(): String {
     return getKey()
   }
+
+  fun isCell() = locationType == LocationType.CELL
+  fun isWingLandingSpur() = locationType in listOf(LocationType.WING, LocationType.LANDING, LocationType.SPUR)
 }
 
 enum class LocationType(
   val description: String,
 ) {
   WING("Wing"),
+  SPUR("Spur"),
   LANDING("Landing"),
   CELL("Cell"),
-  SPUR("Spur"),
+
   OFFICE("Other"),
   ADMINISTRATION_AREA("Administration Area"),
   RESIDENTIAL_UNIT("Residential Unit"),

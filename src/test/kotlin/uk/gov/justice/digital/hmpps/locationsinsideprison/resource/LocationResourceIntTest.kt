@@ -56,10 +56,32 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   fun setUp() {
     repository.deleteAll()
 
-    wing = repository.save(buildResidentialLocation(pathHierarchy = "Z", locationType = LocationType.WING))
-    val landing = repository.save(buildResidentialLocation(pathHierarchy = "Z-1", locationType = LocationType.LANDING))
-    val cell1 = repository.save(buildResidentialLocation(pathHierarchy = "Z-1-001"))
-    val cell2 = repository.save(buildResidentialLocation(pathHierarchy = "Z-1-002"))
+    wing = repository.save(
+      buildResidentialLocation(
+        pathHierarchy = "Z",
+        locationType = LocationType.WING,
+      ),
+    )
+    val landing = repository.save(
+      buildResidentialLocation(
+        pathHierarchy = "Z-1",
+        locationType = LocationType.LANDING,
+      ),
+    )
+    val cell1 = repository.save(
+      buildResidentialLocation(
+        pathHierarchy = "Z-1-001",
+        capacity = Capacity(capacity = 2, operationalCapacity = 2),
+        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+      ),
+    )
+    val cell2 = repository.save(
+      buildResidentialLocation(
+        pathHierarchy = "Z-1-002",
+        capacity = Capacity(capacity = 2, operationalCapacity = 2),
+        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+      ),
+    )
     visitRoom = repository.save(buildNonResidentialLocation(pathHierarchy = "VISIT", locationType = LocationType.VISITS))
     wing.addChildLocation(visitRoom).addChildLocation(landing.addChildLocation(cell1).addChildLocation(cell2))
     repository.save(wing)
@@ -71,6 +93,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     prisonId: String = "MDI",
     pathHierarchy: String,
     locationType: LocationType = LocationType.CELL,
+    capacity: Capacity? = null,
+    certification: Certification? = null,
   ): ResidentialLocation {
     val residentialLocationJPA = ResidentialLocationJPA(
       prisonId = prisonId,
@@ -90,8 +114,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       comments = null,
       orderWithinParentLocation = 99,
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-      capacity = Capacity(capacity = 2, operationalCapacity = 2),
-      certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+      capacity = capacity,
+      certification = certification,
       id = null,
     )
     residentialLocationJPA.addAttribute(ResidentialAttributeValue.DO)
@@ -177,6 +201,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "WING",
               "active": true,
               "key": "MDI-Z",
+              "capacity": {
+                "capacity": 4,
+                "operationalCapacity": 4
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 4
+              },
               "childLocations": [
                 {
                   "prisonId": "MDI",
@@ -194,6 +225,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "active": true,
                   "key": "MDI-Z-1",
+                  "capacity": {
+                    "capacity": 4,
+                    "operationalCapacity": 4
+                  },
+                  "certification": {
+                    "capacityOfCertifiedCell": 4
+                  },
                   "childLocations": [
                     {
                       "prisonId": "MDI",
@@ -201,7 +239,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "pathHierarchy": "Z-1-001",
                       "locationType": "CELL",
                       "active": true,
-                      "key": "MDI-Z-1-001"
+                      "key": "MDI-Z-1-001",
+                      "capacity": {
+                        "capacity": 2,
+                        "operationalCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
                     },
                     {
                       "prisonId": "MDI",
@@ -209,7 +255,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
                       "active": true,
-                      "key": "MDI-Z-1-002"
+                      "key": "MDI-Z-1-002",
+                      "capacity": {
+                        "capacity": 2,
+                        "operationalCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
                     }
                   ]
                 }
@@ -353,12 +407,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           "active": true,
                           "residentialHousingType": "NORMAL_ACCOMMODATION",
                           "capacity": {
-                            "capacity": 2,
-                            "operationalCapacity": 2
+                            "capacity": 4,
+                            "operationalCapacity": 4
                           },
                           "certification": {
-                            "certified": true,
-                            "capacityOfCertifiedCell": 2
+                            "certified": false,
+                            "capacityOfCertifiedCell": 4
                           },
                           "attributes": {
                             "LOCATION_ATTRIBUTE": [
@@ -376,12 +430,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "active": true,
                       "residentialHousingType": "NORMAL_ACCOMMODATION",
                       "capacity": {
-                        "capacity": 2,
-                        "operationalCapacity": 2
+                        "capacity": 4,
+                        "operationalCapacity": 4
                       },
                       "certification": {
-                        "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certified": false,
+                        "capacityOfCertifiedCell": 4
                       },
                       "attributes": {
                         "SECURITY": [
@@ -825,8 +879,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     )
 
     val changeCapacity = PatchLocationRequest(
-      capacity = CapacityDTO(capacity = 4, operationalCapacity = 10),
-      certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 5),
+      capacity = CapacityDTO(capacity = 3, operationalCapacity = 3),
+      certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 3),
     )
 
     val changeAttribute = PatchLocationRequest(
@@ -948,7 +1002,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update details of a locations capacity`() {
-        webTestClient.patch().uri("/locations/${landing1.id}")
+        webTestClient.patch().uri("/locations/${location.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeCapacity))
@@ -957,21 +1011,101 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             // language=json
             """
+               {
+                "prisonId": "MDI",
+                "code": "001",
+                "pathHierarchy": "Z-1-001",
+                "locationType": "CELL",
+                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "capacity": {
+                  "capacity": 3,
+                  "operationalCapacity": 3
+                },
+                "certification": {
+                  "certified": true,
+                  "capacityOfCertifiedCell": 3
+                },
+                "attributes": {
+                  "LOCATION_ATTRIBUTE": [
+                    "DO"
+                  ],
+                  "SECURITY": [
+                    "CAT_B"
+                  ]
+                },
+                "isResidential": true,
+                "key": "MDI-Z-1-001"
+              }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/${wing.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
              {
-              "prisonId": "MDI",
-              "code": "1",
-              "pathHierarchy": "Z-1",
-              "locationType": "LANDING",
-              "active": true,
-              "key": "MDI-Z-1",
+              "pathHierarchy": "Z",
+              "locationType": "WING",
+              "key": "MDI-Z",
               "capacity": {
-                "capacity": 4,
-                "operationalCapacity": 10
+                "capacity": 5,
+                "operationalCapacity": 5
               },
               "certification": {
-                "certified": true,
                 "capacityOfCertifiedCell": 5
-              }
+              },
+              "childLocations": [
+                {
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "key": "MDI-Z-VISIT"
+                },
+                {
+                  "code": "1",
+                  "pathHierarchy": "Z-1",
+                  "locationType": "LANDING",
+                  "key": "MDI-Z-1",
+                  "capacity": {
+                    "capacity": 5,
+                    "operationalCapacity": 5
+                  },
+                  "certification": {
+                    "capacityOfCertifiedCell": 5
+                  },
+                  "childLocations": [
+                    {
+                      "pathHierarchy": "Z-1-001",
+                      "locationType": "CELL",
+                      "key": "MDI-Z-1-001",
+                      "capacity": {
+                        "capacity": 3,
+                        "operationalCapacity": 3
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 3
+                      }
+                    },
+                    {
+                      "pathHierarchy": "Z-1-002",
+                      "locationType": "CELL",
+                      "key": "MDI-Z-1-002",
+                      "capacity": {
+                        "capacity": 2,
+                        "operationalCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
+                    }
+                  ]
+                }
+              ]
             }
           """,
             false,
@@ -998,8 +1132,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "key": "MDI-Z-1",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "capacity": {
-                "capacity": 2,
-                "operationalCapacity": 2
+                "capacity": 4,
+                "operationalCapacity": 4
               },
               "attributes": {
                 "LOCATION_ATTRIBUTE": [
