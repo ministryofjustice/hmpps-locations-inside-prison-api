@@ -13,6 +13,8 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
 @Entity
@@ -72,6 +74,23 @@ class ResidentialLocation(
     attributes.add(ResidentialAttribute(location = this, attributeType = attribute.type, attributeValue = attribute))
   }
 
+  fun getOperationalCapacity(): Int {
+    return cellLocations()
+      .sumOf { it.capacity?.operationalCapacity ?: 0 }
+  }
+
+  fun getMaxCapacity(): Int {
+    return cellLocations()
+      .sumOf { it.capacity?.capacity ?: 0 }
+  }
+
+  fun getBaselineCapacity(): Int {
+    return cellLocations()
+      .sumOf { it.certification?.capacityOfCertifiedCell ?: 0 }
+  }
+
+  private fun cellLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>().filter { it.isCell() }
+
   override fun updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): ResidentialLocation {
     super.updateWith(patch, updatedBy, clock)
     this.residentialHousingType = patch.residentialHousingType ?: this.residentialHousingType
@@ -89,8 +108,22 @@ class ResidentialLocation(
 
   override fun toDto(includeChildren: Boolean): LocationDto {
     return super.toDto(includeChildren).copy(
-      capacity = capacity?.toDto(),
-      certification = certification?.toDto(),
+      capacity = if (isCell()) {
+        capacity?.toDto()
+      } else {
+        CapacityDto(
+          capacity = getMaxCapacity(),
+          operationalCapacity = getOperationalCapacity(),
+        )
+      },
+      certification = if (isCell()) {
+        certification?.toDto()
+      } else {
+        CertificationDto(
+          certified = false,
+          capacityOfCertifiedCell = getBaselineCapacity(),
+        )
+      },
       residentialHousingType = residentialHousingType,
       attributes = attributes.groupBy { it.attributeType }.mapValues { type -> type.value.map { it.attributeValue } },
     )
