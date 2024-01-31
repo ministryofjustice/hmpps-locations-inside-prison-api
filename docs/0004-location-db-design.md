@@ -10,7 +10,7 @@ Date: 2024-01-24
 Accepted
 
 ## Context
-This illustrates the entites that will be held in the database for locations inside prison service
+This illustrates the entities that will be held in the database for locations inside prison service
 
 ```mermaid
 ---
@@ -18,64 +18,59 @@ title: Locations Inside Prison Database ER Diagram
 ---
 
 classDiagram
-direction TB
-    location "1" --> "0..*" location : parent_id
-    location "1" --> "0..1" capacity : capacity_id
-    location "1" --> "0..1" certification : certification_id
-    location "1" --> "0..*" location_attribute : location_id
-    location "1" --> "0..*" location_usage : location_id
-    
-    class location {
-        uuid id PK
-        string location_type
-        string prison_id
-        string code
-        string path_hierarchy
-        uuid parent_id FK
-        string description
-        string comments
-        int order_within_parent_location
-        string residential_housing_type
-        long certification_id FK
-        long capacity_id FK
-        boolean active
-        datetime deactivated_date
-        string deactivated_reason
-        datetime reactivated_date
-        datetime when_created
-        datetime when_updated
-        string updated_by
-    }
-    
+    direction BT
     class capacity {
-        long id PK
-        int capacity
-        int operationalCapacity
+        integer capacity
+        integer operational_capacity
+        integer id
     }
-    
     class certification {
-        long id PK
         boolean certified
-        int capacityOfCertifiedCell
+        integer capacity_of_certified_cell
+        integer id
     }
-    
-    class location_attribute {
-        long id PK
-        uuid location_id FK
-        string usage_type
-        string usage_value
+    class location {
+        varchar(3) prison_id
+        varchar(150) path_hierarchy
+        varchar(40) code
+        varchar(30) location_type
+        uuid parent_id
+        varchar(80) description
+        varchar(255) comments
+        integer order_within_parent_location
+        varchar(30) residential_housing_type
+        bigint certification_id
+        bigint capacity_id
+        boolean active
+        date deactivated_date
+        varchar(30) deactivated_reason
+        date reactivated_date
+        timestamp when_created
+        timestamp when_updated
+        varchar(80) updated_by
+        uuid id
     }
-    
-    class location_usage {
-        long id PK
-        uuid location_id FK
-        string usage_type
-        int capacity
-        int sequence
+    class locations
+    class non_residential_usage {
+        uuid location_id
+        varchar(60) usage_type
+        integer capacity
+        integer sequence
+        integer id
     }
-```
+    class residential_attribute {
+        uuid location_id
+        varchar(60) attribute_type
+        varchar(60) attribute_value
+        integer id
+    }
 
-[![ER Diagram](schema.png)](schema.png)
+    location  -->  capacity : capacity_id
+    location  -->  certification : certification_id
+    location  -->  location : parent_id
+    non_residential_usage  -->  location : location_id
+    residential_attribute  -->  location : location_id
+```
 
 ### NOMIS to DPS type translations
 
@@ -267,7 +262,167 @@ direction TB
 | SUP_LVL_TYPE | 	Y	        | Yes                                    | XXX  |
 | SUP_LVL_TYPE | 	Z	        | Unclass                                | XXX  |
 
+### Entity Diagram
 
+```mermaid
+---
+title: Locations Inside Prison Class Diagram
+---
+
+classDiagram
+direction BT
+class Capacity {
+  + toDto() Capacity
+   Int operationalCapacity
+   Long? id
+   Int capacity
+}
+class Certification {
+  + toDto() Certification
+   Int capacityOfCertifiedCell
+   Long? id
+   Boolean certified
+}
+class Companion {
+   Logger log
+}
+class DeactivatedReason {
+<<enumeration>>
+  + valueOf(String) DeactivatedReason
+  + values() DeactivatedReason[]
+   String description
+   EnumEntries~DeactivatedReason~ entries
+}
+class Location {
+  + toString() String
+  + findTopLevelLocation() Location
+  + addChildLocation(Location) Location
+  + reactivate(String, Clock) Unit
+  - removeChildLocation(Location) Location
+  + hashCode() Int
+  - removeParent() Unit
+  + deactivate(DeactivatedReason, String, Clock) Unit
+  + findAllLeafLocations() List~Location~
+  + equals(Object?) Boolean
+  - updateHierarchicalPath() Unit
+  + toDto(Boolean) Location
+  + updateWith(PatchLocationRequest, String, Clock) Location
+   String? description
+   String pathHierarchy
+   String prisonId
+   String updatedBy
+   String? comments
+   LocalDate? deactivatedDate
+   LocationType locationType
+   String code
+   LocalDateTime whenCreated
+   Boolean active
+   DeactivatedReason? deactivatedReason
+   UUID? id
+   List~Location~ childLocations
+   Location? parent
+   Boolean cell
+   String hierarchicalPath
+   LocalDateTime whenUpdated
+   Boolean wingLandingSpur
+   Int? orderWithinParentLocation
+   String key
+   LocalDate? reactivatedDate
+}
+class LocationType {
+<<enumeration>>
+  + valueOf(String) LocationType
+  + values() LocationType[]
+   String description
+   EnumEntries~LocationType~ entries
+}
+class NonResidentialLocation {
+  + addUsage(NonResidentialUsageType, Int?, Int) Unit
+  + toDto(Boolean) Location
+  + updateWith(PatchLocationRequest, String, Clock) NonResidentialLocation
+}
+class NonResidentialUsage {
+  + toDto() NonResidentialUsageDto
+  + hashCode() Int
+  + equals(Object?) Boolean
+   NonResidentialUsageType usageType
+   Long? id
+   Int sequence
+   Location location
+   Int? capacity
+}
+class NonResidentialUsageType {
+<<enumeration>>
+  + valueOf(String) NonResidentialUsageType
+  + values() NonResidentialUsageType[]
+   String description
+   EnumEntries~NonResidentialUsageType~ entries
+}
+class ResidentialAttribute {
+  + equals(Object?) Boolean
+  + hashCode() Int
+   ResidentialAttributeType attributeType
+   Long? id
+   ResidentialAttributeValue attributeValue
+   Location location
+}
+class ResidentialAttributeType {
+<<enumeration>>
+  + valueOf(String) ResidentialAttributeType
+  + values() ResidentialAttributeType[]
+   String description
+   EnumEntries~ResidentialAttributeType~ entries
+}
+class ResidentialAttributeValue {
+<<enumeration>>
+  + values() ResidentialAttributeValue[]
+  + valueOf(String) ResidentialAttributeValue
+   String description
+   ResidentialAttributeType type
+   EnumEntries~ResidentialAttributeValue~ entries
+}
+class ResidentialHousingType {
+<<enumeration>>
+  + values() ResidentialHousingType[]
+  + valueOf(String) ResidentialHousingType
+   String description
+   EnumEntries~ResidentialHousingType~ entries
+}
+class ResidentialLocation {
+  + updateWith(PatchLocationRequest, String, Clock) ResidentialLocation
+  + addAttribute(ResidentialAttributeValue) Unit
+  + toDto(Boolean) Location
+  - cellLocations() List~ResidentialLocation~
+   ResidentialHousingType residentialHousingType
+   Certification? certification
+   Int baselineCapacity
+   Int operationalCapacity
+   Capacity? capacity
+   Int maxCapacity
+}
+
+Location  -->  Companion 
+Location "1" *--> "deactivatedReason 1" DeactivatedReason 
+Location "1" *--> "locationType 1" LocationType 
+NonResidentialLocation  -->  Location 
+NonResidentialLocation  ..>  Location : «create»
+NonResidentialLocation "1" *--> "nonResidentialUsages *" NonResidentialUsage 
+NonResidentialLocation  ..>  NonResidentialUsage : «create»
+NonResidentialUsage "1" *--> "location 1" Location 
+NonResidentialUsage "1" *--> "usageType 1" NonResidentialUsageType 
+ResidentialAttribute "1" *--> "location 1" Location 
+ResidentialAttribute "1" *--> "attributeType 1" ResidentialAttributeType 
+ResidentialAttribute "1" *--> "attributeValue 1" ResidentialAttributeValue 
+ResidentialAttributeValue "1" *--> "type 1" ResidentialAttributeType 
+ResidentialLocation "1" *--> "capacity 1" Capacity 
+ResidentialLocation "1" *--> "certification 1" Certification 
+ResidentialLocation  -->  Location 
+ResidentialLocation  ..>  Location : «create»
+ResidentialLocation "1" *--> "attributes *" ResidentialAttribute 
+ResidentialLocation  ..>  ResidentialAttribute : «create»
+ResidentialLocation "1" *--> "residentialHousingType 1" ResidentialHousingType 
+
+```
 
 
 
