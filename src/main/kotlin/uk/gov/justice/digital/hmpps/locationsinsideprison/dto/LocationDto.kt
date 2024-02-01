@@ -37,20 +37,26 @@ data class Location(
   @Schema(description = "Location Type", example = "CELL", required = true)
   val locationType: LocationType,
 
-  @Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
-  val parentId: UUID?,
-
-  @Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
-  val topLevelId: UUID,
-
-  @Schema(description = "Child Locations", required = false)
-  val childLocations: List<Location>? = null,
+  @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
+  var residentialHousingType: ResidentialHousingType? = null,
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   val description: String? = null,
 
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   val comments: String? = null,
+
+  @Schema(description = "Capacity details of the location", required = false)
+  var capacity: Capacity? = null,
+
+  @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
+  var certification: Certification? = null,
+
+  @Schema(description = "Location Attributes", required = false)
+  var attributes: Map<ResidentialAttributeType, List<ResidentialAttributeValue>>? = null,
+
+  @Schema(description = "Location Usage", required = false)
+  var usage: List<NonResidentialUsageDto>? = null,
 
   @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
   val orderWithinParentLocation: Int? = null,
@@ -67,21 +73,14 @@ data class Location(
   @Schema(description = "Date the location was reactivated", example = "2023-01-24", required = false)
   var reactivatedDate: LocalDate? = null,
 
-  @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
-  var residentialHousingType: ResidentialHousingType? = null,
+  @Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
+  val topLevelId: UUID,
 
-  @Schema(description = "Capacity details of the location", required = false)
-  var capacity: Capacity? = null,
+  @Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
+  val parentId: UUID?,
 
-  @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
-  var certification: Certification? = null,
-
-  @Schema(description = "Location Attributes", required = false)
-  var attributes: Map<ResidentialAttributeType, List<ResidentialAttributeValue>>? = null,
-
-  @Schema(description = "Location Usage", required = false)
-  var usage: List<NonResidentialUsageDto>? = null,
-
+  @Schema(description = "Child Locations", required = false)
+  val childLocations: List<Location>? = null,
 ) {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
   fun getKey(): String {
