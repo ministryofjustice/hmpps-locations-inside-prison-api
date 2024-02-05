@@ -268,7 +268,6 @@ enum class LocationType(
   VIDEO_LINK("Video Link"),
   ASSOCIATION("Association"),
 
-
   INTERNAL_GROUNDS("Internal Grounds"),
   INTERVIEW("Interview"),
   LOCATION("Location"),
@@ -295,4 +294,3 @@ enum class DeactivatedReason(
   OUT_OF_USE("Out of Use"),
   CELLS_RETURNING_TO_USE("Cells Returning to Use"),
 }
-
