@@ -148,7 +148,7 @@ class LocationRepositoryTest : TestBase() {
       deactivatedReason = null,
       id = null,
     )
-    location.addAttribute(ResidentialAttributeValue.UF_1)
+    location.addAttribute(ResidentialAttributeValue.AUDITABLE_CELL_BELL)
     return location
   }
 
