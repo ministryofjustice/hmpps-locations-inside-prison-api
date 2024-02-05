@@ -129,3 +129,32 @@ class ResidentialLocation(
     )
   }
 }
+
+enum class ResidentialLocationType(
+  val description: String,
+) {
+  WING("Wing"),
+  SPUR("Spur"),
+  LANDING("Landing"),
+  CELL("Cell"),
+  ROOM("Room"),
+  HOLDING_AREA("Holding Area"),
+  TIER("Tier"),
+  MOVEMENT_AREA("Movement Area"),
+  RESIDENTIAL_UNIT("Residential Unit"),
+  EXTERNAL_GROUNDS("External Grounds"),
+  HOLDING_CELL("Holding Cell"),
+  MEDICAL("Medical"),
+}
+
+enum class ResidentialHousingType(
+  val description: String,
+) {
+  NORMAL_ACCOMMODATION("Normal Accommodation"),
+  HEALTHCARE("Healthcare"),
+  HOLDING_CELL("Holding Cell"),
+  OTHER_USE("Other Use"),
+  RECEPTION("Reception"),
+  SEGREGATION("Segregation"),
+  SPECIALIST_CELL("Specialist Cell"),
+}

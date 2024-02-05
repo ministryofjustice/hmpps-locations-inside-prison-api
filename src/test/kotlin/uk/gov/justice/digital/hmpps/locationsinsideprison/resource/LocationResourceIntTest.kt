@@ -21,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
@@ -118,7 +119,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       certification = certification,
       id = null,
     )
-    residentialLocationJPA.addAttribute(ResidentialAttributeValue.DO)
+    residentialLocationJPA.addAttribute(ResidentialAttributeValue.DOUBLE_OCCUPANCY)
     residentialLocationJPA.addAttribute(ResidentialAttributeValue.CAT_B)
     return residentialLocationJPA
   }
@@ -366,7 +367,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                               },
                               "attributes": {
                                 "LOCATION_ATTRIBUTE": [
-                                  "DO"
+                                  "DOUBLE_OCCUPANCY"
                                 ],
                                 "SECURITY": [
                                   "CAT_B"
@@ -393,7 +394,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                               },
                               "attributes": {
                                 "LOCATION_ATTRIBUTE": [
-                                  "DO"
+                                  "DOUBLE_OCCUPANCY"
                                 ],
                                 "SECURITY": [
                                   "CAT_B"
@@ -416,7 +417,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           },
                           "attributes": {
                             "LOCATION_ATTRIBUTE": [
-                              "DO"
+                              "DOUBLE_OCCUPANCY"
                             ],
                             "SECURITY": [
                               "CAT_B"
@@ -442,7 +443,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           "CAT_B"
                         ],
                         "LOCATION_ATTRIBUTE": [
-                          "DO"
+                          "DOUBLE_OCCUPANCY"
                         ]
                       },
                       "isResidential": true,
@@ -885,10 +886,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
     val changeAttribute = PatchLocationRequest(
       attributes = mapOf(
-        ResidentialAttributeValue.SO.type to setOf(
-          ResidentialAttributeValue.SO,
+        ResidentialAttributeType.LOCATION_ATTRIBUTE to setOf(
+          ResidentialAttributeValue.SINGLE_OCCUPANCY,
         ),
-        ResidentialAttributeValue.CAT_C.type to setOf(
+        ResidentialAttributeType.SECURITY to setOf(
           ResidentialAttributeValue.CAT_C,
         ),
       ),
@@ -1027,7 +1028,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 },
                 "attributes": {
                   "LOCATION_ATTRIBUTE": [
-                    "DO"
+                    "DOUBLE_OCCUPANCY"
                   ],
                   "SECURITY": [
                     "CAT_B"
@@ -1137,8 +1138,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               },
               "attributes": {
                 "LOCATION_ATTRIBUTE": [
-                  "DO",
-                  "SO"
+                  "DOUBLE_OCCUPANCY",
+                  "SINGLE_OCCUPANCY"
                 ],
                 "SECURITY": [
                   "CAT_C",
