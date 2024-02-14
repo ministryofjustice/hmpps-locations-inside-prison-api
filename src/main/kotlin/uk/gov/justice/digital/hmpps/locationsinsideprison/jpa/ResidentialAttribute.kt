@@ -10,7 +10,6 @@ import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
 import org.hibernate.Hibernate
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationConstants
 
 @Entity
 class ResidentialAttribute(

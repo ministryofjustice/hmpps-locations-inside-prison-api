@@ -9,8 +9,14 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
-import org.springframework.web.bind.annotation.*
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.*
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 
 @RestController
 @Validated
@@ -19,8 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.*
   name = "Locations",
   description = "Returns location constants",
 )
-class LocationConstants(
-) : EventBaseResource() {
+class LocationConstants() : EventBaseResource() {
 
   @GetMapping("/location-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -52,7 +57,6 @@ class LocationConstants(
     )
   }
 
-
   @GetMapping("/deactivated-reason")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
   @ResponseStatus(HttpStatus.OK)
@@ -82,7 +86,6 @@ class LocationConstants(
       "deactivatedReasons" to DeactivatedReason.entries.map { Constant(it.name, it.description) },
     )
   }
-
 
   @GetMapping("/residential-housing-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -114,7 +117,6 @@ class LocationConstants(
     )
   }
 
-
   @GetMapping("/non-residential-usage-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
   @ResponseStatus(HttpStatus.OK)
@@ -145,7 +147,6 @@ class LocationConstants(
     )
   }
 
-
   @GetMapping("/residential-attribute-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
   @ResponseStatus(HttpStatus.OK)
@@ -169,7 +170,6 @@ class LocationConstants(
       ),
     ],
   )
-
   @ResponseBody
   fun residentialAttributeTypeConstants(): Map<String, List<CompoundConstant>> {
     return mapOf(
@@ -179,11 +179,13 @@ class LocationConstants(
           it.name,
           it.description,
           ResidentialAttributeValue.entries
-            .filter{ it.type.toString() == residentialAttributeTypeName}
-            .map { Constant( it.name, it.description)})}
+            .filter { it.type.toString() == residentialAttributeTypeName }
+            .map { Constant(it.name, it.description) },
+        )
+      },
     )
   }
 
   data class Constant(val key: String, val description: String)
-  data class CompoundConstant(val key: String, val description: String, val values: List<Constant> )
+  data class CompoundConstant(val key: String, val description: String, val values: List<Constant>)
 }

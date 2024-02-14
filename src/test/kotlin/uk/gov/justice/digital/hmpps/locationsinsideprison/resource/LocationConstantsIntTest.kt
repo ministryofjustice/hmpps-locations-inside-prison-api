@@ -42,7 +42,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can retrieve location-type constants`() {
-
         webTestClient.get().uri("/constants/location-type")
           .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
           .exchange()
@@ -220,7 +219,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     }
   }
 
-
   @DisplayName("GET /constants/deactivated-reason")
   @Nested
   inner class ViewDeactivatedReasonsConstantsTest {
@@ -256,7 +254,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can retrieve deactivated-reasons constants`() {
-
         webTestClient.get().uri("/constants/deactivated-reason")
           .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
           .exchange()
@@ -322,7 +319,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     }
   }
 
-
   @DisplayName("GET /constants/residential-housing-type")
   @Nested
   inner class ViewResidentialHousingTypeConstantsTest {
@@ -358,7 +354,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can retrieve residential-housing-type constants`() {
-
         webTestClient.get().uri("/constants/residential-housing-type")
           .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
           .exchange()
@@ -404,7 +399,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     }
   }
 
-
   @DisplayName("GET /constants/non-residential-usage-type")
   @Nested
   inner class ViewNonResidentialUsageTypeConstantsTest {
@@ -440,7 +434,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can retrieve non-residential-usage-type constants`() {
-
         webTestClient.get().uri("/constants/non-residential-usage-type")
           .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
           .exchange()
@@ -490,7 +483,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     }
   }
 
-
   @DisplayName("GET /constants/residential-attribute-type")
   @Nested
   inner class ViewResidentialAttributeTypeConstantsTest {
@@ -526,7 +518,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can retrieve residential-attribute-type constants`() {
-
         webTestClient.get().uri("/constants/residential-attribute-type")
           .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
           .exchange()
