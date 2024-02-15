@@ -235,18 +235,21 @@ enum class LocationType(
   SPUR("Spur"),
   LANDING("Landing"),
   CELL("Cell"),
+  ROOM("Room"),
+  HOLDING_AREA("Holding Area"),
+  TIER("Tier"),
+  MOVEMENT_AREA("Movement Area"),
+  RESIDENTIAL_UNIT("Residential Unit"),
+  EXTERNAL_GROUNDS("External Grounds"),
+  HOLDING_CELL("Holding Cell"),
+  MEDICAL("Medical"),
 
+  GROUP("Group"),
   OFFICE("Other"),
   ADMINISTRATION_AREA("Administration Area"),
-  RESIDENTIAL_UNIT("Residential Unit"),
-  MEDICAL("Medical"),
-  HOLDING_CELL("Holding Cell"),
-  HOLDING_AREA("Holding Area"),
   BOOTH("Booth"),
   BOX("Box"),
-  ROOM("Room"),
   RETURN_TO_UNIT("Return to Unit"),
-
   CLASSROOM("Classroom"),
   TRAINING_AREA("Training Area"),
   TRAINING_ROOM("Training Room"),
@@ -264,12 +267,11 @@ enum class LocationType(
   VISITS("Visits"),
   VIDEO_LINK("Video Link"),
   ASSOCIATION("Association"),
-  EXTERNAL_GROUNDS("External Grounds"),
-  GROUP("Group"),
+
   INTERNAL_GROUNDS("Internal Grounds"),
   INTERVIEW("Interview"),
   LOCATION("Location"),
-  MOVEMENT_AREA("Movement Area"),
+
   POSITION("Position"),
   SHELF("Shelf"),
   STORE("Store"),
@@ -291,16 +293,4 @@ enum class DeactivatedReason(
   DAMAGED("Damaged"),
   OUT_OF_USE("Out of Use"),
   CELLS_RETURNING_TO_USE("Cells Returning to Use"),
-}
-
-enum class ResidentialHousingType(
-  val description: String,
-) {
-  HEALTHCARE("Healthcare"),
-  HOLDING_CELL("Holding Cell"),
-  NORMAL_ACCOMMODATION("Normal Accommodation"),
-  OTHER_USE("Other Use"),
-  RECEPTION("Reception"),
-  SEGREGATION("Segregation"),
-  SPECIALIST_CELL("Specialist Cell"),
 }
