@@ -1138,12 +1138,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               },
               "attributes": {
                 "LOCATION_ATTRIBUTE": [
-                  "DOUBLE_OCCUPANCY",
                   "SINGLE_OCCUPANCY"
                 ],
                 "SECURITY": [
-                  "CAT_C",
-                  "CAT_B"
+                  "CAT_C"
                 ]
               }
             }
