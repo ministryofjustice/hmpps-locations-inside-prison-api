@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import org.springframework.stereotype.Service
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.services.AdditionalInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.services.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.services.SnsService
@@ -16,29 +17,45 @@ class EventPublishAndAuditService(
 ) {
 
   fun publishEvent(
-    event: InternalLocationDomainEventType,
+    eventType: InternalLocationDomainEventType,
     locationDetail: LocationDTO,
     auditData: Any,
     source: InformationSource = InformationSource.DPS,
   ) {
+    traverseUp(eventType = eventType, location = locationDetail.parentLocation, source = source)
+
     locationDetail.getLocationAndSubLocations().forEach {
-      snsService.publishDomainEvent(
-        event,
-        "${it.getKey()} ${event.description}",
-        occurredAt = LocalDateTime.now(clock),
-        AdditionalInformation(
-          id = it.id,
-          key = it.getKey(),
-          source = source,
-        ),
-      )
+      publishEvent(event = eventType, location = it, source = source)
     }
 
     auditEvent(
-      event.auditType,
-      locationDetail.id.toString(),
-      auditData,
-      source,
+      auditType = eventType.auditType,
+      id = locationDetail.id.toString(),
+      auditData = auditData,
+      source = source,
+    )
+  }
+
+  private fun traverseUp(eventType: InternalLocationDomainEventType, location: Location?, source: InformationSource) {
+    if (location != null) {
+      publishEvent(event = eventType, location = location, source = source)
+      traverseUp(eventType = eventType, location = location.parentLocation, source = source)
+    }
+  }
+  private fun publishEvent(
+    event: InternalLocationDomainEventType,
+    location: Location,
+    source: InformationSource,
+  ) {
+    snsService.publishDomainEvent(
+      eventType = event,
+      description = "${location.getKey()} ${event.description}",
+      occurredAt = LocalDateTime.now(clock),
+      additionalInformation = AdditionalInformation(
+        id = location.id,
+        key = location.getKey(),
+        source = source,
+      ),
     )
   }
 
@@ -49,9 +66,9 @@ class EventPublishAndAuditService(
     source: InformationSource = InformationSource.DPS,
   ) {
     auditService.sendMessage(
-      auditType,
-      id,
-      auditData,
+      auditType = auditType,
+      id = id,
+      details = auditData,
     )
   }
 }

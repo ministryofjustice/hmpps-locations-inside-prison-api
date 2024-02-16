@@ -79,6 +79,9 @@ data class Location(
   @Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
   val parentId: UUID?,
 
+  @Schema(description = "Parent Location", required = false)
+  val parentLocation: Location? = null,
+
   @Schema(description = "Child Locations", required = false)
   val childLocations: List<Location>? = null,
 ) {
@@ -114,7 +117,27 @@ data class NonResidentialUsageDto(
   val usageType: NonResidentialUsageType,
   val capacity: Int? = null,
   val sequence: Int = 99,
-)
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as NonResidentialUsageDto
+
+    if (usageType != other.usageType) return false
+    if (capacity != other.capacity) return false
+    if (sequence != other.sequence) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = usageType.hashCode()
+    result = 31 * result + (capacity ?: 0)
+    result = 31 * result + sequence
+    return result
+  }
+}
 
 @Schema(description = "Capacity")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -126,6 +149,24 @@ data class Capacity(
 ) {
   fun toNewEntity(): CapacityJPA {
     return CapacityJPA(capacity = capacity, operationalCapacity = operationalCapacity)
+  }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as Capacity
+
+    if (capacity != other.capacity) return false
+    if (operationalCapacity != other.operationalCapacity) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = capacity
+    result = 31 * result + operationalCapacity
+    return result
   }
 }
 
@@ -139,6 +180,24 @@ data class Certification(
 ) {
   fun toNewEntity(): CertificationJPA {
     return CertificationJPA(certified = certified, capacityOfCertifiedCell = capacityOfCertifiedCell)
+  }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as Certification
+
+    if (certified != other.certified) return false
+    if (capacityOfCertifiedCell != other.capacityOfCertifiedCell) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = certified.hashCode()
+    result = 31 * result + capacityOfCertifiedCell
+    return result
   }
 }
 

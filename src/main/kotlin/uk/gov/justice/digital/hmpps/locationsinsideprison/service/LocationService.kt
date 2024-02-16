@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialL
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
@@ -21,6 +22,7 @@ import java.time.Clock
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
+
 @Service
 @Transactional(readOnly = true)
 class LocationService(
@@ -38,9 +40,10 @@ class LocationService(
     return toDto
   }
 
-  fun getLocationByPrison(prisonId: String): List<LocationDTO> = locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId).map {
-    it.toDto()
-  }
+  fun getLocationByPrison(prisonId: String): List<LocationDTO> =
+    locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId).map {
+      it.toDto()
+    }
 
   fun getLocationByKey(key: String, includeChildren: Boolean = false): LocationDTO? {
     if (!key.contains("-")) throw LocationNotFoundException(key)
@@ -55,11 +58,14 @@ class LocationService(
 
   @Transactional
   fun createResidentialLocation(createResidentialLocationRequest: CreateResidentialLocationRequest): LocationDTO {
-    val locationToCreate = createResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
+    val locationToCreate =
+      createResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
 
     createResidentialLocationRequest.parentId?.let {
       if (it == locationToCreate.id) throw IllegalArgumentException("Cannot set parent to self")
-      locationToCreate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
+      locationToCreate.setParent(
+        locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()),
+      )
     }
 
     val location = locationRepository.save(locationToCreate).toDto()
@@ -80,11 +86,14 @@ class LocationService(
 
   @Transactional
   fun createNonResidentialLocation(createNonResidentialLocationRequest: CreateNonResidentialLocationRequest): LocationDTO {
-    val locationToCreate = createNonResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
+    val locationToCreate =
+      createNonResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
 
     createNonResidentialLocationRequest.parentId?.let {
       if (it == locationToCreate.id) throw IllegalArgumentException("Cannot set parent to self")
-      locationToCreate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
+      locationToCreate.setParent(
+        locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()),
+      )
     }
 
     val location = locationRepository.save(locationToCreate).toDto()
@@ -108,12 +117,21 @@ class LocationService(
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val hierarchyChanged = patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode() ||
-      patchLocationRequest.parentId != null && patchLocationRequest.parentId != locationToUpdate.getParent()?.id
+    val hierarchyChanged =
+      patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode() ||
+        patchLocationRequest.parentId != null && patchLocationRequest.parentId != locationToUpdate.getParent()?.id
+
+    val cascadeUp = locationToUpdate is ResidentialLocation &&
+      (
+        (patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.certification?.toDto()) ||
+          (patchLocationRequest.capacity != null && patchLocationRequest.capacity != locationToUpdate.capacity?.toDto())
+        )
 
     patchLocationRequest.parentId?.let {
       if (it == id) throw IllegalArgumentException("Cannot set parent to self")
-      locationToUpdate.setParent(locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()))
+      locationToUpdate.setParent(
+        locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()),
+      )
     }
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
@@ -129,7 +147,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto(includeChildren = hierarchyChanged)
+    return locationToUpdate.toDto(includeChildren = hierarchyChanged, includeParent = hierarchyChanged || cascadeUp)
   }
 
   @Transactional

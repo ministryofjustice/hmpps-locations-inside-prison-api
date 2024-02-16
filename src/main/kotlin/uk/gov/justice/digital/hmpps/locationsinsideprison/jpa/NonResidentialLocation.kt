@@ -56,29 +56,31 @@ class NonResidentialLocation(
   updatedBy = updatedBy,
 ) {
 
-  fun addUsage(usageType: NonResidentialUsageType, capacity: Int? = null, sequence: Int = 99) {
+  fun addUsage(usageType: NonResidentialUsageType, capacity: Int? = null, sequence: Int = 99): NonResidentialUsage {
     val existingUsage = nonResidentialUsages.find { it.usageType == usageType }
     if (existingUsage != null) {
       existingUsage.capacity = capacity
       existingUsage.sequence = sequence
+      return existingUsage
     } else {
-      nonResidentialUsages.add(NonResidentialUsage(location = this, usageType = usageType, capacity = capacity, sequence = sequence))
+      val nonResidentialUsage =
+        NonResidentialUsage(location = this, usageType = usageType, capacity = capacity, sequence = sequence)
+      nonResidentialUsages.add(nonResidentialUsage)
+      return nonResidentialUsage
     }
   }
 
-  override fun toDto(includeChildren: Boolean): LocationDto {
-    return super.toDto(includeChildren).copy(
+  override fun toDto(includeChildren: Boolean, includeParent: Boolean): LocationDto {
+    return super.toDto(includeChildren = includeChildren, includeParent = includeParent).copy(
       usage = nonResidentialUsages.map { it.toDto() },
     )
   }
 
   override fun updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): NonResidentialLocation {
     super.updateWith(patch, updatedBy, clock)
-    if (patch.usage != null) {
-      patch.usage!!.map { nonResUsage ->
-        this.addUsage(nonResUsage.usageType, nonResUsage.capacity, nonResUsage.sequence)
-      }
-    }
+    this.nonResidentialUsages = patch.usage?.map { nonResUsage ->
+      this.addUsage(nonResUsage.usageType, nonResUsage.capacity, nonResUsage.sequence)
+    }?.toMutableSet() ?: this.nonResidentialUsages
     return this
   }
 }

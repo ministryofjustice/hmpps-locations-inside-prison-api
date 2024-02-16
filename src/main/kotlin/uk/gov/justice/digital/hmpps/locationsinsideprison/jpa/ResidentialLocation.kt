@@ -70,8 +70,10 @@ class ResidentialLocation(
   updatedBy = updatedBy,
 ) {
 
-  fun addAttribute(attribute: ResidentialAttributeValue) {
-    attributes.add(ResidentialAttribute(location = this, attributeType = attribute.type, attributeValue = attribute))
+  fun addAttribute(attribute: ResidentialAttributeValue): ResidentialAttribute {
+    val residentialAttribute = ResidentialAttribute(location = this, attributeType = attribute.type, attributeValue = attribute)
+    attributes.add(residentialAttribute)
+    return residentialAttribute
   }
 
   fun getOperationalCapacity(): Int {
@@ -96,18 +98,16 @@ class ResidentialLocation(
     this.residentialHousingType = patch.residentialHousingType ?: this.residentialHousingType
     this.capacity = patch.capacity?.toNewEntity() ?: this.capacity
     this.certification = patch.certification?.toNewEntity() ?: this.certification
-    if (patch.attributes != null) {
-      patch.attributes!!.map { attributeGroup ->
-        attributeGroup.value.map { attribute ->
-          this.addAttribute(attribute)
-        }
+    this.attributes = patch.attributes?.map { attributeGroup ->
+      attributeGroup.value.map { attribute ->
+        this.addAttribute(attribute)
       }
-    }
+    }?.flatten()?.toMutableSet() ?: this.attributes
     return this
   }
 
-  override fun toDto(includeChildren: Boolean): LocationDto {
-    return super.toDto(includeChildren).copy(
+  override fun toDto(includeChildren: Boolean, includeParent: Boolean): LocationDto {
+    return super.toDto(includeChildren = includeChildren, includeParent = includeParent).copy(
       capacity = if (isCell()) {
         capacity?.toDto()
       } else {
