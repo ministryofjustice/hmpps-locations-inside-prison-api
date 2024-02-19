@@ -895,6 +895,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       ),
     )
 
+    val removeAttributes = PatchLocationRequest(
+      attributes = emptyMap(),
+    )
+
     val changeUsage = PatchLocationRequest(
       code = "MEDICAL",
       locationType = LocationType.APPOINTMENTS,
@@ -902,6 +906,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         NonResidentialUsageDto(usageType = NonResidentialUsageType.VISIT, capacity = 12, sequence = 2),
         NonResidentialUsageDto(usageType = NonResidentialUsageType.APPOINTMENT, capacity = 20, sequence = 1),
       ),
+    )
+
+    val removeUsage = PatchLocationRequest(
+      usage = emptySet(),
     )
 
     @Nested
@@ -1114,6 +1122,36 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
+      fun `can delete details of a locations attributes`() {
+        webTestClient.patch().uri("/locations/${landing1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(removeAttributes))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "MDI",
+              "code": "1",
+              "pathHierarchy": "Z-1",
+              "locationType": "LANDING",
+              "active": true,
+              "key": "MDI-Z-1",
+              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "capacity": {
+                "capacity": 4,
+                "operationalCapacity": 4
+              },
+              "attributes": {}
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
       fun `can update details of a locations attributes`() {
         webTestClient.patch().uri("/locations/${landing1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1138,12 +1176,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               },
               "attributes": {
                 "LOCATION_ATTRIBUTE": [
-                  "DOUBLE_OCCUPANCY",
                   "SINGLE_OCCUPANCY"
                 ],
                 "SECURITY": [
-                  "CAT_C",
-                  "CAT_B"
+                  "CAT_C"
                 ]
               }
             }
@@ -1182,6 +1218,31 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "sequence": 2
                 }
               ]
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can remove details of a locations non-res usage`() {
+        webTestClient.patch().uri("/locations/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(removeUsage))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "MDI",
+              "code": "VISIT",
+              "pathHierarchy": "Z-VISIT",
+              "locationType": "VISITS",
+              "active": true,
+              "key": "MDI-Z-VISIT",
+              "usage": []
             }
           """,
             false,

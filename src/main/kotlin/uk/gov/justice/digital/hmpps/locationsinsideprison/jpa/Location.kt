@@ -152,7 +152,7 @@ abstract class Location(
     return leafLocations
   }
 
-  open fun toDto(includeChildren: Boolean = false): LocationDto {
+  open fun toDto(includeChildren: Boolean = false, includeParent: Boolean = false): LocationDto {
     return LocationDto(
       id = id!!,
       code = getCode(),
@@ -168,7 +168,8 @@ abstract class Location(
       deactivatedDate = deactivatedDate,
       deactivatedReason = deactivatedReason,
       reactivatedDate = reactivatedDate,
-      childLocations = if (includeChildren) childLocations.map { it.toDto(true) } else null,
+      childLocations = if (includeChildren) childLocations.map { it.toDto(includeChildren = true) } else null,
+      parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true) else null,
     )
   }
 

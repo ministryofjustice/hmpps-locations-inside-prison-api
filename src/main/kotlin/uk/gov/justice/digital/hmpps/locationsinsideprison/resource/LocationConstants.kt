@@ -25,8 +25,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousing
 @Validated
 @RequestMapping("/constants", produces = [MediaType.APPLICATION_JSON_VALUE])
 @Tag(
-  name = "Locations",
-  description = "Returns location constants",
+  name = "Constants",
+  description = "Returns location reference data.",
 )
 class LocationConstants() : EventBaseResource() {
 
