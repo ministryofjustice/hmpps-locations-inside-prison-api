@@ -52,6 +52,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   lateinit var landing1: ResidentialLocationJPA
   lateinit var wing: ResidentialLocationJPA
   lateinit var visitRoom: NonResidentialLocationJPA
+  lateinit var adjRoom: NonResidentialLocationJPA
 
   @BeforeEach
   fun setUp() {
@@ -83,8 +84,27 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
       ),
     )
-    visitRoom = repository.save(buildNonResidentialLocation(pathHierarchy = "VISIT", locationType = LocationType.VISITS))
-    wing.addChildLocation(visitRoom).addChildLocation(landing.addChildLocation(cell1).addChildLocation(cell2))
+    visitRoom = repository.save(
+      buildNonResidentialLocation(
+        pathHierarchy = "VISIT",
+        locationType = LocationType.VISITS,
+        nonResidentialUsageType = NonResidentialUsageType.VISIT,
+      ),
+    )
+    adjRoom = repository.save(
+      buildNonResidentialLocation(
+        pathHierarchy = "ADJUDICATION",
+        locationType = LocationType.ADJUDICATION_ROOM,
+        nonResidentialUsageType = NonResidentialUsageType.ADJUDICATION_HEARING,
+      ),
+    )
+    wing.addChildLocation(visitRoom)
+      .addChildLocation(
+        landing
+          .addChildLocation(cell1)
+          .addChildLocation(cell2),
+      )
+
     repository.save(wing)
     location = cell1
     landing1 = landing
@@ -128,6 +148,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     prisonId: String = "MDI",
     pathHierarchy: String,
     locationType: LocationType = LocationType.CELL,
+    nonResidentialUsageType: NonResidentialUsageType,
   ): NonResidentialLocation {
     val nonResidentialLocationJPA = NonResidentialLocationJPA(
       prisonId = prisonId,
@@ -148,7 +169,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       orderWithinParentLocation = 99,
       id = null,
     )
-    nonResidentialLocationJPA.addUsage(NonResidentialUsageType.VISIT, 15, 1)
+    nonResidentialLocationJPA.addUsage(nonResidentialUsageType, 15, 1)
     return nonResidentialLocationJPA
   }
 
@@ -500,6 +521,22 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             // language=json
             """
              [
+               {
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "usage": [
+                    {
+                      "usageType": "ADJUDICATION_HEARING",
+                      "capacity": 15,
+                      "sequence": 1
+                    }
+                  ],
+                  "active": true,
+                  "isResidential": false,
+                  "key": "MDI-ADJUDICATION"
+                },
                 {
                   "prisonId": "MDI",
                   "code": "Z",
@@ -607,11 +644,19 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
               {
                 "totalPages": 1,
-                "totalElements": 5,
+                "totalElements": 6,
                 "first": true,
                 "last": true,
                 "size": 10,
                 "content": [
+                  {
+                    "prisonId": "MDI",
+                    "code": "ADJUDICATION",
+                    "pathHierarchy": "ADJUDICATION",
+                    "locationType": "ADJUDICATION_ROOM",
+                    "isResidential": false,
+                    "key": "MDI-ADJUDICATION"
+                  },
                   {
                     "prisonId": "MDI",
                     "code": "Z",
@@ -655,7 +700,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "sorted": true,
                   "unsorted": false
                 },
-                "numberOfElements": 5,
+                "numberOfElements": 6,
                 "pageable": {
                   "offset": 0,
                   "sort": {
@@ -739,6 +784,16 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"code": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `duplicate location is rejected`() {
+        webTestClient.post().uri("/locations/residential")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createResidentialLocationRequest.copy(code = "001", parentId = landing1.id)))
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -836,6 +891,16 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"code": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `duplicate location is rejected`() {
+        webTestClient.post().uri("/locations/non-residential")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createNonResidentialLocationRequest.copy(code = "VISIT", parentId = wing.id)))
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -960,6 +1025,16 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"code": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot update to existing location`() {
+        webTestClient.patch().uri("/locations/${adjRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(changeCode.copy(code = "VISIT", parentId = wing.id))
           .exchange()
           .expectStatus().is4xxClientError
       }

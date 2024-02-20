@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
@@ -58,15 +59,21 @@ class LocationService(
 
   @Transactional
   fun createResidentialLocation(createResidentialLocationRequest: CreateResidentialLocationRequest): LocationDTO {
+    val parentLocation = createResidentialLocationRequest.parentId?.let {
+      locationRepository.findById(createResidentialLocationRequest.parentId).getOrNull() ?: throw LocationNotFoundException(it.toString())
+    }
+
+    val pathHierarchy = if (parentLocation != null) {
+      parentLocation.getPathHierarchy() + "-"
+    } else {
+      ""
+    } + createResidentialLocationRequest.code
+    locationRepository.findOneByPrisonIdAndPathHierarchy(createResidentialLocationRequest.prisonId, pathHierarchy)
+      ?.let { throw LocationAlreadyExistsException("${createResidentialLocationRequest.prisonId}-$pathHierarchy") }
+
     val locationToCreate =
       createResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
-
-    createResidentialLocationRequest.parentId?.let {
-      if (it == locationToCreate.id) throw IllegalArgumentException("Cannot set parent to self")
-      locationToCreate.setParent(
-        locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()),
-      )
-    }
+    parentLocation?.let { locationToCreate.setParent(it) }
 
     val location = locationRepository.save(locationToCreate).toDto()
 
@@ -86,16 +93,20 @@ class LocationService(
 
   @Transactional
   fun createNonResidentialLocation(createNonResidentialLocationRequest: CreateNonResidentialLocationRequest): LocationDTO {
-    val locationToCreate =
-      createNonResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
-
-    createNonResidentialLocationRequest.parentId?.let {
-      if (it == locationToCreate.id) throw IllegalArgumentException("Cannot set parent to self")
-      locationToCreate.setParent(
-        locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()),
-      )
+    val parentLocation = createNonResidentialLocationRequest.parentId?.let {
+      locationRepository.findById(createNonResidentialLocationRequest.parentId).getOrNull() ?: throw LocationNotFoundException(it.toString())
     }
 
+    val pathHierarchy = if (parentLocation != null) {
+      parentLocation.getPathHierarchy() + "-"
+    } else {
+      ""
+    } + createNonResidentialLocationRequest.code
+    locationRepository.findOneByPrisonIdAndPathHierarchy(createNonResidentialLocationRequest.prisonId, pathHierarchy)
+      ?.let { throw LocationAlreadyExistsException("${createNonResidentialLocationRequest.prisonId}-$pathHierarchy") }
+
+    val locationToCreate = createNonResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
+    parentLocation?.let { locationToCreate.setParent(it) }
     val location = locationRepository.save(locationToCreate).toDto()
 
     log.info("Created Non Residential Location [${location.id}]")
@@ -132,6 +143,13 @@ class LocationService(
       locationToUpdate.setParent(
         locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()),
       )
+    }
+
+    if (hierarchyChanged) {
+      // check that code doesn't clash with existing location
+      val pathHierarchy = locationToUpdate.getParent()?.getPathHierarchy() + "-" + patchLocationRequest.code
+      locationRepository.findOneByPrisonIdAndPathHierarchy(locationToUpdate.prisonId, pathHierarchy)
+        ?.let { throw LocationAlreadyExistsException("${locationToUpdate.prisonId}-$pathHierarchy") }
     }
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)

@@ -9,4 +9,5 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 enum class ErrorCode(val errorCode: Int) {
   LocationNotFound(101),
   ValidationFailure(102),
+  LocationAlreadyExists(103),
 }
