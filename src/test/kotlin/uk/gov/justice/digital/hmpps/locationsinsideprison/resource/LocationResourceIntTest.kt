@@ -84,20 +84,26 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
       ),
     )
-    visitRoom = repository.save(buildNonResidentialLocation(
-      pathHierarchy = "VISIT",
-      locationType = LocationType.VISITS,
-      nonResidentialUsageType = NonResidentialUsageType.VISIT
-    ))
-    adjRoom = repository.save(buildNonResidentialLocation(
-      pathHierarchy = "ADJUDICATION",
-      locationType = LocationType.ADJUDICATION_ROOM,
-      nonResidentialUsageType = NonResidentialUsageType.ADJUDICATION_HEARING
-    ))
+    visitRoom = repository.save(
+      buildNonResidentialLocation(
+        pathHierarchy = "VISIT",
+        locationType = LocationType.VISITS,
+        nonResidentialUsageType = NonResidentialUsageType.VISIT,
+      ),
+    )
+    adjRoom = repository.save(
+      buildNonResidentialLocation(
+        pathHierarchy = "ADJUDICATION",
+        locationType = LocationType.ADJUDICATION_ROOM,
+        nonResidentialUsageType = NonResidentialUsageType.ADJUDICATION_HEARING,
+      ),
+    )
     wing.addChildLocation(visitRoom)
-      .addChildLocation(landing
-        .addChildLocation(cell1)
-        .addChildLocation(cell2))
+      .addChildLocation(
+        landing
+          .addChildLocation(cell1)
+          .addChildLocation(cell2),
+      )
 
     repository.save(wing)
     location = cell1
