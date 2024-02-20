@@ -185,9 +185,25 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(LocationAlreadyExistsException::class)
+  fun handleLocationAlreadyExists(e: LocationAlreadyExistsException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Location already exists exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.CONFLICT)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.CONFLICT,
+          errorCode = ErrorCode.LocationAlreadyExists,
+          userMessage = "Location already exists: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   companion object {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
 }
 
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
+class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
