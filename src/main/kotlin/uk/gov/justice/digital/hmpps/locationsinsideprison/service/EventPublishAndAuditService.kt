@@ -18,8 +18,19 @@ class EventPublishAndAuditService(
 
   fun publishEvent(
     eventType: InternalLocationDomainEventType,
+    locationDetail: List<LocationDTO>,
+    auditData: Any? = null,
+    source: InformationSource = InformationSource.DPS,
+  ) {
+    locationDetail.forEach {
+      publishEvent(eventType = eventType, locationDetail = it, auditData = it, source = source)
+    }
+  }
+
+  fun publishEvent(
+    eventType: InternalLocationDomainEventType,
     locationDetail: LocationDTO,
-    auditData: Any,
+    auditData: Any? = null,
     source: InformationSource = InformationSource.DPS,
   ) {
     traverseUp(eventType = eventType, location = locationDetail.parentLocation, source = source)
@@ -28,12 +39,14 @@ class EventPublishAndAuditService(
       publishEvent(event = eventType, location = it, source = source)
     }
 
-    auditEvent(
-      auditType = eventType.auditType,
-      id = locationDetail.id.toString(),
-      auditData = auditData,
-      source = source,
-    )
+    auditData?.let {
+      auditEvent(
+        auditType = eventType.auditType,
+        id = locationDetail.id.toString(),
+        auditData = it,
+        source = source,
+      )
+    }
   }
 
   private fun traverseUp(eventType: InternalLocationDomainEventType, location: Location?, source: InformationSource) {

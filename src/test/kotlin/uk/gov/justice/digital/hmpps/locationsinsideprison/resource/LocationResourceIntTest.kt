@@ -946,7 +946,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
     val changeCapacity = PatchLocationRequest(
       capacity = CapacityDTO(capacity = 3, operationalCapacity = 3),
-      certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 3),
+    )
+    val changeCertification = PatchLocationRequest(
+      certification = CertificationDTO(certified = false, capacityOfCertifiedCell = 3),
     )
 
     val changeAttribute = PatchLocationRequest(
@@ -1107,7 +1109,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 },
                 "certification": {
                   "certified": true,
-                  "capacityOfCertifiedCell": 3
+                  "capacityOfCertifiedCell": 2
                 },
                 "attributes": {
                   "LOCATION_ATTRIBUTE": [
@@ -1140,7 +1142,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "operationalCapacity": 5
               },
               "certification": {
-                "capacityOfCertifiedCell": 5
+                "capacityOfCertifiedCell": 4
               },
               "childLocations": [
                 {
@@ -1158,7 +1160,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "operationalCapacity": 5
                   },
                   "certification": {
-                    "capacityOfCertifiedCell": 5
+                    "capacityOfCertifiedCell": 4
                   },
                   "childLocations": [
                     {
@@ -1171,6 +1173,118 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       },
                       "certification": {
                         "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
+                    },
+                    {
+                      "pathHierarchy": "Z-1-002",
+                      "locationType": "CELL",
+                      "key": "MDI-Z-1-002",
+                      "capacity": {
+                        "capacity": 2,
+                        "operationalCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can update details of a locations certification`() {
+        webTestClient.patch().uri("/locations/${location.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(changeCertification))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+               {
+                "prisonId": "MDI",
+                "code": "001",
+                "pathHierarchy": "Z-1-001",
+                "locationType": "CELL",
+                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "capacity": {
+                  "capacity": 2,
+                  "operationalCapacity": 2
+                },
+                "certification": {
+                  "certified": false,
+                  "capacityOfCertifiedCell": 3
+                },
+                "attributes": {
+                  "LOCATION_ATTRIBUTE": [
+                    "DOUBLE_OCCUPANCY"
+                  ],
+                  "SECURITY": [
+                    "CAT_B"
+                  ]
+                },
+                "isResidential": true,
+                "key": "MDI-Z-1-001"
+              }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/${wing.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "pathHierarchy": "Z",
+              "locationType": "WING",
+              "key": "MDI-Z",
+              "capacity": {
+                "capacity": 4,
+                "operationalCapacity": 4
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 5
+              },
+              "childLocations": [
+                {
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "key": "MDI-Z-VISIT"
+                },
+                {
+                  "code": "1",
+                  "pathHierarchy": "Z-1",
+                  "locationType": "LANDING",
+                  "key": "MDI-Z-1",
+                  "capacity": {
+                    "capacity": 4,
+                    "operationalCapacity": 4
+                  },
+                  "certification": {
+                    "capacityOfCertifiedCell": 5
+                  },
+                  "childLocations": [
+                    {
+                      "pathHierarchy": "Z-1-001",
+                      "locationType": "CELL",
+                      "key": "MDI-Z-1-001",
+                      "capacity": {
+                        "capacity": 2,
+                        "operationalCapacity": 2
+                      },
+                      "certification": {
+                        "certified": false,
                         "capacityOfCertifiedCell": 3
                       }
                     },

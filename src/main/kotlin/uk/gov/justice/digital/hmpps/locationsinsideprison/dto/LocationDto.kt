@@ -16,6 +16,7 @@ import java.time.LocalDateTime
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity as CapacityJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification as CertificationJPA
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
 
@@ -38,7 +39,7 @@ data class Location(
   val locationType: LocationType,
 
   @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
-  var residentialHousingType: ResidentialHousingType? = null,
+  val residentialHousingType: ResidentialHousingType? = null,
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   val description: String? = null,
@@ -47,16 +48,16 @@ data class Location(
   val comments: String? = null,
 
   @Schema(description = "Capacity details of the location", required = false)
-  var capacity: Capacity? = null,
+  val capacity: Capacity? = null,
 
   @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
-  var certification: Certification? = null,
+  val certification: Certification? = null,
 
   @Schema(description = "Location Attributes", required = false)
-  var attributes: Map<ResidentialAttributeType, List<ResidentialAttributeValue>>? = null,
+  val attributes: Map<ResidentialAttributeType, List<ResidentialAttributeValue>>? = null,
 
   @Schema(description = "Location Usage", required = false)
-  var usage: List<NonResidentialUsageDto>? = null,
+  val usage: List<NonResidentialUsageDto>? = null,
 
   @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
   val orderWithinParentLocation: Int? = null,
@@ -65,13 +66,13 @@ data class Location(
   val active: Boolean = true,
 
   @Schema(description = "Date the location was deactivated", example = "2023-01-23", required = false)
-  var deactivatedDate: LocalDate? = null,
+  val deactivatedDate: LocalDate? = null,
 
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
-  var deactivatedReason: DeactivatedReason? = null,
+  val deactivatedReason: DeactivatedReason? = null,
 
   @Schema(description = "Date the location was reactivated", example = "2023-01-24", required = false)
-  var reactivatedDate: LocalDate? = null,
+  val reactivatedDate: LocalDate? = null,
 
   @Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
   val topLevelId: UUID,
@@ -201,6 +202,17 @@ data class Certification(
   }
 }
 
+interface CreateRequest {
+  val prisonId: String
+  val code: String
+  val locationType: LocationType
+  val description: String?
+  val comments: String?
+  val orderWithinParentLocation: Int?
+  val parentId: UUID?
+  fun toNewEntity(createdBy: String, clock: Clock): LocationJPA
+}
+
 /**
  * Request format to create a residential location
  */
@@ -210,41 +222,41 @@ data class CreateResidentialLocationRequest(
   @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 3)
   @field:Size(min = 3, message = "PrisonId cannot be blank")
   @field:Size(max = 3, message = "PrisonId must be 3 characters")
-  val prisonId: String,
+  override val prisonId: String,
 
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 40, message = "Code must be less than 41 characters")
-  val code: String,
+  override val code: String,
 
   @Schema(description = "residential location type", example = "NORMAL_ACCOMMODATION", required = true)
   val residentialHousingType: ResidentialHousingType,
 
   @Schema(description = "Location Type", example = "CELL", required = true)
-  val locationType: LocationType,
+  override val locationType: LocationType,
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 80, message = "Description must be less than 81 characters")
-  val description: String? = null,
+  override val description: String? = null,
 
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   @field:Size(max = 255, message = "Comments must be less than 256 characters")
-  val comments: String? = null,
+  override val comments: String? = null,
 
   @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
-  val orderWithinParentLocation: Int? = null,
+  override val orderWithinParentLocation: Int? = null,
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
-  val parentId: UUID? = null,
+  override val parentId: UUID? = null,
 
   @Schema(description = "Capacity of the residential location", required = false)
   val capacity: Capacity? = null,
 
   @Schema(description = "Certified status of the residential location", required = false)
   val certification: Certification? = null,
-) {
+) : CreateRequest {
 
-  fun toNewEntity(createdBy: String, clock: Clock): ResidentialLocationJPA {
+  override fun toNewEntity(createdBy: String, clock: Clock): ResidentialLocationJPA {
     return ResidentialLocationJPA(
       id = null,
       prisonId = prisonId,
@@ -276,32 +288,32 @@ data class CreateNonResidentialLocationRequest(
   @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 3)
   @field:Size(min = 3, message = "PrisonId cannot be blank")
   @field:Size(max = 3, message = "PrisonId must be 3 characters")
-  val prisonId: String,
+  override val prisonId: String,
 
   @Schema(description = "Code of the location", required = true, example = "ADJ", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 40, message = "Code must be less than 41 characters")
-  val code: String,
+  override val code: String,
 
   @Schema(description = "Location Type", example = "ADJUDICATION_ROOM", required = true)
-  val locationType: LocationType,
+  override val locationType: LocationType,
 
   @Schema(description = "Alternative description to display for location", example = "Adj Room", required = false)
   @field:Size(max = 80, message = "Description must be less than 81 characters")
-  val description: String? = null,
+  override val description: String? = null,
 
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   @field:Size(max = 255, message = "Comments must be less than 256 characters")
-  val comments: String? = null,
+  override val comments: String? = null,
 
   @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
-  val orderWithinParentLocation: Int? = null,
+  override val orderWithinParentLocation: Int? = null,
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
-  val parentId: UUID? = null,
-) {
+  override val parentId: UUID? = null,
+) : CreateRequest {
 
-  fun toNewEntity(createdBy: String, clock: Clock): NonResidentialLocationJPA {
+  override fun toNewEntity(createdBy: String, clock: Clock): NonResidentialLocationJPA {
     return NonResidentialLocationJPA(
       id = null,
       prisonId = prisonId,
@@ -323,51 +335,6 @@ data class CreateNonResidentialLocationRequest(
     )
   }
 }
-
-/**
- * Request format to update a location
- */
-@Schema(description = "Request to update a location")
-@JsonInclude(JsonInclude.Include.NON_NULL)
-data class PatchLocationRequest(
-
-  @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
-  @field:Size(min = 1, message = "Code cannot be blank")
-  @field:Size(max = 40, message = "Code must be less than 41 characters")
-  val code: String? = null,
-
-  @Schema(description = "Location Type", example = "CELL", required = true)
-  val locationType: LocationType? = null,
-
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
-  @field:Size(max = 80, message = "Description must be less than 81 characters")
-  val description: String? = null,
-
-  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
-  @field:Size(max = 255, message = "Comments must be less than 256 characters")
-  val comments: String? = null,
-
-  @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
-  val orderWithinParentLocation: Int? = null,
-
-  @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
-  val residentialHousingType: ResidentialHousingType? = null,
-
-  @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
-  val parentId: UUID? = null,
-
-  @Schema(description = "Capacity details of the location", required = false)
-  var capacity: Capacity? = null,
-
-  @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
-  var certification: Certification? = null,
-
-  @Schema(description = "Location Attributes", required = false)
-  var attributes: Map<ResidentialAttributeType, Set<ResidentialAttributeValue>>? = null,
-
-  @Schema(description = "Location Usage", required = false)
-  var usage: Set<NonResidentialUsageDto>? = null,
-)
 
 /**
  * Request format to create a location

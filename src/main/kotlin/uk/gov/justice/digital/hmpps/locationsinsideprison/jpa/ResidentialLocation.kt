@@ -8,7 +8,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -93,12 +93,12 @@ class ResidentialLocation(
 
   private fun cellLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>().filter { it.isCell() }
 
-  override fun updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): ResidentialLocation {
-    super.updateWith(patch, updatedBy, clock)
-    this.residentialHousingType = patch.residentialHousingType ?: this.residentialHousingType
-    this.capacity = patch.capacity?.toNewEntity() ?: this.capacity
-    this.certification = patch.certification?.toNewEntity() ?: this.certification
-    this.attributes = patch.attributes?.map { attributeGroup ->
+  override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): ResidentialLocation {
+    super.updateWith(upsert, updatedBy, clock)
+    this.residentialHousingType = upsert.residentialHousingType ?: this.residentialHousingType
+    this.capacity = upsert.capacity?.toNewEntity() ?: this.capacity
+    this.certification = upsert.certification?.toNewEntity() ?: this.certification
+    this.attributes = upsert.attributes?.map { attributeGroup ->
       attributeGroup.value.map { attribute ->
         this.addAttribute(attribute)
       }

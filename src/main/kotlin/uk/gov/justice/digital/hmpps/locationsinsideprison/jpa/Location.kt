@@ -18,7 +18,7 @@ import org.hibernate.annotations.DiscriminatorFormula
 import org.hibernate.annotations.GenericGenerator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import java.io.Serializable
 import java.time.Clock
 import java.time.LocalDate
@@ -191,12 +191,12 @@ abstract class Location(
     return result
   }
 
-  open fun updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): Location {
-    setCode(patch.code ?: this.getCode())
-    this.locationType = patch.locationType ?: this.locationType
-    this.description = patch.description ?: this.description
-    this.comments = patch.comments ?: this.comments
-    this.orderWithinParentLocation = patch.orderWithinParentLocation ?: this.orderWithinParentLocation
+  open fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): Location {
+    setCode(upsert.code ?: this.getCode())
+    this.locationType = upsert.locationType ?: this.locationType
+    this.description = upsert.description ?: this.description
+    this.comments = upsert.comments ?: this.comments
+    this.orderWithinParentLocation = upsert.orderWithinParentLocation ?: this.orderWithinParentLocation
     this.updatedBy = updatedBy
     this.whenUpdated = LocalDateTime.now(clock)
 

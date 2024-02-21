@@ -5,7 +5,7 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -76,9 +76,9 @@ class NonResidentialLocation(
     )
   }
 
-  override fun updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): NonResidentialLocation {
-    super.updateWith(patch, updatedBy, clock)
-    this.nonResidentialUsages = patch.usage?.map { nonResUsage ->
+  override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): NonResidentialLocation {
+    super.updateWith(upsert, updatedBy, clock)
+    this.nonResidentialUsages = upsert.usage?.map { nonResUsage ->
       this.addUsage(nonResUsage.usageType, nonResUsage.capacity, nonResUsage.sequence)
     }?.toMutableSet() ?: this.nonResidentialUsages
     return this
