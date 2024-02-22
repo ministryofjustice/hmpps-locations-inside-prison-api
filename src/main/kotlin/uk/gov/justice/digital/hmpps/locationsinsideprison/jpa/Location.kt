@@ -94,7 +94,7 @@ abstract class Location(
     parent = null
   }
 
-  fun getCode(): String {
+  open fun getCode(): String {
     return code
   }
 

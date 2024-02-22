@@ -91,26 +91,26 @@ class LocationService(
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val oldParent = locationToUpdate.getParent()
     val codeChanged = patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode()
+    val oldParent = locationToUpdate.getParent()
     val parentChanged = patchLocationRequest.parentId != null && patchLocationRequest.parentId != oldParent?.id
+
+    if (codeChanged || parentChanged) {
+      val newCode = patchLocationRequest.code ?: locationToUpdate.getCode()
+      val theParent = patchLocationRequest.parentId?.let {
+        locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
+      } ?: oldParent
+      checkParentValid(theParent, newCode, locationToUpdate.prisonId)
+
+      if (parentChanged && theParent?.id == id) throw ValidationException("Cannot set parent to self")
+      theParent?.let { locationToUpdate.setParent(it) }
+    }
 
     val capacityChanged = locationToUpdate is ResidentialLocation &&
       patchLocationRequest.capacity != null && patchLocationRequest.capacity != locationToUpdate.capacity?.toDto()
 
     val certificationChanged = locationToUpdate is ResidentialLocation &&
       patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.certification?.toDto()
-
-    patchLocationRequest.parentId?.let {
-      if (it == id) throw ValidationException("Cannot set parent to self")
-      locationToUpdate.setParent(
-        locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()),
-      )
-    }
-
-    if (codeChanged || parentChanged) {
-      checkParentValid(locationToUpdate.getParent(), patchLocationRequest.code ?: locationToUpdate.getCode(), locationToUpdate.prisonId)
-    }
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
 
@@ -189,11 +189,12 @@ class LocationService(
     return locationToDelete.toDto()
   }
 
-  private fun buildNewPathHierarchy(parentLocation: Location?, code: String) = if (parentLocation != null) {
-    parentLocation.getPathHierarchy() + "-"
-  } else {
-    ""
-  } + code
+  private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =
+    if (parentLocation != null) {
+      parentLocation.getPathHierarchy() + "-"
+    } else {
+      ""
+    } + code
 
   private fun checkParentValid(
     parentLocation: Location?,

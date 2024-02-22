@@ -14,11 +14,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpsertLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SyncService
-import uk.gov.justice.digital.hmpps.locationsinsideprison.services.InternalLocationDomainEventType
 
 @RestController
 @Validated
@@ -68,12 +65,5 @@ class MigrationResource(
     @RequestBody
     @Validated
     syncRequest: UpsertLocationRequest,
-  ): Location =
-    eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_CREATED,
-      function = {
-        syncService.migrate(syncRequest)
-      },
-      informationSource = InformationSource.NOMIS,
-    )
+  ) = syncService.migrate(syncRequest)
 }
