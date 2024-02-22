@@ -76,17 +76,17 @@ class ResidentialLocation(
     return residentialAttribute
   }
 
-  fun getOperationalCapacity(): Int {
+  private fun getOperationalCapacity(): Int {
     return cellLocations()
       .sumOf { it.capacity?.operationalCapacity ?: 0 }
   }
 
-  fun getMaxCapacity(): Int {
+  private fun getMaxCapacity(): Int {
     return cellLocations()
       .sumOf { it.capacity?.capacity ?: 0 }
   }
 
-  fun getBaselineCapacity(): Int {
+  private fun getBaselineCapacity(): Int {
     return cellLocations()
       .sumOf { it.certification?.capacityOfCertifiedCell ?: 0 }
   }
@@ -98,11 +98,9 @@ class ResidentialLocation(
     this.residentialHousingType = upsert.residentialHousingType ?: this.residentialHousingType
     this.capacity = upsert.capacity?.toNewEntity() ?: this.capacity
     this.certification = upsert.certification?.toNewEntity() ?: this.certification
-    this.attributes = upsert.attributes?.map { attributeGroup ->
-      attributeGroup.value.map { attribute ->
-        this.addAttribute(attribute)
-      }
-    }?.flatten()?.toMutableSet() ?: this.attributes
+    this.attributes = upsert.attributes?.map { attribute ->
+      this.addAttribute(attribute)
+    }?.toMutableSet() ?: this.attributes
     return this
   }
 
@@ -125,7 +123,7 @@ class ResidentialLocation(
         )
       },
       residentialHousingType = residentialHousingType,
-      attributes = attributes.groupBy { it.attributeType }.mapValues { type -> type.value.map { it.attributeValue } },
+      attributes = attributes.map { it.attributeValue },
     )
   }
 }

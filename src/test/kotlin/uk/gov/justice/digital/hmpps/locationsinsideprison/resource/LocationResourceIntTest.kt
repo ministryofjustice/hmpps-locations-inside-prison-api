@@ -21,7 +21,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
@@ -421,14 +420,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                                 "certified": true,
                                 "capacityOfCertifiedCell": 2
                               },
-                              "attributes": {
-                                "LOCATION_ATTRIBUTE": [
-                                  "DOUBLE_OCCUPANCY"
-                                ],
-                                "SECURITY": [
-                                  "CAT_B"
-                                ]
-                              },
+                              "attributes": [
+                                "DOUBLE_OCCUPANCY",
+                                "CAT_B"
+                              ],
                               "isResidential": true,
                               "key": "MDI-Z-1-001"
                             },
@@ -448,14 +443,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                                 "certified": true,
                                 "capacityOfCertifiedCell": 2
                               },
-                              "attributes": {
-                                "LOCATION_ATTRIBUTE": [
-                                  "DOUBLE_OCCUPANCY"
-                                ],
-                                "SECURITY": [
-                                  "CAT_B"
-                                ]
-                              },
+                              "attributes": [
+                                "DOUBLE_OCCUPANCY",
+                                "CAT_B"
+                              ],
                               "isResidential": true,
                               "key": "MDI-Z-1-002"
                             }
@@ -471,14 +462,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                             "certified": false,
                             "capacityOfCertifiedCell": 4
                           },
-                          "attributes": {
-                            "LOCATION_ATTRIBUTE": [
-                              "DOUBLE_OCCUPANCY"
-                            ],
-                            "SECURITY": [
-                              "CAT_B"
-                            ]
-                          },
+                          "attributes": [
+                            "DOUBLE_OCCUPANCY",
+                            "CAT_B"
+                          ],
                           "isResidential": true,
                           "key": "MDI-Z-1"
                         },
@@ -513,14 +500,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                         "certified": false,
                         "capacityOfCertifiedCell": 4
                       },
-                      "attributes": {
-                        "SECURITY": [
-                          "CAT_B"
-                        ],
-                        "LOCATION_ATTRIBUTE": [
-                          "DOUBLE_OCCUPANCY"
-                        ]
-                      },
+                      "attributes": [
+                        "DOUBLE_OCCUPANCY",
+                        "CAT_B"
+                      ],
                       "isResidential": true,
                       "key": "MDI-Z"
                     }
@@ -1042,18 +1025,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     )
 
     val changeAttribute = PatchLocationRequest(
-      attributes = mapOf(
-        ResidentialAttributeType.LOCATION_ATTRIBUTE to setOf(
-          ResidentialAttributeValue.SINGLE_OCCUPANCY,
-        ),
-        ResidentialAttributeType.SECURITY to setOf(
-          ResidentialAttributeValue.CAT_C,
-        ),
+      attributes = setOf(
+        ResidentialAttributeValue.SINGLE_OCCUPANCY,
+        ResidentialAttributeValue.CAT_C,
       ),
     )
 
     val removeAttributes = PatchLocationRequest(
-      attributes = emptyMap(),
+      attributes = emptySet(),
     )
 
     val changeUsage = PatchLocationRequest(
@@ -1356,14 +1335,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "certified": true,
                   "capacityOfCertifiedCell": 2
                 },
-                "attributes": {
-                  "LOCATION_ATTRIBUTE": [
-                    "DOUBLE_OCCUPANCY"
-                  ],
-                  "SECURITY": [
-                    "CAT_B"
-                  ]
-                },
+                "attributes": [
+                  "DOUBLE_OCCUPANCY",
+                  "CAT_B"
+                ],
                 "isResidential": true,
                 "key": "MDI-Z-1-001"
               }
@@ -1482,14 +1457,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "certified": false,
                   "capacityOfCertifiedCell": 3
                 },
-                "attributes": {
-                  "LOCATION_ATTRIBUTE": [
-                    "DOUBLE_OCCUPANCY"
-                  ],
-                  "SECURITY": [
-                    "CAT_B"
-                  ]
-                },
+                "attributes": [
+                  "DOUBLE_OCCUPANCY",
+                  "CAT_B"
+                ],
                 "isResidential": true,
                 "key": "MDI-Z-1-001"
               }
@@ -1606,7 +1577,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "capacity": 4,
                 "operationalCapacity": 4
               },
-              "attributes": {}
+              "attributes": []
             }
           """,
             false,
@@ -1636,14 +1607,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "capacity": 4,
                 "operationalCapacity": 4
               },
-              "attributes": {
-                "LOCATION_ATTRIBUTE": [
-                  "SINGLE_OCCUPANCY"
-                ],
-                "SECURITY": [
-                  "CAT_C"
-                ]
-              }
+              "attributes": [
+                "SINGLE_OCCUPANCY",
+                "CAT_C"
+              ]
             }
           """,
             false,
