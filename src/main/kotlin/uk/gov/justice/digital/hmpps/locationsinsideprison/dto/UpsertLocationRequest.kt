@@ -73,7 +73,7 @@ data class UpsertLocationRequest(
 
   fun toNewEntity(clock: Clock): LocationJPA =
     if (residentialHousingType != null) {
-      ResidentialLocation(
+      val location = ResidentialLocation(
         id = null,
         prisonId = prisonId,
         code = code,
@@ -105,8 +105,12 @@ data class UpsertLocationRequest(
           )
         },
       )
+      attributes?.forEach { attribute ->
+        location.addAttribute(attribute)
+      }
+      location
     } else {
-      NonResidentialLocation(
+      val location = NonResidentialLocation(
         id = null,
         prisonId = prisonId,
         code = code,
@@ -125,5 +129,9 @@ data class UpsertLocationRequest(
         childLocations = mutableListOf(),
         parent = null,
       )
+      usage?.forEach { usage ->
+        location.addUsage(usage.usageType, usage.capacity, usage.sequence)
+      }
+      location
     }
 }
