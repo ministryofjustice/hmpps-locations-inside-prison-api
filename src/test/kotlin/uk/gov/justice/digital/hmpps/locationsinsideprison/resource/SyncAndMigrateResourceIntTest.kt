@@ -132,7 +132,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "comments": "This is a new wing",
               "description": "A New Wing",
               "orderWithinParentLocation": 1,
-              "isResidential": true
+              "isResidential": true,
+              "attributes": ["IMMIGRATION_DETAINEES"]
             }
           """,
             false,
@@ -160,7 +161,14 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "comments": "This is a visit room",
               "description": "Visit Hall",
               "orderWithinParentLocation": 1,
-              "isResidential": false
+              "isResidential": false,
+              "usage": [
+                {
+                  "usageType": "VISIT",
+                  "capacity": 10,
+                  "sequence": 1
+                }
+              ]
             }
           """,
             false,
