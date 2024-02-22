@@ -63,10 +63,10 @@ data class UpsertLocationRequest(
   @Schema(description = "Location Usage", required = false)
   override val usage: Set<NonResidentialUsageDto>? = null,
 
-  @Schema(description = "Location Usage", required = false)
-  val lastModifiedDate: LocalDateTime,
+  @Schema(description = "Last updated, if not provided then the current time will be used", required = false)
+  val lastModifiedDate: LocalDateTime? = null,
 
-  @Schema(description = "Location Usage", required = false)
+  @Schema(description = "Username of the staff updating the location", required = true)
   val lastUpdatedBy: String,
 
 ) : UpdateLocationRequest {
@@ -85,8 +85,8 @@ data class UpsertLocationRequest(
         orderWithinParentLocation = orderWithinParentLocation,
         active = true,
         updatedBy = lastUpdatedBy,
-        whenCreated = LocalDateTime.now(clock),
-        whenUpdated = LocalDateTime.now(clock),
+        whenCreated = lastModifiedDate ?: LocalDateTime.now(clock),
+        whenUpdated = lastModifiedDate ?: LocalDateTime.now(clock),
         deactivatedDate = null,
         deactivatedReason = null,
         reactivatedDate = null,
@@ -121,8 +121,8 @@ data class UpsertLocationRequest(
         orderWithinParentLocation = orderWithinParentLocation,
         active = true,
         updatedBy = lastUpdatedBy,
-        whenCreated = LocalDateTime.now(clock),
-        whenUpdated = LocalDateTime.now(clock),
+        whenCreated = lastModifiedDate ?: LocalDateTime.now(clock),
+        whenUpdated = lastModifiedDate ?: LocalDateTime.now(clock),
         deactivatedDate = null,
         deactivatedReason = null,
         reactivatedDate = null,
