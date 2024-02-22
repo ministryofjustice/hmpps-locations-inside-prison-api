@@ -344,4 +344,6 @@ data class CreateNonResidentialLocationRequest(
 data class DeactivationLocationRequest(
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = true)
   val deactivationReason: DeactivatedReason,
+  @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
+  val reactivationDate: LocalDate? = null,
 )

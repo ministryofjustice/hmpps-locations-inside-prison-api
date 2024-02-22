@@ -21,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocationResult
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
+import java.time.LocalDate
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
@@ -138,13 +139,12 @@ class LocationService(
   }
 
   @Transactional
-  fun deactivateLocation(id: UUID, deactivatedReason: DeactivatedReason): LocationDTO {
+  fun deactivateLocation(id: UUID, deactivatedReason: DeactivatedReason, proposedReactivationDate: LocalDate? = null): LocationDTO {
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    locationToUpdate.deactivate(deactivatedReason, authenticationFacade.getUserOrSystemInContext(), clock)
+    locationToUpdate.deactivate(deactivatedReason, proposedReactivationDate, authenticationFacade.getUserOrSystemInContext(), clock)
 
-    log.info("Deactivated Location [$id]")
     telemetryClient.trackEvent(
       "Deactivated Location",
       mapOf(
@@ -155,7 +155,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto()
+    return locationToUpdate.toDto(includeChildren = true)
   }
 
   @Transactional
@@ -165,7 +165,6 @@ class LocationService(
 
     locationToUpdate.reactivate(authenticationFacade.getUserOrSystemInContext(), clock)
 
-    log.info("Re-activated Location [$id]")
     telemetryClient.trackEvent(
       "Re-activated Location",
       mapOf(
@@ -176,7 +175,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto()
+    return locationToUpdate.toDto(includeChildren = true)
   }
 
   @Transactional

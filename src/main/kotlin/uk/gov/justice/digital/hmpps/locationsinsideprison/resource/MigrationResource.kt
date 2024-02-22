@@ -29,7 +29,7 @@ class MigrationResource(
   private val syncService: SyncService,
 ) : EventBaseResource() {
 
-  @PostMapping("/migrate")
+  @PostMapping("")
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
     summary = "Migrate a location",

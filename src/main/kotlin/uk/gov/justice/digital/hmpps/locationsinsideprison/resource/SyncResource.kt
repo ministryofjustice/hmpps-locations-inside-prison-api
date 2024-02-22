@@ -5,7 +5,9 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.PostMapping
@@ -69,18 +71,25 @@ class SyncResource(
     @RequestBody
     @Validated
     syncRequest: UpsertLocationRequest,
-  ): Location {
+  ): ResponseEntity<Location> {
     val eventType = if (syncRequest.id != null) {
       InternalLocationDomainEventType.LOCATION_AMENDED
     } else {
       InternalLocationDomainEventType.LOCATION_CREATED
     }
-    return eventPublishAndAudit(
-      eventType,
-      function = {
-        syncService.upsertLocation(syncRequest)
+    return ResponseEntity(
+      eventPublishAndAudit(
+        eventType,
+        function = {
+          syncService.upsertLocation(syncRequest)
+        },
+        informationSource = InformationSource.NOMIS,
+      ),
+      if (syncRequest.id != null) {
+        HttpStatus.OK
+      } else {
+        HttpStatus.CREATED
       },
-      informationSource = InformationSource.NOMIS,
     )
   }
 }

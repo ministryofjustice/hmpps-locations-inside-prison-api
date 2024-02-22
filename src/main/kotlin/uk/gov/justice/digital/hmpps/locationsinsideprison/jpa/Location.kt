@@ -19,6 +19,7 @@ import org.hibernate.annotations.GenericGenerator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import java.io.Serializable
 import java.time.Clock
 import java.time.LocalDate
@@ -203,22 +204,33 @@ abstract class Location(
     return this
   }
 
-  fun deactivate(deactivatedReason: DeactivatedReason, userOrSystemInContext: String, clock: Clock) {
+  fun deactivate(deactivatedReason: DeactivatedReason, proposedReactivationDate: LocalDate? = null, userOrSystemInContext: String, clock: Clock) {
     this.active = false
     this.deactivatedReason = deactivatedReason
     this.deactivatedDate = LocalDate.now(clock)
-    this.reactivatedDate = null
+    this.reactivatedDate = proposedReactivationDate
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
+
+    log.info("Deactivated Location [$id]")
+
+    childLocations.forEach { it.deactivate(deactivatedReason, proposedReactivationDate, userOrSystemInContext, clock) }
   }
 
   fun reactivate(userOrSystemInContext: String, clock: Clock) {
+    if (getParent()?.active == false) {
+      throw LocationCannotBeReactivatedException(getKey())
+    }
     this.active = true
     this.deactivatedReason = null
     this.deactivatedDate = null
-    this.reactivatedDate = LocalDate.now(clock)
+    this.reactivatedDate = null
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
+
+    log.info("Re-activated Location [$id]")
+
+    childLocations.forEach { it.reactivate(userOrSystemInContext, clock) }
   }
 
   override fun toString(): String {

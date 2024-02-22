@@ -413,7 +413,11 @@ class LocationResource(
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_DEACTIVATED,
       {
-        locationService.deactivateLocation(id, deactivationLocationRequest.deactivationReason)
+        locationService.deactivateLocation(
+          id,
+          deactivatedReason = deactivationLocationRequest.deactivationReason,
+          proposedReactivationDate = deactivationLocationRequest.reactivationDate,
+        )
       },
       InformationSource.DPS,
     )

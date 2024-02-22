@@ -1774,10 +1774,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can deactivate a location`() {
-        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+        val reactivationDate = LocalDate.now(clock).plusMonths(1)
+        webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, reactivationDate = reactivationDate)))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -1785,13 +1786,82 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
              {
               "prisonId": "MDI",
-              "code": "001",
-              "pathHierarchy": "Z-1-001",
-              "locationType": "CELL",
+              "code": "Z",
+              "pathHierarchy": "Z",
+              "locationType": "WING",
               "active": false,
-              "key": "MDI-Z-1-001",
+              "key": "MDI-Z",
               "deactivatedReason": "DAMAGED",
-              "deactivatedDate": "${LocalDate.now(clock)}"
+              "reactivatedDate": "$reactivationDate",
+              "deactivatedDate": "${LocalDate.now(clock)}",
+              "childLocations": [
+                {
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "active": false,
+                  "reactivatedDate": "$reactivationDate",
+                  "deactivatedDate": "${LocalDate.now(clock)}",
+                  "deactivatedReason": "DAMAGED",
+                  "isResidential": false,
+                  "key": "MDI-Z-VISIT"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "1",
+                  "pathHierarchy": "Z-1",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "active": false,
+                  "reactivatedDate": "$reactivationDate",
+                  "deactivatedDate": "${LocalDate.now(clock)}",
+                  "deactivatedReason": "DAMAGED",
+                  "isResidential": true,
+                  "key": "MDI-Z-1",
+                  "childLocations": [
+                    {
+                      "prisonId": "MDI",
+                      "code": "001",
+                      "pathHierarchy": "Z-1-001",
+                      "locationType": "CELL",
+                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "active": false,
+                      "reactivatedDate": "$reactivationDate",
+                      "deactivatedDate": "${LocalDate.now(clock)}",
+                      "deactivatedReason": "DAMAGED",
+                      "isResidential": true,
+                      "key": "MDI-Z-1-001"
+                    },
+                    {
+                      "prisonId": "MDI",
+                      "code": "002",
+                      "pathHierarchy": "Z-1-002",
+                      "locationType": "CELL",
+                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "active": false,
+                      "reactivatedDate": "$reactivationDate",
+                      "deactivatedDate": "${LocalDate.now(clock)}",
+                      "deactivatedReason": "DAMAGED",
+                      "isResidential": true,
+                      "key": "MDI-Z-1-002"
+                    }
+                  ]
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "active": false,
+                  "reactivatedDate": "$reactivationDate",
+                  "deactivatedDate": "${LocalDate.now(clock)}",
+                  "deactivatedReason": "DAMAGED",
+                  "isResidential": true,
+                  "key": "MDI-Z-2"
+                }
+              ]
             }
           """,
             false,
@@ -1844,8 +1914,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
       @Test
-      fun `can deactivate a location`() {
-        webTestClient.put().uri("/locations/${cell1.id}/reactivate")
+      fun `can reactivate a location`() {
+        webTestClient.put().uri("/locations/${landing1.id}/reactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
@@ -1854,15 +1924,38 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             // language=json
             """
-             {
-              "prisonId": "MDI",
-              "code": "001",
-              "pathHierarchy": "Z-1-001",
-              "locationType": "CELL",
-              "active": true,
-              "key": "MDI-Z-1-001",
-              "reactivatedDate": "${LocalDate.now(clock)}"
-            }
+                {
+                  "prisonId": "MDI",
+                  "code": "1",
+                  "pathHierarchy": "Z-1",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "active": true,
+                  "isResidential": true,
+                  "key": "MDI-Z-1",
+                  "childLocations": [
+                    {
+                      "prisonId": "MDI",
+                      "code": "001",
+                      "pathHierarchy": "Z-1-001",
+                      "locationType": "CELL",
+                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "active": true,
+                      "isResidential": true,
+                      "key": "MDI-Z-1-001"
+                    },
+                    {
+                      "prisonId": "MDI",
+                      "code": "002",
+                      "pathHierarchy": "Z-1-002",
+                      "locationType": "CELL",
+                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "active": true,
+                      "isResidential": true,
+                      "key": "MDI-Z-1-002"
+                    }
+                  ]
+                }
           """,
             false,
           )
