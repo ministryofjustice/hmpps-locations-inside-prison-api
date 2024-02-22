@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
@@ -59,7 +58,7 @@ data class UpsertLocationRequest(
   override val certification: Certification? = null,
 
   @Schema(description = "Location Attributes", required = false)
-  override val attributes: Map<ResidentialAttributeType, Set<ResidentialAttributeValue>>? = null,
+  override val attributes: Set<ResidentialAttributeValue>? = null,
 
   @Schema(description = "Location Usage", required = false)
   override val usage: Set<NonResidentialUsageDto>? = null,

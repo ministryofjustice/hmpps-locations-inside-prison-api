@@ -7,7 +7,6 @@ import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import java.time.Clock
@@ -54,7 +53,7 @@ data class Location(
   val certification: Certification? = null,
 
   @Schema(description = "Location Attributes", required = false)
-  val attributes: Map<ResidentialAttributeType, List<ResidentialAttributeValue>>? = null,
+  val attributes: List<ResidentialAttributeValue>? = null,
 
   @Schema(description = "Location Usage", required = false)
   val usage: List<NonResidentialUsageDto>? = null,

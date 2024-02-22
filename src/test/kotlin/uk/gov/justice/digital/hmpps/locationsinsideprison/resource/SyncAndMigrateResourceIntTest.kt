@@ -13,7 +13,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpsertLocationRequ
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import java.time.Clock
@@ -41,7 +40,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       orderWithinParentLocation = 1,
       lastUpdatedBy = "user",
       lastModifiedDate = LocalDateTime.now(),
-      attributes = mapOf(ResidentialAttributeType.USED_FOR to setOf(ResidentialAttributeValue.IMMIGRATION_DETAINEES)),
+      attributes = setOf(ResidentialAttributeValue.IMMIGRATION_DETAINEES),
     )
 
     var syncNonResRequest = UpsertLocationRequest(

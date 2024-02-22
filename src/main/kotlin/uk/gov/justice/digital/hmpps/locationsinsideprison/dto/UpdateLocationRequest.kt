@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 
@@ -14,6 +13,6 @@ interface UpdateLocationRequest {
   val residentialHousingType: ResidentialHousingType?
   val capacity: Capacity?
   val certification: Certification?
-  val attributes: Map<ResidentialAttributeType, Set<ResidentialAttributeValue>>?
+  val attributes: Set<ResidentialAttributeValue>?
   val usage: Set<NonResidentialUsageDto>?
 }
