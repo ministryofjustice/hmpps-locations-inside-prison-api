@@ -1,8 +1,10 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.springframework.beans.factory.annotation.Autowired
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.EventPublishAndAuditService
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
 import uk.gov.justice.digital.hmpps.locationsinsideprison.services.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
@@ -11,9 +13,39 @@ abstract class EventBaseResource {
   @Autowired
   private lateinit var eventPublishAndAuditService: EventPublishAndAuditService
 
-  protected fun eventPublishAndAuditWrapper(event: InternalLocationDomainEventType, function: () -> LocationDTO) =
-    function().also { location -> eventPublishAndAuditService.publishEvent(event, location, location) }
+  protected fun eventPublishAndAudit(
+    event: InternalLocationDomainEventType,
+    function: () -> Location,
+    informationSource: InformationSource = InformationSource.DPS,
+  ) =
+    function().also { location ->
+      eventPublishAndAuditService.publishEvent(
+        eventType = event,
+        locationDetail = location,
+        auditData = location,
+        source = informationSource,
+      )
+    }
 
-  protected fun auditWrapper(auditType: AuditType, id: String, function: () -> LocationDTO) =
-    function().also { auditData -> eventPublishAndAuditService.auditEvent(auditType, id, auditData) }
+  protected fun eventPublish(
+    function: () -> Map<InternalLocationDomainEventType, List<LocationDTO>>,
+  ) =
+    function().onEach { (event, locationsChanged) ->
+      if (locationsChanged.isNotEmpty()) {
+        eventPublishAndAuditService.publishEvent(
+          eventType = event,
+          locationDetail = locationsChanged,
+          source = InformationSource.DPS,
+        )
+      }
+    }
+
+  protected fun audit(auditType: AuditType, id: String, function: () -> LocationDTO) =
+    function().also { auditData ->
+      eventPublishAndAuditService.auditEvent(
+        auditType = auditType,
+        id = id,
+        auditData = auditData,
+      )
+    }
 }

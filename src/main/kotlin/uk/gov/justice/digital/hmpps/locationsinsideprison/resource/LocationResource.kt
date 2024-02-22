@@ -31,6 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialL
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.services.InternalLocationDomainEventType
 import java.util.*
@@ -80,7 +81,7 @@ class LocationResource(
     id: UUID,
     @RequestParam(name = "includeChildren", required = false, defaultValue = "false") includeChildren: Boolean = false,
   ): LocationDTO {
-    return auditWrapper(AuditType.LOCATION_RETRIEVED, id.toString()) {
+    return audit(AuditType.LOCATION_RETRIEVED, id.toString()) {
       locationService.getLocationById(id, includeChildren) ?: throw LocationNotFoundException(id.toString())
     }
   }
@@ -119,7 +120,7 @@ class LocationResource(
     key: String,
     @RequestParam(name = "includeChildren", required = false, defaultValue = "false") includeChildren: Boolean = false,
   ): LocationDTO {
-    return auditWrapper(AuditType.LOCATION_RETRIEVED, key) {
+    return audit(AuditType.LOCATION_RETRIEVED, key) {
       locationService.getLocationByKey(key, includeChildren) ?: throw LocationNotFoundException(key)
     }
   }
@@ -229,6 +230,11 @@ class LocationResource(
         description = "Data not found",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location already exists",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
     ],
   )
   fun createResidentialLocation(
@@ -236,9 +242,13 @@ class LocationResource(
     @Validated
     createResidentialLocationRequest: CreateResidentialLocationRequest,
   ): LocationDTO {
-    return eventPublishAndAuditWrapper(InternalLocationDomainEventType.LOCATION_CREATED) {
-      locationService.createResidentialLocation(createResidentialLocationRequest)
-    }
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_CREATED,
+      {
+        locationService.createLocation(createResidentialLocationRequest)
+      },
+      InformationSource.DPS,
+    )
   }
 
   @PostMapping("/non-residential", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -272,6 +282,11 @@ class LocationResource(
         description = "Data not found",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location already exists",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
     ],
   )
   fun createNonResidentialLocation(
@@ -279,9 +294,13 @@ class LocationResource(
     @Validated
     createNonResidentialLocationRequest: CreateNonResidentialLocationRequest,
   ): LocationDTO {
-    return eventPublishAndAuditWrapper(InternalLocationDomainEventType.LOCATION_CREATED) {
-      locationService.createNonResidentialLocation(createNonResidentialLocationRequest)
-    }
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_CREATED,
+      {
+        locationService.createLocation(createNonResidentialLocationRequest)
+      },
+      InformationSource.DPS,
+    )
   }
 
   @PatchMapping("/{id}")
@@ -314,6 +333,11 @@ class LocationResource(
         description = "Data not found",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location already exists",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
     ],
   )
   fun patchLocation(
@@ -324,8 +348,25 @@ class LocationResource(
     @Validated
     patchLocationRequest: PatchLocationRequest,
   ): LocationDTO {
-    return eventPublishAndAuditWrapper(InternalLocationDomainEventType.LOCATION_AMENDED) {
-      locationService.updateLocation(id, patchLocationRequest)
+    val results = locationService.updateLocation(id, patchLocationRequest)
+    eventPublish(buildEvents(results))
+    audit(AuditType.LOCATION_AMENDED, id.toString()) { results.location }
+    return results.location
+  }
+
+  fun buildEvents(results: UpdateLocationResult): () -> Map<InternalLocationDomainEventType, List<LocationDTO>> {
+    val locationsChanged = if (results.otherParentLocationChanged != null) {
+      listOf(results.location, results.otherParentLocationChanged)
+    } else {
+      listOf(results.location)
+    }
+
+    return {
+      mapOf(
+        InternalLocationDomainEventType.LOCATION_AMENDED to locationsChanged,
+        InternalLocationDomainEventType.LOCATION_CAPACITY_CHANGED to if (results.capacityChanged) locationsChanged else emptyList(),
+        InternalLocationDomainEventType.LOCATION_CERTIFICATION_CHANGED to if (results.certificationChanged) locationsChanged else emptyList(),
+      )
     }
   }
 
@@ -369,9 +410,17 @@ class LocationResource(
     @Validated
     deactivationLocationRequest: DeactivationLocationRequest,
   ): LocationDTO {
-    return eventPublishAndAuditWrapper(InternalLocationDomainEventType.LOCATION_DEACTIVATED) {
-      locationService.deactivateLocation(id, deactivationLocationRequest.deactivationReason)
-    }
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_DEACTIVATED,
+      {
+        locationService.deactivateLocation(
+          id,
+          deactivatedReason = deactivationLocationRequest.deactivationReason,
+          proposedReactivationDate = deactivationLocationRequest.reactivationDate,
+        )
+      },
+      InformationSource.DPS,
+    )
   }
 
   @PutMapping("/{id}/reactivate")
@@ -411,9 +460,13 @@ class LocationResource(
     @PathVariable
     id: UUID,
   ): LocationDTO {
-    return eventPublishAndAuditWrapper(InternalLocationDomainEventType.LOCATION_REACTIVATED) {
-      locationService.reactivateLocation(id)
-    }
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_REACTIVATED,
+      {
+        locationService.reactivateLocation(id)
+      },
+      InformationSource.DPS,
+    )
   }
 
   @DeleteMapping("/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -454,8 +507,19 @@ class LocationResource(
     @PathVariable
     id: UUID,
   ) {
-    eventPublishAndAuditWrapper(InternalLocationDomainEventType.LOCATION_DELETED) {
-      locationService.deleteLocation(id)
-    }
+    eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_DELETED,
+      {
+        locationService.deleteLocation(id)
+      },
+      InformationSource.DPS,
+    )
   }
 }
+
+data class UpdateLocationResult(
+  val location: LocationDTO,
+  val capacityChanged: Boolean = false,
+  val certificationChanged: Boolean = false,
+  val otherParentLocationChanged: LocationDTO? = null,
+)

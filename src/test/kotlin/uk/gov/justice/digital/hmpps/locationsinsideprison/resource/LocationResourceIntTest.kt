@@ -48,9 +48,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: LocationRepository
-  lateinit var location: ResidentialLocationJPA
+  lateinit var cell1: ResidentialLocationJPA
+  lateinit var cell2: ResidentialLocationJPA
   lateinit var landing1: ResidentialLocationJPA
-  lateinit var wing: ResidentialLocationJPA
+  lateinit var landing2: ResidentialLocationJPA
+  lateinit var wingZ: ResidentialLocationJPA
+  lateinit var wingB: ResidentialLocationJPA
   lateinit var visitRoom: NonResidentialLocationJPA
   lateinit var adjRoom: NonResidentialLocationJPA
 
@@ -58,26 +61,38 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   fun setUp() {
     repository.deleteAll()
 
-    wing = repository.save(
+    wingZ = repository.save(
       buildResidentialLocation(
         pathHierarchy = "Z",
         locationType = LocationType.WING,
       ),
     )
-    val landing = repository.save(
+    wingB = repository.save(
+      buildResidentialLocation(
+        pathHierarchy = "B",
+        locationType = LocationType.WING,
+      ),
+    )
+    landing1 = repository.save(
       buildResidentialLocation(
         pathHierarchy = "Z-1",
         locationType = LocationType.LANDING,
       ),
     )
-    val cell1 = repository.save(
+    landing2 = repository.save(
+      buildResidentialLocation(
+        pathHierarchy = "Z-2",
+        locationType = LocationType.LANDING,
+      ),
+    )
+    cell1 = repository.save(
       buildResidentialLocation(
         pathHierarchy = "Z-1-001",
         capacity = Capacity(capacity = 2, operationalCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
       ),
     )
-    val cell2 = repository.save(
+    cell2 = repository.save(
       buildResidentialLocation(
         pathHierarchy = "Z-1-002",
         capacity = Capacity(capacity = 2, operationalCapacity = 2),
@@ -98,16 +113,16 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         nonResidentialUsageType = NonResidentialUsageType.ADJUDICATION_HEARING,
       ),
     )
-    wing.addChildLocation(visitRoom)
+    wingZ.addChildLocation(visitRoom)
       .addChildLocation(
-        landing
+        landing1
           .addChildLocation(cell1)
           .addChildLocation(cell2),
       )
+      .addChildLocation(landing2)
 
-    repository.save(wing)
-    location = cell1
-    landing1 = landing
+    repository.save(wingZ)
+    repository.save(wingB)
   }
 
   private fun buildResidentialLocation(
@@ -182,14 +197,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.get().uri("/locations/${location.id}")
+        webTestClient.get().uri("/locations/${cell1.id}")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.get().uri("/locations/${location.id}")
+        webTestClient.get().uri("/locations/${cell1.id}")
           .headers(setAuthorisation(roles = listOf()))
           .exchange()
           .expectStatus().isForbidden
@@ -197,7 +212,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.get().uri("/locations/${location.id}")
+        webTestClient.get().uri("/locations/${cell1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .exchange()
           .expectStatus().isForbidden
@@ -209,7 +224,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a location`() {
-        webTestClient.get().uri("/locations/${wing.id}?includeChildren=true")
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -288,6 +303,26 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       }
                     }
                   ]
+                },
+                { 
+                  "prisonId": "MDI",
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "capacity": {
+                    "capacity": 0,
+                    "operationalCapacity": 0
+                  },
+                  "certification": {
+                    "certified": false,
+                    "capacityOfCertifiedCell": 0
+                  },
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "childLocations": [],
+                  "isResidential": true,
+                  "key": "MDI-Z-2"
                 }
               ]
             }
@@ -307,14 +342,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.get().uri("/locations/key/${location.getKey()}")
+        webTestClient.get().uri("/locations/key/${cell1.getKey()}")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.get().uri("/locations/key/${location.getKey()}")
+        webTestClient.get().uri("/locations/key/${cell1.getKey()}")
           .headers(setAuthorisation(roles = listOf()))
           .exchange()
           .expectStatus().isForbidden
@@ -322,7 +357,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.get().uri("/locations/key/${location.getKey()}")
+        webTestClient.get().uri("/locations/key/${cell1.getKey()}")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .exchange()
           .expectStatus().isForbidden
@@ -334,7 +369,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a location by key`() {
-        webTestClient.get().uri("/locations/key/${wing.getKey()}?includeChildren=true")
+        webTestClient.get().uri("/locations/key/${wingZ.getKey()}?includeChildren=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -446,6 +481,25 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           },
                           "isResidential": true,
                           "key": "MDI-Z-1"
+                        },
+                        {
+                          "prisonId": "MDI",
+                          "code": "2",
+                          "pathHierarchy": "Z-2",
+                          "locationType": "LANDING",
+                          "orderWithinParentLocation": 99,
+                          "active": true,
+                          "residentialHousingType": "NORMAL_ACCOMMODATION",
+                          "capacity": {
+                            "capacity": 0,
+                            "operationalCapacity": 0
+                          },
+                          "certification": {
+                            "certified": false,
+                            "capacityOfCertifiedCell": 0
+                          },
+                          "isResidential": true,
+                          "key": "MDI-Z-2"
                         }
                       ],
                       "orderWithinParentLocation": 99,
@@ -486,14 +540,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.get().uri("/locations/prison/${location.prisonId}")
+        webTestClient.get().uri("/locations/prison/${cell1.prisonId}")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.get().uri("/locations/prison/${location.prisonId}")
+        webTestClient.get().uri("/locations/prison/${cell1.prisonId}")
           .headers(setAuthorisation(roles = listOf()))
           .exchange()
           .expectStatus().isForbidden
@@ -501,7 +555,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.get().uri("/locations/prison/${location.prisonId}")
+        webTestClient.get().uri("/locations/prison/${cell1.prisonId}")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .exchange()
           .expectStatus().isForbidden
@@ -513,7 +567,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a location`() {
-        webTestClient.get().uri("/locations/prison/${wing.prisonId}")
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -550,6 +604,17 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 },
                 {
                   "prisonId": "MDI",
+                  "code": "B",
+                  "pathHierarchy": "B",
+                  "locationType": "WING",
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "isResidential": true,
+                  "key": "MDI-B"
+                },
+                {
+                  "prisonId": "MDI",
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
@@ -558,6 +623,17 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "residentialHousingType": "NORMAL_ACCOMMODATION",
                   "isResidential": true,
                   "key": "MDI-Z-1"
+                },
+                                { 
+                  "prisonId": "MDI",
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "isResidential": true,
+                  "key": "MDI-Z-2"
                 },
                 {
                   "prisonId": "MDI",
@@ -644,7 +720,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
               {
                 "totalPages": 1,
-                "totalElements": 6,
+                "totalElements": 8,
                 "first": true,
                 "last": true,
                 "size": 10,
@@ -664,6 +740,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "locationType": "WING",
                     "key": "MDI-Z"
                   },
+                  {
+                    "prisonId": "MDI",
+                    "code": "B",
+                    "pathHierarchy": "B",
+                    "locationType": "WING",
+                    "key": "MDI-B"
+                  },
                   { 
                     "prisonId": "MDI",
                     "code": "VISIT",
@@ -677,6 +760,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "pathHierarchy": "Z-1",
                     "locationType": "LANDING",
                     "key": "MDI-Z-1"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "2",
+                    "pathHierarchy": "Z-2",
+                    "locationType": "LANDING",
+                    "key": "MDI-Z-2"
                   },
                   {
                     "prisonId": "MDI",
@@ -700,7 +790,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "sorted": true,
                   "unsorted": false
                 },
-                "numberOfElements": 6,
+                "numberOfElements": 8,
                 "pageable": {
                   "offset": 0,
                   "sort": {
@@ -900,7 +990,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/locations/non-residential")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(createNonResidentialLocationRequest.copy(code = "VISIT", parentId = wing.id)))
+          .bodyValue(jsonString(createNonResidentialLocationRequest.copy(code = "VISIT", parentId = wingZ.id)))
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -913,7 +1003,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/locations/non-residential")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(createNonResidentialLocationRequest.copy(parentId = wing.id)))
+          .bodyValue(jsonString(createNonResidentialLocationRequest.copy(parentId = wingZ.id)))
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(
@@ -941,12 +1031,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   @Nested
   inner class PatchLocationTest {
     val changeCode = PatchLocationRequest(
-      code = "2",
+      code = "3",
     )
 
     val changeCapacity = PatchLocationRequest(
       capacity = CapacityDTO(capacity = 3, operationalCapacity = 3),
-      certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 3),
+    )
+    val changeCertification = PatchLocationRequest(
+      certification = CertificationDTO(certified = false, capacityOfCertifiedCell = 3),
     )
 
     val changeAttribute = PatchLocationRequest(
@@ -1034,7 +1126,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.patch().uri("/locations/${adjRoom.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(changeCode.copy(code = "VISIT", parentId = wing.id))
+          .bodyValue(changeCode.copy(code = "VISIT", parentId = wingZ.id))
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -1055,27 +1147,182 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
              {
               "prisonId": "MDI",
-              "code": "2",
-              "pathHierarchy": "Z-2",
+              "code": "3",
+              "pathHierarchy": "Z-3",
               "locationType": "LANDING",
               "active": true,
-              "key": "MDI-Z-2",
+              "key": "MDI-Z-3",
               "childLocations": [
                 {
                   "prisonId": "MDI",
                   "code": "001",
-                  "pathHierarchy": "Z-2-001",
+                  "pathHierarchy": "Z-3-001",
                   "locationType": "CELL",
                   "active": true,
-                  "key": "MDI-Z-2-001"
+                  "key": "MDI-Z-3-001"
                 },
                 {
                   "prisonId": "MDI",
                   "code": "002",
-                  "pathHierarchy": "Z-2-002",
+                  "pathHierarchy": "Z-3-002",
                   "locationType": "CELL",
                   "active": true,
-                  "key": "MDI-Z-2-002"
+                  "key": "MDI-Z-3-002"
+                }
+              ]
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can update parent of a location`() {
+        webTestClient.patch().uri("/locations/${landing1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(PatchLocationRequest(parentId = wingB.id)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+               {
+                "prisonId": "MDI",
+                "code": "1",
+                "pathHierarchy": "B-1",
+                "locationType": "LANDING",
+                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "capacity": {
+                  "capacity": 4,
+                  "operationalCapacity": 4
+                },
+                "certification": {
+                  "certified": false,
+                  "capacityOfCertifiedCell": 4
+                },
+                "isResidential": true,
+                "key": "MDI-B-1"
+              }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "pathHierarchy": "Z",
+              "locationType": "WING",
+              "key": "MDI-Z",
+              "capacity": {
+                "capacity": 0,
+                "operationalCapacity": 0
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 0
+              },
+              "childLocations": [
+                 {
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "usage": [
+                    {
+                      "usageType": "VISIT",
+                      "capacity": 15,
+                      "sequence": 1
+                    }
+                  ],
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "isResidential": false,
+                  "key": "MDI-Z-VISIT"
+                },
+                {
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "key": "MDI-Z-2",
+                  "capacity": {
+                    "capacity": 0,
+                    "operationalCapacity": 0
+                  },
+                  "certification": {
+                    "capacityOfCertifiedCell": 0
+                  },
+                  "childLocations": []
+                }
+              ]
+            }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/${wingB.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "pathHierarchy": "B",
+              "locationType": "WING",
+              "key": "MDI-B",
+              "capacity": {
+                "capacity": 4,
+                "operationalCapacity": 4
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 4
+              },
+              "childLocations": [
+                {
+                  "code": "1",
+                  "pathHierarchy": "B-1",
+                  "locationType": "LANDING",
+                  "key": "MDI-B-1",
+                  "capacity": {
+                    "capacity": 4,
+                    "operationalCapacity": 4
+                  },
+                  "certification": {
+                    "capacityOfCertifiedCell": 4
+                  },
+                  "childLocations": [
+                    {
+                      "pathHierarchy": "B-1-001",
+                      "locationType": "CELL",
+                      "key": "MDI-B-1-001",
+                      "capacity": {
+                        "capacity": 2,
+                        "operationalCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
+                    },
+                    {
+                      "pathHierarchy": "B-1-002",
+                      "locationType": "CELL",
+                      "key": "MDI-B-1-002",
+                      "capacity": {
+                        "capacity": 2,
+                        "operationalCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
+                    }
+                  ]
                 }
               ]
             }
@@ -1086,7 +1333,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update details of a locations capacity`() {
-        webTestClient.patch().uri("/locations/${location.id}")
+        webTestClient.patch().uri("/locations/${cell1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeCapacity))
@@ -1107,7 +1354,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 },
                 "certification": {
                   "certified": true,
-                  "capacityOfCertifiedCell": 3
+                  "capacityOfCertifiedCell": 2
                 },
                 "attributes": {
                   "LOCATION_ATTRIBUTE": [
@@ -1124,7 +1371,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             false,
           )
 
-        webTestClient.get().uri("/locations/${wing.id}?includeChildren=true")
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -1140,7 +1387,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "operationalCapacity": 5
               },
               "certification": {
-                "capacityOfCertifiedCell": 5
+                "capacityOfCertifiedCell": 4
               },
               "childLocations": [
                 {
@@ -1158,7 +1405,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "operationalCapacity": 5
                   },
                   "certification": {
-                    "capacityOfCertifiedCell": 5
+                    "capacityOfCertifiedCell": 4
                   },
                   "childLocations": [
                     {
@@ -1171,6 +1418,132 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       },
                       "certification": {
                         "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
+                    },
+                    {
+                      "pathHierarchy": "Z-1-002",
+                      "locationType": "CELL",
+                      "key": "MDI-Z-1-002",
+                      "capacity": {
+                        "capacity": 2,
+                        "operationalCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
+                    }
+                  ]
+                },
+                {
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "key": "MDI-Z-2",
+                  "capacity": {
+                    "capacity": 0,
+                    "operationalCapacity": 0
+                  },
+                  "certification": {
+                    "certified": false,
+                    "capacityOfCertifiedCell": 0
+                  }
+                }
+              ]
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can update details of a locations certification`() {
+        webTestClient.patch().uri("/locations/${cell1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(changeCertification))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+               {
+                "prisonId": "MDI",
+                "code": "001",
+                "pathHierarchy": "Z-1-001",
+                "locationType": "CELL",
+                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "capacity": {
+                  "capacity": 2,
+                  "operationalCapacity": 2
+                },
+                "certification": {
+                  "certified": false,
+                  "capacityOfCertifiedCell": 3
+                },
+                "attributes": {
+                  "LOCATION_ATTRIBUTE": [
+                    "DOUBLE_OCCUPANCY"
+                  ],
+                  "SECURITY": [
+                    "CAT_B"
+                  ]
+                },
+                "isResidential": true,
+                "key": "MDI-Z-1-001"
+              }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "pathHierarchy": "Z",
+              "locationType": "WING",
+              "key": "MDI-Z",
+              "capacity": {
+                "capacity": 4,
+                "operationalCapacity": 4
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 5
+              },
+              "childLocations": [
+                {
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "key": "MDI-Z-VISIT"
+                },
+                {
+                  "code": "1",
+                  "pathHierarchy": "Z-1",
+                  "locationType": "LANDING",
+                  "key": "MDI-Z-1",
+                  "capacity": {
+                    "capacity": 4,
+                    "operationalCapacity": 4
+                  },
+                  "certification": {
+                    "capacityOfCertifiedCell": 5
+                  },
+                  "childLocations": [
+                    {
+                      "pathHierarchy": "Z-1-001",
+                      "locationType": "CELL",
+                      "key": "MDI-Z-1-001",
+                      "capacity": {
+                        "capacity": 2,
+                        "operationalCapacity": 2
+                      },
+                      "certification": {
+                        "certified": false,
                         "capacityOfCertifiedCell": 3
                       }
                     },
@@ -1188,6 +1561,20 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       }
                     }
                   ]
+                },
+                {
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "key": "MDI-Z-2",
+                  "capacity": {
+                    "capacity": 0,
+                    "operationalCapacity": 0
+                  },
+                  "certification": {
+                    "certified": false,
+                    "capacityOfCertifiedCell": 0
+                  }
                 }
               ]
             }
@@ -1334,14 +1721,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class Security {
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.put().uri("/locations/${location.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.put().uri("/locations/${location.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
@@ -1351,7 +1738,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.put().uri("/locations/${location.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
@@ -1361,7 +1748,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with right role, wrong scope`() {
-        webTestClient.put().uri("/locations/${location.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
@@ -1374,7 +1761,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class Validation {
       @Test
       fun `access client error bad data`() {
-        webTestClient.put().uri("/locations/${location.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"deactivationReason": ""}""")
@@ -1387,10 +1774,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can deactivate a location`() {
-        webTestClient.put().uri("/locations/${location.id}/deactivate")
+        val reactivationDate = LocalDate.now(clock).plusMonths(1)
+        webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, reactivationDate = reactivationDate)))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -1398,13 +1786,82 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
              {
               "prisonId": "MDI",
-              "code": "001",
-              "pathHierarchy": "Z-1-001",
-              "locationType": "CELL",
+              "code": "Z",
+              "pathHierarchy": "Z",
+              "locationType": "WING",
               "active": false,
-              "key": "MDI-Z-1-001",
+              "key": "MDI-Z",
               "deactivatedReason": "DAMAGED",
-              "deactivatedDate": "${LocalDate.now(clock)}"
+              "reactivatedDate": "$reactivationDate",
+              "deactivatedDate": "${LocalDate.now(clock)}",
+              "childLocations": [
+                {
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "active": false,
+                  "reactivatedDate": "$reactivationDate",
+                  "deactivatedDate": "${LocalDate.now(clock)}",
+                  "deactivatedReason": "DAMAGED",
+                  "isResidential": false,
+                  "key": "MDI-Z-VISIT"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "1",
+                  "pathHierarchy": "Z-1",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "active": false,
+                  "reactivatedDate": "$reactivationDate",
+                  "deactivatedDate": "${LocalDate.now(clock)}",
+                  "deactivatedReason": "DAMAGED",
+                  "isResidential": true,
+                  "key": "MDI-Z-1",
+                  "childLocations": [
+                    {
+                      "prisonId": "MDI",
+                      "code": "001",
+                      "pathHierarchy": "Z-1-001",
+                      "locationType": "CELL",
+                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "active": false,
+                      "reactivatedDate": "$reactivationDate",
+                      "deactivatedDate": "${LocalDate.now(clock)}",
+                      "deactivatedReason": "DAMAGED",
+                      "isResidential": true,
+                      "key": "MDI-Z-1-001"
+                    },
+                    {
+                      "prisonId": "MDI",
+                      "code": "002",
+                      "pathHierarchy": "Z-1-002",
+                      "locationType": "CELL",
+                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "active": false,
+                      "reactivatedDate": "$reactivationDate",
+                      "deactivatedDate": "${LocalDate.now(clock)}",
+                      "deactivatedReason": "DAMAGED",
+                      "isResidential": true,
+                      "key": "MDI-Z-1-002"
+                    }
+                  ]
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "active": false,
+                  "reactivatedDate": "$reactivationDate",
+                  "deactivatedDate": "${LocalDate.now(clock)}",
+                  "deactivatedReason": "DAMAGED",
+                  "isResidential": true,
+                  "key": "MDI-Z-2"
+                }
+              ]
             }
           """,
             false,
@@ -1421,14 +1878,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class Security {
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.put().uri("/locations/${location.id}/reactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/reactivate")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.put().uri("/locations/${location.id}/reactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/reactivate")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
           .exchange()
@@ -1437,7 +1894,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.put().uri("/locations/${location.id}/reactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/reactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -1446,7 +1903,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with right role, wrong scope`() {
-        webTestClient.put().uri("/locations/${location.id}/reactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/reactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -1457,8 +1914,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
       @Test
-      fun `can deactivate a location`() {
-        webTestClient.put().uri("/locations/${location.id}/reactivate")
+      fun `can reactivate a location`() {
+        webTestClient.put().uri("/locations/${landing1.id}/reactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
@@ -1467,15 +1924,38 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             // language=json
             """
-             {
-              "prisonId": "MDI",
-              "code": "001",
-              "pathHierarchy": "Z-1-001",
-              "locationType": "CELL",
-              "active": true,
-              "key": "MDI-Z-1-001",
-              "reactivatedDate": "${LocalDate.now(clock)}"
-            }
+                {
+                  "prisonId": "MDI",
+                  "code": "1",
+                  "pathHierarchy": "Z-1",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "active": true,
+                  "isResidential": true,
+                  "key": "MDI-Z-1",
+                  "childLocations": [
+                    {
+                      "prisonId": "MDI",
+                      "code": "001",
+                      "pathHierarchy": "Z-1-001",
+                      "locationType": "CELL",
+                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "active": true,
+                      "isResidential": true,
+                      "key": "MDI-Z-1-001"
+                    },
+                    {
+                      "prisonId": "MDI",
+                      "code": "002",
+                      "pathHierarchy": "Z-1-002",
+                      "locationType": "CELL",
+                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "active": true,
+                      "isResidential": true,
+                      "key": "MDI-Z-1-002"
+                    }
+                  ]
+                }
           """,
             false,
           )

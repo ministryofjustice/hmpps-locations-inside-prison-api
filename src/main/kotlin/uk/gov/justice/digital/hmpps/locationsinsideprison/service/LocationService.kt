@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import com.microsoft.applicationinsights.TelemetryClient
+import jakarta.validation.ValidationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Page
@@ -9,8 +10,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -18,8 +18,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocationResult
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
+import java.time.LocalDate
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
@@ -58,28 +60,22 @@ class LocationService(
   }
 
   @Transactional
-  fun createResidentialLocation(createResidentialLocationRequest: CreateResidentialLocationRequest): LocationDTO {
-    val parentLocation = createResidentialLocationRequest.parentId?.let {
-      locationRepository.findById(createResidentialLocationRequest.parentId).getOrNull() ?: throw LocationNotFoundException(it.toString())
-    }
+  fun createLocation(request: CreateRequest): LocationDTO {
+    val parentLocation = getParentLocation(request.parentId)
 
-    val pathHierarchy = if (parentLocation != null) {
-      parentLocation.getPathHierarchy() + "-"
-    } else {
-      ""
-    } + createResidentialLocationRequest.code
-    locationRepository.findOneByPrisonIdAndPathHierarchy(createResidentialLocationRequest.prisonId, pathHierarchy)
-      ?.let { throw LocationAlreadyExistsException("${createResidentialLocationRequest.prisonId}-$pathHierarchy") }
+    checkParentValid(
+      parentLocation = parentLocation,
+      code = request.code,
+      prisonId = request.prisonId,
+    ) // check that code doesn't clash with existing location
 
-    val locationToCreate =
-      createResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
+    val locationToCreate = request.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
     parentLocation?.let { locationToCreate.setParent(it) }
-
     val location = locationRepository.save(locationToCreate).toDto()
 
-    log.info("Created Residential Location [${location.id}]")
+    log.info("Created Location [${location.id}] (Residential=${location.isResidential()})")
     telemetryClient.trackEvent(
-      "Created Residential Location",
+      "Created Location (Residential=${location.isResidential()})",
       mapOf(
         "id" to location.id.toString(),
         "prisonId" to location.prisonId,
@@ -92,65 +88,30 @@ class LocationService(
   }
 
   @Transactional
-  fun createNonResidentialLocation(createNonResidentialLocationRequest: CreateNonResidentialLocationRequest): LocationDTO {
-    val parentLocation = createNonResidentialLocationRequest.parentId?.let {
-      locationRepository.findById(createNonResidentialLocationRequest.parentId).getOrNull() ?: throw LocationNotFoundException(it.toString())
-    }
-
-    val pathHierarchy = if (parentLocation != null) {
-      parentLocation.getPathHierarchy() + "-"
-    } else {
-      ""
-    } + createNonResidentialLocationRequest.code
-    locationRepository.findOneByPrisonIdAndPathHierarchy(createNonResidentialLocationRequest.prisonId, pathHierarchy)
-      ?.let { throw LocationAlreadyExistsException("${createNonResidentialLocationRequest.prisonId}-$pathHierarchy") }
-
-    val locationToCreate = createNonResidentialLocationRequest.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
-    parentLocation?.let { locationToCreate.setParent(it) }
-    val location = locationRepository.save(locationToCreate).toDto()
-
-    log.info("Created Non Residential Location [${location.id}]")
-    telemetryClient.trackEvent(
-      "Created Non Residential Location",
-      mapOf(
-        "id" to location.id.toString(),
-        "prisonId" to location.prisonId,
-        "path" to location.pathHierarchy,
-      ),
-      null,
-    )
-
-    return location
-  }
-
-  @Transactional
-  fun updateLocation(id: UUID, patchLocationRequest: PatchLocationRequest): LocationDTO {
+  fun updateLocation(id: UUID, patchLocationRequest: PatchLocationRequest): UpdateLocationResult {
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val hierarchyChanged =
-      patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode() ||
-        patchLocationRequest.parentId != null && patchLocationRequest.parentId != locationToUpdate.getParent()?.id
+    val codeChanged = patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode()
+    val oldParent = locationToUpdate.getParent()
+    val parentChanged = patchLocationRequest.parentId != null && patchLocationRequest.parentId != oldParent?.id
 
-    val cascadeUp = locationToUpdate is ResidentialLocation &&
-      (
-        (patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.certification?.toDto()) ||
-          (patchLocationRequest.capacity != null && patchLocationRequest.capacity != locationToUpdate.capacity?.toDto())
-        )
+    if (codeChanged || parentChanged) {
+      val newCode = patchLocationRequest.code ?: locationToUpdate.getCode()
+      val theParent = patchLocationRequest.parentId?.let {
+        locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
+      } ?: oldParent
+      checkParentValid(theParent, newCode, locationToUpdate.prisonId)
 
-    patchLocationRequest.parentId?.let {
-      if (it == id) throw IllegalArgumentException("Cannot set parent to self")
-      locationToUpdate.setParent(
-        locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString()),
-      )
+      if (parentChanged && theParent?.id == id) throw ValidationException("Cannot set parent to self")
+      theParent?.let { locationToUpdate.setParent(it) }
     }
 
-    if (hierarchyChanged) {
-      // check that code doesn't clash with existing location
-      val pathHierarchy = locationToUpdate.getParent()?.getPathHierarchy() + "-" + patchLocationRequest.code
-      locationRepository.findOneByPrisonIdAndPathHierarchy(locationToUpdate.prisonId, pathHierarchy)
-        ?.let { throw LocationAlreadyExistsException("${locationToUpdate.prisonId}-$pathHierarchy") }
-    }
+    val capacityChanged = locationToUpdate is ResidentialLocation &&
+      patchLocationRequest.capacity != null && patchLocationRequest.capacity != locationToUpdate.capacity?.toDto()
+
+    val certificationChanged = locationToUpdate is ResidentialLocation &&
+      patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.certification?.toDto()
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
 
@@ -161,21 +122,29 @@ class LocationService(
         "id" to id.toString(),
         "prisonId" to locationToUpdate.prisonId,
         "path" to locationToUpdate.getPathHierarchy(),
+        "codeChanged" to "$codeChanged",
+        "parentChanged" to "$parentChanged",
+        "capacityChanged" to "$capacityChanged",
+        "certificationChanged" to "$certificationChanged",
       ),
       null,
     )
 
-    return locationToUpdate.toDto(includeChildren = hierarchyChanged, includeParent = hierarchyChanged || cascadeUp)
+    return UpdateLocationResult(
+      locationToUpdate.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged || capacityChanged || certificationChanged),
+      capacityChanged,
+      certificationChanged,
+      if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
+    )
   }
 
   @Transactional
-  fun deactivateLocation(id: UUID, deactivatedReason: DeactivatedReason): LocationDTO {
+  fun deactivateLocation(id: UUID, deactivatedReason: DeactivatedReason, proposedReactivationDate: LocalDate? = null): LocationDTO {
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    locationToUpdate.deactivate(deactivatedReason, authenticationFacade.getUserOrSystemInContext(), clock)
+    locationToUpdate.deactivate(deactivatedReason, proposedReactivationDate, authenticationFacade.getUserOrSystemInContext(), clock)
 
-    log.info("Deactivated Location [$id]")
     telemetryClient.trackEvent(
       "Deactivated Location",
       mapOf(
@@ -186,7 +155,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto()
+    return locationToUpdate.toDto(includeChildren = true)
   }
 
   @Transactional
@@ -196,7 +165,6 @@ class LocationService(
 
     locationToUpdate.reactivate(authenticationFacade.getUserOrSystemInContext(), clock)
 
-    log.info("Re-activated Location [$id]")
     telemetryClient.trackEvent(
       "Re-activated Location",
       mapOf(
@@ -207,7 +175,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto()
+    return locationToUpdate.toDto(includeChildren = true)
   }
 
   @Transactional
@@ -219,4 +187,28 @@ class LocationService(
 
     return locationToDelete.toDto()
   }
+
+  private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =
+    if (parentLocation != null) {
+      parentLocation.getPathHierarchy() + "-"
+    } else {
+      ""
+    } + code
+
+  private fun checkParentValid(
+    parentLocation: Location?,
+    code: String,
+    prisonId: String,
+  ) {
+    val pathHierarchy = buildNewPathHierarchy(parentLocation, code)
+
+    locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, pathHierarchy)
+      ?.let { throw LocationAlreadyExistsException("$prisonId-$pathHierarchy") }
+  }
+
+  private fun getParentLocation(parentId: UUID?): Location? =
+    parentId?.let {
+      locationRepository.findById(parentId).getOrNull()
+        ?: throw LocationNotFoundException(it.toString())
+    }
 }

@@ -18,7 +18,8 @@ import org.hibernate.annotations.DiscriminatorFormula
 import org.hibernate.annotations.GenericGenerator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import java.io.Serializable
 import java.time.Clock
 import java.time.LocalDate
@@ -94,7 +95,7 @@ abstract class Location(
     parent = null
   }
 
-  fun getCode(): String {
+  open fun getCode(): String {
     return code
   }
 
@@ -191,34 +192,45 @@ abstract class Location(
     return result
   }
 
-  open fun updateWith(patch: PatchLocationRequest, updatedBy: String, clock: Clock): Location {
-    setCode(patch.code ?: this.getCode())
-    this.locationType = patch.locationType ?: this.locationType
-    this.description = patch.description ?: this.description
-    this.comments = patch.comments ?: this.comments
-    this.orderWithinParentLocation = patch.orderWithinParentLocation ?: this.orderWithinParentLocation
+  open fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): Location {
+    setCode(upsert.code ?: this.getCode())
+    this.locationType = upsert.locationType ?: this.locationType
+    this.description = upsert.description ?: this.description
+    this.comments = upsert.comments ?: this.comments
+    this.orderWithinParentLocation = upsert.orderWithinParentLocation ?: this.orderWithinParentLocation
     this.updatedBy = updatedBy
     this.whenUpdated = LocalDateTime.now(clock)
 
     return this
   }
 
-  fun deactivate(deactivatedReason: DeactivatedReason, userOrSystemInContext: String, clock: Clock) {
+  fun deactivate(deactivatedReason: DeactivatedReason, proposedReactivationDate: LocalDate? = null, userOrSystemInContext: String, clock: Clock) {
     this.active = false
     this.deactivatedReason = deactivatedReason
     this.deactivatedDate = LocalDate.now(clock)
-    this.reactivatedDate = null
+    this.reactivatedDate = proposedReactivationDate
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
+
+    log.info("Deactivated Location [$id]")
+
+    childLocations.forEach { it.deactivate(deactivatedReason, proposedReactivationDate, userOrSystemInContext, clock) }
   }
 
   fun reactivate(userOrSystemInContext: String, clock: Clock) {
+    if (getParent()?.active == false) {
+      throw LocationCannotBeReactivatedException(getKey())
+    }
     this.active = true
     this.deactivatedReason = null
     this.deactivatedDate = null
-    this.reactivatedDate = LocalDate.now(clock)
+    this.reactivatedDate = null
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
+
+    log.info("Re-activated Location [$id]")
+
+    childLocations.forEach { it.reactivate(userOrSystemInContext, clock) }
   }
 
   override fun toString(): String {
