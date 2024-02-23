@@ -113,7 +113,7 @@ data class UpsertLocationRequest(
         location.addAttribute(attribute)
       }
       location
-      } else {
+    } else {
       val location = NonResidentialLocation(
         id = null,
         prisonId = prisonId,
@@ -137,6 +137,6 @@ data class UpsertLocationRequest(
         location.addUsage(usage.usageType, usage.capacity, usage.sequence)
       }
       location
-      }
+    }
   }
 }

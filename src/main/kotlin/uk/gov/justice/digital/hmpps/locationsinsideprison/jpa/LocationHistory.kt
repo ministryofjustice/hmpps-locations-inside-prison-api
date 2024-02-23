@@ -11,7 +11,7 @@ import jakarta.persistence.ManyToOne
 import java.time.LocalDateTime
 
 @Entity
-class LocationHistory (
+class LocationHistory(
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   val id: Long? = null,
@@ -30,7 +30,7 @@ class LocationHistory (
 
   val amendedDate: LocalDateTime,
 
-  )
+)
 
 enum class LocationAttribute(
   val description: String,

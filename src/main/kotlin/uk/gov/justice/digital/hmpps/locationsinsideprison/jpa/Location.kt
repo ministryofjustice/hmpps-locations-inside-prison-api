@@ -19,8 +19,6 @@ import org.hibernate.annotations.GenericGenerator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyDeactivatedException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import java.io.Serializable
 import java.time.Clock
@@ -212,7 +210,6 @@ abstract class Location(
   }
 
   open fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): Location {
-
     setCode(upsert.code ?: this.getCode())
 
     if (this.locationType != upsert.locationType) {
@@ -242,7 +239,6 @@ abstract class Location(
   }
 
   fun deactivate(deactivatedReason: DeactivatedReason, proposedReactivationDate: LocalDate? = null, userOrSystemInContext: String, clock: Clock) {
-
     if (!active) {
       log.warn("Location [$id] is already deactivated")
     } else {
@@ -252,21 +248,21 @@ abstract class Location(
         this.deactivatedReason?.description,
         deactivatedReason.description,
         userOrSystemInContext,
-        LocalDateTime.now(clock)
+        LocalDateTime.now(clock),
       )
       addHistory(
         LocationAttribute.DEACTIVATED_DATE,
         this.deactivatedDate.toString(),
         deactivatedDate.toString(),
         userOrSystemInContext,
-        LocalDateTime.now(clock)
+        LocalDateTime.now(clock),
       )
       addHistory(
         LocationAttribute.PROPOSED_REACTIVATION_DATE,
         this.proposedReactivationDate.toString(),
         proposedReactivationDate?.toString(),
         userOrSystemInContext,
-        LocalDateTime.now(clock)
+        LocalDateTime.now(clock),
       )
 
       this.active = false
