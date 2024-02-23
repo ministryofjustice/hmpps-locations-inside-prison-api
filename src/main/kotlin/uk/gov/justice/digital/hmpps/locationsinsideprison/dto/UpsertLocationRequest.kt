@@ -63,6 +63,9 @@ data class UpsertLocationRequest(
   @Schema(description = "Location Usage", required = false)
   override val usage: Set<NonResidentialUsageDto>? = null,
 
+  @Schema(description = "Date location was created, if not provided then the current time will be used for a new location", required = false)
+  val createDate: LocalDateTime? = null,
+
   @Schema(description = "Last updated, if not provided then the current time will be used", required = false)
   val lastModifiedDate: LocalDateTime? = null,
 
@@ -71,8 +74,9 @@ data class UpsertLocationRequest(
 
 ) : UpdateLocationRequest {
 
-  fun toNewEntity(clock: Clock): LocationJPA =
-    if (residentialHousingType != null) {
+  fun toNewEntity(clock: Clock): LocationJPA {
+    val now = LocalDateTime.now(clock)
+    return if (residentialHousingType != null) {
       val location = ResidentialLocation(
         id = null,
         prisonId = prisonId,
@@ -85,8 +89,8 @@ data class UpsertLocationRequest(
         orderWithinParentLocation = orderWithinParentLocation,
         active = true,
         updatedBy = lastUpdatedBy,
-        whenCreated = lastModifiedDate ?: LocalDateTime.now(clock),
-        whenUpdated = lastModifiedDate ?: LocalDateTime.now(clock),
+        whenCreated = createDate ?: now,
+        whenUpdated = lastModifiedDate ?: now,
         deactivatedDate = null,
         deactivatedReason = null,
         reactivatedDate = null,
@@ -109,7 +113,7 @@ data class UpsertLocationRequest(
         location.addAttribute(attribute)
       }
       location
-    } else {
+      } else {
       val location = NonResidentialLocation(
         id = null,
         prisonId = prisonId,
@@ -121,8 +125,8 @@ data class UpsertLocationRequest(
         orderWithinParentLocation = orderWithinParentLocation,
         active = true,
         updatedBy = lastUpdatedBy,
-        whenCreated = lastModifiedDate ?: LocalDateTime.now(clock),
-        whenUpdated = lastModifiedDate ?: LocalDateTime.now(clock),
+        whenCreated = createDate ?: now,
+        whenUpdated = lastModifiedDate ?: now,
         deactivatedDate = null,
         deactivatedReason = null,
         reactivatedDate = null,
@@ -133,5 +137,6 @@ data class UpsertLocationRequest(
         location.addUsage(usage.usageType, usage.capacity, usage.sequence)
       }
       location
-    }
+      }
+  }
 }

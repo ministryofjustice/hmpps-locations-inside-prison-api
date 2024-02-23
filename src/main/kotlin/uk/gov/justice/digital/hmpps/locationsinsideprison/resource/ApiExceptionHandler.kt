@@ -215,6 +215,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(LocationAlreadyDeactivatedException::class)
+  fun handleLocationAlreadyDeactivated(e: LocationAlreadyDeactivatedException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Location already deactivated: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.LocationAlreadyDeactivated,
+          userMessage = "Location already deactivated: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   companion object {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
@@ -223,3 +238,4 @@ class ApiExceptionHandler {
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
+class LocationAlreadyDeactivatedException(key: String) : Exception("$key is already deactivated")

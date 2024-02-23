@@ -19,6 +19,8 @@ import org.hibernate.annotations.GenericGenerator
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyDeactivatedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import java.io.Serializable
 import java.time.Clock
@@ -60,10 +62,13 @@ abstract class Location(
   open var deactivatedDate: LocalDate? = null,
   @Enumerated(EnumType.STRING)
   open var deactivatedReason: DeactivatedReason? = null,
-  open var reactivatedDate: LocalDate? = null,
+  open var proposedReactivationDate: LocalDate? = null,
 
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   protected open var childLocations: MutableList<Location> = mutableListOf(),
+
+  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  protected open var history: List<LocationHistory> = mutableListOf(),
 
   open val whenCreated: LocalDateTime,
   open var whenUpdated: LocalDateTime,
@@ -76,16 +81,16 @@ abstract class Location(
 
   fun getKey() = "$prisonId-${getPathHierarchy()}"
 
-  fun setCode(code: String) {
+  open fun setCode(code: String) {
     this.code = code
     updateHierarchicalPath()
   }
 
-  fun getPathHierarchy(): String {
+  open fun getPathHierarchy(): String {
     return pathHierarchy
   }
 
-  fun setParent(parent: Location) {
+  open fun setParent(parent: Location) {
     removeParent()
     parent.addChildLocation(this)
   }
@@ -99,7 +104,7 @@ abstract class Location(
     return code
   }
 
-  fun getParent(): Location? {
+  open fun getParent(): Location? {
     return parent
   }
 
@@ -153,6 +158,20 @@ abstract class Location(
     return leafLocations
   }
 
+  fun addHistory(attributeName: LocationAttribute, oldValue: String?, newValue: String?, amendedBy: String, amendedDate: LocalDateTime) {
+    if (oldValue != newValue) {
+      val locationHistory = LocationHistory(
+        location = this,
+        attributeName = attributeName,
+        oldValue = oldValue,
+        newValue = newValue,
+        amendedBy = amendedBy,
+        amendedDate = amendedDate,
+      )
+      history = history + locationHistory
+    }
+  }
+
   open fun toDto(includeChildren: Boolean = false, includeParent: Boolean = false): LocationDto {
     return LocationDto(
       id = id!!,
@@ -168,7 +187,7 @@ abstract class Location(
       active = active,
       deactivatedDate = deactivatedDate,
       deactivatedReason = deactivatedReason,
-      reactivatedDate = reactivatedDate,
+      reactivatedDate = proposedReactivationDate,
       childLocations = if (includeChildren) childLocations.map { it.toDto(includeChildren = true) } else null,
       parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true) else null,
     )
@@ -193,11 +212,29 @@ abstract class Location(
   }
 
   open fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): Location {
+
     setCode(upsert.code ?: this.getCode())
+
+    if (this.locationType != upsert.locationType) {
+      addHistory(LocationAttribute.LOCATION_TYPE, this.locationType.description, upsert.locationType?.description, updatedBy, LocalDateTime.now(clock))
+    }
     this.locationType = upsert.locationType ?: this.locationType
+
+    if (this.description != upsert.description) {
+      addHistory(LocationAttribute.DESCRIPTION, this.description, upsert.description, updatedBy, LocalDateTime.now(clock))
+    }
     this.description = upsert.description ?: this.description
+
+    if (this.comments != upsert.comments) {
+      addHistory(LocationAttribute.COMMENTS, this.comments, upsert.comments, updatedBy, LocalDateTime.now(clock))
+    }
     this.comments = upsert.comments ?: this.comments
+
+    if (this.orderWithinParentLocation != upsert.orderWithinParentLocation) {
+      addHistory(LocationAttribute.ORDER_WITHIN_PARENT_LOCATION, this.orderWithinParentLocation?.toString(), upsert.orderWithinParentLocation?.toString(), updatedBy, LocalDateTime.now(clock))
+    }
     this.orderWithinParentLocation = upsert.orderWithinParentLocation ?: this.orderWithinParentLocation
+
     this.updatedBy = updatedBy
     this.whenUpdated = LocalDateTime.now(clock)
 
@@ -205,15 +242,42 @@ abstract class Location(
   }
 
   fun deactivate(deactivatedReason: DeactivatedReason, proposedReactivationDate: LocalDate? = null, userOrSystemInContext: String, clock: Clock) {
-    this.active = false
-    this.deactivatedReason = deactivatedReason
-    this.deactivatedDate = LocalDate.now(clock)
-    this.reactivatedDate = proposedReactivationDate
-    this.updatedBy = userOrSystemInContext
-    this.whenUpdated = LocalDateTime.now(clock)
 
-    log.info("Deactivated Location [$id]")
+    if (!active) {
+      log.warn("Location [$id] is already deactivated")
+    } else {
+      addHistory(LocationAttribute.ACTIVE, "true", "false", userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(
+        LocationAttribute.DEACTIVATED_REASON,
+        this.deactivatedReason?.description,
+        deactivatedReason.description,
+        userOrSystemInContext,
+        LocalDateTime.now(clock)
+      )
+      addHistory(
+        LocationAttribute.DEACTIVATED_DATE,
+        this.deactivatedDate.toString(),
+        deactivatedDate.toString(),
+        userOrSystemInContext,
+        LocalDateTime.now(clock)
+      )
+      addHistory(
+        LocationAttribute.PROPOSED_REACTIVATION_DATE,
+        this.proposedReactivationDate.toString(),
+        proposedReactivationDate?.toString(),
+        userOrSystemInContext,
+        LocalDateTime.now(clock)
+      )
 
+      this.active = false
+      this.deactivatedReason = deactivatedReason
+      this.deactivatedDate = LocalDate.now(clock)
+      this.proposedReactivationDate = proposedReactivationDate
+      this.updatedBy = userOrSystemInContext
+      this.whenUpdated = LocalDateTime.now(clock)
+
+      log.info("Deactivated Location [$id]")
+    }
     childLocations.forEach { it.deactivate(deactivatedReason, proposedReactivationDate, userOrSystemInContext, clock) }
   }
 
@@ -221,15 +285,20 @@ abstract class Location(
     if (getParent()?.active == false) {
       throw LocationCannotBeReactivatedException(getKey())
     }
+
+    addHistory(LocationAttribute.ACTIVE, "false", "true", userOrSystemInContext, LocalDateTime.now(clock))
+    addHistory(LocationAttribute.DEACTIVATED_REASON, deactivatedReason?.description, null, userOrSystemInContext, LocalDateTime.now(clock))
+    addHistory(LocationAttribute.DEACTIVATED_DATE, deactivatedDate?.toString(), null, userOrSystemInContext, LocalDateTime.now(clock))
+    addHistory(LocationAttribute.PROPOSED_REACTIVATION_DATE, proposedReactivationDate?.toString(), null, userOrSystemInContext, LocalDateTime.now(clock))
+
     this.active = true
     this.deactivatedReason = null
     this.deactivatedDate = null
-    this.reactivatedDate = null
+    this.proposedReactivationDate = null
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
 
     log.info("Re-activated Location [$id]")
-
     childLocations.forEach { it.reactivate(userOrSystemInContext, clock) }
   }
 

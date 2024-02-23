@@ -63,7 +63,7 @@ class ResidentialLocation(
   active = active,
   deactivatedDate = deactivatedDate,
   deactivatedReason = deactivatedReason,
-  reactivatedDate = reactivatedDate,
+  proposedReactivationDate = reactivatedDate,
   childLocations = childLocations,
   whenCreated = whenCreated,
   whenUpdated = whenUpdated,
@@ -95,7 +95,18 @@ class ResidentialLocation(
 
   override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): ResidentialLocation {
     super.updateWith(upsert, updatedBy, clock)
+
+    if (this.residentialHousingType != upsert.residentialHousingType) {
+      addHistory(
+        LocationAttribute.RESIDENTIAL_HOUSING_TYPE,
+        this.residentialHousingType.name,
+        upsert.residentialHousingType?.name,
+        updatedBy,
+        LocalDateTime.now(clock),
+      )
+    }
     this.residentialHousingType = upsert.residentialHousingType ?: this.residentialHousingType
+
     this.capacity = upsert.capacity?.toNewEntity() ?: this.capacity
     this.certification = upsert.certification?.toNewEntity() ?: this.certification
     this.attributes = upsert.attributes?.map { attribute ->
@@ -126,23 +137,6 @@ class ResidentialLocation(
       attributes = attributes.map { it.attributeValue },
     )
   }
-}
-
-enum class ResidentialLocationType(
-  val description: String,
-) {
-  WING("Wing"),
-  SPUR("Spur"),
-  LANDING("Landing"),
-  CELL("Cell"),
-  ROOM("Room"),
-  HOLDING_AREA("Holding Area"),
-  TIER("Tier"),
-  MOVEMENT_AREA("Movement Area"),
-  RESIDENTIAL_UNIT("Residential Unit"),
-  EXTERNAL_GROUNDS("External Grounds"),
-  HOLDING_CELL("Holding Cell"),
-  MEDICAL("Medical"),
 }
 
 enum class ResidentialHousingType(

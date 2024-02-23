@@ -49,7 +49,7 @@ class NonResidentialLocation(
   active = active,
   deactivatedDate = deactivatedDate,
   deactivatedReason = deactivatedReason,
-  reactivatedDate = reactivatedDate,
+  proposedReactivationDate = reactivatedDate,
   childLocations = childLocations,
   whenCreated = whenCreated,
   whenUpdated = whenUpdated,
