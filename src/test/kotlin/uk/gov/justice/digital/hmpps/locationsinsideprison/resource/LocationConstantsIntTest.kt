@@ -816,7 +816,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                       },
                       {
                         "key": "UNCLASSIFIED",
-                        "description": "Un-classfied"
+                        "description": "Un-classified"
                       },
                       {
                         "key": "UNCATEGORISED_SENTENCED_MALE",
