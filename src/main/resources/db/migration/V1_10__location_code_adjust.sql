@@ -1,0 +1,1 @@
+ALTER TABLE location ALTER COLUMN code type VARCHAR(12)
