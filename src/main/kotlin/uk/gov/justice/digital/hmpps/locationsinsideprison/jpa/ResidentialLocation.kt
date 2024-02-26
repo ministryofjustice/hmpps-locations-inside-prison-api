@@ -47,7 +47,7 @@ class ResidentialLocation(
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
   var certification: Certification? = null,
 
-  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   private var attributes: MutableSet<ResidentialAttribute> = mutableSetOf(),
 
 ) : Location(
@@ -119,10 +119,12 @@ class ResidentialLocation(
     }
     this.certification = upsert.certification?.toNewEntity() ?: this.certification
 
-    recordHistoryOfAttributesChanges(upsert, updatedBy, clock)
-    this.attributes = upsert.attributes?.map { attribute ->
-      this.addAttribute(attribute)
-    }?.toMutableSet() ?: this.attributes
+    if (upsert.attributes != null) {
+      recordHistoryOfAttributesChanges(upsert, updatedBy, clock)
+      this.attributes = upsert.attributes?.map { attribute ->
+        this.addAttribute(attribute)
+      }?.toMutableSet() ?: this.attributes
+    }
     return this
   }
 

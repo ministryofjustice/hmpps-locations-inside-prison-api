@@ -33,7 +33,7 @@ class NonResidentialLocation(
   whenUpdated: LocalDateTime,
   updatedBy: String,
 
-  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   private var nonResidentialUsages: MutableSet<NonResidentialUsage> = mutableSetOf(),
 
 ) : Location(
