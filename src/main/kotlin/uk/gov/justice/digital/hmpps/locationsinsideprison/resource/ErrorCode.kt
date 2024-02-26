@@ -11,4 +11,5 @@ enum class ErrorCode(val errorCode: Int) {
   ValidationFailure(102),
   LocationAlreadyExists(103),
   LocationCannotBeReactivated(104),
+  LocationAlreadyDeactivated(105),
 }

@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
@@ -22,6 +23,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
@@ -96,6 +98,9 @@ class LocationService(
     val oldParent = locationToUpdate.getParent()
     val parentChanged = patchLocationRequest.parentId != null && patchLocationRequest.parentId != oldParent?.id
 
+    if (codeChanged) locationToUpdate.addHistory(LocationAttribute.CODE, locationToUpdate.getCode(), patchLocationRequest.code, authenticationFacade.getUserOrSystemInContext(), LocalDateTime.now(clock))
+    if (parentChanged) locationToUpdate.addHistory(LocationAttribute.PARENT_LOCATION, oldParent?.id?.toString(), patchLocationRequest.parentId?.toString(), authenticationFacade.getUserOrSystemInContext(), LocalDateTime.now(clock))
+
     if (codeChanged || parentChanged) {
       val newCode = patchLocationRequest.code ?: locationToUpdate.getCode()
       val theParent = patchLocationRequest.parentId?.let {
@@ -110,8 +115,17 @@ class LocationService(
     val capacityChanged = locationToUpdate is ResidentialLocation &&
       patchLocationRequest.capacity != null && patchLocationRequest.capacity != locationToUpdate.capacity?.toDto()
 
+    if (capacityChanged && locationToUpdate is ResidentialLocation) {
+      locationToUpdate.addHistory(LocationAttribute.CAPACITY, locationToUpdate.capacity?.capacity.toString(), patchLocationRequest.capacity?.capacity.toString(), authenticationFacade.getUserOrSystemInContext(), LocalDateTime.now(clock))
+      locationToUpdate.addHistory(LocationAttribute.OPERATIONAL_CAPACITY, locationToUpdate.capacity?.operationalCapacity.toString(), patchLocationRequest.capacity?.operationalCapacity.toString(), authenticationFacade.getUserOrSystemInContext(), LocalDateTime.now(clock))
+    }
     val certificationChanged = locationToUpdate is ResidentialLocation &&
       patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.certification?.toDto()
+
+    if (certificationChanged && locationToUpdate is ResidentialLocation) {
+      locationToUpdate.addHistory(LocationAttribute.CERTIFIED, locationToUpdate.certification?.certified.toString(), patchLocationRequest.certification?.certified.toString(), authenticationFacade.getUserOrSystemInContext(), LocalDateTime.now(clock))
+      locationToUpdate.addHistory(LocationAttribute.CERTIFIED_CAPACITY, locationToUpdate.certification?.capacityOfCertifiedCell.toString(), patchLocationRequest.certification?.capacityOfCertifiedCell.toString(), authenticationFacade.getUserOrSystemInContext(), LocalDateTime.now(clock))
+    }
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
 

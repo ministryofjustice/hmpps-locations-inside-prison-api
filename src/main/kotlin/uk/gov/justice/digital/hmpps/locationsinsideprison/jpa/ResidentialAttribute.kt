@@ -129,7 +129,7 @@ enum class ResidentialAttributeValue(
   YOI_RESTRICTED(ResidentialAttributeType.SECURITY, "YOI Restricted"),
   YOI_SHORT_SENTENCE(ResidentialAttributeType.SECURITY, "YOI Short Sentence"),
   YOI_LONG_TERM_CLOSED(ResidentialAttributeType.SECURITY, "YOI Long-Term Closed"),
-  UNCLASSIFIED(ResidentialAttributeType.SECURITY, "Un-classfied"),
+  UNCLASSIFIED(ResidentialAttributeType.SECURITY, "Un-classified"),
   UNCATEGORISED_SENTENCED_MALE(ResidentialAttributeType.SECURITY, "Un-categorised Sentenced Male"),
   LOW(ResidentialAttributeType.SECURITY, "Low"),
   MEDIUM(ResidentialAttributeType.SECURITY, "Medium"),
