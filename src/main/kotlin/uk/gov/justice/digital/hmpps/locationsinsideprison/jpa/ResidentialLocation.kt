@@ -96,7 +96,7 @@ class ResidentialLocation(
   override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): ResidentialLocation {
     super.updateWith(upsert, updatedBy, clock)
 
-    if (this.residentialHousingType != upsert.residentialHousingType) {
+    if (upsert.residentialHousingType != null && this.residentialHousingType != upsert.residentialHousingType) {
       addHistory(
         LocationAttribute.RESIDENTIAL_HOUSING_TYPE,
         this.residentialHousingType.name,
@@ -107,12 +107,37 @@ class ResidentialLocation(
     }
     this.residentialHousingType = upsert.residentialHousingType ?: this.residentialHousingType
 
+    if (upsert.capacity != null && upsert.capacity != capacity?.toDto()) {
+      addHistory(LocationAttribute.CAPACITY, capacity?.capacity.toString(), upsert.capacity?.capacity.toString(), updatedBy, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.OPERATIONAL_CAPACITY, capacity?.operationalCapacity.toString(), upsert.capacity?.operationalCapacity.toString(), updatedBy, LocalDateTime.now(clock))
+    }
     this.capacity = upsert.capacity?.toNewEntity() ?: this.capacity
+
+    if (upsert.certification != null && upsert.certification != certification?.toDto()) {
+      addHistory(LocationAttribute.CERTIFIED, certification?.certified.toString(), upsert.certification?.certified.toString(), updatedBy, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.CERTIFIED_CAPACITY, certification?.capacityOfCertifiedCell.toString(), upsert.certification?.capacityOfCertifiedCell.toString(), updatedBy, LocalDateTime.now(clock))
+    }
     this.certification = upsert.certification?.toNewEntity() ?: this.certification
+
+    recordHistoryOfAttributesChanges(upsert, updatedBy, clock)
     this.attributes = upsert.attributes?.map { attribute ->
       this.addAttribute(attribute)
     }?.toMutableSet() ?: this.attributes
     return this
+  }
+
+  private fun recordHistoryOfAttributesChanges(
+    upsert: UpdateLocationRequest,
+    updatedBy: String,
+    clock: Clock,
+  ) {
+    val oldAttributes = this.attributes.map { it.attributeValue }.toSet()
+    upsert.attributes?.subtract(oldAttributes)?.forEach { newAttribute ->
+      addHistory(LocationAttribute.ATTRIBUTES, null, newAttribute.name, updatedBy, LocalDateTime.now(clock))
+    }
+    oldAttributes.subtract((upsert.attributes?.toSet() ?: emptySet()).toSet()).forEach { removedAttribute ->
+      addHistory(LocationAttribute.ATTRIBUTES, removedAttribute.name, null, updatedBy, LocalDateTime.now(clock))
+    }
   }
 
   override fun toDto(includeChildren: Boolean, includeParent: Boolean): LocationDto {

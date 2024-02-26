@@ -78,9 +78,45 @@ class NonResidentialLocation(
 
   override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): NonResidentialLocation {
     super.updateWith(upsert, updatedBy, clock)
+    recordHistoryOfUsages(upsert, updatedBy, clock)
     this.nonResidentialUsages = upsert.usage?.map { nonResUsage ->
       this.addUsage(nonResUsage.usageType, nonResUsage.capacity, nonResUsage.sequence)
     }?.toMutableSet() ?: this.nonResidentialUsages
     return this
+  }
+
+  private fun recordHistoryOfUsages(
+    upsert: UpdateLocationRequest,
+    updatedBy: String,
+    clock: Clock,
+  ) {
+    val oldUsages = this.nonResidentialUsages.map { it.usageType }.toSet()
+    val newUsages = (upsert.usage?.map { it.usageType } ?: emptySet()).toSet()
+
+    newUsages.subtract(oldUsages).forEach { newAttribute ->
+      addHistory(LocationAttribute.USAGE, null, newAttribute.name, updatedBy, LocalDateTime.now(clock))
+      upsert.usage?.find { it.usageType == newAttribute }?.capacity?.let { capacity ->
+        addHistory(LocationAttribute.NON_RESIDENTIAL_CAPACITY, null, capacity.toString(), updatedBy, LocalDateTime.now(clock))
+      }
+    }
+
+    oldUsages.subtract(newUsages).forEach { removedAttribute ->
+      addHistory(LocationAttribute.USAGE, removedAttribute.name, null, updatedBy, LocalDateTime.now(clock))
+    }
+
+    newUsages.intersect(oldUsages).forEach { existingType ->
+      val newUsage = upsert.usage?.find { it.usageType == existingType }
+      val oldUsage = this.nonResidentialUsages.find { it.usageType == existingType }
+      if (newUsage != null && oldUsage != null && newUsage.capacity != oldUsage.capacity) {
+        addHistory(
+          LocationAttribute.NON_RESIDENTIAL_CAPACITY,
+          oldUsage.capacity.toString(),
+          newUsage.capacity.toString(),
+          updatedBy,
+          LocalDateTime.now(clock),
+        )
+      }
+    }
+    this.nonResidentialUsages
   }
 }

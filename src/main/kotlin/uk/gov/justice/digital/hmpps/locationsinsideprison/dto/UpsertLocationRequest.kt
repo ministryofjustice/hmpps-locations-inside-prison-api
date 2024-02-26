@@ -28,7 +28,7 @@ data class UpsertLocationRequest(
 
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
-  @field:Size(max = 40, message = "Code must be less than 41 characters")
+  @field:Size(max = 12, message = "Code must be no more than 12 characters")
   override val code: String,
 
   @Schema(description = "Location Type", example = "CELL", required = true)

@@ -11,3 +11,5 @@ CREATE TABLE location_history
 
     FOREIGN KEY (location_id) REFERENCES location (id)
 );
+
+ALTER TABLE location ALTER COLUMN code type VARCHAR(12)

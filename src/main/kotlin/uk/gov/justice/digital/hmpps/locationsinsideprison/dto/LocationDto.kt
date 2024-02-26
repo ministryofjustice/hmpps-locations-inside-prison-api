@@ -225,7 +225,7 @@ data class CreateResidentialLocationRequest(
 
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
-  @field:Size(max = 40, message = "Code must be less than 41 characters")
+  @field:Size(max = 12, message = "Code must be up to 12 characters")
   override val code: String,
 
   @Schema(description = "residential location type", example = "NORMAL_ACCOMMODATION", required = true)
@@ -291,7 +291,7 @@ data class CreateNonResidentialLocationRequest(
 
   @Schema(description = "Code of the location", required = true, example = "ADJ", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
-  @field:Size(max = 40, message = "Code must be less than 41 characters")
+  @field:Size(max = 12, message = "Code must be no more than 12 characters")
   override val code: String,
 
   @Schema(description = "Location Type", example = "ADJUDICATION_ROOM", required = true)
