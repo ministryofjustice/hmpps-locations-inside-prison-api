@@ -210,24 +210,25 @@ abstract class Location(
   }
 
   open fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): Location {
+    if (upsert.code != null && this.getCode() != upsert.code) addHistory(LocationAttribute.CODE, getCode(), upsert.code, updatedBy, LocalDateTime.now(clock))
     setCode(upsert.code ?: this.getCode())
 
-    if (this.locationType != upsert.locationType) {
+    if (upsert.locationType != null && this.locationType != upsert.locationType) {
       addHistory(LocationAttribute.LOCATION_TYPE, this.locationType.description, upsert.locationType?.description, updatedBy, LocalDateTime.now(clock))
     }
     this.locationType = upsert.locationType ?: this.locationType
 
-    if (this.description != upsert.description) {
+    if (upsert.description != null && this.description != upsert.description) {
       addHistory(LocationAttribute.DESCRIPTION, this.description, upsert.description, updatedBy, LocalDateTime.now(clock))
     }
     this.description = upsert.description ?: this.description
 
-    if (this.comments != upsert.comments) {
+    if (upsert.comments != null && this.comments != upsert.comments) {
       addHistory(LocationAttribute.COMMENTS, this.comments, upsert.comments, updatedBy, LocalDateTime.now(clock))
     }
     this.comments = upsert.comments ?: this.comments
 
-    if (this.orderWithinParentLocation != upsert.orderWithinParentLocation) {
+    if (upsert.orderWithinParentLocation != null && this.orderWithinParentLocation != upsert.orderWithinParentLocation) {
       addHistory(LocationAttribute.ORDER_WITHIN_PARENT_LOCATION, this.orderWithinParentLocation?.toString(), upsert.orderWithinParentLocation?.toString(), updatedBy, LocalDateTime.now(clock))
     }
     this.orderWithinParentLocation = upsert.orderWithinParentLocation ?: this.orderWithinParentLocation

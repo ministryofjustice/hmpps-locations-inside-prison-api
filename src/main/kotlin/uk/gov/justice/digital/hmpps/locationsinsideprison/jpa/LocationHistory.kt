@@ -48,6 +48,7 @@ enum class LocationAttribute(
   DESCRIPTION("Description"),
   ATTRIBUTES("Attributes"),
   USAGE("Usage"),
+  NON_RESIDENTIAL_CAPACITY("Non Residential Capacity"),
   ACTIVE("Active"),
   DEACTIVATED_DATE("Deactivated Date"),
   DEACTIVATED_REASON("Deactivated Reason"),
