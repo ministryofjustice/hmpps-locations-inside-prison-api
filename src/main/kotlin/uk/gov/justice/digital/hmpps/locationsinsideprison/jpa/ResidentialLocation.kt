@@ -47,8 +47,8 @@ class ResidentialLocation(
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
   var certification: Certification? = null,
 
-  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-  private var attributes: MutableSet<ResidentialAttribute> = mutableSetOf(),
+  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  private val attributes: MutableSet<ResidentialAttribute> = mutableSetOf(),
 
 ) : Location(
   id = id,

@@ -18,7 +18,7 @@ class NonResidentialUsage(
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   val id: Long? = null,
 
-  @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  @ManyToOne(fetch = FetchType.LAZY)
   val location: Location,
   @Enumerated(EnumType.STRING)
   val usageType: NonResidentialUsageType,
