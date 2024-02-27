@@ -84,6 +84,9 @@ data class Location(
 
   @Schema(description = "Child Locations", required = false)
   val childLocations: List<Location>? = null,
+
+  @Schema(description = "History of changes", required = false)
+  val changeHistory: List<ChangeHistory>? = null,
 ) {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
   fun getKey(): String {
@@ -169,6 +172,25 @@ data class Capacity(
     return result
   }
 }
+
+@Schema(description = "Change History")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ChangeHistory(
+  @Schema(description = "Location Attribute", example = "Location Type", required = true)
+  val attribute: String,
+
+  @Schema(description = "Previous value of this attribute", example = "CELL", required = false)
+  val oldValue: String? = null,
+
+  @Schema(description = "New value of this attribute", example = "WING", required = false)
+  val newValue: String? = null,
+
+  @Schema(description = "User who made the change", example = "user", required = true)
+  val amendedBy: String,
+
+  @Schema(description = "Date the change was made", example = "2023-01-23T10:15:30", required = true)
+  val amendedDate: LocalDateTime,
+)
 
 @Schema(description = "Certification")
 @JsonInclude(JsonInclude.Include.NON_NULL)

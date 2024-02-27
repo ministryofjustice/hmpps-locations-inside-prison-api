@@ -50,6 +50,10 @@ class NonResidentialUsage(
     result = 31 * result + usageType.hashCode()
     return result
   }
+
+  override fun toString(): String {
+    return "NonResidentialUsage(usageType=$usageType, capacity=$capacity)"
+  }
 }
 
 enum class NonResidentialUsageType(

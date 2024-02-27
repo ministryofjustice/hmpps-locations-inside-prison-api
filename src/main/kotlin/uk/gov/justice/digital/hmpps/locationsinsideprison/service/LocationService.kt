@@ -119,7 +119,7 @@ class LocationService(
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
 
-    log.info("Updated Location [$id]")
+    log.info("Updated Location [$locationToUpdate]")
     telemetryClient.trackEvent(
       "Updated Location",
       mapOf(
