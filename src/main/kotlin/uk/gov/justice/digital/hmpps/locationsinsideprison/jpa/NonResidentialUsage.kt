@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
-import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated

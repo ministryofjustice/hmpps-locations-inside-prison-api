@@ -10,9 +10,11 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.MigrateHistoryRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpsertLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
@@ -252,7 +254,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
-  @DisplayName("POST /migrate")
+  @DisplayName("POST /migrate/location")
   @Nested
   inner class MigrateLocationTest {
     var migrateRequest = UpsertLocationRequest(
@@ -273,14 +275,14 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     inner class Security {
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.post().uri("/migrate")
+        webTestClient.post().uri("/migrate/location")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.post().uri("/migrate")
+        webTestClient.post().uri("/migrate/location")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(migrateRequest))
@@ -290,7 +292,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.post().uri("/migrate")
+        webTestClient.post().uri("/migrate/location")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(migrateRequest))
@@ -300,7 +302,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with right role, wrong scope`() {
-        webTestClient.post().uri("/migrate")
+        webTestClient.post().uri("/migrate/location")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(migrateRequest))
@@ -313,7 +315,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     inner class Validation {
       @Test
       fun `access client error bad data`() {
-        webTestClient.post().uri("/migrate")
+        webTestClient.post().uri("/migrate/location")
           .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"code": ""}""")
@@ -326,7 +328,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can migrate a location`() {
-        webTestClient.post().uri("/migrate")
+        webTestClient.post().uri("/migrate/location")
           .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(migrateRequest))
@@ -350,6 +352,97 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "capacity": 1,
                 "operationalCapacity": 1
               }
+            }
+          """,
+            false,
+          )
+      }
+    }
+  }
+
+  @DisplayName("POST /migrate/location/{id}/history")
+  @Nested
+  inner class MigrateLocationHistoryTest {
+    var migrateHistoryRequest = MigrateHistoryRequest(
+      attribute = LocationAttribute.CAPACITY,
+      oldValue = "2",
+      newValue = "1",
+      amendedBy = "user",
+      amendedDate = LocalDateTime.now(clock).minusYears(2),
+    )
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateHistoryRequest))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateHistoryRequest))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateHistoryRequest))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"attribute": "fsdfsdfsd"}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can migrate a location history`() {
+        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateHistoryRequest))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "attribute": "Capacity",
+              "oldValue": "2",
+              "newValue": "1",
+              "amendedBy": "user",
+              "amendedDate": "${migrateHistoryRequest.amendedDate}"
             }
           """,
             false,
