@@ -62,7 +62,7 @@ abstract class Location(
   open var deactivatedReason: DeactivatedReason? = null,
   open var proposedReactivationDate: LocalDate? = null,
 
-  @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   protected open var childLocations: MutableList<Location> = mutableListOf(),
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
