@@ -40,8 +40,8 @@ class LocationService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun getLocationById(id: UUID, includeChildren: Boolean = false): LocationDTO? {
-    val toDto = locationRepository.findById(id).getOrNull()?.toDto(includeChildren)
+  fun getLocationById(id: UUID, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
+    val toDto = locationRepository.findById(id).getOrNull()?.toDto(includeChildren = includeChildren, includeHistory = includeHistory)
     return toDto
   }
 
@@ -50,11 +50,11 @@ class LocationService(
       it.toDto()
     }
 
-  fun getLocationByKey(key: String, includeChildren: Boolean = false): LocationDTO? {
+  fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
     if (!key.contains("-")) throw LocationNotFoundException(key)
 
     val (prisonId, code) = key.split("-", limit = 2)
-    return locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code)?.toDto(includeChildren)
+    return locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code)?.toDto(includeChildren = includeChildren, includeHistory = includeHistory)
   }
 
   fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LocationDTO> {

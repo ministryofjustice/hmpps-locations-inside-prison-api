@@ -170,7 +170,7 @@ abstract class Location(
     }
   }
 
-  open fun toDto(includeChildren: Boolean = false, includeParent: Boolean = false): LocationDto {
+  open fun toDto(includeChildren: Boolean = false, includeParent: Boolean = false, includeHistory: Boolean = false): LocationDto {
     return LocationDto(
       id = id!!,
       code = getCode(),
@@ -186,8 +186,9 @@ abstract class Location(
       deactivatedDate = deactivatedDate,
       deactivatedReason = deactivatedReason,
       reactivatedDate = proposedReactivationDate,
-      childLocations = if (includeChildren) childLocations.map { it.toDto(includeChildren = true) } else null,
-      parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true) else null,
+      childLocations = if (includeChildren) childLocations.map { it.toDto(includeChildren = true, includeHistory = includeHistory) } else null,
+      parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true, includeHistory = includeHistory) else null,
+      changeHistory = if (includeHistory) history.map { it.toDto() } else null,
     )
   }
 
