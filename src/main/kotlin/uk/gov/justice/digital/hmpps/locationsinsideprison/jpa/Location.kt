@@ -156,8 +156,8 @@ abstract class Location(
     return leafLocations
   }
 
-  fun addHistory(attributeName: LocationAttribute, oldValue: String?, newValue: String?, amendedBy: String, amendedDate: LocalDateTime) {
-    if (oldValue != newValue) {
+  fun addHistory(attributeName: LocationAttribute, oldValue: String?, newValue: String?, amendedBy: String, amendedDate: LocalDateTime): LocationHistory? {
+    return if (oldValue != newValue) {
       val locationHistory = LocationHistory(
         location = this,
         attributeName = attributeName,
@@ -167,6 +167,9 @@ abstract class Location(
         amendedDate = amendedDate,
       )
       history = history + locationHistory
+      return locationHistory
+    } else {
+      null
     }
   }
 
