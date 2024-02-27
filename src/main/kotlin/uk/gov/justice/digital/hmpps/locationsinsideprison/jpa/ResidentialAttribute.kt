@@ -44,6 +44,10 @@ class ResidentialAttribute(
     result = 31 * result + attributeValue.hashCode()
     return result
   }
+
+  override fun toString(): String {
+    return "ResidentialAttribute(attributeType=$attributeType, attributeValue=$attributeValue)"
+  }
 }
 
 enum class ResidentialAttributeType(

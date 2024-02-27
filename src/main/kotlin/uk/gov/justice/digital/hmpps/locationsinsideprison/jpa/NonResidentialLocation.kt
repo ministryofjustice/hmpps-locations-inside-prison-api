@@ -70,18 +70,18 @@ class NonResidentialLocation(
     }
   }
 
-  override fun toDto(includeChildren: Boolean, includeParent: Boolean): LocationDto {
-    return super.toDto(includeChildren = includeChildren, includeParent = includeParent).copy(
+  override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean): LocationDto {
+    return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory).copy(
       usage = nonResidentialUsages.map { it.toDto() },
     )
   }
 
   override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): NonResidentialLocation {
     super.updateWith(upsert, updatedBy, clock)
-    recordHistoryOfUsages(upsert, updatedBy, clock)
-    this.nonResidentialUsages = upsert.usage?.map { nonResUsage ->
-      this.addUsage(nonResUsage.usageType, nonResUsage.capacity, nonResUsage.sequence)
-    }?.toMutableSet() ?: this.nonResidentialUsages
+    if (upsert.usage != null) {
+      recordHistoryOfUsages(upsert, updatedBy, clock)
+      nonResidentialUsages.retainAll(upsert.usage!!.map { addUsage(it.usageType, it.capacity, it.sequence) }.toSet())
+    }
     return this
   }
 

@@ -121,9 +121,7 @@ class ResidentialLocation(
 
     if (upsert.attributes != null) {
       recordHistoryOfAttributesChanges(upsert, updatedBy, clock)
-      this.attributes = upsert.attributes?.map { attribute ->
-        this.addAttribute(attribute)
-      }?.toMutableSet() ?: this.attributes
+      attributes.retainAll(upsert.attributes!!.map { addAttribute(it) }.toSet())
     }
     return this
   }
@@ -142,8 +140,8 @@ class ResidentialLocation(
     }
   }
 
-  override fun toDto(includeChildren: Boolean, includeParent: Boolean): LocationDto {
-    return super.toDto(includeChildren = includeChildren, includeParent = includeParent).copy(
+  override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean): LocationDto {
+    return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory).copy(
       capacity = if (isCell()) {
         capacity?.toDto()
       } else {

@@ -80,9 +80,10 @@ class LocationResource(
     @PathVariable
     id: UUID,
     @RequestParam(name = "includeChildren", required = false, defaultValue = "false") includeChildren: Boolean = false,
+    @RequestParam(name = "includeHistory", required = false, defaultValue = "false") includeHistory: Boolean = false,
   ): LocationDTO {
     return audit(AuditType.LOCATION_RETRIEVED, id.toString()) {
-      locationService.getLocationById(id, includeChildren) ?: throw LocationNotFoundException(id.toString())
+      locationService.getLocationById(id = id, includeChildren = includeChildren, includeHistory = includeHistory) ?: throw LocationNotFoundException(id.toString())
     }
   }
 
@@ -119,9 +120,10 @@ class LocationResource(
     @PathVariable
     key: String,
     @RequestParam(name = "includeChildren", required = false, defaultValue = "false") includeChildren: Boolean = false,
+    @RequestParam(name = "includeHistory", required = false, defaultValue = "false") includeHistory: Boolean = false,
   ): LocationDTO {
     return audit(AuditType.LOCATION_RETRIEVED, key) {
-      locationService.getLocationByKey(key, includeChildren) ?: throw LocationNotFoundException(key)
+      locationService.getLocationByKey(key = key, includeChildren = includeChildren, includeHistory = includeHistory) ?: throw LocationNotFoundException(key)
     }
   }
 
