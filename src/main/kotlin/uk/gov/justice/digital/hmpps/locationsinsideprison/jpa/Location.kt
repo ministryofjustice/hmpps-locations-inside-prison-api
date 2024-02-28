@@ -63,10 +63,10 @@ abstract class Location(
   open var proposedReactivationDate: LocalDate? = null,
 
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-  protected open var childLocations: MutableList<Location> = mutableListOf(),
+  protected open val childLocations: MutableList<Location> = mutableListOf(),
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-  protected open var history: List<LocationHistory> = mutableListOf(),
+  protected open val history: MutableList<LocationHistory> = mutableListOf(),
 
   open val whenCreated: LocalDateTime,
   open var whenUpdated: LocalDateTime,
@@ -166,7 +166,7 @@ abstract class Location(
         amendedBy = amendedBy,
         amendedDate = amendedDate,
       )
-      history = history + locationHistory
+      history.add(locationHistory)
       return locationHistory
     } else {
       null
