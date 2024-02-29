@@ -40,12 +40,12 @@ fun buildResidentialLocation(
   )
 }
 
- fun buildCell(
-   prisonId: String = "MDI",
-   pathHierarchy: String,
-   capacity: Capacity? = null,
-   certification: Certification? = null,
-   residentialAttributeValues: Set<ResidentialAttributeValue> = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY, ResidentialAttributeValue.CAT_B),
+fun buildCell(
+  prisonId: String = "MDI",
+  pathHierarchy: String,
+  capacity: Capacity? = null,
+  certification: Certification? = null,
+  residentialAttributeValues: Set<ResidentialAttributeValue> = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY, ResidentialAttributeValue.CAT_B),
 ): Cell {
   val cell = Cell(
     prisonId = prisonId,
@@ -72,7 +72,7 @@ fun buildResidentialLocation(
   cell.addAttributes(residentialAttributeValues)
   return cell
 }
- fun buildNonResidentialLocation(
+fun buildNonResidentialLocation(
   prisonId: String = "MDI",
   pathHierarchy: String,
   locationType: LocationType = LocationType.CELL,

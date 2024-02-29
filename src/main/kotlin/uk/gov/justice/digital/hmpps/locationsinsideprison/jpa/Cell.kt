@@ -114,7 +114,7 @@ class Cell(
   override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean): LocationDto {
     return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory).copy(
       capacity = capacity?.toDto(),
-      certification = certification?.toDto()
+      certification = certification?.toDto(),
     )
   }
 }

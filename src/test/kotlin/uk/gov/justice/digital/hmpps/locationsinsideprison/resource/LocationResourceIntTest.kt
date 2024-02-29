@@ -125,8 +125,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     repository.save(wingB)
   }
 
-
-
   @DisplayName("GET /locations/{id}")
   @Nested
   inner class ViewLocationTest {

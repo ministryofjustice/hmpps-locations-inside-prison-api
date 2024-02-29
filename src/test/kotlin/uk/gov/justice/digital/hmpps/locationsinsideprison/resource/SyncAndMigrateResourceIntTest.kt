@@ -8,13 +8,13 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.MigrateHistoryRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpsertLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
@@ -26,7 +26,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCe
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import java.time.Clock
 import java.time.LocalDateTime
-
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
 
@@ -48,25 +47,31 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   fun setUp() {
     repository.deleteAll()
 
-    wingB = repository.save(buildResidentialLocation(
+    wingB = repository.save(
+      buildResidentialLocation(
         prisonId = "XXY",
         pathHierarchy = "B",
         locationType = LocationType.WING,
-    ))
+      ),
+    )
 
-    val landing = repository.save(buildResidentialLocation(
-      prisonId = "XXY",
-      pathHierarchy = "B-1",
-      locationType = LocationType.LANDING,
-    ))
+    val landing = repository.save(
+      buildResidentialLocation(
+        prisonId = "XXY",
+        pathHierarchy = "B-1",
+        locationType = LocationType.LANDING,
+      ),
+    )
 
-    cell = repository.save(buildCell(
-      prisonId = "XXY",
-      pathHierarchy = "B-1-001",
-      capacity = Capacity(capacity = 2, operationalCapacity = 2),
-      certification = Certification(certified = true, capacityOfCertifiedCell = 1),
-      residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
-    ))
+    cell = repository.save(
+      buildCell(
+        prisonId = "XXY",
+        pathHierarchy = "B-1-001",
+        capacity = Capacity(capacity = 2, operationalCapacity = 2),
+        certification = Certification(certified = true, capacityOfCertifiedCell = 1),
+        residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
+      ),
+    )
 
     wingB.addChildLocation(landing)
     landing.addChildLocation(cell)
