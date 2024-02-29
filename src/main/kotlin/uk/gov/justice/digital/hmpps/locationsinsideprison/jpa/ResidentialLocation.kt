@@ -1,13 +1,9 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
-import jakarta.persistence.CascadeType
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
-import jakarta.persistence.FetchType
-import jakarta.persistence.OneToMany
-import jakarta.persistence.OneToOne
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import java.time.Clock
 import java.time.LocalDate
@@ -19,7 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 
 @Entity
 @DiscriminatorValue("RESIDENTIAL")
-class ResidentialLocation(
+open class ResidentialLocation(
   id: UUID?,
   code: String,
   pathHierarchy: String,
@@ -32,7 +28,7 @@ class ResidentialLocation(
   active: Boolean,
   deactivatedDate: LocalDate?,
   deactivatedReason: DeactivatedReason?,
-  reactivatedDate: LocalDate?,
+  proposedReactivationDate: LocalDate?,
   childLocations: MutableList<Location>,
   whenCreated: LocalDateTime,
   whenUpdated: LocalDateTime,
@@ -40,15 +36,6 @@ class ResidentialLocation(
 
   @Enumerated(EnumType.STRING)
   var residentialHousingType: ResidentialHousingType,
-
-  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
-  var capacity: Capacity? = null,
-
-  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
-  var certification: Certification? = null,
-
-  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  private val attributes: MutableSet<ResidentialAttribute> = mutableSetOf(),
 
 ) : Location(
   id = id,
@@ -63,18 +50,12 @@ class ResidentialLocation(
   active = active,
   deactivatedDate = deactivatedDate,
   deactivatedReason = deactivatedReason,
-  proposedReactivationDate = reactivatedDate,
+  proposedReactivationDate = proposedReactivationDate,
   childLocations = childLocations,
   whenCreated = whenCreated,
   whenUpdated = whenUpdated,
   updatedBy = updatedBy,
 ) {
-
-  fun addAttribute(attribute: ResidentialAttributeValue): ResidentialAttribute {
-    val residentialAttribute = ResidentialAttribute(location = this, attributeType = attribute.type, attributeValue = attribute)
-    attributes.add(residentialAttribute)
-    return residentialAttribute
-  }
 
   private fun getOperationalCapacity(): Int {
     return cellLocations()
@@ -91,7 +72,13 @@ class ResidentialLocation(
       .sumOf { it.certification?.capacityOfCertifiedCell ?: 0 }
   }
 
-  private fun cellLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>().filter { it.isCell() }
+  private fun getAttributes(): Set<ResidentialAttribute> {
+    return cellLocations()
+      .flatMap { it.attributes }
+      .toSet()
+  }
+
+  private fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
 
   override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): ResidentialLocation {
     super.updateWith(upsert, updatedBy, clock)
@@ -107,59 +94,24 @@ class ResidentialLocation(
     }
     this.residentialHousingType = upsert.residentialHousingType ?: this.residentialHousingType
 
-    if (upsert.capacity != null && upsert.capacity != capacity?.toDto()) {
-      addHistory(LocationAttribute.CAPACITY, capacity?.capacity.toString(), upsert.capacity?.capacity.toString(), updatedBy, LocalDateTime.now(clock))
-      addHistory(LocationAttribute.OPERATIONAL_CAPACITY, capacity?.operationalCapacity.toString(), upsert.capacity?.operationalCapacity.toString(), updatedBy, LocalDateTime.now(clock))
-    }
-    this.capacity = upsert.capacity?.toNewEntity() ?: this.capacity
-
-    if (upsert.certification != null && upsert.certification != certification?.toDto()) {
-      addHistory(LocationAttribute.CERTIFIED, certification?.certified.toString(), upsert.certification?.certified.toString(), updatedBy, LocalDateTime.now(clock))
-      addHistory(LocationAttribute.CERTIFIED_CAPACITY, certification?.capacityOfCertifiedCell.toString(), upsert.certification?.capacityOfCertifiedCell.toString(), updatedBy, LocalDateTime.now(clock))
-    }
-    this.certification = upsert.certification?.toNewEntity() ?: this.certification
-
-    if (upsert.attributes != null) {
-      recordHistoryOfAttributesChanges(upsert, updatedBy, clock)
-      attributes.retainAll(upsert.attributes!!.map { addAttribute(it) }.toSet())
-    }
     return this
-  }
-
-  private fun recordHistoryOfAttributesChanges(
-    upsert: UpdateLocationRequest,
-    updatedBy: String,
-    clock: Clock,
-  ) {
-    val oldAttributes = this.attributes.map { it.attributeValue }.toSet()
-    upsert.attributes?.subtract(oldAttributes)?.forEach { newAttribute ->
-      addHistory(LocationAttribute.ATTRIBUTES, null, newAttribute.name, updatedBy, LocalDateTime.now(clock))
-    }
-    oldAttributes.subtract((upsert.attributes?.toSet() ?: emptySet()).toSet()).forEach { removedAttribute ->
-      addHistory(LocationAttribute.ATTRIBUTES, removedAttribute.name, null, updatedBy, LocalDateTime.now(clock))
-    }
   }
 
   override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean): LocationDto {
     return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory).copy(
-      capacity = if (isCell()) {
-        capacity?.toDto()
-      } else {
-        CapacityDto(
-          capacity = getMaxCapacity(),
-          operationalCapacity = getOperationalCapacity(),
-        )
-      },
-      certification = if (isCell()) {
-        certification?.toDto()
-      } else {
-        CertificationDto(
-          certified = false,
-          capacityOfCertifiedCell = getBaselineCapacity(),
-        )
-      },
       residentialHousingType = residentialHousingType,
-      attributes = attributes.map { it.attributeValue },
+
+      capacity = CapacityDto(
+        capacity = getMaxCapacity(),
+        operationalCapacity = getOperationalCapacity(),
+      ),
+
+      certification = CertificationDto(
+        certified = false,
+        capacityOfCertifiedCell = getBaselineCapacity(),
+      ),
+
+      attributes = getAttributes().map { it.attributeValue }.distinct(),
     )
   }
 }

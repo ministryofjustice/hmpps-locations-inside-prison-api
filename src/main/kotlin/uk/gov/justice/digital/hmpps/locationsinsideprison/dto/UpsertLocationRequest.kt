@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Size
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
@@ -74,45 +75,70 @@ data class UpsertLocationRequest(
 
 ) : UpdateLocationRequest {
 
+  private fun isCell() = locationType == LocationType.CELL
+
   fun toNewEntity(clock: Clock): LocationJPA {
     val now = LocalDateTime.now(clock)
     return if (residentialHousingType != null) {
-      val location = ResidentialLocation(
-        id = null,
-        prisonId = prisonId,
-        code = code,
-        locationType = locationType,
-        pathHierarchy = code,
-        description = description,
-        residentialHousingType = residentialHousingType,
-        comments = comments,
-        orderWithinParentLocation = orderWithinParentLocation,
-        active = true,
-        updatedBy = lastUpdatedBy,
-        whenCreated = createDate ?: now,
-        whenUpdated = lastModifiedDate ?: now,
-        deactivatedDate = null,
-        deactivatedReason = null,
-        reactivatedDate = null,
-        childLocations = mutableListOf(),
-        parent = null,
-        capacity = capacity?.let {
-          uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity(
-            capacity = it.capacity,
-            operationalCapacity = it.operationalCapacity,
-          )
-        },
-        certification = certification?.let {
-          uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification(
-            certified = it.certified,
-            capacityOfCertifiedCell = it.capacityOfCertifiedCell,
-          )
-        },
-      )
-      attributes?.forEach { attribute ->
-        location.addAttribute(attribute)
+      if (isCell()) {
+        val location = Cell(
+          id = null,
+          prisonId = prisonId,
+          code = code,
+          locationType = locationType,
+          pathHierarchy = code,
+          description = description,
+          residentialHousingType = residentialHousingType,
+          comments = comments,
+          orderWithinParentLocation = orderWithinParentLocation,
+          active = true,
+          updatedBy = lastUpdatedBy,
+          whenCreated = createDate ?: now,
+          whenUpdated = lastModifiedDate ?: now,
+          deactivatedDate = null,
+          deactivatedReason = null,
+          proposedReactivationDate = null,
+          childLocations = mutableListOf(),
+          parent = null,
+          capacity = capacity?.let {
+            uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity(
+              capacity = it.capacity,
+              operationalCapacity = it.operationalCapacity,
+            )
+          },
+          certification = certification?.let {
+            uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification(
+              certified = it.certified,
+              capacityOfCertifiedCell = it.capacityOfCertifiedCell,
+            )
+          },
+        )
+        attributes?.forEach { attribute ->
+          location.addAttribute(attribute)
+        }
+        location
+      } else {
+        ResidentialLocation(
+          id = null,
+          prisonId = prisonId,
+          code = code,
+          locationType = locationType,
+          pathHierarchy = code,
+          description = description,
+          residentialHousingType = residentialHousingType,
+          comments = comments,
+          orderWithinParentLocation = orderWithinParentLocation,
+          active = true,
+          updatedBy = lastUpdatedBy,
+          whenCreated = createDate ?: now,
+          whenUpdated = lastModifiedDate ?: now,
+          deactivatedDate = null,
+          deactivatedReason = null,
+          proposedReactivationDate = null,
+          childLocations = mutableListOf(),
+          parent = null,
+        )
       }
-      location
     } else {
       val location = NonResidentialLocation(
         id = null,

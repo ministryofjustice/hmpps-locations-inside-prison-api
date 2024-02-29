@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -40,9 +41,18 @@ class LocationRepositoryTest : TestBase() {
     val wing = buildResLocation("A", locationType = LocationType.WING)
     val landing1 = buildResLocation("A-1", locationType = LocationType.LANDING)
     val landing2 = buildResLocation("A-2", locationType = LocationType.LANDING)
-    val cell001L1 = buildResLocation("A-1-001", locationType = LocationType.CELL)
-    val cell002L1 = buildResLocation("A-1-002", locationType = LocationType.CELL)
-    val cell002L2 = buildResLocation("A-2-001", locationType = LocationType.CELL)
+    val cell001L1 = buildCell(
+      "A-1-001",
+      residentialAttributeValues = setOf(ResidentialAttributeValue.AUDITABLE_CELL_BELL, ResidentialAttributeValue.SAFE_CELL),
+    )
+    val cell002L1 = buildCell(
+      "A-1-002",
+      residentialAttributeValues = setOf(ResidentialAttributeValue.SENTENCED_ADULTS, ResidentialAttributeValue.SAFE_CELL),
+    )
+    val cell002L2 = buildCell(
+      "A-2-001",
+      residentialAttributeValues = setOf(ResidentialAttributeValue.ANTI_BARRICADE_DOOR, ResidentialAttributeValue.SAFE_CELL),
+    )
     val adjRoom = buildNonResLocation("A-ADJ", locationType = LocationType.ADJUDICATION_ROOM, active = true)
     wing.addChildLocation(landing1)
     wing.addChildLocation(landing2)
@@ -59,7 +69,7 @@ class LocationRepositoryTest : TestBase() {
     val location = repository.findOneByPrisonIdAndPathHierarchy("MDI", "A") ?: throw Exception("Location not found")
 
     location.findAllLeafLocations().forEach {
-      if (it is ResidentialLocation) {
+      if (it is Cell) {
         assertThat(it.capacity?.operationalCapacity).isEqualTo(1)
         assertThat(it.certification?.capacityOfCertifiedCell).isEqualTo(1)
       }
@@ -67,7 +77,7 @@ class LocationRepositoryTest : TestBase() {
 
     assertThat(location.findAllLeafLocations()).containsExactlyInAnyOrder(cell001L1, cell002L1, cell002L2, adjRoom)
     location.findAllLeafLocations().forEach {
-      if (it is ResidentialLocation) {
+      if (it is Cell) {
         it.capacity?.operationalCapacity = 2
         it.certification?.capacityOfCertifiedCell = 2
       }
@@ -80,7 +90,7 @@ class LocationRepositoryTest : TestBase() {
     val cell2 = repository.findOneByPrisonIdAndPathHierarchy(cell002L2.prisonId, cell002L2.getPathHierarchy()) ?: throw Exception("Location not found")
     assertThat(cell2.findTopLevelLocation()).isEqualTo(wing)
     assertThat(cell2.getPathHierarchy()).isEqualTo("A-2-001")
-    cell2 as ResidentialLocation
+    cell2 as Cell
     assertThat(cell2.capacity?.operationalCapacity).isEqualTo(2)
     assertThat(cell2.certification?.capacityOfCertifiedCell).isEqualTo(2)
 
@@ -118,7 +128,7 @@ class LocationRepositoryTest : TestBase() {
     parent: Location? = null,
   ): Location {
     val now = LocalDateTime.now(clock)
-    val location = ResidentialLocation(
+    return ResidentialLocation(
       code = pathHierarchy.split("-").last(),
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
@@ -128,19 +138,9 @@ class LocationRepositoryTest : TestBase() {
       whenUpdated = now,
       whenCreated = now,
       parent = parent,
-      capacity = if (locationType == LocationType.CELL) {
-        Capacity(capacity = 1, operationalCapacity = 1)
-      } else {
-        null
-      },
-      certification = if (locationType == LocationType.CELL) {
-        Certification(certified = true, capacityOfCertifiedCell = 1)
-      } else {
-        null
-      },
       description = "$locationType $prisonId $pathHierarchy",
       deactivatedDate = LocalDate.now(clock).minusYears(1),
-      reactivatedDate = LocalDate.now(clock).minusDays(1),
+      proposedReactivationDate = LocalDate.now(clock).minusDays(1),
       orderWithinParentLocation = 1,
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "comments",
@@ -148,14 +148,46 @@ class LocationRepositoryTest : TestBase() {
       deactivatedReason = null,
       id = null,
     )
-    location.addAttribute(ResidentialAttributeValue.AUDITABLE_CELL_BELL)
+  }
+
+  private fun buildCell(
+    pathHierarchy: String,
+    prisonId: String = "MDI",
+    active: Boolean = true,
+    parent: Location? = null,
+    residentialAttributeValues: Set<ResidentialAttributeValue>,
+  ): Location {
+    val now = LocalDateTime.now(clock)
+    val location = Cell(
+      code = pathHierarchy.split("-").last(),
+      pathHierarchy = pathHierarchy,
+      prisonId = prisonId,
+      locationType = LocationType.CELL,
+      active = active,
+      updatedBy = SYSTEM_USERNAME,
+      whenUpdated = now,
+      whenCreated = now,
+      parent = parent,
+      capacity = Capacity(capacity = 1, operationalCapacity = 1),
+      certification = Certification(certified = true, capacityOfCertifiedCell = 1),
+      description = "CELL $prisonId $pathHierarchy",
+      deactivatedDate = LocalDate.now(clock).minusYears(1),
+      proposedReactivationDate = LocalDate.now(clock).minusDays(1),
+      orderWithinParentLocation = 1,
+      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+      comments = "comments",
+      childLocations = mutableListOf(),
+      deactivatedReason = null,
+      id = null,
+    )
+    location.addAttributes(residentialAttributeValues)
     return location
   }
 
   private fun buildNonResLocation(
     pathHierarchy: String,
     prisonId: String = "MDI",
-    locationType: LocationType = LocationType.CELL,
+    locationType: LocationType,
     active: Boolean = true,
     parent: Location? = null,
   ): Location {

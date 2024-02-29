@@ -75,10 +75,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Holding Area"
                   },
                   {
-                    "key": "TIER",
-                    "description": "Tier"
-                  },
-                  {
                     "key": "MOVEMENT_AREA",
                     "description": "Movement Area"
                   },

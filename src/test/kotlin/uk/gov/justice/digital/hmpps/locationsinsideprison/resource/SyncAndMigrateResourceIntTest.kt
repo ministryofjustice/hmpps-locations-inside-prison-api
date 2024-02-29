@@ -8,12 +8,13 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.MigrateHistoryRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpsertLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
@@ -21,8 +22,13 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import java.time.Clock
 import java.time.LocalDateTime
+
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
 
 class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
@@ -36,45 +42,35 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   @Autowired
   lateinit var repository: LocationRepository
   lateinit var wingB: ResidentialLocation
+  lateinit var cell: Cell
 
   @BeforeEach
   fun setUp() {
     repository.deleteAll()
 
-    wingB = repository.save(
-      buildResidentialLocation(
+    wingB = repository.save(buildResidentialLocation(
+        prisonId = "XXY",
         pathHierarchy = "B",
         locationType = LocationType.WING,
-      ),
-    )
-  }
+    ))
 
-  private fun buildResidentialLocation(
-    prisonId: String = "XXY",
-    pathHierarchy: String,
-    locationType: LocationType = LocationType.CELL,
-  ): ResidentialLocation {
-    val residentialLocationJPA = ResidentialLocation(
-      prisonId = prisonId,
-      code = pathHierarchy.split("-").last(),
-      pathHierarchy = pathHierarchy,
-      locationType = locationType,
-      updatedBy = EXPECTED_USERNAME,
-      whenCreated = LocalDateTime.now(clock),
-      whenUpdated = LocalDateTime.now(clock),
-      deactivatedDate = null,
-      deactivatedReason = null,
-      reactivatedDate = null,
-      childLocations = mutableListOf(),
-      parent = null,
-      active = true,
-      description = null,
-      comments = null,
-      orderWithinParentLocation = 1,
-      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-      id = null,
-    )
-    return residentialLocationJPA
+    val landing = repository.save(buildResidentialLocation(
+      prisonId = "XXY",
+      pathHierarchy = "B-1",
+      locationType = LocationType.LANDING,
+    ))
+
+    cell = repository.save(buildCell(
+      prisonId = "XXY",
+      pathHierarchy = "B-1-001",
+      capacity = Capacity(capacity = 2, operationalCapacity = 2),
+      certification = Certification(certified = true, capacityOfCertifiedCell = 1),
+      residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
+    ))
+
+    wingB.addChildLocation(landing)
+    landing.addChildLocation(cell)
+    repository.save(wingB)
   }
 
   @DisplayName("POST /sync/upsert")
@@ -82,11 +78,12 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   inner class CreateLocationTest {
     var syncResRequest = UpsertLocationRequest(
       prisonId = "XXY",
-      code = "A",
-      locationType = LocationType.WING,
-      description = "A New Wing",
+      code = "003",
+      parentLocationPath = "B-1",
+      locationType = LocationType.CELL,
+      description = "A New Cell",
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-      comments = "This is a new wing",
+      comments = "This is a new cell",
       orderWithinParentLocation = 1,
       lastUpdatedBy = "user",
       lastModifiedDate = LocalDateTime.now(clock).minusYears(1),
@@ -172,14 +169,14 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             """ 
              {
               "prisonId": "XXY",
-              "code": "A",
-              "pathHierarchy": "A",
-              "locationType": "WING",
+              "code": "003",
+              "pathHierarchy": "B-1-003",
+              "locationType": "CELL",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "active": true,
-              "key": "XXY-A",
-              "comments": "This is a new wing",
-              "description": "A New Wing",
+              "key": "XXY-B-1-003",
+              "comments": "This is a new cell",
+              "description": "A New Cell",
               "orderWithinParentLocation": 1,
               "isResidential": true,
               "attributes": ["IMMIGRATION_DETAINEES"]
@@ -194,7 +191,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/sync/upsert")
           .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(syncResRequest.copy(id = wingB.id, attributes = setOf(ResidentialAttributeValue.CAT_A))))
+          .bodyValue(jsonString(syncResRequest.copy(id = cell.id, code = "001", attributes = setOf(ResidentialAttributeValue.CAT_A))))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -202,15 +199,18 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             """ 
              {
               "prisonId": "XXY",
-              "code": "A",
-              "pathHierarchy": "A",
-              "locationType": "WING",
+              "code": "001",
+              "pathHierarchy": "B-1-001",
+              "locationType": "CELL",
+              "description": "A New Cell",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "active": true,
-              "key": "XXY-A",
+              "key": "XXY-B-1-001",
               "orderWithinParentLocation": 1,
               "isResidential": true,
-              "attributes": ["CAT_A"]
+              "attributes": [
+                "CAT_A"
+              ]
             }
           """,
             false,
@@ -259,16 +259,18 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   inner class MigrateLocationTest {
     var migrateRequest = UpsertLocationRequest(
       prisonId = "XXY",
-      code = "001",
+      code = "002",
       locationType = LocationType.CELL,
       description = "A New Cell",
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "This is a new cell",
       orderWithinParentLocation = 1,
       lastUpdatedBy = "user",
+      parentLocationPath = "B-1",
       lastModifiedDate = LocalDateTime.now(clock).minusYears(2),
-      capacity = Capacity(1, 1),
-      certification = Certification(true, 1),
+      capacity = CapacityDTO(1, 1),
+      certification = CertificationDTO(true, 1),
+      attributes = setOf(ResidentialAttributeValue.CAT_B),
     )
 
     @Nested
@@ -339,19 +341,20 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             """ 
              {
               "prisonId": "XXY",
-              "code": "001",
-              "pathHierarchy": "001",
+              "code": "002",
+              "pathHierarchy": "B-1-002",
               "locationType": "CELL",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "active": true,
-              "key": "XXY-001",
+              "key": "XXY-B-1-002",
               "comments": "This is a new cell",
               "description": "A New Cell",
               "orderWithinParentLocation": 1,
               "capacity": {
                 "capacity": 1,
                 "operationalCapacity": 1
-              }
+              },
+              "attributes": ["CAT_B"]
             }
           """,
             false,
@@ -418,7 +421,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/migrate/location/${wingB.id}/history")
           .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue("""{"attribute": "fsdfsdfsd"}""")
+          .bodyValue("""{"attribute": "SOME_TEXT"}""")
           .exchange()
           .expectStatus().is4xxClientError
       }
