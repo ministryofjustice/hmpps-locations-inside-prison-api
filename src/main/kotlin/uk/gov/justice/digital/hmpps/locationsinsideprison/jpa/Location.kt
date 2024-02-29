@@ -28,7 +28,7 @@ import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
 @Entity
-@DiscriminatorFormula("case when residential_housing_type IS NULL then 'NON_RESIDENTIAL' else 'RESIDENTIAL' end")
+@DiscriminatorFormula("case when residential_housing_type IS NULL then 'NON_RESIDENTIAL' when location_type = 'CELL' then 'CELL' else 'RESIDENTIAL' end")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 abstract class Location(
   @Id
@@ -320,7 +320,6 @@ enum class LocationType(
   CELL("Cell"),
   ROOM("Room"),
   HOLDING_AREA("Holding Area"),
-  TIER("Tier"),
   MOVEMENT_AREA("Movement Area"),
   RESIDENTIAL_UNIT("Residential Unit"),
   EXTERNAL_GROUNDS("External Grounds"),

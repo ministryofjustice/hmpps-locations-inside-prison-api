@@ -16,18 +16,19 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import java.time.Clock
 import java.time.LocalDate
-import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
@@ -47,8 +48,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: LocationRepository
-  lateinit var cell1: ResidentialLocationJPA
-  lateinit var cell2: ResidentialLocationJPA
+  lateinit var cell1: Cell
+  lateinit var cell2: Cell
   lateinit var landing1: ResidentialLocationJPA
   lateinit var landing2: ResidentialLocationJPA
   lateinit var wingZ: ResidentialLocationJPA
@@ -85,14 +86,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       ),
     )
     cell1 = repository.save(
-      buildResidentialLocation(
+      buildCell(
         pathHierarchy = "Z-1-001",
         capacity = Capacity(capacity = 2, operationalCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
       ),
     )
     cell2 = repository.save(
-      buildResidentialLocation(
+      buildCell(
         pathHierarchy = "Z-1-002",
         capacity = Capacity(capacity = 2, operationalCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
@@ -122,69 +123,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
     repository.save(wingZ)
     repository.save(wingB)
-  }
-
-  private fun buildResidentialLocation(
-    prisonId: String = "MDI",
-    pathHierarchy: String,
-    locationType: LocationType = LocationType.CELL,
-    capacity: Capacity? = null,
-    certification: Certification? = null,
-  ): ResidentialLocation {
-    val residentialLocationJPA = ResidentialLocationJPA(
-      prisonId = prisonId,
-      code = pathHierarchy.split("-").last(),
-      pathHierarchy = pathHierarchy,
-      locationType = locationType,
-      updatedBy = EXPECTED_USERNAME,
-      whenCreated = LocalDateTime.now(clock),
-      whenUpdated = LocalDateTime.now(clock),
-      deactivatedDate = null,
-      deactivatedReason = null,
-      reactivatedDate = null,
-      childLocations = mutableListOf(),
-      parent = null,
-      active = true,
-      description = null,
-      comments = null,
-      orderWithinParentLocation = 99,
-      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-      capacity = capacity,
-      certification = certification,
-      id = null,
-    )
-    residentialLocationJPA.addAttribute(ResidentialAttributeValue.DOUBLE_OCCUPANCY)
-    residentialLocationJPA.addAttribute(ResidentialAttributeValue.CAT_B)
-    return residentialLocationJPA
-  }
-
-  private fun buildNonResidentialLocation(
-    prisonId: String = "MDI",
-    pathHierarchy: String,
-    locationType: LocationType = LocationType.CELL,
-    nonResidentialUsageType: NonResidentialUsageType,
-  ): NonResidentialLocation {
-    val nonResidentialLocationJPA = NonResidentialLocationJPA(
-      prisonId = prisonId,
-      code = pathHierarchy.split("-").last(),
-      pathHierarchy = pathHierarchy,
-      locationType = locationType,
-      updatedBy = EXPECTED_USERNAME,
-      whenCreated = LocalDateTime.now(clock),
-      whenUpdated = LocalDateTime.now(clock),
-      deactivatedDate = null,
-      deactivatedReason = null,
-      reactivatedDate = null,
-      childLocations = mutableListOf(),
-      parent = null,
-      active = true,
-      description = null,
-      comments = null,
-      orderWithinParentLocation = 99,
-      id = null,
-    )
-    nonResidentialLocationJPA.addUsage(nonResidentialUsageType, 15, 1)
-    return nonResidentialLocationJPA
   }
 
   @DisplayName("GET /locations/{id}")
@@ -1580,7 +1518,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can delete details of a locations attributes`() {
-        webTestClient.patch().uri("/locations/${landing1.id}")
+        webTestClient.patch().uri("/locations/${cell1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(removeAttributes))
@@ -1591,15 +1529,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
              {
               "prisonId": "MDI",
-              "code": "1",
-              "pathHierarchy": "Z-1",
-              "locationType": "LANDING",
+              "code": "001",
+              "pathHierarchy": "Z-1-001",
+              "locationType": "CELL",
               "active": true,
-              "key": "MDI-Z-1",
+              "key": "MDI-Z-1-001",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "capacity": {
-                "capacity": 4,
-                "operationalCapacity": 4
+                "capacity": 2,
+                "operationalCapacity": 2
               },
               "attributes": []
             }
@@ -1607,7 +1545,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             false,
           )
 
-        webTestClient.get().uri("/locations/${landing1.id}?includeHistory=true")
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -1616,15 +1554,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
                {
               "prisonId": "MDI",
-              "code": "1",
-              "pathHierarchy": "Z-1",
-              "locationType": "LANDING",
+              "code": "001",
+              "pathHierarchy": "Z-1-001",
+              "locationType": "CELL",
               "active": true,
-              "key": "MDI-Z-1",
+              "key": "MDI-Z-1-001",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "capacity": {
-                "capacity": 4,
-                "operationalCapacity": 4
+                "capacity": 2,
+                "operationalCapacity": 2
               },
               "attributes": [],
               "changeHistory": [
@@ -1645,7 +1583,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update details of a locations attributes`() {
-        webTestClient.patch().uri("/locations/${landing1.id}")
+        webTestClient.patch().uri("/locations/${cell1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeAttribute))
@@ -1656,15 +1594,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
              {
               "prisonId": "MDI",
-              "code": "1",
-              "pathHierarchy": "Z-1",
-              "locationType": "LANDING",
+              "code": "001",
+              "pathHierarchy": "Z-1-001",
+              "locationType": "CELL",
               "active": true,
-              "key": "MDI-Z-1",
+              "key": "MDI-Z-1-001",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "capacity": {
-                "capacity": 4,
-                "operationalCapacity": 4
+                "capacity": 2,
+                "operationalCapacity": 2
               },
               "attributes": [
                 "SINGLE_OCCUPANCY",

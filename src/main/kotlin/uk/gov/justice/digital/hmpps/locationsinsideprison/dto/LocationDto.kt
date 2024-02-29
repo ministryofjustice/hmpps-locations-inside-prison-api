@@ -14,6 +14,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity as CapacityJPA
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell as CellJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification as CertificationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
@@ -278,28 +279,56 @@ data class CreateResidentialLocationRequest(
 ) : CreateRequest {
 
   override fun toNewEntity(createdBy: String, clock: Clock): ResidentialLocationJPA {
-    return ResidentialLocationJPA(
-      id = null,
-      prisonId = prisonId,
-      code = code,
-      locationType = locationType,
-      pathHierarchy = code,
-      description = description,
-      residentialHousingType = residentialHousingType,
-      comments = comments,
-      orderWithinParentLocation = orderWithinParentLocation,
-      active = true,
-      updatedBy = createdBy,
-      whenCreated = LocalDateTime.now(clock),
-      whenUpdated = LocalDateTime.now(clock),
-      deactivatedDate = null,
-      deactivatedReason = null,
-      reactivatedDate = null,
-      childLocations = mutableListOf(),
-      parent = null,
-      capacity = capacity?.let { CapacityJPA(capacity = it.capacity, operationalCapacity = it.operationalCapacity) },
-      certification = certification?.let { CertificationJPA(certified = it.certified, capacityOfCertifiedCell = it.capacityOfCertifiedCell) },
-    )
+    return if (locationType == LocationType.CELL) {
+      CellJPA(
+        id = null,
+        prisonId = prisonId,
+        code = code,
+        locationType = locationType,
+        pathHierarchy = code,
+        description = description,
+        residentialHousingType = residentialHousingType,
+        comments = comments,
+        orderWithinParentLocation = orderWithinParentLocation,
+        active = true,
+        updatedBy = createdBy,
+        whenCreated = LocalDateTime.now(clock),
+        whenUpdated = LocalDateTime.now(clock),
+        deactivatedDate = null,
+        deactivatedReason = null,
+        proposedReactivationDate = null,
+        childLocations = mutableListOf(),
+        parent = null,
+        capacity = capacity?.let { CapacityJPA(capacity = it.capacity, operationalCapacity = it.operationalCapacity) },
+        certification = certification?.let {
+          CertificationJPA(
+            certified = it.certified,
+            capacityOfCertifiedCell = it.capacityOfCertifiedCell,
+          )
+        },
+      )
+    } else {
+      ResidentialLocationJPA(
+        id = null,
+        prisonId = prisonId,
+        code = code,
+        locationType = locationType,
+        pathHierarchy = code,
+        description = description,
+        residentialHousingType = residentialHousingType,
+        comments = comments,
+        orderWithinParentLocation = orderWithinParentLocation,
+        active = true,
+        updatedBy = createdBy,
+        whenCreated = LocalDateTime.now(clock),
+        whenUpdated = LocalDateTime.now(clock),
+        deactivatedDate = null,
+        deactivatedReason = null,
+        proposedReactivationDate = null,
+        childLocations = mutableListOf(),
+        parent = null,
+      )
+    }
   }
 }
 
