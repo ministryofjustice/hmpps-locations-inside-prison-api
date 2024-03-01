@@ -71,7 +71,11 @@ data class Location(
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
 
-  @Schema(description = "Date the location was reactivated", example = "2023-01-24", required = false)
+  @Schema(description = "Proposed Date for location reactivation", example = "2026-01-24", required = false)
+  val proposedReactivationDate: LocalDate? = null,
+
+  @Schema(description = "Date the location was reactivated (deprecated)", example = "2023-01-24", required = false)
+  @Deprecated("Use proposedReactivationDate instead")
   val reactivatedDate: LocalDate? = null,
 
   @Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
@@ -285,7 +289,6 @@ data class CreateResidentialLocationRequest(
   override fun toNewEntity(createdBy: String, clock: Clock): ResidentialLocationJPA {
     return if (locationType == LocationType.CELL) {
       val location = CellJPA(
-        id = null,
         prisonId = prisonId,
         code = code,
         locationType = locationType,
@@ -294,15 +297,9 @@ data class CreateResidentialLocationRequest(
         residentialHousingType = residentialHousingType,
         comments = comments,
         orderWithinParentLocation = orderWithinParentLocation,
-        active = true,
-        updatedBy = createdBy,
+        createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
-        whenUpdated = LocalDateTime.now(clock),
-        deactivatedDate = null,
-        deactivatedReason = null,
-        proposedReactivationDate = null,
         childLocations = mutableListOf(),
-        parent = null,
         capacity = capacity?.let { CapacityJPA(capacity = it.capacity, operationalCapacity = it.operationalCapacity) },
         certification = certification?.let {
           CertificationJPA(
@@ -326,15 +323,9 @@ data class CreateResidentialLocationRequest(
         residentialHousingType = residentialHousingType,
         comments = comments,
         orderWithinParentLocation = orderWithinParentLocation,
-        active = true,
-        updatedBy = createdBy,
+        createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
-        whenUpdated = LocalDateTime.now(clock),
-        deactivatedDate = null,
-        deactivatedReason = null,
-        proposedReactivationDate = null,
         childLocations = mutableListOf(),
-        parent = null,
       )
     }
   }
@@ -384,15 +375,9 @@ data class CreateNonResidentialLocationRequest(
       description = description,
       comments = comments,
       orderWithinParentLocation = orderWithinParentLocation,
-      active = true,
-      updatedBy = createdBy,
+      createdBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
-      whenUpdated = LocalDateTime.now(clock),
-      deactivatedDate = null,
-      deactivatedReason = null,
-      reactivatedDate = null,
       childLocations = mutableListOf(),
-      parent = null,
     )
     usage?.forEach { usage ->
       location.addUsage(usage.usageType, usage.capacity, usage.sequence)
@@ -410,5 +395,5 @@ data class DeactivationLocationRequest(
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = true)
   val deactivationReason: DeactivatedReason,
   @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
-  val reactivationDate: LocalDate? = null,
+  val proposedReactivationDate: LocalDate? = null,
 )

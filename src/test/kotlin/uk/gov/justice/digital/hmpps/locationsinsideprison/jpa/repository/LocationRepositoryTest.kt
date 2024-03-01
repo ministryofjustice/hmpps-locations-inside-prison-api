@@ -134,8 +134,7 @@ class LocationRepositoryTest : TestBase() {
       prisonId = prisonId,
       locationType = locationType,
       active = active,
-      updatedBy = SYSTEM_USERNAME,
-      whenUpdated = now,
+      createdBy = SYSTEM_USERNAME,
       whenCreated = now,
       parent = parent,
       description = "$locationType $prisonId $pathHierarchy",
@@ -145,8 +144,7 @@ class LocationRepositoryTest : TestBase() {
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "comments",
       childLocations = mutableListOf(),
-      deactivatedReason = null,
-      id = null,
+
     )
   }
 
@@ -164,8 +162,7 @@ class LocationRepositoryTest : TestBase() {
       prisonId = prisonId,
       locationType = LocationType.CELL,
       active = active,
-      updatedBy = SYSTEM_USERNAME,
-      whenUpdated = now,
+      createdBy = SYSTEM_USERNAME,
       whenCreated = now,
       parent = parent,
       capacity = Capacity(capacity = 1, operationalCapacity = 1),
@@ -177,8 +174,6 @@ class LocationRepositoryTest : TestBase() {
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "comments",
       childLocations = mutableListOf(),
-      deactivatedReason = null,
-      id = null,
     )
     location.addAttributes(residentialAttributeValues)
     return location
@@ -198,18 +193,13 @@ class LocationRepositoryTest : TestBase() {
       prisonId = prisonId,
       locationType = locationType,
       active = active,
-      updatedBy = SYSTEM_USERNAME,
-      whenUpdated = now,
+      createdBy = SYSTEM_USERNAME,
       whenCreated = now,
       parent = parent,
       description = "$locationType $prisonId $pathHierarchy",
-      deactivatedDate = null,
-      reactivatedDate = null,
       orderWithinParentLocation = 1,
       comments = "Non Res comments",
       childLocations = mutableListOf(),
-      deactivatedReason = null,
-      id = null,
     )
     location.addUsage(NonResidentialUsageType.ADJUDICATION_HEARING)
     return location

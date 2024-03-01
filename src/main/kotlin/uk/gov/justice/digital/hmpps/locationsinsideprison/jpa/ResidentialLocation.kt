@@ -16,26 +16,25 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 @Entity
 @DiscriminatorValue("RESIDENTIAL")
 open class ResidentialLocation(
-  id: UUID?,
+  id: UUID? = null,
   code: String,
   pathHierarchy: String,
   locationType: LocationType,
   prisonId: String,
-  parent: Location?,
-  description: String?,
-  comments: String?,
-  orderWithinParentLocation: Int?,
-  active: Boolean,
-  deactivatedDate: LocalDate?,
-  deactivatedReason: DeactivatedReason?,
-  proposedReactivationDate: LocalDate?,
+  parent: Location? = null,
+  description: String? = null,
+  comments: String? = null,
+  orderWithinParentLocation: Int? = 1,
+  active: Boolean = true,
+  deactivatedDate: LocalDate? = null,
+  deactivatedReason: DeactivatedReason? = null,
+  proposedReactivationDate: LocalDate? = null,
   childLocations: MutableList<Location>,
   whenCreated: LocalDateTime,
-  whenUpdated: LocalDateTime,
-  updatedBy: String,
+  createdBy: String,
 
   @Enumerated(EnumType.STRING)
-  var residentialHousingType: ResidentialHousingType,
+  var residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
 
 ) : Location(
   id = id,
@@ -53,8 +52,8 @@ open class ResidentialLocation(
   proposedReactivationDate = proposedReactivationDate,
   childLocations = childLocations,
   whenCreated = whenCreated,
-  whenUpdated = whenUpdated,
-  updatedBy = updatedBy,
+  whenUpdated = whenCreated,
+  updatedBy = createdBy,
 ) {
 
   private fun getOperationalCapacity(): Int {
