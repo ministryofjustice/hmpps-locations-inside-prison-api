@@ -72,6 +72,11 @@ open class ResidentialLocation(
       .sumOf { it.certification?.capacityOfCertifiedCell ?: 0 }
   }
 
+  private fun hasCertifiedCells(): Boolean {
+    return cellLocations()
+      .any { it.certification?.certified == true }
+  }
+
   private fun getAttributes(): Set<ResidentialAttribute> {
     return cellLocations()
       .flatMap { it.attributes }
@@ -107,7 +112,7 @@ open class ResidentialLocation(
       ),
 
       certification = CertificationDto(
-        certified = false,
+        certified = hasCertifiedCells(),
         capacityOfCertifiedCell = getBaselineCapacity(),
       ),
 

@@ -397,7 +397,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                             "operationalCapacity": 4
                           },
                           "certification": {
-                            "certified": false,
+                            "certified": true,
                             "capacityOfCertifiedCell": 4
                           },
                           "attributes": [
@@ -435,7 +435,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                         "operationalCapacity": 4
                       },
                       "certification": {
-                        "certified": false,
+                        "certified": true,
                         "capacityOfCertifiedCell": 4
                       },
                       "attributes": [
@@ -1114,7 +1114,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "operationalCapacity": 4
                 },
                 "certification": {
-                  "certified": false,
+                  "certified": true,
                   "capacityOfCertifiedCell": 4
                 },
                 "isResidential": true,
@@ -1140,6 +1140,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "operationalCapacity": 0
               },
               "certification": {
+                "certified": false,
                 "capacityOfCertifiedCell": 0
               },
               "childLocations": [
@@ -1170,6 +1171,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "operationalCapacity": 0
                   },
                   "certification": {
+                    "certified": false,
                     "capacityOfCertifiedCell": 0
                   },
                   "childLocations": []
@@ -1196,6 +1198,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "operationalCapacity": 4
               },
               "certification": {
+                "certified": true,
                 "capacityOfCertifiedCell": 4
               },
               "childLocations": [
@@ -1209,6 +1212,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "operationalCapacity": 4
                   },
                   "certification": {
+                    "certified": true,
                     "capacityOfCertifiedCell": 4
                   },
                   "childLocations": [

@@ -233,6 +233,7 @@ interface CreateRequest {
   val orderWithinParentLocation: Int?
   val parentId: UUID?
   fun toNewEntity(createdBy: String, clock: Clock): LocationJPA
+  fun isCell(): Boolean = locationType == LocationType.CELL
 }
 
 /**
@@ -276,11 +277,14 @@ data class CreateResidentialLocationRequest(
 
   @Schema(description = "Certified status of the residential location", required = false)
   val certification: Certification? = null,
+
+  @Schema(description = "Location Attributes", required = false)
+  val attributes: Set<ResidentialAttributeValue>? = null,
 ) : CreateRequest {
 
   override fun toNewEntity(createdBy: String, clock: Clock): ResidentialLocationJPA {
     return if (locationType == LocationType.CELL) {
-      CellJPA(
+      val location = CellJPA(
         id = null,
         prisonId = prisonId,
         code = code,
@@ -307,6 +311,10 @@ data class CreateResidentialLocationRequest(
           )
         },
       )
+      attributes?.forEach { attribute ->
+        location.addAttribute(attribute)
+      }
+      return location
     } else {
       ResidentialLocationJPA(
         id = null,
@@ -361,10 +369,13 @@ data class CreateNonResidentialLocationRequest(
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   override val parentId: UUID? = null,
+
+  @Schema(description = "Location Usage", required = false)
+  val usage: Set<NonResidentialUsageDto>? = null,
 ) : CreateRequest {
 
   override fun toNewEntity(createdBy: String, clock: Clock): NonResidentialLocationJPA {
-    return NonResidentialLocationJPA(
+    val location = NonResidentialLocationJPA(
       id = null,
       prisonId = prisonId,
       code = code,
@@ -383,6 +394,10 @@ data class CreateNonResidentialLocationRequest(
       childLocations = mutableListOf(),
       parent = null,
     )
+    usage?.forEach { usage ->
+      location.addUsage(usage.usageType, usage.capacity, usage.sequence)
+    }
+    return location
   }
 }
 

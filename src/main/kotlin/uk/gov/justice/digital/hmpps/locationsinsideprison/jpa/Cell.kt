@@ -35,10 +35,10 @@ class Cell(
   updatedBy: String,
   residentialHousingType: ResidentialHousingType,
 
-  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
+  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
   var capacity: Capacity? = null,
 
-  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true)
+  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
   var certification: Certification? = null,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
