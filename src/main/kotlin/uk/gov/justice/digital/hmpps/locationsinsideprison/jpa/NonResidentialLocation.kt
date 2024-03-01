@@ -15,23 +15,22 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 @Entity
 @DiscriminatorValue("NON_RESIDENTIAL")
 class NonResidentialLocation(
-  id: UUID?,
+  id: UUID? = null,
   code: String,
   pathHierarchy: String,
   locationType: LocationType,
   prisonId: String,
-  parent: Location?,
-  description: String?,
-  comments: String?,
-  orderWithinParentLocation: Int?,
-  active: Boolean,
-  deactivatedDate: LocalDate?,
-  deactivatedReason: DeactivatedReason?,
-  reactivatedDate: LocalDate?,
+  parent: Location? = null,
+  description: String? = null,
+  comments: String? = null,
+  orderWithinParentLocation: Int? = 1,
+  active: Boolean = true,
+  deactivatedDate: LocalDate? = null,
+  deactivatedReason: DeactivatedReason? = null,
+  proposedReactivationDate: LocalDate? = null,
   childLocations: MutableList<Location>,
   whenCreated: LocalDateTime,
-  whenUpdated: LocalDateTime,
-  updatedBy: String,
+  createdBy: String,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   private val nonResidentialUsages: MutableSet<NonResidentialUsage> = mutableSetOf(),
@@ -49,11 +48,11 @@ class NonResidentialLocation(
   active = active,
   deactivatedDate = deactivatedDate,
   deactivatedReason = deactivatedReason,
-  proposedReactivationDate = reactivatedDate,
+  proposedReactivationDate = proposedReactivationDate,
   childLocations = childLocations,
   whenCreated = whenCreated,
-  whenUpdated = whenUpdated,
-  updatedBy = updatedBy,
+  whenUpdated = whenCreated,
+  updatedBy = createdBy,
 ) {
 
   fun addUsage(usageType: NonResidentialUsageType, capacity: Int? = null, sequence: Int = 99): NonResidentialUsage {

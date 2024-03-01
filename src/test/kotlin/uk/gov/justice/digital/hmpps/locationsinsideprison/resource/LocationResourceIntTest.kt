@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Primary
 import org.springframework.security.test.context.support.WithMockUser
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
@@ -734,6 +735,115 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("POST /locations/create-wing")
+  @Nested
+  inner class CreateWingTest {
+    var createWingRequest = CreateWingRequest(
+      prisonId = "MDI",
+      wingCode = "Y",
+      wingDescription = "Y Wing",
+      numberOfLandings = 3,
+      numberOfSpursPerLanding = 2,
+      numberOfCellsPerSection = 20,
+      defaultCellCapacity = 1,
+      defaultAttributesOfCells = setOf(ResidentialAttributeValue.SINGLE_OCCUPANCY),
+    )
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.post().uri("/locations/create-wing")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"prisonId": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `duplicate location is rejected`() {
+        webTestClient.post().uri("/locations/create-wing")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createWingRequest.copy(wingCode = "Z")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can create an entire wing with 3 landings, 2 spurs and 20 cells per spur`() {
+        webTestClient.post().uri("/locations/create-wing")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(createWingRequest)
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "MDI",
+              "code": "Y",
+              "pathHierarchy": "Y",
+              "locationType": "WING",
+              "active": true,
+              "key": "MDI-Y",
+              "description": "Y Wing",
+              "orderWithinParentLocation": 1,
+              "capacity": {
+                "capacity": 120,
+                "operationalCapacity": 120
+              },
+              "certification": {
+                "certified": true,
+                "capacityOfCertifiedCell": 120
+              }
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can create an entire wing with 4 landings, 20 cells per landing`() {
+        webTestClient.post().uri("/locations/create-wing")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(createWingRequest.copy(wingCode = "X", wingDescription = "X Wing", numberOfLandings = 4, numberOfSpursPerLanding = 0, numberOfCellsPerSection = 20, defaultCellCapacity = 2, defaultAttributesOfCells = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY)))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "MDI",
+              "code": "X",
+              "pathHierarchy": "X",
+              "locationType": "WING",
+              "active": true,
+              "key": "MDI-X",
+              "description": "X Wing",
+              "orderWithinParentLocation": 1,
+              "capacity": {
+                "capacity": 160,
+                "operationalCapacity": 160
+              },
+              "certification": {
+                "certified": true,
+                "capacityOfCertifiedCell": 160
+              }
+            }
+          """,
+            false,
+          )
+      }
+    }
+  }
+
   @DisplayName("POST /locations/residential")
   @Nested
   inner class CreateResidentialLocationTest {
@@ -745,6 +855,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "This is a new cell",
       orderWithinParentLocation = 4,
+      attributes = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY, ResidentialAttributeValue.CAT_B),
+      capacity = CapacityDTO(capacity = 2, operationalCapacity = 2),
+      certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 2),
     )
 
     @Nested
@@ -833,7 +946,19 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "key": "MDI-Z-1-004",
               "comments": "This is a new cell",
               "description": "A New Cell (004)",
-              "orderWithinParentLocation": 4
+              "orderWithinParentLocation": 4,
+              "capacity": {
+                "capacity": 2,
+                "operationalCapacity": 2
+              },
+              "certification": {
+                "certified": true,
+                "capacityOfCertifiedCell": 2
+              },
+              "attributes": [
+                "DOUBLE_OCCUPANCY",
+                "CAT_B"
+              ]
             }
           """,
             false,
@@ -852,6 +977,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       description = "Adjudication Room",
       comments = "This room is for adjudications",
       orderWithinParentLocation = 1,
+      usage = setOf(
+        NonResidentialUsageDto(usageType = NonResidentialUsageType.ADJUDICATION_HEARING, capacity = 15, sequence = 1),
+      ),
     )
 
     @Nested
@@ -939,7 +1067,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "key": "MDI-Z-ADJ",
               "comments": "${createNonResidentialLocationRequest.comments}",
               "description": "${createNonResidentialLocationRequest.description}",
-              "orderWithinParentLocation": 1
+              "orderWithinParentLocation": 1,
+              "usage": [
+                {
+                  "usageType": "ADJUDICATION_HEARING",
+                  "capacity": 15,
+                  "sequence": 1
+                }
+              ]
             }
           """,
             false,
@@ -1808,11 +1943,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can deactivate a location`() {
-        val reactivationDate = LocalDate.now(clock).plusMonths(1)
+        val proposedReactivationDate = LocalDate.now(clock).plusMonths(1)
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, reactivationDate = reactivationDate)))
+          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -1826,7 +1961,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "active": false,
               "key": "MDI-Z",
               "deactivatedReason": "DAMAGED",
-              "reactivatedDate": "$reactivationDate",
+              "proposedReactivationDate": "$proposedReactivationDate",
               "deactivatedDate": "${LocalDate.now(clock)}",
               "childLocations": [
                 {
@@ -1835,7 +1970,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",
                   "active": false,
-                  "reactivatedDate": "$reactivationDate",
+                  "proposedReactivationDate": "$proposedReactivationDate",
                   "deactivatedDate": "${LocalDate.now(clock)}",
                   "deactivatedReason": "DAMAGED",
                   "isResidential": false,
@@ -1848,7 +1983,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "residentialHousingType": "NORMAL_ACCOMMODATION",
                   "active": false,
-                  "reactivatedDate": "$reactivationDate",
+                  "proposedReactivationDate": "$proposedReactivationDate",
                   "deactivatedDate": "${LocalDate.now(clock)}",
                   "deactivatedReason": "DAMAGED",
                   "isResidential": true,
@@ -1861,7 +1996,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "residentialHousingType": "NORMAL_ACCOMMODATION",
                       "active": false,
-                      "reactivatedDate": "$reactivationDate",
+                      "proposedReactivationDate": "$proposedReactivationDate",
                       "deactivatedDate": "${LocalDate.now(clock)}",
                       "deactivatedReason": "DAMAGED",
                       "isResidential": true,
@@ -1874,7 +2009,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "residentialHousingType": "NORMAL_ACCOMMODATION",
                       "active": false,
-                      "reactivatedDate": "$reactivationDate",
+                      "proposedReactivationDate": "$proposedReactivationDate",
                       "deactivatedDate": "${LocalDate.now(clock)}",
                       "deactivatedReason": "DAMAGED",
                       "isResidential": true,
@@ -1889,7 +2024,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "residentialHousingType": "NORMAL_ACCOMMODATION",
                   "active": false,
-                  "reactivatedDate": "$reactivationDate",
+                  "proposedReactivationDate": "$proposedReactivationDate",
                   "deactivatedDate": "${LocalDate.now(clock)}",
                   "deactivatedReason": "DAMAGED",
                   "isResidential": true,

@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
@@ -253,6 +254,53 @@ class LocationResource(
     )
   }
 
+  @PostMapping("/create-wing", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @ResponseStatus(HttpStatus.CREATED)
+  @Operation(
+    summary = "Creates a residential wing with landings and cells",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "201",
+        description = "Returns created locations",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location already exists",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun createWing(
+    @RequestBody
+    @Validated
+    createWingRequest: CreateWingRequest,
+  ): LocationDTO {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_CREATED,
+      {
+        locationService.createWing(createWingRequest)
+      },
+      InformationSource.DPS,
+    )
+  }
+
   @PostMapping("/non-residential", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @ResponseStatus(HttpStatus.CREATED)
@@ -418,7 +466,7 @@ class LocationResource(
         locationService.deactivateLocation(
           id,
           deactivatedReason = deactivationLocationRequest.deactivationReason,
-          proposedReactivationDate = deactivationLocationRequest.reactivationDate,
+          proposedReactivationDate = deactivationLocationRequest.proposedReactivationDate,
         )
       },
       InformationSource.DPS,

@@ -16,24 +16,23 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 @Entity
 @DiscriminatorValue("CELL")
 class Cell(
-  id: UUID?,
+  id: UUID? = null,
   code: String,
   pathHierarchy: String,
-  locationType: LocationType,
+  locationType: LocationType = LocationType.CELL,
   prisonId: String,
-  parent: Location?,
-  description: String?,
-  comments: String?,
-  orderWithinParentLocation: Int?,
-  active: Boolean,
-  deactivatedDate: LocalDate?,
-  deactivatedReason: DeactivatedReason?,
-  proposedReactivationDate: LocalDate?,
+  parent: Location? = null,
+  description: String? = null,
+  comments: String? = null,
+  orderWithinParentLocation: Int? = null,
+  active: Boolean = true,
+  deactivatedDate: LocalDate? = null,
+  deactivatedReason: DeactivatedReason? = null,
+  proposedReactivationDate: LocalDate? = null,
   childLocations: MutableList<Location>,
   whenCreated: LocalDateTime,
-  whenUpdated: LocalDateTime,
-  updatedBy: String,
-  residentialHousingType: ResidentialHousingType,
+  createdBy: String,
+  residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
 
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
   var capacity: Capacity? = null,
@@ -60,8 +59,7 @@ class Cell(
   proposedReactivationDate = proposedReactivationDate,
   childLocations = childLocations,
   whenCreated = whenCreated,
-  whenUpdated = whenUpdated,
-  updatedBy = updatedBy,
+  createdBy = createdBy,
   residentialHousingType = residentialHousingType,
 ) {
 

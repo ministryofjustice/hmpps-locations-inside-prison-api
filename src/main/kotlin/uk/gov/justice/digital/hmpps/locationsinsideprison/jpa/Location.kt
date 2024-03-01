@@ -188,6 +188,7 @@ abstract class Location(
       active = active,
       deactivatedDate = deactivatedDate,
       deactivatedReason = deactivatedReason,
+      proposedReactivationDate = proposedReactivationDate,
       reactivatedDate = proposedReactivationDate,
       childLocations = if (includeChildren) childLocations.map { it.toDto(includeChildren = true, includeHistory = includeHistory) } else null,
       parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true, includeHistory = includeHistory) else null,

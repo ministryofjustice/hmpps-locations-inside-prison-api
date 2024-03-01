@@ -92,9 +92,8 @@ data class UpsertLocationRequest(
           comments = comments,
           orderWithinParentLocation = orderWithinParentLocation,
           active = true,
-          updatedBy = lastUpdatedBy,
+          createdBy = lastUpdatedBy,
           whenCreated = createDate ?: now,
-          whenUpdated = lastModifiedDate ?: now,
           deactivatedDate = null,
           deactivatedReason = null,
           proposedReactivationDate = null,
@@ -119,7 +118,6 @@ data class UpsertLocationRequest(
         location
       } else {
         ResidentialLocation(
-          id = null,
           prisonId = prisonId,
           code = code,
           locationType = locationType,
@@ -128,20 +126,13 @@ data class UpsertLocationRequest(
           residentialHousingType = residentialHousingType,
           comments = comments,
           orderWithinParentLocation = orderWithinParentLocation,
-          active = true,
-          updatedBy = lastUpdatedBy,
+          createdBy = lastUpdatedBy,
           whenCreated = createDate ?: now,
-          whenUpdated = lastModifiedDate ?: now,
-          deactivatedDate = null,
-          deactivatedReason = null,
-          proposedReactivationDate = null,
           childLocations = mutableListOf(),
-          parent = null,
         )
       }
     } else {
       val location = NonResidentialLocation(
-        id = null,
         prisonId = prisonId,
         code = code,
         locationType = locationType,
@@ -150,14 +141,9 @@ data class UpsertLocationRequest(
         comments = comments,
         orderWithinParentLocation = orderWithinParentLocation,
         active = true,
-        updatedBy = lastUpdatedBy,
+        createdBy = lastUpdatedBy,
         whenCreated = createDate ?: now,
-        whenUpdated = lastModifiedDate ?: now,
-        deactivatedDate = null,
-        deactivatedReason = null,
-        reactivatedDate = null,
         childLocations = mutableListOf(),
-        parent = null,
       )
       usage?.forEach { usage ->
         location.addUsage(usage.usageType, usage.capacity, usage.sequence)
