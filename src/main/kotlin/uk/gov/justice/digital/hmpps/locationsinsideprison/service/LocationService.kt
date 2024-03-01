@@ -10,7 +10,9 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
@@ -73,7 +75,19 @@ class LocationService(
 
     val locationToCreate = request.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
     parentLocation?.let { locationToCreate.setParent(it) }
-    val location = locationRepository.save(locationToCreate).toDto()
+
+    val capacityChanged = request is CreateResidentialLocationRequest && request.isCell() &&
+      request.capacity != null
+
+    val certificationChanged = request is CreateResidentialLocationRequest && request.isCell() &&
+      request.certification != null
+
+    val attributesChanged = request is CreateResidentialLocationRequest && request.isCell() &&
+      request.attributes != null
+
+    val usageChanged = request is CreateNonResidentialLocationRequest && request.usage != null
+
+    val location = locationRepository.save(locationToCreate).toDto(includeParent = certificationChanged || capacityChanged || attributesChanged || usageChanged)
 
     log.info("Created Location [${location.id}] (Residential=${location.isResidential()})")
     telemetryClient.trackEvent(
@@ -117,6 +131,8 @@ class LocationService(
     val certificationChanged = locationToUpdate is Cell &&
       patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.certification?.toDto()
 
+    val attributesChanged = locationToUpdate is Cell && patchLocationRequest.attributes != locationToUpdate.attributes.map { it.attributeValue }.toSet()
+
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
 
     log.info("Updated Location [$locationToUpdate]")
@@ -135,7 +151,7 @@ class LocationService(
     )
 
     return UpdateLocationResult(
-      locationToUpdate.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged || capacityChanged || certificationChanged),
+      locationToUpdate.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged || capacityChanged || certificationChanged || attributesChanged),
       capacityChanged,
       certificationChanged,
       if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
