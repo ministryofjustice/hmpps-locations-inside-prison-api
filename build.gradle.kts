@@ -28,7 +28,7 @@ dependencies {
 
   implementation("org.flywaydb:flyway-core")
   implementation("com.zaxxer:HikariCP:5.1.0")
-  runtimeOnly("org.postgresql:postgresql:42.7.1")
+  runtimeOnly("org.postgresql:postgresql")
 
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.16.1")
