@@ -108,6 +108,7 @@ data class Location(
     val locations = mutableListOf<Location>()
 
     fun traverse(location: Location) {
+      locations.add(location)
       location.childLocations?.forEach { childLocation ->
         traverse(childLocation)
       }
