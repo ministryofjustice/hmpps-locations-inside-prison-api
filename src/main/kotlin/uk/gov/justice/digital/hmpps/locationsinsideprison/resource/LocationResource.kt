@@ -414,8 +414,6 @@ class LocationResource(
     return {
       mapOf(
         InternalLocationDomainEventType.LOCATION_AMENDED to locationsChanged,
-        InternalLocationDomainEventType.LOCATION_CAPACITY_CHANGED to if (results.capacityChanged) locationsChanged else emptyList(),
-        InternalLocationDomainEventType.LOCATION_CERTIFICATION_CHANGED to if (results.certificationChanged) locationsChanged else emptyList(),
       )
     }
   }

@@ -33,10 +33,11 @@ class EventPublishAndAuditService(
     auditData: Any? = null,
     source: InformationSource = InformationSource.DPS,
   ) {
-    traverseUp(eventType = eventType, location = locationDetail.parentLocation, source = source)
+    publishEvent(event = eventType, location = locationDetail, source = source)
+    traverseUp(eventType = InternalLocationDomainEventType.LOCATION_AMENDED, location = locationDetail.parentLocation, source = source)
 
-    locationDetail.getLocationAndSubLocations().forEach {
-      publishEvent(event = eventType, location = it, source = source)
+    locationDetail.getSubLocations().forEach {
+      publishEvent(event = InternalLocationDomainEventType.LOCATION_AMENDED, location = it, source = source)
     }
 
     auditData?.let {
