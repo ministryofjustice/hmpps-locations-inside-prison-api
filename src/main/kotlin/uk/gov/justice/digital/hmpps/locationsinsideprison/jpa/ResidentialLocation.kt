@@ -34,7 +34,7 @@ open class ResidentialLocation(
   createdBy: String,
 
   @Enumerated(EnumType.STRING)
-  var residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+  open var residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
 
 ) : Location(
   id = id,
