@@ -98,8 +98,6 @@ In all instances the domain event will contain the unique reference to a locatio
 - location.inside.prison.amended
 - location.inside.prison.deactivated
 - location.inside.prison.reactivated
-- location.inside.prison.capacity.changed
-- location.inside.prison.certification.changed
 - location.inside.prison.deleted
 
 **Example:**

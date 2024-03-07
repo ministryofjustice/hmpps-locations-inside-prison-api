@@ -104,11 +104,10 @@ data class Location(
   }
 
   @JsonIgnore
-  fun getLocationAndSubLocations(): List<Location> {
+  fun getSubLocations(): List<Location> {
     val locations = mutableListOf<Location>()
 
     fun traverse(location: Location) {
-      locations.add(location)
       location.childLocations?.forEach { childLocation ->
         traverse(childLocation)
       }
