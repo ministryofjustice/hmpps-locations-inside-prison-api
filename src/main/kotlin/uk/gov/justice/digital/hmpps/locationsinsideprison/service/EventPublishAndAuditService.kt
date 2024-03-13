@@ -33,7 +33,6 @@ class EventPublishAndAuditService(
     auditData: Any? = null,
     source: InformationSource = InformationSource.DPS,
   ) {
-    publishEvent(event = eventType, location = locationDetail, source = source)
     locationDetail.getSubLocations().forEach {
       publishEvent(event = eventType, location = it, source = source)
     }
