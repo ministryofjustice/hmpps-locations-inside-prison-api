@@ -5,7 +5,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.EventPublishAndAuditService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
-import uk.gov.justice.digital.hmpps.locationsinsideprison.services.InternalLocationDomainEventType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
 abstract class EventBaseResource {

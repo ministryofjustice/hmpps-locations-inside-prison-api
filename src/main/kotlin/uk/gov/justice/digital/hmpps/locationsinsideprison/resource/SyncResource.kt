@@ -17,8 +17,8 @@ import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpsertLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SyncService
-import uk.gov.justice.digital.hmpps.locationsinsideprison.services.InternalLocationDomainEventType
 
 @RestController
 @Validated

@@ -33,8 +33,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DeactivationLocati
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
-import uk.gov.justice.digital.hmpps.locationsinsideprison.services.InternalLocationDomainEventType
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 @RestController

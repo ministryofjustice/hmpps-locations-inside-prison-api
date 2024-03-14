@@ -3,11 +3,6 @@ hmpps.sqs:
   queues:
     audit:
       queueName: ${random.uuid}
-    locationsinsideprison:
-      queueName: locations-inside-prison-event-queue
-      dlqName: locations-inside-prison-event-dlq
-      subscribeTopicId: domainevents
-      subscribeFilter: '{"eventType":[ "dummy-event" ] }'
   topics:
     domainevents:
-      arn: arn:aws:sns:eu-west-2:000000000000:11111111-2222-3333-4444-555555555555
+      arn: arn:aws:sns:eu-west-2:000000000000:${random.uuid}

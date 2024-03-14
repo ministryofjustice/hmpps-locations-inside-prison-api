@@ -2,9 +2,6 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
-import uk.gov.justice.digital.hmpps.locationsinsideprison.services.AdditionalInformation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.services.InternalLocationDomainEventType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.services.SnsService
 import java.time.Clock
 import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
