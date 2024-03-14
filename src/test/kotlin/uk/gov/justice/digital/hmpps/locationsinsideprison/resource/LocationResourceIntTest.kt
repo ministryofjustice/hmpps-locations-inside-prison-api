@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -963,6 +964,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           """,
             false,
           )
+
+        getDomainEvents(3).let {
+          assertThat(it).hasSize(3)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.created" to "MDI-Z-1-004",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
       }
     }
   }
@@ -1079,6 +1089,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           """,
             false,
           )
+
+        getDomainEvents(2).let {
+          assertThat(it).hasSize(2)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.created" to "MDI-Z-ADJ",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
       }
     }
   }
@@ -1225,6 +1243,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           """,
             false,
           )
+
+        getDomainEvents(3).let {
+          assertThat(it).hasSize(3)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-3",
+            "location.inside.prison.amended" to "MDI-Z-3-001",
+            "location.inside.prison.amended" to "MDI-Z-3-002",
+          )
+        }
       }
 
       @Test
@@ -2035,6 +2062,18 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           """,
             false,
           )
+
+        getDomainEvents(6).let {
+          assertThat(it).hasSize(6)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z",
+            "location.inside.prison.deactivated" to "MDI-Z-1",
+            "location.inside.prison.deactivated" to "MDI-Z-2",
+            "location.inside.prison.deactivated" to "MDI-Z-VISIT",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.deactivated" to "MDI-Z-1-002",
+          )
+        }
       }
     }
   }
@@ -2128,6 +2167,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           """,
             false,
           )
+
+        getDomainEvents(3).let {
+          assertThat(it).hasSize(3)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.reactivated" to "MDI-Z-1",
+            "location.inside.prison.reactivated" to "MDI-Z-1-001",
+            "location.inside.prison.reactivated" to "MDI-Z-1-002",
+          )
+        }
       }
     }
   }

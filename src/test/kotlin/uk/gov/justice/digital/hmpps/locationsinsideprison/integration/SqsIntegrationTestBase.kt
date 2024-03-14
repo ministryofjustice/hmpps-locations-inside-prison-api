@@ -1,5 +1,9 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 
+import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
+import org.awaitility.kotlin.await
+import org.awaitility.kotlin.matches
+import org.awaitility.kotlin.untilCallTo
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -7,8 +11,10 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
+import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.config.LocalStackContainer
 import uk.gov.justice.digital.hmpps.locationsinsideprison.config.LocalStackContainer.setLocalStackProperties
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.HMPPSDomainEvent
 import uk.gov.justice.hmpps.sqs.HmppsQueue
 import uk.gov.justice.hmpps.sqs.HmppsQueueService
 import uk.gov.justice.hmpps.sqs.countMessagesOnQueue
@@ -44,4 +50,39 @@ class SqsIntegrationTestBase : IntegrationTestBase() {
 
   fun getNumberOfMessagesCurrentlyOnSubscriptionQueue(): Int? =
     testDomainEventQueue.sqsClient.countMessagesOnQueue(testDomainEventQueue.queueUrl).get()
+
+  fun getDomainEvents(messageCount: Int = 1): List<HMPPSDomainEvent> {
+    val sqsClient = testDomainEventQueue.sqsClient
+
+    val messages: MutableList<HMPPSDomainEvent> = mutableListOf()
+    await untilCallTo {
+      messages.addAll(
+        sqsClient.receiveMessage(ReceiveMessageRequest.builder().queueUrl(testDomainEventQueue.queueUrl).build())
+          .get()
+          .messages()
+          .map { objectMapper.readValue(it.body(), HMPPSMessage::class.java) }
+          .map { objectMapper.readValue(it.Message, HMPPSDomainEvent::class.java) },
+      )
+    } matches { messages.size == messageCount }
+
+    return messages
+  }
+
+  fun assertDomainEventSent(eventType: String): HMPPSDomainEvent {
+    val sqsClient = testDomainEventQueue.sqsClient
+    val body = sqsClient.receiveMessage(ReceiveMessageRequest.builder().queueUrl(testDomainEventQueue.queueUrl).build()).get().messages()[0].body()
+    val (message, attributes) = objectMapper.readValue(body, HMPPSMessage::class.java)
+    assertThat(attributes.eventType.Value).isEqualTo(eventType)
+    val domainEvent = objectMapper.readValue(message, HMPPSDomainEvent::class.java)
+    assertThat(domainEvent.eventType).isEqualTo(eventType)
+
+    return domainEvent
+  }
 }
+
+data class HMPPSEventType(val Value: String, val Type: String)
+data class HMPPSMessageAttributes(val eventType: HMPPSEventType)
+data class HMPPSMessage(
+  val Message: String,
+  val MessageAttributes: HMPPSMessageAttributes,
+)
