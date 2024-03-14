@@ -3,7 +3,6 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.mock.mockito.SpyBean
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
@@ -12,9 +11,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.config.LocalStackConta
 import uk.gov.justice.digital.hmpps.locationsinsideprison.config.LocalStackContainer.setLocalStackProperties
 import uk.gov.justice.hmpps.sqs.HmppsQueue
 import uk.gov.justice.hmpps.sqs.HmppsQueueService
-import uk.gov.justice.hmpps.sqs.HmppsSqsProperties
-import uk.gov.justice.hmpps.sqs.MissingQueueException
-import uk.gov.justice.hmpps.sqs.MissingTopicException
 import uk.gov.justice.hmpps.sqs.countMessagesOnQueue
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -24,29 +20,15 @@ class SqsIntegrationTestBase : IntegrationTestBase() {
   @Autowired
   private lateinit var hmppsQueueService: HmppsQueueService
 
-  @SpyBean
-  protected lateinit var hmppsSqsPropertiesSpy: HmppsSqsProperties
-
-  protected val domainEventsTopic by lazy {
-    hmppsQueueService.findByTopicId("domainevents")
-      ?: throw MissingQueueException("HmppsTopic domainevents not found")
-  }
-  protected val domainEventsTopicSnsClient by lazy { domainEventsTopic.snsClient }
-  protected val domainEventsTopicArn by lazy { domainEventsTopic.arn }
-
   protected val auditQueue by lazy { hmppsQueueService.findByQueueId("audit") as HmppsQueue }
-  protected val locationsInsidePrisonQueue by lazy { hmppsQueueService.findByQueueId("locationsinsideprison") as HmppsQueue }
-
-  fun HmppsSqsProperties.domaineventsTopicConfig() =
-    topics["domainevents"]
-      ?: throw MissingTopicException("domainevents has not been loaded from configuration properties")
+  protected val testDomainEventQueue by lazy { hmppsQueueService.findByQueueId("test") as HmppsQueue }
 
   @BeforeEach
   fun cleanQueue() {
     auditQueue.sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(auditQueue.queueUrl).build())
-    locationsInsidePrisonQueue.sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(locationsInsidePrisonQueue.queueUrl).build())
+    testDomainEventQueue.sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(testDomainEventQueue.queueUrl).build())
     auditQueue.sqsClient.countMessagesOnQueue(auditQueue.queueUrl).get()
-    locationsInsidePrisonQueue.sqsClient.countMessagesOnQueue(locationsInsidePrisonQueue.queueUrl).get()
+    testDomainEventQueue.sqsClient.countMessagesOnQueue(testDomainEventQueue.queueUrl).get()
   }
 
   companion object {
@@ -59,4 +41,7 @@ class SqsIntegrationTestBase : IntegrationTestBase() {
       localStackContainer?.also { setLocalStackProperties(it, registry) }
     }
   }
+
+  fun getNumberOfMessagesCurrentlyOnSubscriptionQueue(): Int? =
+    testDomainEventQueue.sqsClient.countMessagesOnQueue(testDomainEventQueue.queueUrl).get()
 }
