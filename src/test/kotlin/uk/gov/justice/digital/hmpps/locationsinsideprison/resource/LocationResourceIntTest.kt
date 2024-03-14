@@ -745,7 +745,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       wingDescription = "Y Wing",
       numberOfLandings = 3,
       numberOfSpursPerLanding = 2,
-      numberOfCellsPerSection = 20,
+      numberOfCellsPerSection = 2,
       defaultCellCapacity = 1,
       defaultAttributesOfCells = setOf(ResidentialAttributeValue.SINGLE_OCCUPANCY),
     )
@@ -776,7 +776,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
       @Test
-      fun `can create an entire wing with 3 landings, 2 spurs and 20 cells per spur`() {
+      fun `can create an entire wing with 3 landings, 2 spurs and 2 cells per spur`() {
         webTestClient.post().uri("/locations/create-wing")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -796,25 +796,29 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "description": "Y Wing",
               "orderWithinParentLocation": 1,
               "capacity": {
-                "capacity": 120,
-                "operationalCapacity": 120
+                "capacity": 12,
+                "operationalCapacity": 12
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 120
+                "capacityOfCertifiedCell": 12
               }
             }
           """,
             false,
           )
+
+        getDomainEvents(12).let {
+          assertThat(it).hasSize(12)
+        }
       }
 
       @Test
-      fun `can create an entire wing with 4 landings, 20 cells per landing`() {
+      fun `can create an entire wing with 4 landings, 2 cells per landing`() {
         webTestClient.post().uri("/locations/create-wing")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(createWingRequest.copy(wingCode = "X", wingDescription = "X Wing", numberOfLandings = 4, numberOfSpursPerLanding = 0, numberOfCellsPerSection = 20, defaultCellCapacity = 2, defaultAttributesOfCells = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY)))
+          .bodyValue(createWingRequest.copy(wingCode = "X", wingDescription = "X Wing", numberOfLandings = 4, numberOfSpursPerLanding = 0, numberOfCellsPerSection = 2, defaultCellCapacity = 2, defaultAttributesOfCells = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY)))
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(
@@ -830,17 +834,21 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "description": "X Wing",
               "orderWithinParentLocation": 1,
               "capacity": {
-                "capacity": 160,
-                "operationalCapacity": 160
+                "capacity": 16,
+                "operationalCapacity": 16
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 160
+                "capacityOfCertifiedCell": 16
               }
             }
           """,
             false,
           )
+
+        getDomainEvents(8).let {
+          assertThat(it).hasSize(8)
+        }
       }
     }
   }
