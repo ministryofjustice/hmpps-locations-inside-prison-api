@@ -49,7 +49,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
     wingB = repository.save(
       buildResidentialLocation(
-        prisonId = "XXY",
+        prisonId = "ZZGHI",
         pathHierarchy = "B",
         locationType = LocationType.WING,
       ),
@@ -57,7 +57,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
     val landing = repository.save(
       buildResidentialLocation(
-        prisonId = "XXY",
+        prisonId = "ZZGHI",
         pathHierarchy = "B-1",
         locationType = LocationType.LANDING,
       ),
@@ -65,7 +65,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
     cell = repository.save(
       buildCell(
-        prisonId = "XXY",
+        prisonId = "ZZGHI",
         pathHierarchy = "B-1-001",
         capacity = Capacity(capacity = 2, operationalCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 1),
@@ -82,7 +82,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   @Nested
   inner class CreateLocationTest {
     var syncResRequest = UpsertLocationRequest(
-      prisonId = "XXY",
+      prisonId = "ZZGHI",
       code = "003",
       parentLocationPath = "B-1",
       locationType = LocationType.CELL,
@@ -96,7 +96,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     )
 
     var syncNonResRequest = UpsertLocationRequest(
-      prisonId = "XXY",
+      prisonId = "ZZGHI",
       code = "VISIT",
       locationType = LocationType.VISITS,
       description = "Visit Hall",
@@ -173,13 +173,13 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             // language=json
             """ 
              {
-              "prisonId": "XXY",
+              "prisonId": "ZZGHI",
               "code": "003",
               "pathHierarchy": "B-1-003",
               "locationType": "CELL",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "active": true,
-              "key": "XXY-B-1-003",
+              "key": "ZZGHI-B-1-003",
               "comments": "This is a new cell",
               "description": "A New Cell",
               "orderWithinParentLocation": 1,
@@ -203,14 +203,14 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             // language=json
             """ 
              {
-              "prisonId": "XXY",
+              "prisonId": "ZZGHI",
               "code": "001",
               "pathHierarchy": "B-1-001",
               "locationType": "CELL",
               "description": "A New Cell",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "active": true,
-              "key": "XXY-B-1-001",
+              "key": "ZZGHI-B-1-001",
               "orderWithinParentLocation": 1,
               "isResidential": true,
               "attributes": [
@@ -234,12 +234,12 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             // language=json
             """ 
              {
-              "prisonId": "XXY",
+              "prisonId": "ZZGHI",
               "code": "VISIT",
               "pathHierarchy": "VISIT",
               "locationType": "VISITS",
               "active": true,
-              "key": "XXY-VISIT",
+              "key": "ZZGHI-VISIT",
               "comments": "This is a visit room",
               "description": "Visit Hall",
               "orderWithinParentLocation": 1,
@@ -263,7 +263,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   @Nested
   inner class MigrateLocationTest {
     var migrateRequest = UpsertLocationRequest(
-      prisonId = "XXY",
+      prisonId = "ZZGHI",
       code = "002",
       locationType = LocationType.CELL,
       description = "A New Cell",
@@ -345,13 +345,13 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             // language=json
             """ 
              {
-              "prisonId": "XXY",
+              "prisonId": "ZZGHI",
               "code": "002",
               "pathHierarchy": "B-1-002",
               "locationType": "CELL",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "active": true,
-              "key": "XXY-B-1-002",
+              "key": "ZZGHI-B-1-002",
               "comments": "This is a new cell",
               "description": "A New Cell",
               "orderWithinParentLocation": 1,

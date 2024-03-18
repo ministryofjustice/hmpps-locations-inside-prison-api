@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -17,7 +18,10 @@ import java.time.LocalDateTime
 @Schema(description = "Request to create a wing")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateWingRequest(
-  @Schema(description = "Prison ID", example = "MDI", required = true)
+  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  @field:Size(min = 3, message = "Prison ID cannot be blank")
+  @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
+  @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
   val prisonId: String,
   @Schema(description = "Code assigned to a wing", example = "B", required = true)
   @field:Size(max = 12, message = "Max of 12 characters")
