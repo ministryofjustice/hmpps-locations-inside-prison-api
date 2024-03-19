@@ -43,7 +43,7 @@ data class Location(
   val residentialHousingType: ResidentialHousingType? = null,
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
-  val localName: String? = null,
+  val description: String? = null,
 
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   val comments: String? = null,
@@ -151,13 +151,13 @@ data class NonResidentialUsageDto(
 @Schema(description = "Capacity")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Capacity(
-  @Schema(description = "Max capacity of the location", example = "2", required = false)
-  val maxCapacity: Int = 0,
-  @Schema(description = "Working capacity of the location", example = "2", required = false)
-  val workingCapacity: Int = 0,
+  @Schema(description = "Capacity of the location", example = "2", required = false)
+  val capacity: Int = 0,
+  @Schema(description = "Operational capacity of the location", example = "2", required = false)
+  val operationalCapacity: Int = 0,
 ) {
   fun toNewEntity(): CapacityJPA {
-    return CapacityJPA(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+    return CapacityJPA(capacity = capacity, operationalCapacity = operationalCapacity)
   }
 
   override fun equals(other: Any?): Boolean {
@@ -166,15 +166,15 @@ data class Capacity(
 
     other as Capacity
 
-    if (maxCapacity != other.maxCapacity) return false
-    if (workingCapacity != other.workingCapacity) return false
+    if (capacity != other.capacity) return false
+    if (operationalCapacity != other.operationalCapacity) return false
 
     return true
   }
 
   override fun hashCode(): Int {
-    var result = maxCapacity
-    result = 31 * result + workingCapacity
+    var result = capacity
+    result = 31 * result + operationalCapacity
     return result
   }
 }
@@ -233,7 +233,7 @@ interface CreateRequest {
   val prisonId: String
   val code: String
   val locationType: LocationType
-  val localName: String?
+  val description: String?
   val comments: String?
   val orderWithinParentLocation: Int?
   val parentId: UUID?
@@ -266,7 +266,7 @@ data class CreateResidentialLocationRequest(
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 80, message = "Description must be less than 81 characters")
-  override val localName: String? = null,
+  override val description: String? = null,
 
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   @field:Size(max = 255, message = "Comments must be less than 256 characters")
@@ -295,14 +295,14 @@ data class CreateResidentialLocationRequest(
         code = code,
         locationType = locationType,
         pathHierarchy = code,
-        localName = localName,
+        description = description,
         residentialHousingType = residentialHousingType,
         comments = comments,
         orderWithinParentLocation = orderWithinParentLocation,
         createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
         childLocations = mutableListOf(),
-        capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
+        capacity = capacity?.let { CapacityJPA(capacity = it.capacity, operationalCapacity = it.operationalCapacity) },
         certification = certification?.let {
           CertificationJPA(
             certified = it.certified,
@@ -321,7 +321,7 @@ data class CreateResidentialLocationRequest(
         code = code,
         locationType = locationType,
         pathHierarchy = code,
-        localName = localName,
+        description = description,
         residentialHousingType = residentialHousingType,
         comments = comments,
         orderWithinParentLocation = orderWithinParentLocation,
@@ -352,7 +352,7 @@ data class CreateNonResidentialLocationRequest(
 
   @Schema(description = "Alternative description to display for location", example = "Adj Room", required = false)
   @field:Size(max = 80, message = "Description must be less than 81 characters")
-  override val localName: String? = null,
+  override val description: String? = null,
 
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   @field:Size(max = 255, message = "Comments must be less than 256 characters")
@@ -375,7 +375,7 @@ data class CreateNonResidentialLocationRequest(
       code = code,
       locationType = locationType,
       pathHierarchy = code,
-      localName = localName,
+      description = description,
       comments = comments,
       orderWithinParentLocation = orderWithinParentLocation,
       createdBy = createdBy,

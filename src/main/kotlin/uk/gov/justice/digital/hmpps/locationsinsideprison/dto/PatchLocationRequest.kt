@@ -25,7 +25,7 @@ data class PatchLocationRequest(
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 80, message = "Description must be less than 81 characters")
-  override val localName: String? = null,
+  override val description: String? = null,
 
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   @field:Size(max = 255, message = "Comments must be less than 256 characters")
