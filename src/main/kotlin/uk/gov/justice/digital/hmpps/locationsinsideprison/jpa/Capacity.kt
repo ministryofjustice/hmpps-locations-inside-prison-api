@@ -13,13 +13,13 @@ class Capacity(
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   val id: Long? = null,
 
-  var capacity: Int = 0,
-  var operationalCapacity: Int = 0,
+  var maxCapacity: Int = 0,
+  var workingCapacity: Int = 0,
 ) {
   fun toDto() = (
     CapacityDTO(
-      capacity = capacity,
-      operationalCapacity = operationalCapacity,
+      maxCapacity = maxCapacity,
+      workingCapacity = workingCapacity,
     )
     )
 
@@ -29,19 +29,19 @@ class Capacity(
 
     other as Capacity
 
-    if (capacity != other.capacity) return false
-    if (operationalCapacity != other.operationalCapacity) return false
+    if (maxCapacity != other.maxCapacity) return false
+    if (workingCapacity != other.workingCapacity) return false
 
     return true
   }
 
   override fun hashCode(): Int {
-    var result = capacity
-    result = 31 * result + operationalCapacity
+    var result = maxCapacity
+    result = 31 * result + workingCapacity
     return result
   }
 
   override fun toString(): String {
-    return "Capacity(capacity=$capacity, operationalCapacity=$operationalCapacity)"
+    return "Capacity(max capacity=$maxCapacity, working capacity=$workingCapacity)"
   }
 }

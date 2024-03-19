@@ -273,7 +273,7 @@ classDiagram
 direction BT
 class Capacity {
   + toDto() Capacity
-   Int operationalCapacity
+   Int workingCapacity
    Long? id
    Int capacity
 }
@@ -396,7 +396,7 @@ class ResidentialLocation {
    ResidentialHousingType residentialHousingType
    Certification? certification
    Int baselineCapacity
-   Int operationalCapacity
+   Int workingCapacity
    Capacity? capacity
    Int maxCapacity
 }

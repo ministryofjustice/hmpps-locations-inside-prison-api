@@ -41,7 +41,7 @@ data class UpsertLocationRequest(
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 80, message = "Description must be less than 81 characters")
-  override val description: String? = null,
+  override val localName: String? = null,
 
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   @field:Size(max = 255, message = "Comments must be less than 256 characters")
@@ -91,7 +91,7 @@ data class UpsertLocationRequest(
           code = code,
           locationType = locationType,
           pathHierarchy = code,
-          description = description,
+          localName = localName,
           residentialHousingType = residentialHousingType,
           comments = comments,
           orderWithinParentLocation = orderWithinParentLocation,
@@ -105,8 +105,8 @@ data class UpsertLocationRequest(
           parent = null,
           capacity = capacity?.let {
             uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity(
-              capacity = it.capacity,
-              operationalCapacity = it.operationalCapacity,
+              maxCapacity = it.maxCapacity,
+              workingCapacity = it.workingCapacity,
             )
           },
           certification = certification?.let {
@@ -126,7 +126,7 @@ data class UpsertLocationRequest(
           code = code,
           locationType = locationType,
           pathHierarchy = code,
-          description = description,
+          localName = localName,
           residentialHousingType = residentialHousingType,
           comments = comments,
           orderWithinParentLocation = orderWithinParentLocation,
@@ -141,7 +141,7 @@ data class UpsertLocationRequest(
         code = code,
         locationType = locationType,
         pathHierarchy = code,
-        description = description,
+        localName = localName,
         comments = comments,
         orderWithinParentLocation = orderWithinParentLocation,
         active = true,

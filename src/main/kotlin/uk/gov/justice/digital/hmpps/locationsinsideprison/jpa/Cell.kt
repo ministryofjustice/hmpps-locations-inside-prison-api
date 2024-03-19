@@ -22,7 +22,7 @@ class Cell(
   locationType: LocationType = LocationType.CELL,
   prisonId: String,
   parent: Location? = null,
-  description: String? = null,
+  localName: String? = null,
   comments: String? = null,
   orderWithinParentLocation: Int? = null,
   active: Boolean = true,
@@ -50,7 +50,7 @@ class Cell(
   locationType = locationType,
   prisonId = prisonId,
   parent = parent,
-  description = description,
+  localName = localName,
   comments = comments,
   orderWithinParentLocation = orderWithinParentLocation,
   active = active,
@@ -77,8 +77,8 @@ class Cell(
     super.updateWith(upsert, updatedBy, clock)
 
     if (upsert.capacity != null && upsert.capacity != capacity?.toDto()) {
-      addHistory(LocationAttribute.CAPACITY, capacity?.capacity.toString(), upsert.capacity?.capacity.toString(), updatedBy, LocalDateTime.now(clock))
-      addHistory(LocationAttribute.OPERATIONAL_CAPACITY, capacity?.operationalCapacity.toString(), upsert.capacity?.operationalCapacity.toString(), updatedBy, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.CAPACITY, capacity?.maxCapacity.toString(), upsert.capacity?.maxCapacity.toString(), updatedBy, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.OPERATIONAL_CAPACITY, capacity?.workingCapacity.toString(), upsert.capacity?.workingCapacity.toString(), updatedBy, LocalDateTime.now(clock))
     }
     this.capacity = upsert.capacity?.toNewEntity() ?: this.capacity
 
