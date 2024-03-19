@@ -22,7 +22,7 @@ open class ResidentialLocation(
   locationType: LocationType,
   prisonId: String,
   parent: Location? = null,
-  localName: String? = null,
+  description: String? = null,
   comments: String? = null,
   orderWithinParentLocation: Int? = 1,
   active: Boolean = true,
@@ -43,7 +43,7 @@ open class ResidentialLocation(
   locationType = locationType,
   prisonId = prisonId,
   parent = parent,
-  localName = localName,
+  description = description,
   comments = comments,
   orderWithinParentLocation = orderWithinParentLocation,
   active = active,
@@ -56,14 +56,14 @@ open class ResidentialLocation(
   updatedBy = createdBy,
 ) {
 
-  private fun getWorkingCapacity(): Int {
+  private fun getOperationalCapacity(): Int {
     return cellLocations()
-      .sumOf { it.capacity?.workingCapacity ?: 0 }
+      .sumOf { it.capacity?.operationalCapacity ?: 0 }
   }
 
   private fun getMaxCapacity(): Int {
     return cellLocations()
-      .sumOf { it.capacity?.maxCapacity ?: 0 }
+      .sumOf { it.capacity?.capacity ?: 0 }
   }
 
   private fun getBaselineCapacity(): Int {
@@ -106,8 +106,8 @@ open class ResidentialLocation(
       residentialHousingType = residentialHousingType,
 
       capacity = CapacityDto(
-        maxCapacity = getMaxCapacity(),
-        workingCapacity = getWorkingCapacity(),
+        capacity = getMaxCapacity(),
+        operationalCapacity = getOperationalCapacity(),
       ),
 
       certification = CertificationDto(

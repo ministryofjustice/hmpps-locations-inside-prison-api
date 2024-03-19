@@ -7,7 +7,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousing
 interface UpdateLocationRequest {
   val code: String?
   val locationType: LocationType?
-  val localName: String?
+  val description: String?
   val comments: String?
   val orderWithinParentLocation: Int?
   val residentialHousingType: ResidentialHousingType?

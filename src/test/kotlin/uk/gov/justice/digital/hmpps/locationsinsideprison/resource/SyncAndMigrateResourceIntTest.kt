@@ -67,7 +67,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       buildCell(
         prisonId = "ZZGHI",
         pathHierarchy = "B-1-001",
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
+        capacity = Capacity(capacity = 2, operationalCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 1),
         residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
       ),
@@ -86,7 +86,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       code = "003",
       parentLocationPath = "B-1",
       locationType = LocationType.CELL,
-      localName = "A New Cell",
+      description = "A New Cell",
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "This is a new cell",
       orderWithinParentLocation = 1,
@@ -99,7 +99,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       prisonId = "ZZGHI",
       code = "VISIT",
       locationType = LocationType.VISITS,
-      localName = "Visit Hall",
+      description = "Visit Hall",
       comments = "This is a visit room",
       orderWithinParentLocation = 1,
       lastUpdatedBy = "user",
@@ -181,7 +181,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-B-1-003",
               "comments": "This is a new cell",
-              "localName": "A New Cell",
+              "description": "A New Cell",
               "orderWithinParentLocation": 1,
               "isResidential": true,
               "attributes": ["IMMIGRATION_DETAINEES"]
@@ -207,7 +207,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "code": "001",
               "pathHierarchy": "B-1-001",
               "locationType": "CELL",
-              "localName": "A New Cell",
+              "description": "A New Cell",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "active": true,
               "key": "ZZGHI-B-1-001",
@@ -241,7 +241,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-VISIT",
               "comments": "This is a visit room",
-              "localName": "Visit Hall",
+              "description": "Visit Hall",
               "orderWithinParentLocation": 1,
               "isResidential": false,
               "usage": [
@@ -266,7 +266,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       prisonId = "ZZGHI",
       code = "002",
       locationType = LocationType.CELL,
-      localName = "A New Cell",
+      description = "A New Cell",
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "This is a new cell",
       orderWithinParentLocation = 1,
@@ -353,11 +353,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-B-1-002",
               "comments": "This is a new cell",
-              "localName": "A New Cell",
+              "description": "A New Cell",
               "orderWithinParentLocation": 1,
               "capacity": {
-                "maxCapacity": 1,
-                "workingCapacity": 1
+                "capacity": 1,
+                "operationalCapacity": 1
               },
               "attributes": ["CAT_B"]
             }
@@ -446,7 +446,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             // language=json
             """ 
              {
-              "attribute": "Max Capacity",
+              "attribute": "Capacity",
               "oldValue": "2",
               "newValue": "1",
               "amendedBy": "user",
