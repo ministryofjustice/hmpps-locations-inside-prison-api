@@ -930,6 +930,16 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().is4xxClientError
       }
+
+      @Test
+      fun `invalid prison ID is rejected`() {
+        webTestClient.post().uri("/locations/residential")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createResidentialLocationRequest.copy(prisonId = "FFO")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
     }
 
     @Nested

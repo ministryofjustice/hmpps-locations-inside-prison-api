@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -246,9 +247,10 @@ interface CreateRequest {
 @Schema(description = "Request to create a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateResidentialLocationRequest(
-  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 3)
-  @field:Size(min = 3, message = "PrisonId cannot be blank")
-  @field:Size(max = 3, message = "PrisonId must be 3 characters")
+  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  @field:Size(min = 3, message = "Prison ID cannot be blank")
+  @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
+  @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
   override val prisonId: String,
 
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
@@ -334,9 +336,10 @@ data class CreateResidentialLocationRequest(
 @Schema(description = "Request to create a non-residential location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateNonResidentialLocationRequest(
-  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 3)
-  @field:Size(min = 3, message = "PrisonId cannot be blank")
-  @field:Size(max = 3, message = "PrisonId must be 3 characters")
+  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  @field:Size(min = 3, message = "Prison ID cannot be blank")
+  @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
+  @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
   override val prisonId: String,
 
   @Schema(description = "Code of the location", required = true, example = "ADJ", minLength = 1)

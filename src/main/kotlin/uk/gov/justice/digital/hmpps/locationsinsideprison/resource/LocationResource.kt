@@ -157,7 +157,7 @@ class LocationResource(
     ],
   )
   fun getLocationForPrison(
-    @Schema(description = "Prison Id", example = "MDI", required = true)
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @PathVariable
     prisonId: String,
   ): List<LocationDTO> = locationService.getLocationByPrison(prisonId)

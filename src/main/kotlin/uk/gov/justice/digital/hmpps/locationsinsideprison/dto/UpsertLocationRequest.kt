@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -24,7 +25,10 @@ data class UpsertLocationRequest(
   @Schema(description = "Location Id, provided if a new location", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = false)
   val id: UUID? = null,
 
-  @Schema(description = "Prison ID", example = "MDI", required = true)
+  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  @field:Size(min = 3, message = "Prison ID cannot be blank")
+  @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
+  @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
   val prisonId: String,
 
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)

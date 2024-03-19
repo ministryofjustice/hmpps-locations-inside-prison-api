@@ -1,0 +1,1 @@
+ALTER TABLE location ALTER COLUMN prison_id type VARCHAR(5)
