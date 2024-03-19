@@ -90,14 +90,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     cell1 = repository.save(
       buildCell(
         pathHierarchy = "Z-1-001",
-        capacity = Capacity(capacity = 2, operationalCapacity = 2),
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
       ),
     )
     cell2 = repository.save(
       buildCell(
         pathHierarchy = "Z-1-002",
-        capacity = Capacity(capacity = 2, operationalCapacity = 2),
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
       ),
     )
@@ -178,8 +178,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "MDI-Z",
               "capacity": {
-                "capacity": 4,
-                "operationalCapacity": 4
+                "maxCapacity": 4,
+                "workingCapacity": 4
               },
               "certification": {
                 "capacityOfCertifiedCell": 4
@@ -202,8 +202,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "active": true,
                   "key": "MDI-Z-1",
                   "capacity": {
-                    "capacity": 4,
-                    "operationalCapacity": 4
+                    "maxCapacity": 4,
+                    "workingCapacity": 4
                   },
                   "certification": {
                     "capacityOfCertifiedCell": 4
@@ -217,8 +217,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "active": true,
                       "key": "MDI-Z-1-001",
                       "capacity": {
-                        "capacity": 2,
-                        "operationalCapacity": 2
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
                       },
                       "certification": {
                         "certified": true,
@@ -233,8 +233,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "active": true,
                       "key": "MDI-Z-1-002",
                       "capacity": {
-                        "capacity": 2,
-                        "operationalCapacity": 2
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
                       },
                       "certification": {
                         "certified": true,
@@ -250,8 +250,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "residentialHousingType": "NORMAL_ACCOMMODATION",
                   "capacity": {
-                    "capacity": 0,
-                    "operationalCapacity": 0
+                    "maxCapacity": 0,
+                    "workingCapacity": 0
                   },
                   "certification": {
                     "certified": false,
@@ -353,8 +353,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                               "active": true,
                               "residentialHousingType": "NORMAL_ACCOMMODATION",
                               "capacity": {
-                                "capacity": 2,
-                                "operationalCapacity": 2
+                                "maxCapacity": 2,
+                                "workingCapacity": 2
                               },
                               "certification": {
                                 "certified": true,
@@ -376,8 +376,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                               "active": true,
                               "residentialHousingType": "NORMAL_ACCOMMODATION",
                               "capacity": {
-                                "capacity": 2,
-                                "operationalCapacity": 2
+                                "maxCapacity": 2,
+                                "workingCapacity": 2
                               },
                               "certification": {
                                 "certified": true,
@@ -395,8 +395,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           "active": true,
                           "residentialHousingType": "NORMAL_ACCOMMODATION",
                           "capacity": {
-                            "capacity": 4,
-                            "operationalCapacity": 4
+                            "maxCapacity": 4,
+                            "workingCapacity": 4
                           },
                           "certification": {
                             "certified": true,
@@ -418,8 +418,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           "active": true,
                           "residentialHousingType": "NORMAL_ACCOMMODATION",
                           "capacity": {
-                            "capacity": 0,
-                            "operationalCapacity": 0
+                            "maxCapacity": 0,
+                            "workingCapacity": 0
                           },
                           "certification": {
                             "certified": false,
@@ -433,8 +433,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "active": true,
                       "residentialHousingType": "NORMAL_ACCOMMODATION",
                       "capacity": {
-                        "capacity": 4,
-                        "operationalCapacity": 4
+                        "maxCapacity": 4,
+                        "workingCapacity": 4
                       },
                       "certification": {
                         "certified": true,
@@ -793,11 +793,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "WING",
               "active": true,
               "key": "MDI-Y",
-              "description": "Y Wing",
+              "localName": "Y Wing",
               "orderWithinParentLocation": 1,
               "capacity": {
-                "capacity": 12,
-                "operationalCapacity": 12
+                "maxCapacity": 12,
+                "workingCapacity": 12
               },
               "certification": {
                 "certified": true,
@@ -831,11 +831,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "WING",
               "active": true,
               "key": "MDI-X",
-              "description": "X Wing",
+              "localName": "X Wing",
               "orderWithinParentLocation": 1,
               "capacity": {
-                "capacity": 16,
-                "operationalCapacity": 16
+                "maxCapacity": 16,
+                "workingCapacity": 16
               },
               "certification": {
                 "certified": true,
@@ -860,12 +860,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       prisonId = "MDI",
       code = "004",
       locationType = LocationType.CELL,
-      description = "A New Cell (004)",
+      localName = "A New Cell (004)",
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "This is a new cell",
       orderWithinParentLocation = 4,
       attributes = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY, ResidentialAttributeValue.CAT_B),
-      capacity = CapacityDTO(capacity = 2, operationalCapacity = 2),
+      capacity = CapacityDTO(maxCapacity = 2, workingCapacity = 2),
       certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 2),
     )
 
@@ -954,11 +954,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "MDI-Z-1-004",
               "comments": "This is a new cell",
-              "description": "A New Cell (004)",
+              "localName": "A New Cell (004)",
               "orderWithinParentLocation": 4,
               "capacity": {
-                "capacity": 2,
-                "operationalCapacity": 2
+                "maxCapacity": 2,
+                "workingCapacity": 2
               },
               "certification": {
                 "certified": true,
@@ -992,7 +992,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       prisonId = "MDI",
       code = "ADJ",
       locationType = LocationType.ADJUDICATION_ROOM,
-      description = "Adjudication Room",
+      localName = "Adjudication Room",
       comments = "This room is for adjudications",
       orderWithinParentLocation = 1,
       usage = setOf(
@@ -1084,7 +1084,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "MDI-Z-ADJ",
               "comments": "${createNonResidentialLocationRequest.comments}",
-              "description": "${createNonResidentialLocationRequest.description}",
+              "localName": "${createNonResidentialLocationRequest.localName}",
               "orderWithinParentLocation": 1,
               "usage": [
                 {
@@ -1117,7 +1117,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     )
 
     val changeCapacity = PatchLocationRequest(
-      capacity = CapacityDTO(capacity = 3, operationalCapacity = 3),
+      capacity = CapacityDTO(maxCapacity = 3, workingCapacity = 3),
     )
     val changeCertification = PatchLocationRequest(
       certification = CertificationDTO(certified = false, capacityOfCertifiedCell = 3),
@@ -1280,8 +1280,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "locationType": "LANDING",
                 "residentialHousingType": "NORMAL_ACCOMMODATION",
                 "capacity": {
-                  "capacity": 4,
-                  "operationalCapacity": 4
+                  "maxCapacity": 4,
+                  "workingCapacity": 4
                 },
                 "certification": {
                   "certified": true,
@@ -1306,8 +1306,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "WING",
               "key": "MDI-Z",
               "capacity": {
-                "capacity": 0,
-                "operationalCapacity": 0
+                "maxCapacity": 0,
+                "workingCapacity": 0
               },
               "certification": {
                 "certified": false,
@@ -1337,8 +1337,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "key": "MDI-Z-2",
                   "capacity": {
-                    "capacity": 0,
-                    "operationalCapacity": 0
+                    "maxCapacity": 0,
+                    "workingCapacity": 0
                   },
                   "certification": {
                     "certified": false,
@@ -1364,8 +1364,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "WING",
               "key": "MDI-B",
               "capacity": {
-                "capacity": 4,
-                "operationalCapacity": 4
+                "maxCapacity": 4,
+                "workingCapacity": 4
               },
               "certification": {
                 "certified": true,
@@ -1378,8 +1378,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "key": "MDI-B-1",
                   "capacity": {
-                    "capacity": 4,
-                    "operationalCapacity": 4
+                    "maxCapacity": 4,
+                    "workingCapacity": 4
                   },
                   "certification": {
                     "certified": true,
@@ -1391,8 +1391,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "key": "MDI-B-1-001",
                       "capacity": {
-                        "capacity": 2,
-                        "operationalCapacity": 2
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
                       },
                       "certification": {
                         "certified": true,
@@ -1404,8 +1404,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "key": "MDI-B-1-002",
                       "capacity": {
-                        "capacity": 2,
-                        "operationalCapacity": 2
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
                       },
                       "certification": {
                         "certified": true,
@@ -1439,8 +1439,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "locationType": "CELL",
                 "residentialHousingType": "NORMAL_ACCOMMODATION",
                 "capacity": {
-                  "capacity": 3,
-                  "operationalCapacity": 3
+                  "maxCapacity": 3,
+                  "workingCapacity": 3
                 },
                 "certification": {
                   "certified": true,
@@ -1469,8 +1469,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "WING",
               "key": "MDI-Z",
               "capacity": {
-                "capacity": 5,
-                "operationalCapacity": 5
+                "maxCapacity": 5,
+                "workingCapacity": 5
               },
               "certification": {
                 "capacityOfCertifiedCell": 4
@@ -1487,8 +1487,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "key": "MDI-Z-1",
                   "capacity": {
-                    "capacity": 5,
-                    "operationalCapacity": 5
+                    "maxCapacity": 5,
+                    "workingCapacity": 5
                   },
                   "certification": {
                     "capacityOfCertifiedCell": 4
@@ -1499,8 +1499,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "key": "MDI-Z-1-001",
                       "capacity": {
-                        "capacity": 3,
-                        "operationalCapacity": 3
+                        "maxCapacity": 3,
+                        "workingCapacity": 3
                       },
                       "certification": {
                         "certified": true,
@@ -1508,13 +1508,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       },
                       "changeHistory": [
                         {
-                          "attribute": "Capacity",
+                          "attribute": "Max Capacity",
                           "oldValue": "2",
                           "newValue": "3"
                         },
                         {
 
-                          "attribute": "Operational Capacity",
+                          "attribute": "Working Capacity",
                           "oldValue": "2",
                           "newValue": "3"
                         }
@@ -1525,8 +1525,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "key": "MDI-Z-1-002",
                       "capacity": {
-                        "capacity": 2,
-                        "operationalCapacity": 2
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
                       },
                       "certification": {
                         "certified": true,
@@ -1541,8 +1541,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "key": "MDI-Z-2",
                   "capacity": {
-                    "capacity": 0,
-                    "operationalCapacity": 0
+                    "maxCapacity": 0,
+                    "workingCapacity": 0
                   },
                   "certification": {
                     "certified": false,
@@ -1574,8 +1574,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "locationType": "CELL",
                 "residentialHousingType": "NORMAL_ACCOMMODATION",
                 "capacity": {
-                  "capacity": 2,
-                  "operationalCapacity": 2
+                  "maxCapacity": 2,
+                  "workingCapacity": 2
                 },
                 "certification": {
                   "certified": false,
@@ -1604,8 +1604,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "WING",
               "key": "MDI-Z",
               "capacity": {
-                "capacity": 4,
-                "operationalCapacity": 4
+                "maxCapacity": 4,
+                "workingCapacity": 4
               },
               "certification": {
                 "capacityOfCertifiedCell": 5
@@ -1622,8 +1622,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "key": "MDI-Z-1",
                   "capacity": {
-                    "capacity": 4,
-                    "operationalCapacity": 4
+                    "maxCapacity": 4,
+                    "workingCapacity": 4
                   },
                   "certification": {
                     "capacityOfCertifiedCell": 5
@@ -1634,8 +1634,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "key": "MDI-Z-1-001",
                       "capacity": {
-                        "capacity": 2,
-                        "operationalCapacity": 2
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
                       },
                       "certification": {
                         "certified": false,
@@ -1648,7 +1648,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           "newValue": "false"
                         },
                         {
-                          "attribute": "Certified Capacity",
+                          "attribute": "Baseline Certified Capacity",
                           "oldValue": "2",
                           "newValue": "3"
                         }
@@ -1659,8 +1659,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "key": "MDI-Z-1-002",
                       "capacity": {
-                        "capacity": 2,
-                        "operationalCapacity": 2
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
                       },
                       "certification": {
                         "certified": true,
@@ -1675,8 +1675,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "key": "MDI-Z-2",
                   "capacity": {
-                    "capacity": 0,
-                    "operationalCapacity": 0
+                    "maxCapacity": 0,
+                    "workingCapacity": 0
                   },
                   "certification": {
                     "certified": false,
@@ -1710,8 +1710,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "key": "MDI-Z-1-001",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "capacity": {
-                "capacity": 2,
-                "operationalCapacity": 2
+                "maxCapacity": 2,
+                "workingCapacity": 2
               },
               "attributes": []
             }
@@ -1735,8 +1735,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "key": "MDI-Z-1-001",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "capacity": {
-                "capacity": 2,
-                "operationalCapacity": 2
+                "maxCapacity": 2,
+                "workingCapacity": 2
               },
               "attributes": [],
               "changeHistory": [
@@ -1775,8 +1775,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "key": "MDI-Z-1-001",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "capacity": {
-                "capacity": 2,
-                "operationalCapacity": 2
+                "maxCapacity": 2,
+                "workingCapacity": 2
               },
               "attributes": [
                 "SINGLE_OCCUPANCY",
