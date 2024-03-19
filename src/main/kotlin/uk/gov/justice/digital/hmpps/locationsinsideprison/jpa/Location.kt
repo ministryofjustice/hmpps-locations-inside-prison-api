@@ -50,7 +50,7 @@ abstract class Location(
   @JoinColumn(name = "parent_id")
   private var parent: Location? = null,
 
-  open var description: String? = null,
+  open var localName: String? = null,
 
   open var comments: String? = null,
 
@@ -182,7 +182,7 @@ abstract class Location(
       prisonId = prisonId,
       parentId = getParent()?.id,
       topLevelId = findTopLevelLocation().id!!,
-      description = description,
+      localName = localName,
       comments = comments,
       orderWithinParentLocation = orderWithinParentLocation,
       active = active,
@@ -223,10 +223,10 @@ abstract class Location(
     }
     this.locationType = upsert.locationType ?: this.locationType
 
-    if (upsert.description != null && this.description != upsert.description) {
-      addHistory(LocationAttribute.DESCRIPTION, this.description, upsert.description, updatedBy, LocalDateTime.now(clock))
+    if (upsert.localName != null && this.localName != upsert.localName) {
+      addHistory(LocationAttribute.DESCRIPTION, this.localName, upsert.localName, updatedBy, LocalDateTime.now(clock))
     }
-    this.description = upsert.description ?: this.description
+    this.localName = upsert.localName ?: this.localName
 
     if (upsert.comments != null && this.comments != upsert.comments) {
       addHistory(LocationAttribute.COMMENTS, this.comments, upsert.comments, updatedBy, LocalDateTime.now(clock))

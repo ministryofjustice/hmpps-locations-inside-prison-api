@@ -70,7 +70,7 @@ class LocationRepositoryTest : TestBase() {
 
     location.findAllLeafLocations().forEach {
       if (it is Cell) {
-        assertThat(it.capacity?.operationalCapacity).isEqualTo(1)
+        assertThat(it.capacity?.workingCapacity).isEqualTo(1)
         assertThat(it.certification?.capacityOfCertifiedCell).isEqualTo(1)
       }
     }
@@ -78,7 +78,7 @@ class LocationRepositoryTest : TestBase() {
     assertThat(location.findAllLeafLocations()).containsExactlyInAnyOrder(cell001L1, cell002L1, cell002L2, adjRoom)
     location.findAllLeafLocations().forEach {
       if (it is Cell) {
-        it.capacity?.operationalCapacity = 2
+        it.capacity?.workingCapacity = 2
         it.certification?.capacityOfCertifiedCell = 2
       }
     }
@@ -91,7 +91,7 @@ class LocationRepositoryTest : TestBase() {
     assertThat(cell2.findTopLevelLocation()).isEqualTo(wing)
     assertThat(cell2.getPathHierarchy()).isEqualTo("A-2-001")
     cell2 as Cell
-    assertThat(cell2.capacity?.operationalCapacity).isEqualTo(2)
+    assertThat(cell2.capacity?.workingCapacity).isEqualTo(2)
     assertThat(cell2.certification?.capacityOfCertifiedCell).isEqualTo(2)
 
     val landing1Retrieved = repository.findOneByPrisonIdAndPathHierarchy(landing1.prisonId, landing1.getPathHierarchy()) ?: throw Exception("Location not found")
@@ -137,7 +137,7 @@ class LocationRepositoryTest : TestBase() {
       createdBy = SYSTEM_USERNAME,
       whenCreated = now,
       parent = parent,
-      description = "$locationType $prisonId $pathHierarchy",
+      localName = "$locationType $prisonId $pathHierarchy",
       deactivatedDate = LocalDate.now(clock).minusYears(1),
       proposedReactivationDate = LocalDate.now(clock).minusDays(1),
       orderWithinParentLocation = 1,
@@ -165,9 +165,9 @@ class LocationRepositoryTest : TestBase() {
       createdBy = SYSTEM_USERNAME,
       whenCreated = now,
       parent = parent,
-      capacity = Capacity(capacity = 1, operationalCapacity = 1),
+      capacity = Capacity(maxCapacity = 1, workingCapacity = 1),
       certification = Certification(certified = true, capacityOfCertifiedCell = 1),
-      description = "CELL $prisonId $pathHierarchy",
+      localName = "CELL $prisonId $pathHierarchy",
       deactivatedDate = LocalDate.now(clock).minusYears(1),
       proposedReactivationDate = LocalDate.now(clock).minusDays(1),
       orderWithinParentLocation = 1,
@@ -196,7 +196,7 @@ class LocationRepositoryTest : TestBase() {
       createdBy = SYSTEM_USERNAME,
       whenCreated = now,
       parent = parent,
-      description = "$locationType $prisonId $pathHierarchy",
+      localName = "$locationType $prisonId $pathHierarchy",
       orderWithinParentLocation = 1,
       comments = "Non Res comments",
       childLocations = mutableListOf(),
