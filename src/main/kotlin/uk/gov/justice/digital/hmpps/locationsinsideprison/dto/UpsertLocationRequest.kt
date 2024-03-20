@@ -22,7 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as Locati
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class UpsertLocationRequest(
 
-  @Schema(description = "Location Id, provided if a new location", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = false)
+  @Schema(description = "Location UUID, provided if a new location", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = false)
   val id: UUID? = null,
 
   @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
@@ -55,6 +55,9 @@ data class UpsertLocationRequest(
 
   @Schema(description = "Path hierarchy of the parent (if one exists)", example = "A-1", required = false)
   val parentLocationPath: String? = null,
+
+  @Schema(description = "Parent UUID of the parent location (if one exists)", example = "2475f250-434a-4257-afe7-b911f1773a4e", required = false)
+  val parentId: UUID? = null,
 
   @Schema(description = "Capacity details of the location", required = false)
   override val capacity: Capacity? = null,
