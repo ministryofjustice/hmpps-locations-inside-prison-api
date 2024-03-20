@@ -182,7 +182,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-B-1-003",
               "comments": "This is a new cell",
-              "description": "A New Cell",
+              "localName": "A New Cell",
               "orderWithinParentLocation": 1,
               "isResidential": true,
               "attributes": ["IMMIGRATION_DETAINEES"]
