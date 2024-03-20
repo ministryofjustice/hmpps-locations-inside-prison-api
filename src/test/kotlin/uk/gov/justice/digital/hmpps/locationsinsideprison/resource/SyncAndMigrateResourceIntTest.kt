@@ -40,7 +40,9 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: LocationRepository
+
   lateinit var wingB: ResidentialLocation
+  lateinit var landing1: ResidentialLocation
   lateinit var cell: Cell
 
   @BeforeEach
@@ -55,7 +57,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       ),
     )
 
-    val landing = repository.save(
+    landing1 = repository.save(
       buildResidentialLocation(
         prisonId = "ZZGHI",
         pathHierarchy = "B-1",
@@ -73,8 +75,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       ),
     )
 
-    wingB.addChildLocation(landing)
-    landing.addChildLocation(cell)
+    wingB.addChildLocation(landing1)
+    landing1.addChildLocation(cell)
     repository.save(wingB)
   }
 
@@ -84,7 +86,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     var syncResRequest = UpsertLocationRequest(
       prisonId = "ZZGHI",
       code = "003",
-      parentLocationPath = "B-1",
       locationType = LocationType.CELL,
       description = "A New Cell",
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
@@ -162,11 +163,41 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
       @Test
-      fun `can sync a new res location`() {
+      fun `can sync a new res location with parent UUID`() {
         webTestClient.post().uri("/sync/upsert")
           .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(syncResRequest))
+          .bodyValue(jsonString(syncResRequest.copy(parentId = landing1.id)))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "003",
+              "pathHierarchy": "B-1-003",
+              "locationType": "CELL",
+              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "active": true,
+              "key": "ZZGHI-B-1-003",
+              "comments": "This is a new cell",
+              "description": "A New Cell",
+              "orderWithinParentLocation": 1,
+              "isResidential": true,
+              "attributes": ["IMMIGRATION_DETAINEES"]
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can sync a new res location with parent code`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(syncResRequest.copy(parentLocationPath = "B-1")))
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(

@@ -86,7 +86,11 @@ class SyncService(
   }
 
   private fun findParent(upsert: UpsertLocationRequest): Location? {
-    return upsert.parentLocationPath?.let {
+    return upsert.parentId?.let {
+      locationRepository.findById(it).orElseThrow {
+        LocationNotFoundException(it.toString())
+      }
+    } ?: upsert.parentLocationPath?.let {
       locationRepository.findOneByPrisonIdAndPathHierarchy(upsert.prisonId, upsert.parentLocationPath)
         ?: throw LocationNotFoundException(upsert.toString())
     }
