@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -16,11 +17,13 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationHistoryRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
@@ -41,12 +44,17 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   @Autowired
   lateinit var repository: LocationRepository
 
+  @Autowired
+  lateinit var locationHistoryRepository: LocationHistoryRepository
+
   lateinit var wingB: ResidentialLocation
   lateinit var landing1: ResidentialLocation
   lateinit var cell: Cell
+  lateinit var locationHistory: LocationHistory
 
   @BeforeEach
   fun setUp() {
+    locationHistoryRepository.deleteAll()
     repository.deleteAll()
 
     wingB = repository.save(
@@ -65,15 +73,21 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       ),
     )
 
-    cell = repository.save(
-      buildCell(
-        prisonId = "ZZGHI",
-        pathHierarchy = "B-1-001",
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, capacityOfCertifiedCell = 1),
-        residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
-      ),
+    cell = buildCell(
+      prisonId = "ZZGHI",
+      pathHierarchy = "B-1-001",
+      capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
+      certification = Certification(certified = true, capacityOfCertifiedCell = 1),
+      residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
     )
+    locationHistory = cell.addHistory(
+      attributeName = LocationAttribute.DESCRIPTION,
+      oldValue = "2",
+      newValue = "1",
+      amendedBy = "user",
+      amendedDate = LocalDateTime.now(clock).minusYears(2),
+    )!!
+    cell = repository.save(cell)
 
     wingB.addChildLocation(landing1)
     landing1.addChildLocation(cell)
@@ -486,6 +500,49 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           """,
             false,
           )
+      }
+
+      @Test
+      fun `can handle a duplicate a location history`() {
+        assertThat(locationHistoryRepository.findAllByLocationIdOrderByAmendedDate(cell.id!!)).hasSize(1)
+
+        webTestClient.post().uri("/migrate/location/${cell.id}/history")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              MigrateHistoryRequest(
+                attribute = locationHistory.attributeName,
+                oldValue = locationHistory.oldValue,
+                newValue = locationHistory.newValue,
+                amendedBy = locationHistory.amendedBy,
+                amendedDate = locationHistory.amendedDate,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isCreated
+
+        assertThat(locationHistoryRepository.findAllByLocationIdOrderByAmendedDate(cell.id!!)).hasSize(1)
+
+        webTestClient.post().uri("/migrate/location/${cell.id}/history")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              MigrateHistoryRequest(
+                attribute = locationHistory.attributeName,
+                oldValue = locationHistory.oldValue,
+                newValue = locationHistory.newValue,
+                amendedBy = locationHistory.amendedBy,
+                amendedDate = locationHistory.amendedDate.plusMinutes(1),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isCreated
+
+        assertThat(locationHistoryRepository.findAllByLocationIdOrderByAmendedDate(cell.id!!)).hasSize(2)
       }
     }
   }

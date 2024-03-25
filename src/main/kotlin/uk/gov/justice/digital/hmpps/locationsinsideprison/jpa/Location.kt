@@ -66,7 +66,7 @@ abstract class Location(
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   protected open val childLocations: MutableList<Location> = mutableListOf(),
 
-  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
   protected open val history: SortedSet<LocationHistory> = sortedSetOf(),
 
