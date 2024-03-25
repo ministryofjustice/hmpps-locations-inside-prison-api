@@ -32,7 +32,8 @@ class LocationHistory(
 
   val amendedDate: LocalDateTime,
 
-) {
+) : Comparable<LocationHistory> {
+
   fun toDto() =
     ChangeHistory(
       attribute = attributeName.description,
@@ -49,23 +50,44 @@ class LocationHistory(
     other as LocationHistory
 
     if (location != other.location) return false
+    if (amendedDate != other.amendedDate) return false
     if (attributeName != other.attributeName) return false
     if (oldValue != other.oldValue) return false
     if (newValue != other.newValue) return false
     if (amendedBy != other.amendedBy) return false
-    if (amendedDate != other.amendedDate) return false
 
     return true
   }
 
   override fun hashCode(): Int {
     var result = location.hashCode()
+    result = 31 * result + amendedDate.hashCode()
     result = 31 * result + attributeName.hashCode()
     result = 31 * result + (oldValue?.hashCode() ?: 0)
     result = 31 * result + (newValue?.hashCode() ?: 0)
     result = 31 * result + amendedBy.hashCode()
-    result = 31 * result + amendedDate.hashCode()
     return result
+  }
+
+  override fun compareTo(other: LocationHistory): Int {
+    var comparison = location.id?.compareTo(other.location.id)
+    if (comparison != 0 && comparison != null) return comparison
+
+    comparison = amendedDate.compareTo(other.amendedDate)
+    if (comparison != 0) return comparison
+
+    comparison = attributeName.compareTo(other.attributeName)
+    if (comparison != 0) return comparison
+
+    comparison = oldValue?.compareTo(other.oldValue ?: "") ?: -1
+    if (comparison != 0) return comparison
+
+    comparison = newValue?.compareTo(other.newValue ?: "") ?: -1
+    if (comparison != 0) return comparison
+
+    comparison = amendedBy.compareTo(other.amendedBy)
+
+    return comparison
   }
 
   override fun toString(): String {
