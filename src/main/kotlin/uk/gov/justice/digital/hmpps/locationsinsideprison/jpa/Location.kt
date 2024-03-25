@@ -16,6 +16,7 @@ import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
 import org.hibernate.annotations.DiscriminatorFormula
 import org.hibernate.annotations.GenericGenerator
+import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
@@ -66,7 +67,8 @@ abstract class Location(
   protected open val childLocations: MutableList<Location> = mutableListOf(),
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-  protected open val history: MutableList<LocationHistory> = mutableListOf(),
+  @SortNatural
+  protected open val history: SortedSet<LocationHistory> = sortedSetOf(),
 
   open val whenCreated: LocalDateTime,
   open var whenUpdated: LocalDateTime,
