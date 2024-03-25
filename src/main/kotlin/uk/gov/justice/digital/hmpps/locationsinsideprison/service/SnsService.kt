@@ -109,11 +109,6 @@ enum class InternalLocationDomainEventType(val value: String, val description: S
     "A location inside prison has been reactivated: ",
     AuditType.LOCATION_REACTIVATED,
   ),
-  LOCATION_DELETED(
-    "location.inside.prison.deleted",
-    "A location inside prison has been deleted: ",
-    AuditType.LOCATION_DELETED,
-  ),
 }
 
 fun Instant.toOffsetDateFormat(): String =

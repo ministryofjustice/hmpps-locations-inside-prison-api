@@ -1988,11 +1988,55 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can deactivate a location`() {
-        val proposedReactivationDate = LocalDate.now(clock).plusMonths(1)
+        val now = LocalDate.now(clock)
+        val proposedReactivationDate = now.plusMonths(1)
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.CLOSURE, proposedReactivationDate = proposedReactivationDate)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "id": "${wingZ.id}",
+                "prisonId": "MDI",
+                "code": "Z",
+                "pathHierarchy": "Z",
+                "locationType": "WING",
+                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "capacity": {
+                  "maxCapacity": 0,
+                  "workingCapacity": 0
+                },
+                "certification": {
+                  "certified": false,
+                  "capacityOfCertifiedCell": 0
+                },
+                "attributes": [],
+                "orderWithinParentLocation": 99,
+                "active": false,
+                "deactivatedDate": "$now",
+                "deactivatedReason": "CLOSURE",
+                "proposedReactivationDate": "$proposedReactivationDate",
+                "topLevelId": "${wingZ.id}",
+                "isResidential": true,
+                "key": "MDI-Z"
+              }
+          """,
+            false,
+          )
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z",
+          )
+        }
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -2004,10 +2048,18 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "pathHierarchy": "Z",
               "locationType": "WING",
               "active": false,
+              "deactivatedByParent": false,
               "key": "MDI-Z",
-              "deactivatedReason": "DAMAGED",
+              "deactivatedReason": "CLOSURE",
               "proposedReactivationDate": "$proposedReactivationDate",
-              "deactivatedDate": "${LocalDate.now(clock)}",
+              "deactivatedDate": "$now",
+              "capacity": {
+                "maxCapacity": 0,
+                "workingCapacity": 0
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 0
+              },
               "childLocations": [
                 {
                   "prisonId": "MDI",
@@ -2015,9 +2067,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",
                   "active": false,
+                  "deactivatedByParent": true,
                   "proposedReactivationDate": "$proposedReactivationDate",
-                  "deactivatedDate": "${LocalDate.now(clock)}",
-                  "deactivatedReason": "DAMAGED",
+                  "deactivatedDate": "$now",
+                  "deactivatedReason": "CLOSURE",
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
                 },
@@ -2028,9 +2081,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "residentialHousingType": "NORMAL_ACCOMMODATION",
                   "active": false,
+                  "deactivatedByParent": true,
                   "proposedReactivationDate": "$proposedReactivationDate",
-                  "deactivatedDate": "${LocalDate.now(clock)}",
-                  "deactivatedReason": "DAMAGED",
+                  "deactivatedDate": "$now",
+                  "deactivatedReason": "CLOSURE",
                   "isResidential": true,
                   "key": "MDI-Z-1",
                   "childLocations": [
@@ -2041,9 +2095,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "residentialHousingType": "NORMAL_ACCOMMODATION",
                       "active": false,
+                      "deactivatedByParent": true,
                       "proposedReactivationDate": "$proposedReactivationDate",
-                      "deactivatedDate": "${LocalDate.now(clock)}",
-                      "deactivatedReason": "DAMAGED",
+                      "deactivatedDate": "$now",
+                      "deactivatedReason": "CLOSURE",
                       "isResidential": true,
                       "key": "MDI-Z-1-001"
                     },
@@ -2054,9 +2109,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "residentialHousingType": "NORMAL_ACCOMMODATION",
                       "active": false,
+                      "deactivatedByParent": true,
                       "proposedReactivationDate": "$proposedReactivationDate",
-                      "deactivatedDate": "${LocalDate.now(clock)}",
-                      "deactivatedReason": "DAMAGED",
+                      "deactivatedDate": "$now",
+                      "deactivatedReason": "CLOSURE",
                       "isResidential": true,
                       "key": "MDI-Z-1-002"
                     }
@@ -2069,9 +2125,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "locationType": "LANDING",
                   "residentialHousingType": "NORMAL_ACCOMMODATION",
                   "active": false,
+                  "deactivatedByParent": true,
                   "proposedReactivationDate": "$proposedReactivationDate",
-                  "deactivatedDate": "${LocalDate.now(clock)}",
-                  "deactivatedReason": "DAMAGED",
+                  "deactivatedDate": "$now",
+                  "deactivatedReason": "CLOSURE",
                   "isResidential": true,
                   "key": "MDI-Z-2"
                 }
@@ -2080,18 +2137,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           """,
             false,
           )
-
-        getDomainEvents(6).let {
-          assertThat(it).hasSize(6)
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.deactivated" to "MDI-Z",
-            "location.inside.prison.deactivated" to "MDI-Z-1",
-            "location.inside.prison.deactivated" to "MDI-Z-2",
-            "location.inside.prison.deactivated" to "MDI-Z-VISIT",
-            "location.inside.prison.deactivated" to "MDI-Z-1-001",
-            "location.inside.prison.deactivated" to "MDI-Z-1-002",
-          )
-        }
       }
     }
   }
@@ -2141,15 +2186,88 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can reactivate a location`() {
-        webTestClient.put().uri("/locations/${landing1.id}/reactivate")
+        val proposedReactivationDate = LocalDate.now(clock).plusMonths(1)
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.CLOSURE)))
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.put().uri("/locations/${wingZ.id}/reactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
             // language=json
             """
+           {
+              "prisonId": "MDI",
+              "code": "Z",
+              "pathHierarchy": "Z",
+              "locationType": "WING",
+              "active": true,
+              "key": "MDI-Z",
+              "capacity": {
+                "maxCapacity": 4,
+                "workingCapacity": 2
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 4
+              }
+            }
+          """,
+            false,
+          )
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.reactivated" to "MDI-Z",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.deactivated" to "MDI-Z",
+          )
+        }
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "MDI",
+              "code": "Z",
+              "pathHierarchy": "Z",
+              "locationType": "WING",
+              "active": true,
+              "key": "MDI-Z",
+              "capacity": {
+                "maxCapacity": 4,
+                "workingCapacity": 2
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 4
+              },
+              "childLocations": [
+                {
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "active": true,
+                  "isResidential": false,
+                  "key": "MDI-Z-VISIT"
+                },
                 {
                   "prisonId": "MDI",
                   "code": "1",
@@ -2166,7 +2284,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "pathHierarchy": "Z-1-001",
                       "locationType": "CELL",
                       "residentialHousingType": "NORMAL_ACCOMMODATION",
-                      "active": true,
+                      "active": false,
+                      "deactivatedByParent": false,
+                      "proposedReactivationDate": "$proposedReactivationDate",
+                      "deactivatedDate": "${LocalDate.now(clock)}",
+                      "deactivatedReason": "DAMAGED",
                       "isResidential": true,
                       "key": "MDI-Z-1-001"
                     },
@@ -2181,74 +2303,22 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "key": "MDI-Z-1-002"
                     }
                   ]
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "active": true,
+                  "isResidential": true,
+                  "key": "MDI-Z-2"
                 }
+              ]
+            }
           """,
             false,
           )
-
-        getDomainEvents(3).let {
-          assertThat(it).hasSize(3)
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.reactivated" to "MDI-Z-1",
-            "location.inside.prison.reactivated" to "MDI-Z-1-001",
-            "location.inside.prison.reactivated" to "MDI-Z-1-002",
-          )
-        }
-      }
-    }
-  }
-
-  @DisplayName("DELETE /locations/{id}")
-  @Nested
-  inner class DeleteLocationTest {
-
-    @Nested
-    inner class Security {
-      @Test
-      fun `access forbidden when no authority`() {
-        webTestClient.delete().uri("/locations")
-          .exchange()
-          .expectStatus().isUnauthorized
-      }
-
-      @Test
-      fun `access forbidden when no role`() {
-        webTestClient.delete().uri("/locations/${landing1.id}")
-          .headers(setAuthorisation(roles = listOf()))
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      fun `access forbidden with wrong role`() {
-        webTestClient.delete().uri("/locations/${landing1.id}")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      fun `access forbidden with right role, wrong scope`() {
-        webTestClient.delete().uri("/locations/${landing1.id}")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isForbidden
-      }
-    }
-
-    @Nested
-    inner class HappyPath {
-      @Test
-      fun `can create details of a location`() {
-        webTestClient.delete().uri("/locations/${landing1.id}")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().is2xxSuccessful
-          .expectBody()
       }
     }
   }

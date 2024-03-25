@@ -22,7 +22,7 @@ abstract class EventBaseResource {
       eventPublishAndAuditService.publishEvent(
         eventType = event,
         locationDetail = location,
-        auditData = location,
+        auditData = location.copy(childLocations = null, parentLocation = null, changeHistory = null),
         source = informationSource,
       )
     }

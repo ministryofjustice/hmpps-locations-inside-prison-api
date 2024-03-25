@@ -15,7 +15,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
-import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -400,7 +399,7 @@ class LocationResource(
   ): LocationDTO {
     val results = locationService.updateLocation(id, patchLocationRequest)
     eventPublish(buildEvents(results))
-    audit(AuditType.LOCATION_AMENDED, id.toString()) { results.location }
+    audit(AuditType.LOCATION_AMENDED, id.toString()) { results.location.copy(childLocations = null, parentLocation = null) }
     return results.location
   }
 
@@ -512,53 +511,6 @@ class LocationResource(
       InternalLocationDomainEventType.LOCATION_REACTIVATED,
       {
         locationService.reactivateLocation(id)
-      },
-      InformationSource.DPS,
-    )
-  }
-
-  @DeleteMapping("/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
-  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
-  @ResponseStatus(HttpStatus.ACCEPTED)
-  @Operation(
-    summary = "Deletes a location",
-    description = "Requires role MAINTAIN_LOCATIONS and write scope",
-    responses = [
-      ApiResponse(
-        responseCode = "202",
-        description = "Returns deleted location",
-      ),
-      ApiResponse(
-        responseCode = "400",
-        description = "Invalid Request",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "401",
-        description = "Unauthorized to access this endpoint",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "403",
-        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Data not found",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-    ],
-  )
-  fun deleteLocation(
-    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
-    @PathVariable
-    id: UUID,
-  ) {
-    eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_DELETED,
-      {
-        locationService.deleteLocation(id)
       },
       InformationSource.DPS,
     )

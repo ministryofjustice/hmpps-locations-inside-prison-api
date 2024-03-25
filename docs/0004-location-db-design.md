@@ -327,7 +327,7 @@ class Location {
    Boolean wingLandingSpur
    Int? orderWithinParentLocation
    String key
-   LocalDate? reactivatedDate
+   LocalDate? proposedReactivationDate
 }
 class LocationType {
 <<enumeration>>

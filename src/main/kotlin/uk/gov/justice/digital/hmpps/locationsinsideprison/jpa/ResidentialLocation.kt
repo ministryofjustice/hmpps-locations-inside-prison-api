@@ -57,27 +57,27 @@ open class ResidentialLocation(
 ) {
 
   private fun getWorkingCapacity(): Int {
-    return cellLocations()
+    return cellLocations().filter { it.isActiveAndAllParentsActive() }
       .sumOf { it.capacity?.workingCapacity ?: 0 }
   }
 
   private fun getMaxCapacity(): Int {
-    return cellLocations()
+    return cellLocations().filter { !it.isPermanentlyClosed() }
       .sumOf { it.capacity?.maxCapacity ?: 0 }
   }
 
   private fun getBaselineCapacity(): Int {
-    return cellLocations()
+    return cellLocations().filter { !it.isPermanentlyClosed() }
       .sumOf { it.certification?.capacityOfCertifiedCell ?: 0 }
   }
 
   private fun hasCertifiedCells(): Boolean {
-    return cellLocations()
+    return cellLocations().filter { !it.isPermanentlyClosed() }
       .any { it.certification?.certified == true }
   }
 
   private fun getAttributes(): Set<ResidentialAttribute> {
-    return cellLocations()
+    return cellLocations().filter { !it.isPermanentlyClosed() }
       .flatMap { it.attributes }
       .toSet()
   }

@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegra
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
@@ -282,6 +283,60 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "sequence": 1
                 }
               ]
+            }
+          """,
+            false,
+          )
+      }
+    }
+  }
+
+  @DisplayName("POST /sync/upsert")
+  @Nested
+  inner class CreateLocationTestDeactivated {
+    var deactivatedLocationMigration = UpsertLocationRequest(
+      prisonId = "ZZGHI",
+      code = "006",
+      locationType = LocationType.CELL,
+      localName = "A New Inactive Cell",
+      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+      comments = "This is a new cell (inactive)",
+      deactivatedDate = LocalDateTime.now(clock).minusYears(1).toLocalDate(),
+      deactivationReason = DeactivatedReason.DAMAGED,
+      proposedReactivationDate = LocalDateTime.now(clock).plusYears(1).toLocalDate(),
+      orderWithinParentLocation = 6,
+      lastUpdatedBy = "user",
+      lastModifiedDate = LocalDateTime.now(clock).minusYears(1),
+    )
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can sync a new inactive res location`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(deactivatedLocationMigration.copy(parentId = landing1.id)))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "006",
+              "pathHierarchy": "B-1-006",
+              "locationType": "CELL",
+              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "active": false,
+              "deactivatedDate": "${deactivatedLocationMigration.deactivatedDate}",
+              "deactivatedReason": "DAMAGED",
+              "proposedReactivationDate": "${deactivatedLocationMigration.proposedReactivationDate}",
+              "key": "ZZGHI-B-1-006",
+              "comments": "This is a new cell (inactive)",
+              "localName": "A New Inactive Cell",
+              "orderWithinParentLocation": 6,
+              "isResidential": true
             }
           """,
             false,

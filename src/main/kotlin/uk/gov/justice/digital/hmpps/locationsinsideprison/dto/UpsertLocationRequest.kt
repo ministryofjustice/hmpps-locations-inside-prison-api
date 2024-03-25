@@ -5,12 +5,14 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import java.time.Clock
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
@@ -53,6 +55,15 @@ data class UpsertLocationRequest(
   @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
   override val residentialHousingType: ResidentialHousingType? = null,
 
+  @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
+  override val deactivationReason: DeactivatedReason? = null,
+
+  @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
+  override val proposedReactivationDate: LocalDate? = null,
+
+  @Schema(description = "Date deactivation occurred", example = "2023-01-05", required = false)
+  override val deactivatedDate: LocalDate? = null,
+
   @Schema(description = "Path hierarchy of the parent (if one exists)", example = "A-1", required = false)
   val parentLocationPath: String? = null,
 
@@ -86,7 +97,7 @@ data class UpsertLocationRequest(
 
   fun toNewEntity(clock: Clock): LocationJPA {
     val now = LocalDateTime.now(clock)
-    return if (residentialHousingType != null) {
+    val location = if (residentialHousingType != null) {
       if (isCell()) {
         val location = Cell(
           id = null,
@@ -94,11 +105,11 @@ data class UpsertLocationRequest(
           code = code,
           locationType = locationType,
           pathHierarchy = code,
+          active = deactivationReason == null,
           localName = localName,
           residentialHousingType = residentialHousingType,
           comments = comments,
           orderWithinParentLocation = orderWithinParentLocation,
-          active = true,
           createdBy = lastUpdatedBy,
           whenCreated = createDate ?: now,
           deactivatedDate = null,
@@ -129,6 +140,7 @@ data class UpsertLocationRequest(
           code = code,
           locationType = locationType,
           pathHierarchy = code,
+          active = deactivationReason == null,
           localName = localName,
           residentialHousingType = residentialHousingType,
           comments = comments,
@@ -144,10 +156,10 @@ data class UpsertLocationRequest(
         code = code,
         locationType = locationType,
         pathHierarchy = code,
+        active = deactivationReason == null,
         localName = localName,
         comments = comments,
         orderWithinParentLocation = orderWithinParentLocation,
-        active = true,
         createdBy = lastUpdatedBy,
         whenCreated = createDate ?: now,
         childLocations = mutableListOf(),
@@ -157,5 +169,12 @@ data class UpsertLocationRequest(
       }
       location
     }
+
+    if (deactivationReason != null) {
+      location.deactivatedReason = deactivationReason
+      location.deactivatedDate = deactivatedDate
+      location.proposedReactivationDate = proposedReactivationDate
+    }
+    return location
   }
 }

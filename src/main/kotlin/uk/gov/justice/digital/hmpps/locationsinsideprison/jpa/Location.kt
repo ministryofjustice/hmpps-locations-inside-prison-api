@@ -56,7 +56,7 @@ abstract class Location(
 
   open var orderWithinParentLocation: Int? = null,
 
-  open var active: Boolean = true,
+  private var active: Boolean = true,
   open var deactivatedDate: LocalDate? = null,
   @Enumerated(EnumType.STRING)
   open var deactivatedReason: DeactivatedReason? = null,
@@ -104,6 +104,41 @@ abstract class Location(
 
   open fun getParent(): Location? {
     return parent
+  }
+
+  private fun findDeactivatedParent(): Location? {
+    fun findDeactivatedLocation(location: Location?): Location? {
+      if (location == null) {
+        return null
+      }
+      if (location.isActive()) {
+        return findDeactivatedLocation(location.getParent())
+      }
+      return location
+    }
+
+    return findDeactivatedLocation(getParent())
+  }
+
+  private fun findDeactivatedLocationInHierarchy(): Location? {
+    if (!isActive()) {
+      return this
+    }
+    return findDeactivatedParent()
+  }
+
+  open fun isActive(): Boolean {
+    return active
+  }
+
+  open fun isActiveAndAllParentsActive(): Boolean {
+    return isActive() && !hasDeactivatedParent()
+  }
+
+  private fun hasDeactivatedParent() = findDeactivatedParent() != null
+
+  open fun isPermanentlyClosed(): Boolean {
+    return findDeactivatedLocationInHierarchy()?.deactivatedReason in permanentlyClosedReasons()
   }
 
   fun addChildLocation(childLocation: Location): Location {
@@ -185,11 +220,11 @@ abstract class Location(
       localName = localName,
       comments = comments,
       orderWithinParentLocation = orderWithinParentLocation,
-      active = active,
-      deactivatedDate = deactivatedDate,
-      deactivatedReason = deactivatedReason,
-      proposedReactivationDate = proposedReactivationDate,
-      reactivatedDate = proposedReactivationDate,
+      active = isActiveAndAllParentsActive(),
+      deactivatedByParent = !isActiveAndAllParentsActive() && hasDeactivatedParent(),
+      deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
+      deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
+      proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
       childLocations = if (includeChildren) childLocations.map { it.toDto(includeChildren = true, includeHistory = includeHistory) } else null,
       parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true, includeHistory = includeHistory) else null,
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
@@ -238,6 +273,13 @@ abstract class Location(
     }
     this.orderWithinParentLocation = upsert.orderWithinParentLocation ?: this.orderWithinParentLocation
 
+    if (this.deactivatedReason != upsert.deactivationReason) {
+      if (upsert.deactivationReason != null) {
+        deactivate(upsert.deactivationReason!!, upsert.proposedReactivationDate, updatedBy, clock)
+      } else {
+        reactivate(updatedBy, clock)
+      }
+    }
     this.updatedBy = updatedBy
     this.whenUpdated = LocalDateTime.now(clock)
 
@@ -245,7 +287,7 @@ abstract class Location(
   }
 
   fun deactivate(deactivatedReason: DeactivatedReason, proposedReactivationDate: LocalDate? = null, userOrSystemInContext: String, clock: Clock) {
-    if (!active) {
+    if (!isActive()) {
       log.warn("Location [$id] is already deactivated")
     } else {
       addHistory(LocationAttribute.ACTIVE, "true", "false", userOrSystemInContext, LocalDateTime.now(clock))
@@ -280,14 +322,12 @@ abstract class Location(
 
       log.info("Deactivated Location [$id]")
     }
-    childLocations.forEach { it.deactivate(deactivatedReason, proposedReactivationDate, userOrSystemInContext, clock) }
   }
 
   fun reactivate(userOrSystemInContext: String, clock: Clock) {
-    if (getParent()?.active == false) {
-      throw LocationCannotBeReactivatedException(getKey())
+    if (isActive()) {
+      throw LocationCannotBeReactivatedException("Location [$id] is already active")
     }
-
     addHistory(LocationAttribute.ACTIVE, "false", "true", userOrSystemInContext, LocalDateTime.now(clock))
     addHistory(LocationAttribute.DEACTIVATED_REASON, deactivatedReason?.description, null, userOrSystemInContext, LocalDateTime.now(clock))
     addHistory(LocationAttribute.DEACTIVATED_DATE, deactivatedDate?.toString(), null, userOrSystemInContext, LocalDateTime.now(clock))
@@ -301,7 +341,6 @@ abstract class Location(
     this.whenUpdated = LocalDateTime.now(clock)
 
     log.info("Re-activated Location [$id]")
-    childLocations.forEach { it.reactivate(userOrSystemInContext, clock) }
   }
 
   override fun toString(): String {
@@ -377,3 +416,5 @@ enum class DeactivatedReason(
   OUT_OF_USE("Out of Use"),
   CELLS_RETURNING_TO_USE("Cells Returning to Use"),
 }
+
+fun permanentlyClosedReasons() = listOf(DeactivatedReason.CLOSURE, DeactivatedReason.MOTHBALLED, DeactivatedReason.CHANGE_OF_USE, DeactivatedReason.NEW_BUILDING)
