@@ -185,7 +185,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto(includeChildren = true)
+    return locationToUpdate.toDto(includeChildren = false)
   }
 
   @Transactional
@@ -205,17 +205,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto(includeChildren = true)
-  }
-
-  @Transactional
-  fun deleteLocation(id: UUID): LocationDTO {
-    val locationToDelete = locationRepository.findById(id)
-      .orElseThrow { LocationNotFoundException(id.toString()) }
-
-    locationRepository.delete(locationToDelete)
-
-    return locationToDelete.toDto()
+    return locationToUpdate.toDto(includeChildren = false)
   }
 
   private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =

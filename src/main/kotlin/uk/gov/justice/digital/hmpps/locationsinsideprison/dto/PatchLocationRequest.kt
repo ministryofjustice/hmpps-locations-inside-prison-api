@@ -3,9 +3,11 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Size
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
+import java.time.LocalDate
 import java.util.*
 
 /**
@@ -51,4 +53,13 @@ data class PatchLocationRequest(
 
   @Schema(description = "Location Usage", required = false)
   override val usage: Set<NonResidentialUsageDto>? = null,
+
+  @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
+  override val deactivationReason: DeactivatedReason? = null,
+
+  @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
+  override val proposedReactivationDate: LocalDate? = null,
+
+  @Schema(description = "Date deactivation occurred", example = "2023-01-05", required = false)
+  override val deactivatedDate: LocalDate? = null,
 ) : UpdateLocationRequest
