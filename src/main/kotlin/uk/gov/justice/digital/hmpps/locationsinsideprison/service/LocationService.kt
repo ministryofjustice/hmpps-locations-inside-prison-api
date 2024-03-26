@@ -182,6 +182,7 @@ class LocationService(
       deactivatedDate = LocalDateTime.now(clock),
       proposedReactivationDate = proposedReactivationDate,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+      clock = clock,
     )
 
     telemetryClient.trackEvent(

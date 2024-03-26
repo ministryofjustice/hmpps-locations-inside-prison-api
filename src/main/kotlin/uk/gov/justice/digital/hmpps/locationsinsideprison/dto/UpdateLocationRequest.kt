@@ -20,5 +20,5 @@ interface UpdateLocationRequest {
   val deactivationReason: DeactivatedReason?
   val proposedReactivationDate: LocalDate?
   val deactivatedDate: LocalDate?
-  fun isDeactivated() = deactivationReason != null && deactivatedDate != null
+  fun isDeactivated() = deactivationReason != null
 }

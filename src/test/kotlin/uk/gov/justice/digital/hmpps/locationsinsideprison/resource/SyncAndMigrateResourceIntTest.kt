@@ -372,7 +372,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       orderWithinParentLocation = 1,
       lastUpdatedBy = "user",
       parentLocationPath = "B-1",
-      deactivatedDate = LocalDateTime.now(clock).minusDays(2).toLocalDate(),
       deactivationReason = DeactivatedReason.DAMAGED,
       proposedReactivationDate = LocalDateTime.now(clock).plusMonths(1).toLocalDate(),
       lastModifiedDate = LocalDateTime.now(clock).minusYears(2),
@@ -463,7 +462,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "workingCapacity": 1
               },
               "attributes": ["CAT_B"],
-              "deactivatedDate": "${migrateRequest.deactivatedDate}",
               "deactivatedReason": "${migrateRequest.deactivationReason}",
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}"
             }

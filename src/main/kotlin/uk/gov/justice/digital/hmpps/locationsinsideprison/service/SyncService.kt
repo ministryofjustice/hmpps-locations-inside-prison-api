@@ -70,10 +70,6 @@ class SyncService(
     val locationToUpdate = locationRepository.findById(upsert.id!!)
       .orElseThrow { LocationNotFoundException(upsert.toString()) }
 
-    if (upsert.deactivationReason != null && upsert.deactivatedDate == null) {
-      throw ValidationException("When deactivating a location, the deactivated date must be provided")
-    }
-
     findParent(upsert)?.let { parent ->
       if (parent.id == locationToUpdate.id) throw ValidationException("Cannot set parent to self")
       locationToUpdate.setParent(parent)
