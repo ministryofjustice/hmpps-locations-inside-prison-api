@@ -170,7 +170,7 @@ data class UpsertLocationRequest(
       location
     }
 
-    if (deactivationReason != null) {
+    if (deactivationReason != null && deactivatedDate != null) {
       location.deactivatedReason = deactivationReason
       location.deactivatedDate = deactivatedDate
       location.proposedReactivationDate = proposedReactivationDate
