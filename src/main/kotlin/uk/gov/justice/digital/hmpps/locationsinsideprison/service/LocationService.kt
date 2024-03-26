@@ -195,7 +195,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto(includeChildren = false)
+    return locationToUpdate.toDto(includeParent = true)
   }
 
   @Transactional
@@ -215,7 +215,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto(includeChildren = false)
+    return locationToUpdate.toDto(includeParent = true)
   }
 
   private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =

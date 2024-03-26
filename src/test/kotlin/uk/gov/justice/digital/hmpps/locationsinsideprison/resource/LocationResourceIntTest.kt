@@ -2228,10 +2228,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             false,
           )
 
-        getDomainEvents(3).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.reactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z",
           )
         }
