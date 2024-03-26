@@ -223,7 +223,7 @@ abstract class Location(
       comments = comments,
       orderWithinParentLocation = orderWithinParentLocation,
       active = isActiveAndAllParentsActive(),
-      deactivatedByParent = !isActiveAndAllParentsActive() && hasDeactivatedParent(),
+      deactivatedByParent = isActive() && !isActiveAndAllParentsActive(),
       deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
@@ -276,8 +276,14 @@ abstract class Location(
     this.orderWithinParentLocation = upsert.orderWithinParentLocation ?: this.orderWithinParentLocation
 
     if (this.deactivatedReason != upsert.deactivationReason) {
-      if (upsert.deactivationReason != null) {
-        deactivate(upsert.deactivationReason!!, upsert.proposedReactivationDate, updatedBy, clock)
+      if (upsert.isDeactivated()) {
+        deactivate(
+          deactivatedReason = upsert.deactivationReason!!,
+          deactivatedDate = upsert.deactivatedDate?.atStartOfDay() ?: LocalDateTime.now(clock),
+          proposedReactivationDate = upsert.proposedReactivationDate,
+          userOrSystemInContext = updatedBy,
+          clock = clock,
+        )
       } else {
         reactivate(updatedBy, clock)
       }
@@ -288,39 +294,46 @@ abstract class Location(
     return this
   }
 
-  fun deactivate(deactivatedReason: DeactivatedReason, proposedReactivationDate: LocalDate? = null, userOrSystemInContext: String, clock: Clock) {
+  fun deactivate(
+    deactivatedReason: DeactivatedReason,
+    deactivatedDate: LocalDateTime?,
+    proposedReactivationDate: LocalDate? = null,
+    userOrSystemInContext: String,
+    clock: Clock,
+  ) {
     if (!isActive()) {
       log.warn("Location [$id] is already deactivated")
     } else {
-      addHistory(LocationAttribute.ACTIVE, "true", "false", userOrSystemInContext, LocalDateTime.now(clock))
+      val amendedDate = deactivatedDate ?: LocalDateTime.now(clock)
+      addHistory(LocationAttribute.ACTIVE, "true", "false", userOrSystemInContext, amendedDate)
       addHistory(
         LocationAttribute.DEACTIVATED_REASON,
         this.deactivatedReason?.description,
         deactivatedReason.description,
         userOrSystemInContext,
-        LocalDateTime.now(clock),
+        amendedDate,
       )
       addHistory(
         LocationAttribute.DEACTIVATED_DATE,
         this.deactivatedDate.toString(),
         deactivatedDate.toString(),
         userOrSystemInContext,
-        LocalDateTime.now(clock),
+        amendedDate,
       )
       addHistory(
         LocationAttribute.PROPOSED_REACTIVATION_DATE,
         this.proposedReactivationDate.toString(),
         proposedReactivationDate?.toString(),
         userOrSystemInContext,
-        LocalDateTime.now(clock),
+        amendedDate,
       )
 
       this.active = false
       this.deactivatedReason = deactivatedReason
-      this.deactivatedDate = LocalDate.now(clock)
+      this.deactivatedDate = deactivatedDate?.toLocalDate()
       this.proposedReactivationDate = proposedReactivationDate
       this.updatedBy = userOrSystemInContext
-      this.whenUpdated = LocalDateTime.now(clock)
+      this.whenUpdated = amendedDate
 
       log.info("Deactivated Location [$id]")
     }

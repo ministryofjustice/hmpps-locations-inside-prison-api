@@ -115,6 +115,10 @@ class LocationService(
 
   @Transactional
   fun updateLocation(id: UUID, patchLocationRequest: PatchLocationRequest): UpdateLocationResult {
+    if (patchLocationRequest.deactivationReason != null && patchLocationRequest.deactivatedDate == null) {
+      throw ValidationException("When deactivating a location, the deactivated date must be provided")
+    }
+
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -173,7 +177,13 @@ class LocationService(
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    locationToUpdate.deactivate(deactivatedReason, proposedReactivationDate, authenticationFacade.getUserOrSystemInContext(), clock)
+    locationToUpdate.deactivate(
+      deactivatedReason = deactivatedReason,
+      deactivatedDate = LocalDateTime.now(clock),
+      proposedReactivationDate = proposedReactivationDate,
+      userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+      clock = clock,
+    )
 
     telemetryClient.trackEvent(
       "Deactivated Location",
@@ -185,7 +195,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto(includeChildren = false)
+    return locationToUpdate.toDto(includeParent = true)
   }
 
   @Transactional
@@ -205,7 +215,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto(includeChildren = false)
+    return locationToUpdate.toDto(includeParent = true)
   }
 
   private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =

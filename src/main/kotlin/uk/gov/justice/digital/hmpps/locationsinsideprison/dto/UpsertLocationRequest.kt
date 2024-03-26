@@ -105,7 +105,7 @@ data class UpsertLocationRequest(
           code = code,
           locationType = locationType,
           pathHierarchy = code,
-          active = deactivationReason == null,
+          active = !isDeactivated(),
           localName = localName,
           residentialHousingType = residentialHousingType,
           comments = comments,
@@ -140,7 +140,7 @@ data class UpsertLocationRequest(
           code = code,
           locationType = locationType,
           pathHierarchy = code,
-          active = deactivationReason == null,
+          active = !isDeactivated(),
           localName = localName,
           residentialHousingType = residentialHousingType,
           comments = comments,
@@ -156,7 +156,7 @@ data class UpsertLocationRequest(
         code = code,
         locationType = locationType,
         pathHierarchy = code,
-        active = deactivationReason == null,
+        active = !isDeactivated(),
         localName = localName,
         comments = comments,
         orderWithinParentLocation = orderWithinParentLocation,
@@ -170,7 +170,7 @@ data class UpsertLocationRequest(
       location
     }
 
-    if (deactivationReason != null) {
+    if (isDeactivated()) {
       location.deactivatedReason = deactivationReason
       location.deactivatedDate = deactivatedDate
       location.proposedReactivationDate = proposedReactivationDate

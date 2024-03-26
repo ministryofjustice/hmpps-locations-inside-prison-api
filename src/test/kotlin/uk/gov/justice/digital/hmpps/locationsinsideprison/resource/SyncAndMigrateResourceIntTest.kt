@@ -372,6 +372,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       orderWithinParentLocation = 1,
       lastUpdatedBy = "user",
       parentLocationPath = "B-1",
+      deactivationReason = DeactivatedReason.DAMAGED,
+      proposedReactivationDate = LocalDateTime.now(clock).plusMonths(1).toLocalDate(),
       lastModifiedDate = LocalDateTime.now(clock).minusYears(2),
       capacity = CapacityDTO(1, 1),
       certification = CertificationDTO(true, 1),
@@ -450,7 +452,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "pathHierarchy": "B-1-002",
               "locationType": "CELL",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
-              "active": true,
+              "active": false,
               "key": "ZZGHI-B-1-002",
               "comments": "This is a new cell",
               "localName": "A New Cell",
@@ -459,7 +461,9 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "maxCapacity": 1,
                 "workingCapacity": 1
               },
-              "attributes": ["CAT_B"]
+              "attributes": ["CAT_B"],
+              "deactivatedReason": "${migrateRequest.deactivationReason}",
+              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}"
             }
           """,
             false,
