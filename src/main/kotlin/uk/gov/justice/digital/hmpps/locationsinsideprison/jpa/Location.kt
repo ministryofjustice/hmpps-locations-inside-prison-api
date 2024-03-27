@@ -139,8 +139,8 @@ abstract class Location(
 
   private fun hasDeactivatedParent() = findDeactivatedParent() != null
 
-  open fun isPermanentlyClosed(): Boolean {
-    return findDeactivatedLocationInHierarchy()?.deactivatedReason in permanentlyClosedReasons()
+  open fun isPermanentlyInactive(): Boolean {
+    return findDeactivatedLocationInHierarchy()?.deactivatedReason in permanentlyInactiveReasons()
   }
 
   fun addChildLocation(childLocation: Location): Location {
@@ -223,6 +223,7 @@ abstract class Location(
       comments = comments,
       orderWithinParentLocation = orderWithinParentLocation,
       active = isActiveAndAllParentsActive(),
+      permanentlyInactive = isPermanentlyInactive(),
       deactivatedByParent = isActive() && !isActiveAndAllParentsActive(),
       deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
@@ -239,16 +240,11 @@ abstract class Location(
 
     other as Location
 
-    if (prisonId != other.prisonId) return false
-    if (pathHierarchy != other.pathHierarchy) return false
-
-    return true
+    return getKey() == other.getKey()
   }
 
   override fun hashCode(): Int {
-    var result = prisonId.hashCode()
-    result = 31 * result + pathHierarchy.hashCode()
-    return result
+    return getKey().hashCode()
   }
 
   open fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): Location {
@@ -432,4 +428,4 @@ enum class DeactivatedReason(
   CELLS_RETURNING_TO_USE("Cells Returning to Use"),
 }
 
-fun permanentlyClosedReasons() = listOf(DeactivatedReason.CLOSURE, DeactivatedReason.MOTHBALLED, DeactivatedReason.CHANGE_OF_USE, DeactivatedReason.NEW_BUILDING)
+fun permanentlyInactiveReasons() = listOf(DeactivatedReason.CLOSURE, DeactivatedReason.MOTHBALLED, DeactivatedReason.CHANGE_OF_USE, DeactivatedReason.NEW_BUILDING)

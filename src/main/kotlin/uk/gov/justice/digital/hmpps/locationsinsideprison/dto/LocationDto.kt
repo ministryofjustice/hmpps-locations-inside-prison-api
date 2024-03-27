@@ -48,6 +48,9 @@ data class Location(
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   val comments: String? = null,
 
+  @Schema(description = "Indicates if the location is permanently inactive", example = "false", required = true)
+  val permanentlyInactive: Boolean = false,
+
   @Schema(description = "Capacity details of the location", required = false)
   val capacity: Capacity? = null,
 
