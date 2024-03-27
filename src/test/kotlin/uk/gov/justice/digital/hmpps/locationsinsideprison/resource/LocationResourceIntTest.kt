@@ -99,6 +99,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         pathHierarchy = "Z-1-002",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A, ResidentialAttributeValue.SAFE_CELL, ResidentialAttributeValue.DOUBLE_OCCUPANCY),
+
       ),
     )
     visitRoom = repository.save(
@@ -385,7 +387,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                               },
                               "attributes": [
                                 "DOUBLE_OCCUPANCY",
-                                "CAT_B"
+                                "CAT_A",
+                                "SAFE_CELL"
                               ],
                               "isResidential": true,
                               "key": "MDI-Z-1-002"
@@ -404,7 +407,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           },
                           "attributes": [
                             "DOUBLE_OCCUPANCY",
-                            "CAT_B"
+                            "CAT_B",
+                            "CAT_A",
+                            "SAFE_CELL"
                           ],
                           "isResidential": true,
                           "key": "MDI-Z-1"
@@ -442,7 +447,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       },
                       "attributes": [
                         "DOUBLE_OCCUPANCY",
-                        "CAT_B"
+                        "CAT_B",
+                        "CAT_A",
+                        "SAFE_CELL"
                       ],
                       "isResidential": true,
                       "key": "MDI-Z"
@@ -1990,10 +1997,17 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       fun `can deactivate a location`() {
         val now = LocalDate.now(clock)
         val proposedReactivationDate = now.plusMonths(1)
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.CLOSURE)))
+          .exchange()
+          .expectStatus().isOk
+
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.CLOSURE, proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -2007,18 +2021,23 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "locationType": "WING",
                 "residentialHousingType": "NORMAL_ACCOMMODATION",
                 "capacity": {
-                  "maxCapacity": 0,
+                  "maxCapacity": 2,
                   "workingCapacity": 0
                 },
                 "certification": {
-                  "certified": false,
-                  "capacityOfCertifiedCell": 0
+                  "certified": true,
+                  "capacityOfCertifiedCell": 2
                 },
-                "attributes": [],
+                "attributes": [
+                  "SAFE_CELL",
+                  "DOUBLE_OCCUPANCY",
+                  "CAT_A"
+                ],
                 "orderWithinParentLocation": 99,
                 "active": false,
                 "deactivatedDate": "$now",
-                "deactivatedReason": "CLOSURE",
+                "deactivatedReason": "DAMAGED",
+                "permanentlyInactive": false,
                 "proposedReactivationDate": "$proposedReactivationDate",
                 "topLevelId": "${wingZ.id}",
                 "isResidential": true,
@@ -2028,9 +2047,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             false,
           )
 
-        getDomainEvents(1).let {
+        getDomainEvents(4).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
           )
         }
 
@@ -2050,15 +2072,22 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "active": false,
               "deactivatedByParent": false,
               "key": "MDI-Z",
-              "deactivatedReason": "CLOSURE",
+              "deactivatedReason": "DAMAGED",
+              "permanentlyInactive": false,
               "proposedReactivationDate": "$proposedReactivationDate",
               "deactivatedDate": "$now",
               "capacity": {
-                "maxCapacity": 0,
+                "maxCapacity": 2,
                 "workingCapacity": 0
               },
+              "attributes": [
+                "SAFE_CELL",
+                "DOUBLE_OCCUPANCY",
+                "CAT_A"
+              ],
               "certification": {
-                "capacityOfCertifiedCell": 0
+                "certified": true,
+                "capacityOfCertifiedCell": 2
               },
               "childLocations": [
                 {
@@ -2070,7 +2099,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "deactivatedByParent": true,
                   "proposedReactivationDate": "$proposedReactivationDate",
                   "deactivatedDate": "$now",
-                  "deactivatedReason": "CLOSURE",
+                  "deactivatedReason": "DAMAGED",
+                  "permanentlyInactive": false,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
                 },
@@ -2084,9 +2114,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "deactivatedByParent": true,
                   "proposedReactivationDate": "$proposedReactivationDate",
                   "deactivatedDate": "$now",
-                  "deactivatedReason": "CLOSURE",
+                  "deactivatedReason": "DAMAGED",
+                  "permanentlyInactive": false,
                   "isResidential": true,
                   "key": "MDI-Z-1",
+                  "attributes": [
+                      "SAFE_CELL",
+                      "DOUBLE_OCCUPANCY",
+                      "CAT_A"
+                    ],
                   "childLocations": [
                     {
                       "prisonId": "MDI",
@@ -2095,12 +2131,16 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "locationType": "CELL",
                       "residentialHousingType": "NORMAL_ACCOMMODATION",
                       "active": false,
-                      "deactivatedByParent": true,
-                      "proposedReactivationDate": "$proposedReactivationDate",
+                      "deactivatedByParent": false,
                       "deactivatedDate": "$now",
                       "deactivatedReason": "CLOSURE",
+                      "permanentlyInactive": true,
                       "isResidential": true,
-                      "key": "MDI-Z-1-001"
+                      "key": "MDI-Z-1-001",
+                      "attributes": [
+                        "DOUBLE_OCCUPANCY",
+                        "CAT_B"
+                      ]
                     },
                     {
                       "prisonId": "MDI",
@@ -2112,9 +2152,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "deactivatedByParent": true,
                       "proposedReactivationDate": "$proposedReactivationDate",
                       "deactivatedDate": "$now",
-                      "deactivatedReason": "CLOSURE",
+                      "deactivatedReason": "DAMAGED",
                       "isResidential": true,
-                      "key": "MDI-Z-1-002"
+                      "key": "MDI-Z-1-002",
+                      "attributes": [
+                        "DOUBLE_OCCUPANCY",
+                        "CAT_A",
+                        "SAFE_CELL"
+                      ]
                     }
                   ]
                 },
@@ -2128,9 +2173,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "deactivatedByParent": true,
                   "proposedReactivationDate": "$proposedReactivationDate",
                   "deactivatedDate": "$now",
-                  "deactivatedReason": "CLOSURE",
+                  "deactivatedReason": "DAMAGED",
                   "isResidential": true,
-                  "key": "MDI-Z-2"
+                  "key": "MDI-Z-2",
+                  "attributes": [ ]
                 }
               ]
             }

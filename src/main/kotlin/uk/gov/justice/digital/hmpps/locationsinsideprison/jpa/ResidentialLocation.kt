@@ -57,30 +57,32 @@ open class ResidentialLocation(
 ) {
 
   private fun getWorkingCapacity(): Int {
-    return cellLocations().filter { it.isActiveAndAllParentsActive() }
+    return cellLocations().filter { it.isActiveAndAllParentsActive() || it == this }
       .sumOf { it.capacity?.workingCapacity ?: 0 }
   }
 
   private fun getMaxCapacity(): Int {
-    return cellLocations().filter { !it.isPermanentlyClosed() }
+    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .sumOf { it.capacity?.maxCapacity ?: 0 }
   }
 
   private fun getBaselineCapacity(): Int {
-    return cellLocations().filter { !it.isPermanentlyClosed() }
+    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .sumOf { it.certification?.capacityOfCertifiedCell ?: 0 }
   }
 
   private fun hasCertifiedCells(): Boolean {
-    return cellLocations().filter { !it.isPermanentlyClosed() }
+    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .any { it.certification?.certified == true }
   }
 
   private fun getAttributes(): Set<ResidentialAttribute> {
-    return cellLocations().filter { !it.isPermanentlyClosed() }
+    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .flatMap { it.attributes }
       .toSet()
   }
+
+  private fun isCurrentCellOrNotPermanentlyInactive(cell: Cell) = !cell.isPermanentlyInactive() || cell == this
 
   private fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
 
