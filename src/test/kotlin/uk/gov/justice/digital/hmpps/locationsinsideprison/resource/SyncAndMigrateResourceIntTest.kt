@@ -581,6 +581,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           )
           .exchange()
           .expectStatus().isCreated
+          .expectBody()
+          .isEmpty
 
         assertThat(locationHistoryRepository.findAllByLocationIdOrderByAmendedDate(cell.id!!)).hasSize(1)
 
@@ -600,6 +602,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           )
           .exchange()
           .expectStatus().isCreated
+          .expectBody()
+          .jsonPath("$.attribute").isEqualTo("Local Name")
 
         assertThat(locationHistoryRepository.findAllByLocationIdOrderByAmendedDate(cell.id!!)).hasSize(2)
       }

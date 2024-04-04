@@ -203,8 +203,11 @@ abstract class Location(
         amendedBy = amendedBy,
         amendedDate = amendedDate,
       )
-      history.add(locationHistory)
-      return locationHistory
+      return if (history.add(locationHistory)) {
+        locationHistory
+      } else {
+        null
+      }
     } else {
       null
     }
