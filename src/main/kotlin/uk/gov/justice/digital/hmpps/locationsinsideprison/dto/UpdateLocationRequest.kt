@@ -21,4 +21,5 @@ interface UpdateLocationRequest {
   val proposedReactivationDate: LocalDate?
   val deactivatedDate: LocalDate?
   fun isDeactivated() = deactivationReason != null
+  fun isCell() = locationType == LocationType.CELL
 }

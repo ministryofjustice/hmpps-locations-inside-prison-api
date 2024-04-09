@@ -6,14 +6,12 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.MigrateHistoryRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpsertLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import java.time.Clock
-import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
 @Service
@@ -28,7 +26,7 @@ class SyncService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun upsertLocation(upsert: UpsertLocationRequest): LocationDTO {
+  fun sync(upsert: NomisSyncLocationRequest): LocationDTO {
     val location = if (upsert.id != null) {
       updateLocation(upsert)
     } else {
@@ -50,7 +48,7 @@ class SyncService(
     return location
   }
 
-  fun migrate(upsert: UpsertLocationRequest): LocationDTO {
+  fun migrate(upsert: NomisMigrationRequest): LocationDTO {
     val location = createLocation(upsert)
 
     log.info("Migrated Location: ${location.id}")
@@ -66,7 +64,7 @@ class SyncService(
     return location
   }
 
-  private fun updateLocation(upsert: UpsertLocationRequest): LocationDTO {
+  private fun updateLocation(upsert: NomisSyncLocationRequest): LocationDTO {
     val locationToUpdate = locationRepository.findById(upsert.id!!)
       .orElseThrow { LocationNotFoundException(upsert.toString()) }
 
@@ -79,35 +77,20 @@ class SyncService(
     return locationToUpdate.toDto()
   }
 
-  private fun createLocation(upsert: UpsertLocationRequest): LocationDTO {
+  private fun createLocation(upsert: NomisMigrationRequest): LocationDTO {
     val locationToCreate = upsert.toNewEntity(clock)
     findParent(upsert)?.let { locationToCreate.setParent(it) }
     return locationRepository.save(locationToCreate).toDto()
   }
 
-  private fun findParent(upsert: UpsertLocationRequest): Location? {
+  private fun findParent(upsert: NomisMigrationRequest): Location? {
     return upsert.parentId?.let {
       locationRepository.findById(it).orElseThrow {
         LocationNotFoundException(it.toString())
       }
     } ?: upsert.parentLocationPath?.let {
-      locationRepository.findOneByPrisonIdAndPathHierarchy(upsert.prisonId, upsert.parentLocationPath)
+      locationRepository.findOneByPrisonIdAndPathHierarchy(upsert.prisonId, upsert.parentLocationPath!!)
         ?: throw LocationNotFoundException(upsert.toString())
-    }
-  }
-
-  fun migrateHistory(locationId: UUID, migrateHistoryRequest: MigrateHistoryRequest): ChangeHistory? {
-    val location = locationRepository.findById(locationId)
-      .orElseThrow { LocationNotFoundException(locationId.toString()) }
-
-    with(migrateHistoryRequest) {
-      return location.addHistory(
-        attributeName = attribute,
-        oldValue = oldValue,
-        newValue = newValue,
-        amendedBy = amendedBy,
-        amendedDate = amendedDate,
-      )?.toDto()
     }
   }
 }

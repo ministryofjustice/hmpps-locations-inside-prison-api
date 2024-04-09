@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpsertLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SyncService
@@ -70,7 +70,7 @@ class SyncResource(
   fun upsertLocation(
     @RequestBody
     @Validated
-    syncRequest: UpsertLocationRequest,
+    syncRequest: NomisSyncLocationRequest,
   ): ResponseEntity<Location> {
     val eventType = if (syncRequest.id != null) {
       InternalLocationDomainEventType.LOCATION_AMENDED
@@ -81,7 +81,7 @@ class SyncResource(
       eventPublishAndAudit(
         eventType,
         function = {
-          syncService.upsertLocation(syncRequest)
+          syncService.sync(syncRequest)
         },
         informationSource = InformationSource.NOMIS,
       ),

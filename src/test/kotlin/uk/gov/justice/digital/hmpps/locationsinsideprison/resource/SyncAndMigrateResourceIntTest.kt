@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
-import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -9,9 +8,10 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.MigrateHistoryRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpsertLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -98,7 +98,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   @DisplayName("POST /sync/upsert")
   @Nested
   inner class CreateLocationTest {
-    var syncResRequest = UpsertLocationRequest(
+    var syncResRequest = NomisSyncLocationRequest(
       prisonId = "ZZGHI",
       code = "003",
       locationType = LocationType.CELL,
@@ -111,7 +111,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       attributes = setOf(ResidentialAttributeValue.IMMIGRATION_DETAINEES),
     )
 
-    var syncNonResRequest = UpsertLocationRequest(
+    var syncNonResRequest = NomisSyncLocationRequest(
       prisonId = "ZZGHI",
       code = "VISIT",
       locationType = LocationType.VISITS,
@@ -238,7 +238,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `can sync a new res location and update it`() {
+      fun `can sync an existing res location and update it`() {
         webTestClient.post().uri("/sync/upsert")
           .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -308,7 +308,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   @DisplayName("POST /sync/upsert")
   @Nested
   inner class CreateLocationTestDeactivated {
-    var deactivatedLocationMigration = UpsertLocationRequest(
+    var deactivatedLocationMigration = NomisSyncLocationRequest(
       prisonId = "ZZGHI",
       code = "006",
       locationType = LocationType.CELL,
@@ -362,7 +362,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   @DisplayName("POST /migrate/location")
   @Nested
   inner class MigrateLocationTest {
-    var migrateRequest = UpsertLocationRequest(
+    var migrateRequest = NomisMigrateLocationRequest(
       prisonId = "ZZGHI",
       code = "002",
       locationType = LocationType.CELL,
@@ -378,6 +378,22 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       capacity = CapacityDTO(1, 1),
       certification = CertificationDTO(true, 1),
       attributes = setOf(ResidentialAttributeValue.CAT_B),
+      history = listOf(
+        ChangeHistory(
+          attribute = LocationAttribute.DESCRIPTION.name,
+          oldValue = null,
+          newValue = "A New Cell",
+          amendedBy = "user2",
+          amendedDate = LocalDateTime.now(clock).minusYears(2),
+        ),
+        ChangeHistory(
+          attribute = LocationAttribute.COMMENTS.name,
+          oldValue = "Old comment",
+          newValue = "This is a new cell",
+          amendedBy = "user1",
+          amendedDate = LocalDateTime.now(clock).minusYears(1),
+        ),
+      ),
     )
 
     @Nested
@@ -468,140 +484,51 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           """,
             false,
           )
-      }
-    }
-  }
 
-  @DisplayName("POST /migrate/location/{id}/history")
-  @Nested
-  inner class MigrateLocationHistoryTest {
-    var migrateHistoryRequest = MigrateHistoryRequest(
-      attribute = LocationAttribute.CAPACITY,
-      oldValue = "2",
-      newValue = "1",
-      amendedBy = "user",
-      amendedDate = LocalDateTime.now(clock).minusYears(2),
-    )
-
-    @Nested
-    inner class Security {
-      @Test
-      fun `access forbidden when no authority`() {
-        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
+        webTestClient.get().uri("/locations/key/ZZGHI-B-1-002?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
-          .expectStatus().isUnauthorized
-      }
-
-      @Test
-      fun `access forbidden when no role`() {
-        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
-          .headers(setAuthorisation(roles = listOf()))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(migrateHistoryRequest))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      fun `access forbidden with wrong role`() {
-        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(migrateHistoryRequest))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      fun `access forbidden with right role, wrong scope`() {
-        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(migrateHistoryRequest))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-    }
-
-    @Nested
-    inner class Validation {
-      @Test
-      fun `access client error bad data`() {
-        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
-          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue("""{"attribute": "SOME_TEXT"}""")
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-    }
-
-    @Nested
-    inner class HappyPath {
-      @Test
-      fun `can migrate a location history`() {
-        webTestClient.post().uri("/migrate/location/${wingB.id}/history")
-          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(migrateHistoryRequest))
-          .exchange()
-          .expectStatus().isCreated
+          .expectStatus().isOk
           .expectBody().json(
             // language=json
-            """ 
+            """
              {
-              "attribute": "Max Capacity",
-              "oldValue": "2",
-              "newValue": "1",
-              "amendedBy": "user",
-              "amendedDate": "${migrateHistoryRequest.amendedDate}"
+              "prisonId": "ZZGHI",
+              "code": "002",
+              "pathHierarchy": "B-1-002",
+              "locationType": "CELL",
+              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "active": false,
+              "key": "ZZGHI-B-1-002",
+              "comments": "This is a new cell",
+              "localName": "A New Cell",
+              "orderWithinParentLocation": 1,
+              "capacity": {
+                "maxCapacity": 1,
+                "workingCapacity": 1
+              },
+              "attributes": ["CAT_B"],
+              "deactivatedReason": "${migrateRequest.deactivationReason}",
+              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
+              "changeHistory": [
+                {
+                  "attribute": "Local Name",
+                  "newValue": "A New Cell",
+                  "amendedBy": "user2",
+                  "amendedDate": "${LocalDateTime.now(clock).minusYears(2)}"
+                },
+                {
+                  "attribute": "Comments",
+                  "oldValue": "Old comment",
+                  "newValue": "This is a new cell",
+                  "amendedBy": "user1",
+                  "amendedDate": "${LocalDateTime.now(clock).minusYears(1)}"
+                }
+              ]
             }
-          """,
+            """,
             false,
           )
-      }
-
-      @Test
-      fun `can handle a duplicate a location history`() {
-        assertThat(locationHistoryRepository.findAllByLocationIdOrderByAmendedDate(cell.id!!)).hasSize(1)
-
-        webTestClient.post().uri("/migrate/location/${cell.id}/history")
-          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              MigrateHistoryRequest(
-                attribute = locationHistory.attributeName,
-                oldValue = locationHistory.oldValue,
-                newValue = locationHistory.newValue,
-                amendedBy = locationHistory.amendedBy,
-                amendedDate = locationHistory.amendedDate,
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isCreated
-
-        assertThat(locationHistoryRepository.findAllByLocationIdOrderByAmendedDate(cell.id!!)).hasSize(1)
-
-        webTestClient.post().uri("/migrate/location/${cell.id}/history")
-          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              MigrateHistoryRequest(
-                attribute = locationHistory.attributeName,
-                oldValue = locationHistory.oldValue,
-                newValue = locationHistory.newValue,
-                amendedBy = locationHistory.amendedBy,
-                amendedDate = locationHistory.amendedDate.plusMinutes(1),
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isCreated
-
-        assertThat(locationHistoryRepository.findAllByLocationIdOrderByAmendedDate(cell.id!!)).hasSize(2)
       }
     }
   }
