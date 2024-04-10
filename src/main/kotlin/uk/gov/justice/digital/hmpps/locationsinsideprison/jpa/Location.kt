@@ -311,14 +311,14 @@ abstract class Location(
       )
       addHistory(
         LocationAttribute.DEACTIVATED_DATE,
-        this.deactivatedDate.toString(),
+        this.deactivatedDate?.toString(),
         deactivatedDate.toString(),
         userOrSystemInContext,
         amendedDate,
       )
       addHistory(
         LocationAttribute.PROPOSED_REACTIVATION_DATE,
-        this.proposedReactivationDate.toString(),
+        this.proposedReactivationDate?.toString(),
         proposedReactivationDate?.toString(),
         userOrSystemInContext,
         amendedDate,
