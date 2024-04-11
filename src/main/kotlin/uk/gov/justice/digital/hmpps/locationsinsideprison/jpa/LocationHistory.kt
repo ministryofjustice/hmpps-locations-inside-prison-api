@@ -69,26 +69,8 @@ class LocationHistory(
     return result
   }
 
-  override fun compareTo(other: LocationHistory): Int {
-    var comparison = location.id?.compareTo(other.location.id)
-    if (comparison != 0 && comparison != null) return comparison
-
-    comparison = amendedDate.compareTo(other.amendedDate)
-    if (comparison != 0) return comparison
-
-    comparison = attributeName.compareTo(other.attributeName)
-    if (comparison != 0) return comparison
-
-    comparison = oldValue?.compareTo(other.oldValue ?: "") ?: -1
-    if (comparison != 0) return comparison
-
-    comparison = newValue?.compareTo(other.newValue ?: "") ?: -1
-    if (comparison != 0) return comparison
-
-    comparison = amendedBy.compareTo(other.amendedBy)
-
-    return comparison
-  }
+  override fun compareTo(other: LocationHistory) =
+    compareValuesBy(this, other, { it.location.id }, { it.amendedDate }, { it.attributeName }, { it.oldValue }, { it.newValue }, { it.amendedBy })
 
   override fun toString(): String {
     return "Changed $attributeName from $oldValue --> $newValue, on $amendedDate)"
