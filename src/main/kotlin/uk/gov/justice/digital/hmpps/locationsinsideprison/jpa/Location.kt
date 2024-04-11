@@ -210,6 +210,8 @@ abstract class Location(
     }
   }
 
+  open fun getHistory() = history.toList()
+
   open fun toDto(includeChildren: Boolean = false, includeParent: Boolean = false, includeHistory: Boolean = false): LocationDto {
     return LocationDto(
       id = id!!,
@@ -311,14 +313,14 @@ abstract class Location(
       )
       addHistory(
         LocationAttribute.DEACTIVATED_DATE,
-        this.deactivatedDate.toString(),
+        this.deactivatedDate?.toString(),
         deactivatedDate.toString(),
         userOrSystemInContext,
         amendedDate,
       )
       addHistory(
         LocationAttribute.PROPOSED_REACTIVATION_DATE,
-        this.proposedReactivationDate.toString(),
+        this.proposedReactivationDate?.toString(),
         proposedReactivationDate?.toString(),
         userOrSystemInContext,
         amendedDate,
