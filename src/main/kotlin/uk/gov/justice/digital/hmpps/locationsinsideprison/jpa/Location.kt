@@ -210,6 +210,8 @@ abstract class Location(
     }
   }
 
+  open fun getHistory() = history.toList()
+
   open fun toDto(includeChildren: Boolean = false, includeParent: Boolean = false, includeHistory: Boolean = false): LocationDto {
     return LocationDto(
       id = id!!,
