@@ -277,7 +277,7 @@ abstract class Location(
       if (upsert.isDeactivated()) {
         deactivate(
           deactivatedReason = upsert.deactivationReason!!,
-          deactivatedDate = upsert.deactivatedDate?.atStartOfDay() ?: LocalDateTime.now(clock),
+          deactivatedDate = upsert.deactivatedDate ?: LocalDate.now(clock),
           proposedReactivationDate = upsert.proposedReactivationDate,
           userOrSystemInContext = updatedBy,
           clock = clock,
@@ -294,7 +294,7 @@ abstract class Location(
 
   fun deactivate(
     deactivatedReason: DeactivatedReason,
-    deactivatedDate: LocalDateTime?,
+    deactivatedDate: LocalDate,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
     clock: Clock,
@@ -302,7 +302,7 @@ abstract class Location(
     if (!isActive()) {
       log.warn("Location [$id] is already deactivated")
     } else {
-      val amendedDate = deactivatedDate ?: LocalDateTime.now(clock)
+      val amendedDate = LocalDateTime.now(clock)
       addHistory(LocationAttribute.ACTIVE, "true", "false", userOrSystemInContext, amendedDate)
       addHistory(
         LocationAttribute.DEACTIVATED_REASON,
@@ -328,7 +328,7 @@ abstract class Location(
 
       this.active = false
       this.deactivatedReason = deactivatedReason
-      this.deactivatedDate = deactivatedDate?.toLocalDate()
+      this.deactivatedDate = deactivatedDate
       this.proposedReactivationDate = proposedReactivationDate
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
@@ -341,17 +341,36 @@ abstract class Location(
     if (isActive()) {
       throw LocationCannotBeReactivatedException("Location [$id] is already active")
     }
-    addHistory(LocationAttribute.ACTIVE, "false", "true", userOrSystemInContext, LocalDateTime.now(clock))
-    addHistory(LocationAttribute.DEACTIVATED_REASON, deactivatedReason?.description, null, userOrSystemInContext, LocalDateTime.now(clock))
-    addHistory(LocationAttribute.DEACTIVATED_DATE, deactivatedDate?.toString(), null, userOrSystemInContext, LocalDateTime.now(clock))
-    addHistory(LocationAttribute.PROPOSED_REACTIVATION_DATE, proposedReactivationDate?.toString(), null, userOrSystemInContext, LocalDateTime.now(clock))
+    val amendedDate = LocalDateTime.now(clock)
+    addHistory(LocationAttribute.ACTIVE, "false", "true", userOrSystemInContext, amendedDate)
+    addHistory(
+      LocationAttribute.DEACTIVATED_REASON,
+      deactivatedReason?.description,
+      null,
+      userOrSystemInContext,
+      amendedDate,
+    )
+    addHistory(
+      LocationAttribute.DEACTIVATED_DATE,
+      deactivatedDate?.toString(),
+      null,
+      userOrSystemInContext,
+      amendedDate,
+    )
+    addHistory(
+      LocationAttribute.PROPOSED_REACTIVATION_DATE,
+      proposedReactivationDate?.toString(),
+      null,
+      userOrSystemInContext,
+      amendedDate,
+    )
 
     this.active = true
     this.deactivatedReason = null
     this.deactivatedDate = null
     this.proposedReactivationDate = null
     this.updatedBy = userOrSystemInContext
-    this.whenUpdated = LocalDateTime.now(clock)
+    this.whenUpdated = amendedDate
 
     log.info("Re-activated Location [$id]")
   }

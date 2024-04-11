@@ -179,7 +179,7 @@ class LocationService(
 
     locationToUpdate.deactivate(
       deactivatedReason = deactivatedReason,
-      deactivatedDate = LocalDateTime.now(clock),
+      deactivatedDate = LocalDate.now(clock),
       proposedReactivationDate = proposedReactivationDate,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
