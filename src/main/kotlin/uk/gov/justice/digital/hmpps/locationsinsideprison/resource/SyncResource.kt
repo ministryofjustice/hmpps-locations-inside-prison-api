@@ -130,7 +130,7 @@ class SyncResource(
     ],
   )
   fun deleteLocation(
-    @Schema(description = "Location UUID, provided if already exists", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+    @Schema(description = "Location UUID to remove", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
     @PathVariable id: UUID,
   ) {
     eventPublishAndAudit(
