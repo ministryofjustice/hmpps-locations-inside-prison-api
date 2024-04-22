@@ -31,6 +31,7 @@ jobs:
       postgres_tag: << pipeline.parameters.postgres-version >>
       postgres_username: "locations_inside_prison"
       postgres_password: "locations_inside_prison"
+      postgres_db: "locations_inside_prison"
     steps:
       - checkout
       - restore_cache:
