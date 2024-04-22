@@ -47,7 +47,7 @@ abstract class Location(
 
   open val prisonId: String,
 
-  @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST])
   @JoinColumn(name = "parent_id")
   private var parent: Location? = null,
 
