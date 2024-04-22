@@ -12,6 +12,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import java.time.Clock
+import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
 @Service
@@ -92,5 +93,23 @@ class SyncService(
       locationRepository.findOneByPrisonIdAndPathHierarchy(upsert.prisonId, upsert.parentLocationPath!!)
         ?: throw LocationNotFoundException(upsert.toString())
     }
+  }
+
+  fun deleteLocation(id: UUID): LocationDTO {
+    val deletedLocation = locationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }.toDto()
+
+    locationRepository.deleteById(id)
+    log.info("Deleted Location: $id (${deletedLocation.getKey()})")
+    telemetryClient.trackEvent(
+      "Deleted Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to deletedLocation.prisonId,
+        "key" to deletedLocation.getKey(),
+      ),
+      null,
+    )
+    return deletedLocation
   }
 }
