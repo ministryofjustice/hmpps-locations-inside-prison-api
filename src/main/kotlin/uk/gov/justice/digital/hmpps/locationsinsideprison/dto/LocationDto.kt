@@ -5,11 +5,15 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SecurityCategoryType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -62,6 +66,18 @@ data class Location(
 
   @Schema(description = "Location Usage", required = false)
   val usage: List<NonResidentialUsageDto>? = null,
+
+  @Schema(description = "Accommodation Types", required = false)
+  var accommodationTypes: List<AccommodationType>? = null,
+
+  @Schema(description = "Specialist Cell Type", required = false)
+  var specialistCellType: SpecialistCellType? = null,
+
+  @Schema(description = "Usage For", required = false)
+  val usedFor: List<UsedForType>? = null,
+
+  @Schema(description = "Security Categories", required = false)
+  val securityCategories: List<SecurityCategoryType>? = null,
 
   @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
   val orderWithinParentLocation: Int? = null,
@@ -288,6 +304,9 @@ data class CreateResidentialLocationRequest(
 
   @Schema(description = "Location Attributes", required = false)
   val attributes: Set<ResidentialAttributeValue>? = null,
+
+  @Schema(description = "Accommodation Type", required = false)
+  val accommodationType: AccommodationType? = null,
 ) : CreateRequest {
 
   override fun toNewEntity(createdBy: String, clock: Clock): ResidentialLocationJPA {
@@ -304,6 +323,7 @@ data class CreateResidentialLocationRequest(
         createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
         childLocations = mutableListOf(),
+        accommodationType = accommodationType ?: AccommodationType.NORMAL_ACCOMMODATION,
         capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
         certification = certification?.let {
           CertificationJPA(

@@ -186,6 +186,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "certification": {
                 "capacityOfCertifiedCell": 4
               },
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ],
+              "securityCategories": [
+                "CAT_B"
+              ],
               "childLocations": [
                 {
                   "prisonId": "MDI",

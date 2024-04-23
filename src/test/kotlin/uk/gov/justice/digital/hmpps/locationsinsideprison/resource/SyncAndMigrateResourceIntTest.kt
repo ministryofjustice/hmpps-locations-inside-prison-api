@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -30,6 +31,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCe
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import java.time.Clock
 import java.time.LocalDateTime
+import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
 
@@ -242,7 +245,15 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/sync/upsert")
           .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(syncResRequest.copy(id = cell.id, code = "001", attributes = setOf(ResidentialAttributeValue.CAT_A))))
+          .bodyValue(
+            jsonString(
+              syncResRequest.copy(
+                id = cell.id,
+                code = "001",
+                attributes = setOf(ResidentialAttributeValue.CAT_A),
+              ),
+            ),
+          )
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -529,6 +540,84 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             """,
             false,
           )
+      }
+    }
+  }
+
+  @DisplayName("DELETE /sync/delete")
+  @Nested
+  inner class DeleteLocationTest {
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.delete().uri("/sync/delete/-23rf-$$££@")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `handles location not found`() {
+        webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can delete an existing location`() {
+        webTestClient.delete().uri("/sync/delete/${cell.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .exchange()
+          .expectStatus().isNoContent
+
+        assertThat(repository.findById(cell.id!!).getOrNull()).isNull()
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deleted" to "ZZGHI-B-1-001",
+          )
+        }
       }
     }
   }

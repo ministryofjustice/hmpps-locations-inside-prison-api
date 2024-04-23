@@ -82,6 +82,23 @@ open class ResidentialLocation(
       .toSet()
   }
 
+  private fun getAccommodationTypes(): Set<AccommodationType> {
+    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+      .map { it.accommodationType }
+      .toSet()
+  }
+
+  private fun getUsedFor(): Set<CellUsedFor> {
+    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+      .flatMap { it.usedFor }
+      .toSet()
+  }
+
+  private fun getSecurityCategories(): Set<SecurityCategory> {
+    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+      .flatMap { it.securityCategories }
+      .toSet()
+  }
   private fun isCurrentCellOrNotPermanentlyInactive(cell: Cell) = !cell.isPermanentlyInactive() || cell == this
 
   private fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
@@ -118,6 +135,9 @@ open class ResidentialLocation(
       ),
 
       attributes = getAttributes().map { it.attributeValue }.distinct(),
+      accommodationTypes = getAccommodationTypes().map { it }.distinct(),
+      usedFor = getUsedFor().map { it.usedFor }.distinct(),
+      securityCategories = getSecurityCategories().map { it.category }.distinct(),
     )
   }
 }
