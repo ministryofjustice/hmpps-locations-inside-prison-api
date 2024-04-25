@@ -8,7 +8,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SecurityCategoryType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.time.LocalDate
@@ -76,6 +75,6 @@ data class PatchLocationRequest(
   @Schema(description = "Used For Types", required = false)
   val usedFor: Set<UsedForType>? = null,
 
-  @Schema(description = "Security Categories", required = false)
-  val securityCategories: Set<SecurityCategoryType>? = null,
+  @Schema(description = "Specialist Cell Types", required = false)
+  val specialistCellTypes: Set<SpecialistCellType>? = null,
 ) : UpdateLocationRequest

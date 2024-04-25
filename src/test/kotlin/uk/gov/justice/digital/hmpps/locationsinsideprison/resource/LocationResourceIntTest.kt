@@ -192,8 +192,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
               ],
-              "securityCategories": [
-                "CAT_B"
+              "specialistCellTypes": [
+                "WHEELCHAIR_ACCESSIBLE"
               ],
               "childLocations": [
                 {
