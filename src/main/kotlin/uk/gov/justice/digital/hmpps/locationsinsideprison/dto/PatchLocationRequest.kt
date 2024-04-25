@@ -69,9 +69,6 @@ data class PatchLocationRequest(
   @Schema(description = "Accommodation Type", example = "NORMAL_ACCOMMODATION", required = false)
   val accommodationType: AccommodationType? = null,
 
-  @Schema(description = "Specialist Cell Type", required = false)
-  val specialistCellType: SpecialistCellType? = null,
-
   @Schema(description = "Used For Types", required = false)
   val usedFor: Set<UsedForType>? = null,
 

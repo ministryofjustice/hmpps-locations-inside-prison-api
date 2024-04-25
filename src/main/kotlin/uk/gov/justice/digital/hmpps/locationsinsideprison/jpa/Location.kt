@@ -212,7 +212,7 @@ abstract class Location(
 
   open fun getHistory() = history.toList()
 
-  open fun toDto(includeChildren: Boolean = false, includeParent: Boolean = false, includeHistory: Boolean = false): LocationDto {
+  open fun toDto(includeChildren: Boolean = false, includeParent: Boolean = false, includeHistory: Boolean = false, countInactiveCells: Boolean = false): LocationDto {
     return LocationDto(
       id = id!!,
       code = getCode(),

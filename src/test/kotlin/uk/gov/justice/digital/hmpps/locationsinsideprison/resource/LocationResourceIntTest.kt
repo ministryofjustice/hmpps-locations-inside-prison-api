@@ -52,8 +52,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   lateinit var repository: LocationRepository
   lateinit var cell1: Cell
   lateinit var cell2: Cell
+  lateinit var inactiveCell: Cell
   lateinit var landing1: ResidentialLocationJPA
   lateinit var landing2: ResidentialLocationJPA
+  lateinit var landing3: ResidentialLocationJPA
   lateinit var wingZ: ResidentialLocationJPA
   lateinit var wingB: ResidentialLocationJPA
   lateinit var visitRoom: NonResidentialLocationJPA
@@ -87,6 +89,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         locationType = LocationType.LANDING,
       ),
     )
+    landing3 = repository.save(
+      buildResidentialLocation(
+        pathHierarchy = "B-A",
+        locationType = LocationType.LANDING,
+      ),
+    )
     cell1 = repository.save(
       buildCell(
         pathHierarchy = "Z-1-001",
@@ -101,6 +109,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A, ResidentialAttributeValue.SAFE_CELL, ResidentialAttributeValue.DOUBLE_OCCUPANCY),
 
+      ),
+    )
+    inactiveCell = repository.save(
+      buildCell(
+        pathHierarchy = "B-1-001",
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
+        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        active = false,
       ),
     )
     visitRoom = repository.save(
@@ -125,6 +141,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       )
       .addChildLocation(landing2)
 
+    wingB.addChildLocation(landing3.addChildLocation(inactiveCell))
     repository.save(wingZ)
     repository.save(wingB)
   }
@@ -276,6 +293,200 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 }
               ]
             }
+          """,
+            false,
+          )
+      }
+    }
+  }
+
+  @DisplayName("GET /locations/residential/{prisonId}/below-parent")
+  @Nested
+  inner class ViewLocationsBelowParent {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/residential/${wingZ.prisonId}/below-parent")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/residential/${wingZ.prisonId}/below-parent")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/residential/${wingZ.prisonId}/below-parent")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve details of a locations on a wing`() {
+        webTestClient.get().uri("/locations/residential/MDI/below-parent")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            [
+             {
+              "prisonId": "MDI",
+              "code": "Z",
+              "pathHierarchy": "Z",
+              "locationType": "WING",
+              "active": true,
+              "key": "MDI-Z",
+              "inactiveCells": 0,
+              "capacity": {
+                "maxCapacity": 4,
+                "workingCapacity": 4
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 4
+              },
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ],
+              "specialistCellTypes": [
+                "WHEELCHAIR_ACCESSIBLE"
+              ]
+            },
+             {
+              "prisonId": "MDI",
+              "code": "B",
+              "pathHierarchy": "B",
+              "locationType": "WING",
+              "active": true,
+              "key": "MDI-B",
+              "inactiveCells": 1,
+              "capacity": {
+                "maxCapacity": 2,
+                "workingCapacity": 0
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 2
+              }
+            }
+          ]
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of a locations on a landing`() {
+        webTestClient.get().uri("/locations/residential/MDI/below-parent?parentLocationId=${wingZ.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            [
+              {
+              "prisonId": "MDI",
+              "code": "1",
+              "pathHierarchy": "Z-1",
+              "locationType": "LANDING",
+              "active": true,
+              "key": "MDI-Z-1",
+              "inactiveCells": 0,
+              "capacity": {
+                "maxCapacity": 4,
+                "workingCapacity": 4
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 4
+              },
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ],
+              "specialistCellTypes": [
+                "WHEELCHAIR_ACCESSIBLE"
+              ]
+            },
+             {
+                "prisonId": "MDI",
+                "code": "2",
+                "pathHierarchy": "Z-2",
+                "locationType": "LANDING",
+                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "inactiveCells": 0,
+                "capacity": {
+                  "maxCapacity": 0,
+                  "workingCapacity": 0
+                },
+                "certification": {
+                  "certified": false,
+                  "capacityOfCertifiedCell": 0
+                },
+                "orderWithinParentLocation": 99,
+                "active": true,
+                "isResidential": true,
+                "key": "MDI-Z-2"
+            }
+          ]
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of a locations on another landing by path`() {
+        webTestClient.get().uri("/locations/residential/MDI/below-parent?parentPathHierarchy=${wingB.getPathHierarchy()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            [
+              {
+              "prisonId": "MDI",
+              "code": "A",
+              "pathHierarchy": "B-A",
+              "locationType": "LANDING",
+              "active": true,
+              "key": "MDI-B-A",
+              "inactiveCells": 1,
+              "capacity": {
+                "maxCapacity": 2,
+                "workingCapacity": 0
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 2
+              },
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ],
+              "specialistCellTypes": [
+                "WHEELCHAIR_ACCESSIBLE"
+              ]
+            }
+          ]
           """,
             false,
           )
@@ -554,6 +765,32 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 },
                 {
                   "prisonId": "MDI",
+                  "code": "A",
+                  "pathHierarchy": "B-A",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "permanentlyInactive": false,
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "isResidential": true,
+                  "key": "MDI-B-A"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "001",
+                  "pathHierarchy": "B-A-001",
+                  "locationType": "CELL",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "orderWithinParentLocation": 99,
+                  "active": false,
+                  "deactivatedByParent": false,
+                  "deactivatedDate": "2023-12-05",
+                  "deactivatedReason": "DAMAGED",
+                  "isResidential": true,
+                  "key": "MDI-B-A-001"
+                },
+                {
+                  "prisonId": "MDI",
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
@@ -659,7 +896,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
               {
                 "totalPages": 1,
-                "totalElements": 8,
+                "totalElements": 10,
                 "first": true,
                 "last": true,
                 "size": 10,
@@ -702,6 +939,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "prisonId": "MDI",
+                    "code": "A",
+                    "pathHierarchy": "B-A",
+                    "locationType": "LANDING",
+                    "key": "MDI-B-A"
+                  },
+                  {
+                    "prisonId": "MDI",
                     "code": "2",
                     "pathHierarchy": "Z-2",
                     "locationType": "LANDING",
@@ -720,8 +964,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "pathHierarchy": "Z-1-002",
                     "locationType": "CELL",
                     "key": "MDI-Z-1-002"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "001",
+                    "pathHierarchy": "B-A-001",
+                    "locationType": "CELL",
+                    "key": "MDI-B-A-001"
                   }
-
                 ],
                 "number": 0,
                 "sort": {
@@ -729,7 +979,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "sorted": true,
                   "unsorted": false
                 },
-                "numberOfElements": 8,
+                "numberOfElements": 10,
                 "pageable": {
                   "offset": 0,
                   "sort": {
@@ -1390,14 +1640,59 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "WING",
               "key": "MDI-B",
               "capacity": {
-                "maxCapacity": 4,
+                "maxCapacity": 6,
                 "workingCapacity": 4
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 4
+                "capacityOfCertifiedCell": 6
               },
               "childLocations": [
+                {
+                  "prisonId": "MDI",
+                  "code": "A",
+                  "pathHierarchy": "B-A",
+                  "locationType": "LANDING",
+                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "permanentlyInactive": false,
+                  "capacity": {
+                    "maxCapacity": 2,
+                    "workingCapacity": 0
+                  },
+                  "certification": {
+                    "certified": true,
+                    "capacityOfCertifiedCell": 2
+                  },
+                  "active": true,
+                  "deactivatedByParent": false,
+                  "childLocations": [
+                    {
+                      "prisonId": "MDI",
+                      "code": "001",
+                      "pathHierarchy": "B-A-001",
+                      "locationType": "CELL",
+                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "permanentlyInactive": false,
+                      "capacity": {
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      },
+                      "active": false,
+                      "deactivatedByParent": false,
+                      "deactivatedDate": "2023-12-05",
+                      "deactivatedReason": "DAMAGED",
+                      "childLocations": [],
+                      "isResidential": true,
+                      "key": "MDI-B-A-001"
+                    }
+                  ],
+                  "isResidential": true,
+                  "key": "MDI-B-A"
+                },              
                 {
                   "code": "1",
                   "pathHierarchy": "B-1",

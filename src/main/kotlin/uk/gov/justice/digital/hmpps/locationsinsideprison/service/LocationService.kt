@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocationResult
@@ -35,6 +36,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 @Transactional(readOnly = true)
 class LocationService(
   private val locationRepository: LocationRepository,
+  private val residentialLocationRepository: ResidentialLocationRepository,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
@@ -241,4 +243,32 @@ class LocationService(
       locationRepository.findById(parentId).getOrNull()
         ?: throw LocationNotFoundException(it.toString())
     }
+
+  fun getLocationForPrisonBelowParent(
+    prisonId: String,
+    parentLocationId: UUID? = null,
+    parentPathHierarchy: String? = null,
+  ): List<LocationDTO> {
+    val parentId =
+      if (parentLocationId != null) {
+        locationRepository.findById(parentLocationId).getOrNull()?.id
+          ?: throw LocationNotFoundException(parentLocationId.toString())
+      } else if (parentPathHierarchy != null) {
+        locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, parentPathHierarchy)?.id
+          ?: throw LocationNotFoundException("$prisonId-$parentPathHierarchy")
+      } else {
+        null
+      }
+
+    val locations =
+      (
+        if (parentId != null) {
+          residentialLocationRepository.findAllByPrisonIdAndParentId(prisonId, parentId)
+        } else {
+          residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+        }
+        ).map { it.toDto(countInactiveCells = true) }
+
+    return locations
+  }
 }

@@ -102,6 +102,9 @@ data class Location(
   @Schema(description = "Parent Location", required = false)
   val parentLocation: Location? = null,
 
+  @Schema(description = "Number of inactive cells below this location", required = false)
+  val inactiveCells: Int? = null,
+
   @Schema(description = "Child Locations", required = false)
   val childLocations: List<Location>? = null,
 
