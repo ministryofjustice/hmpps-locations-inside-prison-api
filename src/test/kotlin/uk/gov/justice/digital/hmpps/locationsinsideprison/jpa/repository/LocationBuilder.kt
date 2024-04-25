@@ -10,7 +10,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLoca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SecurityCategoryType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME
@@ -51,10 +50,9 @@ fun buildCell(
     capacity = capacity,
     certification = certification,
     accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
-    specialistCellType = SpecialistCellType.SEG,
   )
   cell.addAttributes(residentialAttributeValues)
-  cell.addSecurityCategory(SecurityCategoryType.CAT_B)
+  cell.addSpecialistCellType(SpecialistCellType.WHEELCHAIR_ACCESSIBLE)
   cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION)
   return cell
 }

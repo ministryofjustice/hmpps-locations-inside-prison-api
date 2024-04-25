@@ -4,5 +4,6 @@ enum class AccommodationType(
   val description: String,
 ) {
   NORMAL_ACCOMMODATION("Normal Accommodation"),
-  SPECIAL_ACCOMMODATION("Specialist Accommodation"),
+  HEALTHCARE_INPATIENTS("Health Care In-patients"),
+  CARE_AND_SEPARATION("Care and Separation"),
 }

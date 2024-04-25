@@ -94,9 +94,9 @@ open class ResidentialLocation(
       .toSet()
   }
 
-  private fun getSecurityCategories(): Set<SecurityCategory> {
+  private fun getSpecialistCellTypes(): Set<SpecialistCell> {
     return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-      .flatMap { it.securityCategories }
+      .flatMap { it.specialistCellTypes }
       .toSet()
   }
   private fun isCurrentCellOrNotPermanentlyInactive(cell: Cell) = !cell.isPermanentlyInactive() || cell == this
@@ -137,7 +137,7 @@ open class ResidentialLocation(
       attributes = getAttributes().map { it.attributeValue }.distinct(),
       accommodationTypes = getAccommodationTypes().map { it }.distinct(),
       usedFor = getUsedFor().map { it.usedFor }.distinct(),
-      securityCategories = getSecurityCategories().map { it.category }.distinct(),
+      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct(),
     )
   }
 }
