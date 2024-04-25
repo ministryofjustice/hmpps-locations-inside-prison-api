@@ -49,14 +49,12 @@ class Cell(
   @Enumerated(EnumType.STRING)
   var accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 
-  @Enumerated(EnumType.STRING)
-  var specialistCellType: SpecialistCellType? = null,
-
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   val usedFor: MutableSet<CellUsedFor> = mutableSetOf(),
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val securityCategories: MutableSet<SecurityCategory> = mutableSetOf(),
+  val specialistCellTypes: MutableSet<SpecialistCell> = mutableSetOf(),
+
 ) : ResidentialLocation(
   id = id,
   code = code,
@@ -87,10 +85,10 @@ class Cell(
     return attributes.map { addAttribute(it) }.toSet()
   }
 
-  fun addSecurityCategory(securityCategoryType: SecurityCategoryType): SecurityCategory {
-    val securityCategory = SecurityCategory(location = this, category = securityCategoryType)
-    this.securityCategories.add(securityCategory)
-    return securityCategory
+  fun addSpecialistCellType(specialistCellType: SpecialistCellType): SpecialistCell {
+    val specialistCell = SpecialistCell(location = this, specialistCellType = specialistCellType)
+    this.specialistCellTypes.add(specialistCell)
+    return specialistCell
   }
 
   fun addUsedFor(usedForType: UsedForType): CellUsedFor {
@@ -155,20 +153,9 @@ class Cell(
       }
       this.accommodationType = upsert.accommodationType ?: this.accommodationType
 
-      if (upsert.specialistCellType != null && this.specialistCellType != upsert.specialistCellType) {
-        addHistory(
-          LocationAttribute.SPECIALIST_CELL_TYPE,
-          this.specialistCellType?.description,
-          upsert.specialistCellType.description,
-          updatedBy,
-          LocalDateTime.now(clock),
-        )
-      }
-      this.specialistCellType = upsert.specialistCellType ?: this.specialistCellType
-
-      if (upsert.securityCategories != null) {
+      if (upsert.specialistCellTypes != null) {
         recordHistoryOfSecurityChanges(upsert, updatedBy, clock)
-        securityCategories.retainAll(upsert.securityCategories.map { addSecurityCategory(it) }.toSet())
+        specialistCellTypes.retainAll(upsert.specialistCellTypes.map { addSpecialistCellType(it) }.toSet())
       }
 
       if (upsert.usedFor != null) {
@@ -198,12 +185,12 @@ class Cell(
     updatedBy: String,
     clock: Clock,
   ) {
-    val oldSecurityCategory = this.securityCategories.map { it.category }.toSet()
-    upsert.securityCategories?.subtract(oldSecurityCategory)?.forEach { newSecurity ->
-      addHistory(LocationAttribute.SECURITY_CATEGORY, null, newSecurity.name, updatedBy, LocalDateTime.now(clock))
+    val oldSpecialistCellTypes = this.specialistCellTypes.map { it.specialistCellType }.toSet()
+    upsert.specialistCellTypes?.subtract(oldSpecialistCellTypes)?.forEach { newSpecialistCellType ->
+      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, null, newSpecialistCellType.name, updatedBy, LocalDateTime.now(clock))
     }
-    oldSecurityCategory.subtract((upsert.securityCategories?.toSet() ?: emptySet()).toSet()).forEach { removedSecurity ->
-      addHistory(LocationAttribute.SECURITY_CATEGORY, removedSecurity.name, null, updatedBy, LocalDateTime.now(clock))
+    oldSpecialistCellTypes.subtract((upsert.specialistCellTypes?.toSet() ?: emptySet()).toSet()).forEach { removedSpecialistCellType ->
+      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, removedSpecialistCellType.name, null, updatedBy, LocalDateTime.now(clock))
     }
   }
 
@@ -225,7 +212,6 @@ class Cell(
     return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory).copy(
       capacity = capacity?.toDto(),
       certification = certification?.toDto(),
-      specialistCellType = specialistCellType,
     )
   }
 }

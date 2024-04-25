@@ -11,7 +11,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SecurityCategoryType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.time.Clock
@@ -70,14 +69,11 @@ data class Location(
   @Schema(description = "Accommodation Types", required = false)
   var accommodationTypes: List<AccommodationType>? = null,
 
-  @Schema(description = "Specialist Cell Type", required = false)
-  var specialistCellType: SpecialistCellType? = null,
+  @Schema(description = "Specialist Cell Types", required = false)
+  var specialistCellTypes: List<SpecialistCellType>? = null,
 
   @Schema(description = "Usage For", required = false)
   val usedFor: List<UsedForType>? = null,
-
-  @Schema(description = "Security Categories", required = false)
-  val securityCategories: List<SecurityCategoryType>? = null,
 
   @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
   val orderWithinParentLocation: Int? = null,
