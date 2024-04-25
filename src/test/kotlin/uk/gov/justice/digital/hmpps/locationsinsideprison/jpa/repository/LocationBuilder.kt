@@ -1,10 +1,12 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository
 
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.Companion.clock
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
@@ -13,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME
+import java.time.LocalDate
 import java.time.LocalDateTime
 
 fun buildResidentialLocation(
@@ -35,6 +38,7 @@ fun buildResidentialLocation(
 fun buildCell(
   prisonId: String = "MDI",
   pathHierarchy: String,
+  active: Boolean = true,
   capacity: Capacity? = null,
   certification: Certification? = null,
   residentialAttributeValues: Set<ResidentialAttributeValue> = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY, ResidentialAttributeValue.CAT_B),
@@ -42,6 +46,7 @@ fun buildCell(
   val cell = Cell(
     prisonId = prisonId,
     code = pathHierarchy.split("-").last(),
+    active = active,
     pathHierarchy = pathHierarchy,
     createdBy = EXPECTED_USERNAME,
     whenCreated = LocalDateTime.now(TestBase.clock),
@@ -50,10 +55,21 @@ fun buildCell(
     capacity = capacity,
     certification = certification,
     accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+    deactivatedReason = if (!active) {
+      DeactivatedReason.DAMAGED
+    } else {
+      null
+    },
+    deactivatedDate = if (!active) {
+      LocalDate.now(clock)
+    } else {
+      null
+    },
   )
   cell.addAttributes(residentialAttributeValues)
   cell.addSpecialistCellType(SpecialistCellType.WHEELCHAIR_ACCESSIBLE)
   cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION)
+
   return cell
 }
 fun buildNonResidentialLocation(

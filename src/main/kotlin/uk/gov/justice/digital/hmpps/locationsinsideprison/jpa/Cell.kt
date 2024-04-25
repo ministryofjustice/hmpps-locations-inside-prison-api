@@ -154,7 +154,7 @@ class Cell(
       this.accommodationType = upsert.accommodationType ?: this.accommodationType
 
       if (upsert.specialistCellTypes != null) {
-        recordHistoryOfSecurityChanges(upsert, updatedBy, clock)
+        recordHistoryOfSpecialistCellTypeChanges(upsert, updatedBy, clock)
         specialistCellTypes.retainAll(upsert.specialistCellTypes.map { addSpecialistCellType(it) }.toSet())
       }
 
@@ -180,7 +180,7 @@ class Cell(
     }
   }
 
-  private fun recordHistoryOfSecurityChanges(
+  private fun recordHistoryOfSpecialistCellTypeChanges(
     upsert: PatchLocationRequest,
     updatedBy: String,
     clock: Clock,
@@ -208,8 +208,8 @@ class Cell(
     }
   }
 
-  override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean): LocationDto {
-    return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory).copy(
+  override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean, countInactiveCells: Boolean): LocationDto {
+    return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory, countInactiveCells = countInactiveCells).copy(
       capacity = capacity?.toDto(),
       certification = certification?.toDto(),
     )

@@ -101,6 +101,8 @@ open class ResidentialLocation(
   }
   private fun isCurrentCellOrNotPermanentlyInactive(cell: Cell) = !cell.isPermanentlyInactive() || cell == this
 
+  fun getInactiveCellCount() = cellLocations().count { !it.isActive() }
+
   private fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
 
   override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): ResidentialLocation {
@@ -120,8 +122,8 @@ open class ResidentialLocation(
     return this
   }
 
-  override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean): LocationDto {
-    return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory).copy(
+  override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean, countInactiveCells: Boolean): LocationDto {
+    return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory, countInactiveCells = countInactiveCells).copy(
       residentialHousingType = residentialHousingType,
 
       capacity = CapacityDto(
@@ -138,6 +140,11 @@ open class ResidentialLocation(
       accommodationTypes = getAccommodationTypes().map { it }.distinct(),
       usedFor = getUsedFor().map { it.usedFor }.distinct(),
       specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct(),
+      inactiveCells = if (countInactiveCells) {
+        getInactiveCellCount()
+      } else {
+        null
+      },
     )
   }
 }
