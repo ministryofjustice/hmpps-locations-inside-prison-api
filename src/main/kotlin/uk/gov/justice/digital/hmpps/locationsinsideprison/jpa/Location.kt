@@ -19,6 +19,7 @@ import org.hibernate.annotations.GenericGenerator
 import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import java.io.Serializable
@@ -62,6 +63,7 @@ abstract class Location(
   @Enumerated(EnumType.STRING)
   open var deactivatedReason: DeactivatedReason? = null,
   open var proposedReactivationDate: LocalDate? = null,
+  open var planetFmReference: String? = null,
 
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   protected open val childLocations: MutableList<Location> = mutableListOf(),
@@ -140,7 +142,7 @@ abstract class Location(
   private fun hasDeactivatedParent() = findDeactivatedParent() != null
 
   open fun isPermanentlyInactive(): Boolean {
-    return findDeactivatedLocationInHierarchy()?.deactivatedReason in permanentlyInactiveReasons()
+    return findDeactivatedLocationInHierarchy()?.deactivatedReason?.isPermanentlyInactiveReason() ?: false
   }
 
   fun addChildLocation(childLocation: Location): Location {
@@ -216,6 +218,7 @@ abstract class Location(
     return LocationDto(
       id = id!!,
       code = getCode(),
+      status = getStatus(),
       locationType = locationType,
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
@@ -235,6 +238,20 @@ abstract class Location(
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
     )
   }
+
+  private fun getStatus(): LocationStatus {
+    if (isActive()) {
+      return if (isNonResCell()) {
+        LocationStatus.NON_RESIDENTIAL
+      } else {
+        LocationStatus.ACTIVE
+      }
+    } else {
+      return LocationStatus.INACTIVE
+    }
+  }
+
+  private fun isNonResCell() = this is Cell && convertedCellType != null
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -382,71 +399,3 @@ abstract class Location(
   fun isCell() = locationType == LocationType.CELL
   fun isWingLandingSpur() = locationType in listOf(LocationType.WING, LocationType.LANDING, LocationType.SPUR)
 }
-
-enum class LocationType(
-  val description: String,
-) {
-  WING("Wing"),
-  SPUR("Spur"),
-  LANDING("Landing"),
-  CELL("Cell"),
-  ROOM("Room"),
-  HOLDING_AREA("Holding Area"),
-  MOVEMENT_AREA("Movement Area"),
-  RESIDENTIAL_UNIT("Residential Unit"),
-  EXTERNAL_GROUNDS("External Grounds"),
-  HOLDING_CELL("Holding Cell"),
-  MEDICAL("Medical"),
-
-  GROUP("Group"),
-  OFFICE("Other"),
-  ADMINISTRATION_AREA("Administration Area"),
-  BOOTH("Booth"),
-  BOX("Box"),
-  RETURN_TO_UNIT("Return to Unit"),
-  CLASSROOM("Classroom"),
-  TRAINING_AREA("Training Area"),
-  TRAINING_ROOM("Training Room"),
-  EXERCISE_AREA("Exercise Area"),
-  AREA("Area"),
-  SPORTS("Sports"),
-  WORKSHOP("Workshop"),
-  INSIDE_PARTY("Inside Party"),
-  OUTSIDE_PARTY("Outside Party"),
-
-  FAITH_AREA("Faith Area"),
-
-  ADJUDICATION_ROOM("Adjudication Room"),
-  APPOINTMENTS("Appointments"),
-  VISITS("Visits"),
-  VIDEO_LINK("Video Link"),
-  ASSOCIATION("Association"),
-
-  INTERNAL_GROUNDS("Internal Grounds"),
-  INTERVIEW("Interview"),
-  LOCATION("Location"),
-
-  POSITION("Position"),
-  SHELF("Shelf"),
-  STORE("Store"),
-  TABLE("Table"),
-}
-
-enum class DeactivatedReason(
-  val description: String,
-) {
-  NEW_BUILDING("New Building"),
-  CELL_RECLAIMS("Cell Reclaims"),
-  CHANGE_OF_USE("Change of Use"),
-  REFURBISHMENT("Refurbishment"),
-  CLOSURE("Closure"),
-  OTHER("Other"),
-  LOCAL_WORK("Local Work"),
-  STAFF_SHORTAGE("Staff Shortage"),
-  MOTHBALLED("Mothballed"),
-  DAMAGED("Damaged"),
-  OUT_OF_USE("Out of Use"),
-  CELLS_RETURNING_TO_USE("Cells Returning to Use"),
-}
-
-fun permanentlyInactiveReasons() = listOf(DeactivatedReason.CLOSURE, DeactivatedReason.MOTHBALLED, DeactivatedReason.CHANGE_OF_USE, DeactivatedReason.NEW_BUILDING)

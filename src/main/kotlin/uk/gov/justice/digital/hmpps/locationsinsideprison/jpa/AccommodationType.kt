@@ -6,4 +6,5 @@ enum class AccommodationType(
   NORMAL_ACCOMMODATION("Normal Accommodation"),
   HEALTHCARE_INPATIENTS("Health Care In-patients"),
   CARE_AND_SEPARATION("Care and Separation"),
+  OTHER_NON_RESIDENTIAL("Other Non Residential"),
 }
