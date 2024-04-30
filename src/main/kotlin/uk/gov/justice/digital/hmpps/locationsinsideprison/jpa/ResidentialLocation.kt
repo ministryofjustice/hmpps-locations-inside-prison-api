@@ -139,6 +139,7 @@ open class ResidentialLocation(
       attributes = getAttributes().map { it.attributeValue }.distinct(),
       accommodationTypes = getAccommodationTypes().map { it }.distinct(),
       usedFor = getUsedFor().map { it.usedFor }.distinct(),
+
       specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct(),
       inactiveCells = if (countInactiveCells) {
         getInactiveCellCount()

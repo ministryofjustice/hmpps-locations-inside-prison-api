@@ -19,5 +19,5 @@ enum class SpecialistCellType(
   MOTHER_AND_BABY("Mother and baby cell"),
   SOUND_RESISTANT("Sound resistant cell"),
   UNFURNISHED("Unfurnished cell"),
-  WHEELCHAIR_ACCESSIBLE("Wheelchair accessible cell"),
+  WHEELCHAIR_ACCESSIBLE("Wheelchair accessible cells"),
 }

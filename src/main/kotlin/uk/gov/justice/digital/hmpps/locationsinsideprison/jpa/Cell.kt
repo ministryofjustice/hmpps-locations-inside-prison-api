@@ -55,6 +55,11 @@ class Cell(
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   val specialistCellTypes: MutableSet<SpecialistCell> = mutableSetOf(),
 
+  @Enumerated(EnumType.STRING)
+  var convertedCellType: ConvertedCellType? = null,
+
+  var otherConvertedCellType: String? = null,
+
 ) : ResidentialLocation(
   id = id,
   code = code,
@@ -74,6 +79,27 @@ class Cell(
   createdBy = createdBy,
   residentialHousingType = residentialHousingType,
 ) {
+
+  fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null) {
+    this.convertedCellType = convertedCellType
+    if (convertedCellType == ConvertedCellType.OTHER) {
+      this.otherConvertedCellType = otherConvertedCellType
+    }
+    capacity = null
+    certification = null
+  }
+
+  fun convertToCell(accommodationType: AccommodationType, usedForTypes: List<UsedForType>? = null, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0) {
+    this.accommodationType = accommodationType
+    usedForTypes?.forEach { addUsedFor(it) }
+    specialistCellType?.let { addSpecialistCellType(it) }
+    if (accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+      capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+      certification = Certification(certified = true, capacityOfCertifiedCell = workingCapacity)
+    }
+    convertedCellType = null
+    otherConvertedCellType = null
+  }
 
   fun addAttribute(attribute: ResidentialAttributeValue): ResidentialAttribute {
     val residentialAttribute = ResidentialAttribute(location = this, attributeType = attribute.type, attributeValue = attribute)

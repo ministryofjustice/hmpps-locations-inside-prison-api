@@ -284,7 +284,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "LOCAL_WORK",
-                    "description": "Local Work"
+                    "description": "Maintenance"
                   },
                   {
                     "key": "STAFF_SHORTAGE",

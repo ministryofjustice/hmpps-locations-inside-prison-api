@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
@@ -67,16 +68,25 @@ data class Location(
   val usage: List<NonResidentialUsageDto>? = null,
 
   @Schema(description = "Accommodation Types", required = false)
-  var accommodationTypes: List<AccommodationType>? = null,
+  val accommodationTypes: List<AccommodationType>? = null,
 
   @Schema(description = "Specialist Cell Types", required = false)
-  var specialistCellTypes: List<SpecialistCellType>? = null,
+  val specialistCellTypes: List<SpecialistCellType>? = null,
 
   @Schema(description = "Usage For", required = false)
   val usedFor: List<UsedForType>? = null,
 
   @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
   val orderWithinParentLocation: Int? = null,
+
+  @Schema(description = "Status of the location", example = "ACTIVE", required = true)
+  val status: LocationStatus,
+
+  @Schema(description = "Convert Cell Type", required = false)
+  val convertedCellType: ConvertedCellType? = null,
+
+  @Schema(description = "Convert Cell Type (Other)", required = false)
+  val otherConvertedCellType: String? = null,
 
   @Schema(description = "Indicates the location is enabled", example = "true", required = true)
   val active: Boolean = true,

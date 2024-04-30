@@ -1,17 +1,22 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType.HOLDING_CELL
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity as CapacityJPA
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification as CertificationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 
 interface NomisMigrationRequest : UpdateLocationRequest {
@@ -57,15 +62,16 @@ interface NomisMigrationRequest : UpdateLocationRequest {
           deactivatedReason = null,
           proposedReactivationDate = null,
           childLocations = mutableListOf(),
+          accommodationType = mapAccommodationType(residentialHousingType!!),
           parent = null,
           capacity = capacity?.let {
-            uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity(
+            CapacityJPA(
               maxCapacity = it.maxCapacity,
               workingCapacity = it.workingCapacity,
             )
           },
           certification = certification?.let {
-            uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification(
+            CertificationJPA(
               certified = it.certified,
               capacityOfCertifiedCell = it.capacityOfCertifiedCell,
             )
@@ -73,6 +79,7 @@ interface NomisMigrationRequest : UpdateLocationRequest {
         )
         attributes?.forEach { attribute ->
           location.addAttribute(attribute)
+          attribute.mapTo?.let { location.addSpecialistCellType(it) }
         }
         location
       } else {
@@ -111,6 +118,10 @@ interface NomisMigrationRequest : UpdateLocationRequest {
       location
     }
 
+    if (location is Cell && residentialHousingType == HOLDING_CELL) {
+      location.convertToNonResidentialCell(ConvertedCellType.HOLDING_ROOM)
+    }
+
     if (isDeactivated()) {
       location.deactivatedReason = deactivationReason
       location.deactivatedDate = deactivatedDate
@@ -118,5 +129,19 @@ interface NomisMigrationRequest : UpdateLocationRequest {
     }
 
     return location
+  }
+
+  fun mapAccommodationType(residentialHousingType: ResidentialHousingType): AccommodationType {
+    return when (residentialHousingType) {
+      ResidentialHousingType.NORMAL_ACCOMMODATION -> AccommodationType.NORMAL_ACCOMMODATION
+      ResidentialHousingType.HEALTHCARE -> AccommodationType.HEALTHCARE_INPATIENTS
+      ResidentialHousingType.SEGREGATION -> AccommodationType.CARE_AND_SEPARATION
+
+      ResidentialHousingType.SPECIALIST_CELL,
+      HOLDING_CELL,
+      ResidentialHousingType.OTHER_USE,
+      ResidentialHousingType.RECEPTION,
+      -> AccommodationType.OTHER_NON_RESIDENTIAL
+    }
   }
 }

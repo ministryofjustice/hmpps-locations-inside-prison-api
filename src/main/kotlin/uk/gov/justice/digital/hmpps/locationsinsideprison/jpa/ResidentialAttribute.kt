@@ -62,6 +62,7 @@ enum class ResidentialAttributeType(
 enum class ResidentialAttributeValue(
   val type: ResidentialAttributeType,
   val description: String,
+  val mapTo: SpecialistCellType? = null,
 ) {
   ANTI_BARRICADE_DOOR(ResidentialAttributeType.SANITATION_FITTINGS, "Anti Barricade Door"),
   AUDITABLE_CELL_BELL(ResidentialAttributeType.SANITATION_FITTINGS, "Auditable Cell Bell"),
@@ -74,19 +75,27 @@ enum class ResidentialAttributeValue(
   SEPARATE_TOILET(ResidentialAttributeType.SANITATION_FITTINGS, "Separate Toilet"),
   WOODEN_DOOR(ResidentialAttributeType.SANITATION_FITTINGS, "Wooden Door"),
 
-  CAT_A_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Cat A Cell"),
+  CAT_A_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Cat A Cell", SpecialistCellType.CAT_A),
   DOUBLE_OCCUPANCY(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Double Occupancy"),
-  E_LIST_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "E List Cell"),
-  GATED_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Gated Cell"),
-  LISTENER_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Listener Cell"),
-  LOCATE_FLAT(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Locate Flat"),
+  E_LIST_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "E List Cell", SpecialistCellType.ESCAPE_LIST),
+  GATED_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Gated Cell", SpecialistCellType.CONSTANT_SUPERVISION),
+  LISTENER_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Listener Cell", SpecialistCellType.LISTENER_CRISIS),
+  LOCATE_FLAT(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Locate Flat", SpecialistCellType.LOW_MOBILITY),
   MULTIPLE_OCCUPANCY(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Multiple Occupancy"),
   NON_SMOKER_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Non Smoker Cell"),
-  OBSERVATION_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Observation Cell"),
+  OBSERVATION_CELL(
+    ResidentialAttributeType.LOCATION_ATTRIBUTE,
+    "Observation Cell",
+    SpecialistCellType.CONSTANT_SUPERVISION,
+  ),
   SAFE_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Safe Cell"),
   SINGLE_OCCUPANCY(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Single Occupancy"),
   SPECIAL_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Special Cell"),
-  WHEELCHAIR_ACCESS(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Wheelchair Access"),
+  WHEELCHAIR_ACCESS(
+    ResidentialAttributeType.LOCATION_ATTRIBUTE,
+    "Wheelchair Access",
+    SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
+  ),
 
   UNCONVICTED_JUVENILES(ResidentialAttributeType.USED_FOR, "Unconvicted Juveniles"),
   SENTENCED_JUVENILES(ResidentialAttributeType.USED_FOR, "Sentenced Juveniles"),
