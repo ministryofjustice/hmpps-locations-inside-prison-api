@@ -64,5 +64,3 @@ SET converted_cell_type = 'HOLDING_ROOM',
     capacity_id = null,
     certification_id = null
 WHERE residential_housing_type = 'HOLDING_CELL';
-
-ALTER TABLE location DROP COLUMN specialist_cell_type;
