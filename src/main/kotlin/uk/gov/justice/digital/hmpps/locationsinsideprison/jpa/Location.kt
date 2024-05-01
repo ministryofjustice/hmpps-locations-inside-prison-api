@@ -13,6 +13,7 @@ import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
+import jakarta.validation.ValidationException
 import org.hibernate.Hibernate
 import org.hibernate.annotations.DiscriminatorFormula
 import org.hibernate.annotations.GenericGenerator
@@ -20,6 +21,7 @@ import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import java.io.Serializable
@@ -59,6 +61,7 @@ abstract class Location(
   open var orderWithinParentLocation: Int? = null,
 
   private var active: Boolean = true,
+  private var archived: Boolean = false,
   open var deactivatedDate: LocalDate? = null,
   @Enumerated(EnumType.STRING)
   open var deactivatedReason: DeactivatedReason? = null,
@@ -110,6 +113,20 @@ abstract class Location(
     return parent
   }
 
+  private fun findArchivedParent(): Location? {
+    fun findArchivedLocation(location: Location?): Location? {
+      if (location == null) {
+        return null
+      }
+      if (!location.isArchived()) {
+        return findArchivedLocation(location.getParent())
+      }
+      return location
+    }
+
+    return findArchivedLocation(getParent())
+  }
+
   private fun findDeactivatedParent(): Location? {
     fun findDeactivatedLocation(location: Location?): Location? {
       if (location == null) {
@@ -131,8 +148,19 @@ abstract class Location(
     return findDeactivatedParent()
   }
 
+  private fun findArchivedLocationInHierarchy(): Location? {
+    if (isArchived()) {
+      return this
+    }
+    return findArchivedParent()
+  }
+
   open fun isActive(): Boolean {
     return active
+  }
+
+  open fun isArchived(): Boolean {
+    return archived
   }
 
   open fun isActiveAndAllParentsActive(): Boolean {
@@ -142,7 +170,7 @@ abstract class Location(
   private fun hasDeactivatedParent() = findDeactivatedParent() != null
 
   open fun isPermanentlyInactive(): Boolean {
-    return findDeactivatedLocationInHierarchy()?.deactivatedReason?.isPermanentlyInactiveReason() ?: false
+    return findArchivedLocationInHierarchy()?.archived ?: false
   }
 
   fun addChildLocation(childLocation: Location): Location {
@@ -233,13 +261,13 @@ abstract class Location(
       deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
-      childLocations = if (includeChildren) childLocations.map { it.toDto(includeChildren = true, includeHistory = includeHistory) } else null,
+      childLocations = if (includeChildren) childLocations.filter { !it.isPermanentlyInactive() }.map { it.toDto(includeChildren = true, includeHistory = includeHistory) } else null,
       parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true, includeHistory = includeHistory) else null,
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
     )
   }
 
-  private fun getStatus(): LocationStatus {
+  fun getStatus(): LocationStatus {
     if (isActive()) {
       return if (isNonResCell()) {
         LocationStatus.NON_RESIDENTIAL
@@ -290,10 +318,24 @@ abstract class Location(
     }
     this.orderWithinParentLocation = upsert.orderWithinParentLocation ?: this.orderWithinParentLocation
 
-    if (this.deactivatedReason != upsert.deactivationReason) {
+    this.updatedBy = updatedBy
+    this.whenUpdated = LocalDateTime.now(clock)
+
+    if (upsert is NomisMigrationRequest) {
+      updateActiveStatusSyncOnly(upsert, clock, updatedBy)
+    }
+    return this
+  }
+
+  private fun updateActiveStatusSyncOnly(
+    upsert: NomisMigrationRequest,
+    clock: Clock,
+    updatedBy: String,
+  ) {
+    if (upsert.deactivationReason != this.deactivatedReason) {
       if (upsert.isDeactivated()) {
         deactivate(
-          deactivatedReason = upsert.deactivationReason!!,
+          deactivatedReason = upsert.deactivationReason!!.mapsTo(),
           deactivatedDate = upsert.deactivatedDate ?: LocalDate.now(clock),
           proposedReactivationDate = upsert.proposedReactivationDate,
           userOrSystemInContext = updatedBy,
@@ -303,19 +345,21 @@ abstract class Location(
         reactivate(updatedBy, clock)
       }
     }
-    this.updatedBy = updatedBy
-    this.whenUpdated = LocalDateTime.now(clock)
-
-    return this
   }
 
   fun deactivate(
-    deactivatedReason: DeactivatedReason,
+    deactivatedReason: DeactivatedReason? = null,
+    permanentDeactivation: Boolean = false,
     deactivatedDate: LocalDate,
+    planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
     clock: Clock,
   ) {
+    if (!permanentDeactivation && deactivatedReason == null) {
+      throw ValidationException("Temporary deactivation reason must be specified")
+    }
+
     if (!isActive()) {
       log.warn("Location [$id] is already deactivated")
     } else {
@@ -324,7 +368,7 @@ abstract class Location(
       addHistory(
         LocationAttribute.DEACTIVATED_REASON,
         this.deactivatedReason?.description,
-        deactivatedReason.description,
+        deactivatedReason?.description,
         userOrSystemInContext,
         amendedDate,
       )
@@ -342,21 +386,39 @@ abstract class Location(
         userOrSystemInContext,
         amendedDate,
       )
-
+      addHistory(
+        LocationAttribute.PLANET_FM_NUMBER,
+        this.planetFmReference,
+        planetFmReference,
+        userOrSystemInContext,
+        amendedDate,
+      )
+      addHistory(
+        LocationAttribute.PERMANENT_DEACTIVATION,
+        this.archived.toString(),
+        permanentDeactivation.toString(),
+        userOrSystemInContext,
+        amendedDate,
+      )
+      this.archived = permanentDeactivation
       this.active = false
       this.deactivatedReason = deactivatedReason
       this.deactivatedDate = deactivatedDate
       this.proposedReactivationDate = proposedReactivationDate
+      this.planetFmReference = planetFmReference
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
 
-      log.info("Deactivated Location [$id]")
+      log.info("Deactivated Location [$id] (Permanent = $permanentDeactivation)")
     }
   }
 
   fun reactivate(userOrSystemInContext: String, clock: Clock) {
     if (isActive()) {
       throw LocationCannotBeReactivatedException("Location [$id] is already active")
+    }
+    if (isPermanentlyInactive()) {
+      throw LocationCannotBeReactivatedException("Location [$id] permanently deactivated")
     }
     val amendedDate = LocalDateTime.now(clock)
     addHistory(LocationAttribute.ACTIVE, "false", "true", userOrSystemInContext, amendedDate)
@@ -381,10 +443,17 @@ abstract class Location(
       userOrSystemInContext,
       amendedDate,
     )
-
+    addHistory(
+      LocationAttribute.PLANET_FM_NUMBER,
+      planetFmReference,
+      null,
+      userOrSystemInContext,
+      amendedDate,
+    )
     this.active = true
     this.deactivatedReason = null
     this.deactivatedDate = null
+    this.planetFmReference = null
     this.proposedReactivationDate = null
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = amendedDate

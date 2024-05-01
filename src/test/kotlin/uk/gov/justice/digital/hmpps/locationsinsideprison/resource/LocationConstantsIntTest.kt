@@ -256,39 +256,19 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
           .expectStatus().isOk
           .expectBody().json(
             """
-              {
+            {
                 "deactivatedReasons": [
-                  {
-                    "key": "NEW_BUILDING",
-                    "description": "New Building"
-                  },
-                  {
-                    "key": "CELL_RECLAIMS",
-                    "description": "Cell Reclaims"
-                  },
-                  {
-                    "key": "CHANGE_OF_USE",
-                    "description": "Change of Use"
-                  },
                   {
                     "key": "REFURBISHMENT",
                     "description": "Refurbishment"
                   },
                   {
-                    "key": "CLOSURE",
-                    "description": "Closure"
-                  },
-                  {
-                    "key": "OTHER",
-                    "description": "Other"
-                  },
-                  {
-                    "key": "LOCAL_WORK",
+                    "key": "MAINTENANCE",
                     "description": "Maintenance"
                   },
                   {
                     "key": "STAFF_SHORTAGE",
-                    "description": "Staff Shortage"
+                    "description": "Staff shortage"
                   },
                   {
                     "key": "MOTHBALLED",
@@ -296,15 +276,23 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "DAMAGED",
-                    "description": "Damaged"
+                    "description": "Damage"
                   },
                   {
-                    "key": "OUT_OF_USE",
-                    "description": "Out of Use"
+                    "key": "DAMP",
+                    "description": "Dump / mould"
                   },
                   {
-                    "key": "CELLS_RETURNING_TO_USE",
-                    "description": "Cells Returning to Use"
+                    "key": "PEST",
+                    "description": "Pest control"
+                  },
+                  {
+                    "key": "SECURITY_SEALED",
+                    "description": "Security sealed"
+                  },
+                  {
+                    "key": "OTHER",
+                    "description": "Other"
                   }
                 ]
               }

@@ -1396,7 +1396,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       capacity = CapacityDTO(maxCapacity = 3, workingCapacity = 3),
     )
     val changeCertification = PatchLocationRequest(
-      certification = CertificationDTO(certified = false, capacityOfCertifiedCell = 3),
+      certification = CertificationDTO(certified = false),
     )
 
     val changeAttribute = PatchLocationRequest(
@@ -1900,7 +1900,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 },
                 "certification": {
                   "certified": false,
-                  "capacityOfCertifiedCell": 3
+                  "capacityOfCertifiedCell": 0
                 },
                 "attributes": [
                   "DOUBLE_OCCUPANCY",
@@ -1929,7 +1929,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "workingCapacity": 4
               },
               "certification": {
-                "capacityOfCertifiedCell": 5
+                "capacityOfCertifiedCell": 2
               },
               "childLocations": [
                 {
@@ -1947,7 +1947,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "workingCapacity": 4
                   },
                   "certification": {
-                    "capacityOfCertifiedCell": 5
+                    "capacityOfCertifiedCell": 2
                   },
                   "childLocations": [
                     {
@@ -1960,7 +1960,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       },
                       "certification": {
                         "certified": false,
-                        "capacityOfCertifiedCell": 3
+                        "capacityOfCertifiedCell": 0
                       },
                       "changeHistory": [
                         {
@@ -1971,7 +1971,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                         {
                           "attribute": "Baseline Certified Capacity",
                           "oldValue": "2",
-                          "newValue": "3"
+                          "newValue": "0"
                         }
                       ]
                     },
@@ -2304,7 +2304,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/${cell1.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.CLOSURE)))
+          .bodyValue(jsonString(DeactivationLocationRequest(permanentDeactivation = true)))
           .exchange()
           .expectStatus().isOk
 
@@ -2377,6 +2377,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "deactivatedByParent": false,
               "key": "MDI-Z",
               "deactivatedReason": "DAMAGED",
+              "accommodationTypes":["NORMAL_ACCOMMODATION"],
               "permanentlyInactive": false,
               "proposedReactivationDate": "$proposedReactivationDate",
               "deactivatedDate": "$now",
@@ -2414,6 +2415,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
                   "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "active": false,
                   "deactivatedByParent": true,
                   "proposedReactivationDate": "$proposedReactivationDate",
@@ -2430,28 +2432,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "childLocations": [
                     {
                       "prisonId": "MDI",
-                      "code": "001",
-                      "pathHierarchy": "Z-1-001",
-                      "locationType": "CELL",
-                      "residentialHousingType": "NORMAL_ACCOMMODATION",
-                      "active": false,
-                      "deactivatedByParent": false,
-                      "deactivatedDate": "$now",
-                      "deactivatedReason": "CLOSURE",
-                      "permanentlyInactive": true,
-                      "isResidential": true,
-                      "key": "MDI-Z-1-001",
-                      "attributes": [
-                        "DOUBLE_OCCUPANCY",
-                        "CAT_B"
-                      ]
-                    },
-                    {
-                      "prisonId": "MDI",
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
                       "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "active": false,
                       "deactivatedByParent": true,
                       "proposedReactivationDate": "$proposedReactivationDate",
@@ -2547,7 +2532,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.CLOSURE)))
+          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
           .exchange()
           .expectStatus().isOk
 

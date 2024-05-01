@@ -51,9 +51,11 @@ class LocationService(
   }
 
   fun getLocationByPrison(prisonId: String): List<LocationDTO> =
-    locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId).map {
-      it.toDto()
-    }
+    locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
+      .filter { !it.isPermanentlyInactive() }
+      .map {
+        it.toDto()
+      }
 
   fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
     if (!key.contains("-")) throw LocationNotFoundException(key)
@@ -117,12 +119,12 @@ class LocationService(
 
   @Transactional
   fun updateLocation(id: UUID, patchLocationRequest: PatchLocationRequest): UpdateLocationResult {
-    if (patchLocationRequest.deactivationReason != null && patchLocationRequest.deactivatedDate == null) {
-      throw ValidationException("When deactivating a location, the deactivated date must be provided")
-    }
-
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (locationToUpdate.isPermanentlyInactive()) {
+      throw ValidationException("Cannot update a permanently inactive location")
+    }
 
     val codeChanged = patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode()
     val oldParent = locationToUpdate.getParent()
@@ -142,10 +144,10 @@ class LocationService(
     }
 
     val capacityChanged = locationToUpdate is Cell &&
-      patchLocationRequest.capacity != null && patchLocationRequest.capacity != locationToUpdate.capacity?.toDto()
+      patchLocationRequest.capacity != null && patchLocationRequest.capacity != locationToUpdate.getCapacity()
 
     val certificationChanged = locationToUpdate is Cell &&
-      patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.certification?.toDto()
+      patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.getCertification()
 
     val attributesChanged = locationToUpdate is Cell && patchLocationRequest.attributes != locationToUpdate.attributes.map { it.attributeValue }.toSet()
 
@@ -175,7 +177,13 @@ class LocationService(
   }
 
   @Transactional
-  fun deactivateLocation(id: UUID, deactivatedReason: DeactivatedReason, proposedReactivationDate: LocalDate? = null): LocationDTO {
+  fun deactivateLocation(
+    id: UUID,
+    deactivatedReason: DeactivatedReason? = null,
+    proposedReactivationDate: LocalDate? = null,
+    planetFmReference: String? = null,
+    permanentDeactivation: Boolean = false,
+  ): LocationDTO {
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -183,6 +191,8 @@ class LocationService(
       deactivatedReason = deactivatedReason,
       deactivatedDate = LocalDate.now(clock),
       proposedReactivationDate = proposedReactivationDate,
+      planetFmReference = planetFmReference,
+      permanentDeactivation = permanentDeactivation,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
     )
@@ -267,7 +277,9 @@ class LocationService(
         } else {
           residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
         }
-        ).map { it.toDto(countInactiveCells = true) }
+        )
+        .filter { !it.isPermanentlyInactive() }
+        .map { it.toDto(countInactiveCells = true) }
 
     return locations
   }

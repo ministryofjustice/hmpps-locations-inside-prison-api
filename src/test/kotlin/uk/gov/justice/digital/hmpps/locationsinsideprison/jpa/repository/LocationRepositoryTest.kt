@@ -9,10 +9,13 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.test.context.transaction.TestTransaction
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
@@ -20,6 +23,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -70,16 +75,16 @@ class LocationRepositoryTest : TestBase() {
 
     location.findAllLeafLocations().forEach {
       if (it is Cell) {
-        assertThat(it.capacity?.workingCapacity).isEqualTo(1)
-        assertThat(it.certification?.capacityOfCertifiedCell).isEqualTo(1)
+        assertThat(it.getWorkingCapacity()).isEqualTo(1)
+        assertThat(it.getCapacityOfCertifiedCell()).isEqualTo(1)
       }
     }
 
     assertThat(location.findAllLeafLocations()).containsExactlyInAnyOrder(cell001L1, cell002L1, cell002L2, adjRoom)
     location.findAllLeafLocations().forEach {
       if (it is Cell) {
-        it.capacity?.workingCapacity = 2
-        it.certification?.capacityOfCertifiedCell = 2
+        it.setCapacity(workingCapacity = 2, maxCapacity = 2)
+        it.certifyCell(2)
       }
     }
 
@@ -91,8 +96,8 @@ class LocationRepositoryTest : TestBase() {
     assertThat(cell2.findTopLevelLocation()).isEqualTo(wing)
     assertThat(cell2.getPathHierarchy()).isEqualTo("A-2-001")
     cell2 as Cell
-    assertThat(cell2.capacity?.workingCapacity).isEqualTo(2)
-    assertThat(cell2.certification?.capacityOfCertifiedCell).isEqualTo(2)
+    assertThat(cell2.getWorkingCapacity()).isEqualTo(2)
+    assertThat(cell2.getCapacityOfCertifiedCell()).isEqualTo(2)
 
     val landing1Retrieved = repository.findOneByPrisonIdAndPathHierarchy(landing1.prisonId, landing1.getPathHierarchy()) ?: throw Exception("Location not found")
     cell2.setCode("003")
@@ -118,6 +123,35 @@ class LocationRepositoryTest : TestBase() {
 
     val cell3Renamed = repository.findOneByPrisonIdAndPathHierarchy(cell3.prisonId, cell3.getPathHierarchy()) ?: throw Exception("Location not found")
     assertThat(cell3Renamed.getPathHierarchy()).isEqualTo("T-1-003")
+
+    (cell3Renamed as Cell).convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM)
+
+    TestTransaction.flagForCommit()
+    TestTransaction.end()
+    TestTransaction.start()
+
+    val cell3Converted = repository.findOneByPrisonIdAndPathHierarchy(cell3.prisonId, cell3.getPathHierarchy()) ?: throw Exception("Location not found")
+    assertThat(cell3Converted.getStatus()).isEqualTo(LocationStatus.NON_RESIDENTIAL)
+    assertThat((cell3Converted as Cell).getMaxCapacity()).isNull()
+    assertThat(cell3Converted.isCertified()).isFalse()
+
+    cell3Converted.convertToCell(
+      accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+      usedForTypes = listOf(UsedForType.FIRST_NIGHT_CENTRE, UsedForType.MOTHER_AND_BABY),
+      specialistCellType = SpecialistCellType.LOW_MOBILITY,
+      maxCapacity = 1,
+      workingCapacity = 1,
+    )
+
+    TestTransaction.flagForCommit()
+    TestTransaction.end()
+    TestTransaction.start()
+
+    val cell3ConvertedBack = repository.findOneByPrisonIdAndPathHierarchy(cell3.prisonId, cell3.getPathHierarchy()) ?: throw Exception("Location not found")
+    assertThat(cell3ConvertedBack.getStatus()).isEqualTo(LocationStatus.ACTIVE)
+    assertThat((cell3ConvertedBack as Cell).accommodationType).isEqualTo(AccommodationType.NORMAL_ACCOMMODATION)
+    assertThat((cell3ConvertedBack).getMaxCapacity()).isEqualTo(1)
+    assertThat(cell3ConvertedBack.isCertified()).isTrue()
   }
 
   private fun buildResLocation(

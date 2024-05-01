@@ -29,15 +29,15 @@ interface NomisMigrationRequest : UpdateLocationRequest {
   override val comments: String?
   override val orderWithinParentLocation: Int?
   override val residentialHousingType: ResidentialHousingType?
-  override val deactivationReason: DeactivatedReason?
-  override val proposedReactivationDate: LocalDate?
-  override val deactivatedDate: LocalDate?
   override val capacity: Capacity?
   override val certification: Certification?
   override val attributes: Set<ResidentialAttributeValue>?
   override val usage: Set<NonResidentialUsageDto>?
   val parentId: UUID?
   val parentLocationPath: String?
+  val deactivationReason: NomisDeactivatedReason?
+  val proposedReactivationDate: LocalDate?
+  val deactivatedDate: LocalDate?
   val createDate: LocalDateTime?
   val lastModifiedDate: LocalDateTime?
   val lastUpdatedBy: String
@@ -123,13 +123,15 @@ interface NomisMigrationRequest : UpdateLocationRequest {
     }
 
     if (isDeactivated()) {
-      location.deactivatedReason = deactivationReason
+      location.deactivatedReason = deactivationReason!!.mapsTo()
       location.deactivatedDate = deactivatedDate
       location.proposedReactivationDate = proposedReactivationDate
     }
 
     return location
   }
+
+  fun isDeactivated() = deactivationReason != null
 
   fun mapAccommodationType(residentialHousingType: ResidentialHousingType): AccommodationType {
     return when (residentialHousingType) {
@@ -143,5 +145,30 @@ interface NomisMigrationRequest : UpdateLocationRequest {
       ResidentialHousingType.RECEPTION,
       -> AccommodationType.OTHER_NON_RESIDENTIAL
     }
+  }
+}
+
+enum class NomisDeactivatedReason {
+  REFURBISHMENT,
+  LOCAL_WORK,
+  STAFF_SHORTAGE,
+  MOTHBALLED,
+  DAMAGED,
+  NEW_BUILDING,
+  CELL_RECLAIMS,
+  CHANGE_OF_USE,
+  CLOSURE,
+  OUT_OF_USE,
+  CELLS_RETURNING_TO_USE,
+  OTHER,
+  ;
+
+  fun mapsTo(): DeactivatedReason = when (this) {
+    NEW_BUILDING, CELL_RECLAIMS, CHANGE_OF_USE, CLOSURE, OUT_OF_USE, CELLS_RETURNING_TO_USE, OTHER -> DeactivatedReason.OTHER
+    REFURBISHMENT -> DeactivatedReason.REFURBISHMENT
+    LOCAL_WORK -> DeactivatedReason.MAINTENANCE
+    STAFF_SHORTAGE -> DeactivatedReason.STAFF_SHORTAGE
+    MOTHBALLED -> DeactivatedReason.MOTHBALLED
+    DAMAGED -> DeactivatedReason.DAMAGED
   }
 }
