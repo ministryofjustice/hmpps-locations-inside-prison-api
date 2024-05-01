@@ -504,6 +504,8 @@ class LocationResource(
           id,
           deactivatedReason = deactivationLocationRequest.deactivationReason,
           proposedReactivationDate = deactivationLocationRequest.proposedReactivationDate,
+          planetFmReference = deactivationLocationRequest.planetFmReference,
+          permanentDeactivation = deactivationLocationRequest.permanentDeactivation,
         )
       },
       InformationSource.DPS,

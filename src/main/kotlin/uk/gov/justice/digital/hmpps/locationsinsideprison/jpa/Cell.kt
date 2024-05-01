@@ -10,6 +10,8 @@ import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CertificationException
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -38,10 +40,10 @@ class Cell(
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
 
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
-  var capacity: Capacity? = null,
+  private var capacity: Capacity? = null,
 
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
-  var certification: Certification? = null,
+  private var certification: Certification? = null,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   val attributes: MutableSet<ResidentialAttribute> = mutableSetOf(),
@@ -80,8 +82,21 @@ class Cell(
   residentialHousingType = residentialHousingType,
 ) {
 
+  fun getWorkingCapacity() = capacity?.workingCapacity
+
+  fun getMaxCapacity() = capacity?.maxCapacity
+
+  fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
+
+  fun isCertified() = certification?.certified ?: false
+
+  fun getCapacity() = capacity?.toDto()
+
+  fun getCertification() = certification?.toDto()
+
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null) {
     this.convertedCellType = convertedCellType
+    this.accommodationType = AccommodationType.OTHER_NON_RESIDENTIAL
     if (convertedCellType == ConvertedCellType.OTHER) {
       this.otherConvertedCellType = otherConvertedCellType
     }
@@ -94,11 +109,33 @@ class Cell(
     usedForTypes?.forEach { addUsedFor(it) }
     specialistCellType?.let { addSpecialistCellType(it) }
     if (accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
-      capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
-      certification = Certification(certified = true, capacityOfCertifiedCell = workingCapacity)
+      setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+      certifyCell(capacityOfCertifiedCell = workingCapacity)
     }
     convertedCellType = null
     otherConvertedCellType = null
+  }
+
+  fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0) {
+    if (workingCapacity > maxCapacity) {
+      throw CapacityException(workingCapacity = workingCapacity, maxCapacity = maxCapacity)
+    }
+    capacity = if (maxCapacity != 0 && workingCapacity != 0) {
+      Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+    } else {
+      null
+    }
+  }
+
+  fun certifyCell(capacityOfCertifiedCell: Int) {
+    if (capacityOfCertifiedCell < 1) {
+      throw CertificationException(capacityOfCertifiedCell = capacityOfCertifiedCell)
+    }
+    certification = Certification(certified = true, capacityOfCertifiedCell = capacityOfCertifiedCell)
+  }
+
+  fun deCertifyCell() {
+    certification = Certification(certified = false, capacityOfCertifiedCell = 0)
   }
 
   fun addAttribute(attribute: ResidentialAttributeValue): ResidentialAttribute {
@@ -142,7 +179,7 @@ class Cell(
         LocalDateTime.now(clock),
       )
     }
-    this.capacity = upsert.capacity?.toNewEntity() ?: this.capacity
+    upsert.capacity?.let { setCapacity(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) }
 
     if (upsert.certification != null && upsert.certification != certification?.toDto()) {
       addHistory(
@@ -160,7 +197,13 @@ class Cell(
         LocalDateTime.now(clock),
       )
     }
-    this.certification = upsert.certification?.toNewEntity() ?: this.certification
+    upsert.certification?.let {
+      if (it.certified) {
+        certifyCell(it.capacityOfCertifiedCell)
+      } else {
+        deCertifyCell()
+      }
+    }
 
     if (upsert.attributes != null) {
       recordHistoryOfAttributesChanges(upsert, updatedBy, clock)
@@ -238,6 +281,8 @@ class Cell(
     return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory, countInactiveCells = countInactiveCells).copy(
       capacity = capacity?.toDto(),
       certification = certification?.toDto(),
+      convertedCellType = convertedCellType,
+      otherConvertedCellType = otherConvertedCellType,
     )
   }
 }

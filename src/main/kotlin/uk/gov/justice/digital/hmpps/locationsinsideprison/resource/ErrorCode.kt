@@ -12,4 +12,5 @@ enum class ErrorCode(val errorCode: Int) {
   LocationAlreadyExists(103),
   LocationCannotBeReactivated(104),
   LocationAlreadyDeactivated(105),
+  MaxCapacityLessThanWorkingCapacity(106),
 }

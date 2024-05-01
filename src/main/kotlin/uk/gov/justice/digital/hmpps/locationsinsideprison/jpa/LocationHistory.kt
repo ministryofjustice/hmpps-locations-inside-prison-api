@@ -100,4 +100,6 @@ enum class LocationAttribute(
   ACCOMMODATION_TYPE("Accommodation Type"),
   SPECIALIST_CELL_TYPE("Specialist Cell Type"),
   USED_FOR("Used For"),
+  PLANET_FM_NUMBER("Planet Fm Number"),
+  PERMANENT_DEACTIVATION("Permanent Deactivation"),
 }

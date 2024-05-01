@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisDeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
@@ -17,7 +18,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegra
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -327,7 +327,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "This is a new cell (inactive)",
       deactivatedDate = LocalDateTime.now(clock).minusYears(1).toLocalDate(),
-      deactivationReason = DeactivatedReason.DAMAGED,
+      deactivationReason = NomisDeactivatedReason.DAMAGED,
       proposedReactivationDate = LocalDateTime.now(clock).plusYears(1).toLocalDate(),
       orderWithinParentLocation = 6,
       lastUpdatedBy = "user",
@@ -383,7 +383,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       orderWithinParentLocation = 1,
       lastUpdatedBy = "user",
       parentLocationPath = "B-1",
-      deactivationReason = DeactivatedReason.DAMAGED,
+      deactivationReason = NomisDeactivatedReason.DAMAGED,
       proposedReactivationDate = LocalDateTime.now(clock).plusMonths(1).toLocalDate(),
       lastModifiedDate = LocalDateTime.now(clock).minusYears(2),
       capacity = CapacityDTO(1, 1),
@@ -518,6 +518,86 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "maxCapacity": 1,
                 "workingCapacity": 1
               },
+              "attributes": ["CAT_B"],
+              "deactivatedReason": "${migrateRequest.deactivationReason}",
+              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
+              "changeHistory": [
+                {
+                  "attribute": "Local Name",
+                  "newValue": "A New Cell",
+                  "amendedBy": "user2",
+                  "amendedDate": "${LocalDateTime.now(clock).minusYears(2)}"
+                },
+                {
+                  "attribute": "Comments",
+                  "oldValue": "Old comment",
+                  "newValue": "This is a new cell",
+                  "amendedBy": "user1",
+                  "amendedDate": "${LocalDateTime.now(clock).minusYears(1)}"
+                }
+              ]
+            }
+            """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can migrate a location can convert`() {
+        webTestClient.post().uri("/migrate/location")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateRequest.copy(residentialHousingType = ResidentialHousingType.HOLDING_CELL)))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "002",
+              "pathHierarchy": "B-1-002",
+              "locationType": "CELL",
+              "residentialHousingType": "HOLDING_CELL",
+              "accommodationTypes": [
+                "OTHER_NON_RESIDENTIAL"
+              ],
+              "convertedCellType": "HOLDING_ROOM",
+              "active": false,
+              "key": "ZZGHI-B-1-002",
+              "comments": "This is a new cell",
+              "localName": "A New Cell",
+              "orderWithinParentLocation": 1,
+              "attributes": ["CAT_B"],
+              "deactivatedReason": "${migrateRequest.deactivationReason}",
+              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}"
+            }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/key/ZZGHI-B-1-002?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "ZZGHI",
+              "code": "002",
+              "pathHierarchy": "B-1-002",
+              "locationType": "CELL",
+              "residentialHousingType": "HOLDING_CELL",
+              "accommodationTypes": [
+                "OTHER_NON_RESIDENTIAL"
+              ],
+              "convertedCellType": "HOLDING_ROOM",
+              "active": false,
+              "key": "ZZGHI-B-1-002",
+              "comments": "This is a new cell",
+              "localName": "A New Cell",
+              "orderWithinParentLocation": 1,
               "attributes": ["CAT_B"],
               "deactivatedReason": "${migrateRequest.deactivationReason}",
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",

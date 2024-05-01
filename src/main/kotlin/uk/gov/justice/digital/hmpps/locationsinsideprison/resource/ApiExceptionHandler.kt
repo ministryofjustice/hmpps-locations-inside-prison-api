@@ -230,6 +230,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(CapacityException::class)
+  fun handleCapacityException(e: CapacityException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Capacity Validation Error: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.MaxCapacityLessThanWorkingCapacity,
+          userMessage = "Capacity Incorrect: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   companion object {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
@@ -239,3 +254,5 @@ class LocationNotFoundException(id: String) : Exception("There is no location fo
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
 class LocationAlreadyDeactivatedException(key: String) : Exception("$key is already deactivated")
+class CapacityException(workingCapacity: Int, maxCapacity: Int) : ValidationException("Working capacity $workingCapacity exceeded maximum allowed capacity $maxCapacity")
+class CertificationException(capacityOfCertifiedCell: Int) : ValidationException("Certified Cells cannot have a certified capacity of $capacityOfCertifiedCell")

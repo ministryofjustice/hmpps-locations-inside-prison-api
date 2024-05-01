@@ -421,13 +421,15 @@ data class CreateNonResidentialLocationRequest(
 }
 
 /**
- * Request format to create a location
+ * Request format deactivating a location
  */
 @Schema(description = "Request to deactivate a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class DeactivationLocationRequest(
-  @Schema(description = "Reason for deactivation", example = "DAMAGED", required = true)
-  val deactivationReason: DeactivatedReason,
-  @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
+  val permanentDeactivation: Boolean = false,
+  @Schema(description = "Reason for deactivation, if temp", example = "MOTHBALLED", required = false)
+  val deactivationReason: DeactivatedReason? = null,
+  @Schema(description = "Proposed re-activation date, if temp", example = "2025-01-05", required = false)
   val proposedReactivationDate: LocalDate? = null,
+  val planetFmReference: String? = null,
 )

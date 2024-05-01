@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
@@ -53,7 +52,7 @@ data class NomisSyncLocationRequest(
   override val residentialHousingType: ResidentialHousingType? = null,
 
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
-  override val deactivationReason: DeactivatedReason? = null,
+  override val deactivationReason: NomisDeactivatedReason? = null,
 
   @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
   override val proposedReactivationDate: LocalDate? = null,
