@@ -169,7 +169,7 @@ abstract class Location(
 
   private fun hasDeactivatedParent() = findDeactivatedParent() != null
 
-  open fun isPermanentlyInactive(): Boolean {
+  open fun isPermanentlyDeactivated(): Boolean {
     return findArchivedLocationInHierarchy()?.archived ?: false
   }
 
@@ -256,12 +256,12 @@ abstract class Location(
       comments = comments,
       orderWithinParentLocation = orderWithinParentLocation,
       active = isActiveAndAllParentsActive(),
-      permanentlyInactive = isPermanentlyInactive(),
+      permanentlyInactive = isPermanentlyDeactivated(),
       deactivatedByParent = isActive() && !isActiveAndAllParentsActive(),
       deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
-      childLocations = if (includeChildren) childLocations.filter { !it.isPermanentlyInactive() }.map { it.toDto(includeChildren = true, includeHistory = includeHistory) } else null,
+      childLocations = if (includeChildren) childLocations.filter { !it.isPermanentlyDeactivated() }.map { it.toDto(includeChildren = true, includeHistory = includeHistory) } else null,
       parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true, includeHistory = includeHistory) else null,
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
     )
@@ -417,7 +417,7 @@ abstract class Location(
     if (isActive()) {
       throw LocationCannotBeReactivatedException("Location [$id] is already active")
     }
-    if (isPermanentlyInactive()) {
+    if (isPermanentlyDeactivated()) {
       throw LocationCannotBeReactivatedException("Location [$id] permanently deactivated")
     }
     val amendedDate = LocalDateTime.now(clock)

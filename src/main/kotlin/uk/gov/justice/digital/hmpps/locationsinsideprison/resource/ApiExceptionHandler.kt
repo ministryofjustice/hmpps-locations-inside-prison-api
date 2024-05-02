@@ -5,6 +5,7 @@ import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
+import org.springframework.http.HttpStatus.CONFLICT
 import org.springframework.http.HttpStatus.INTERNAL_SERVER_ERROR
 import org.springframework.http.ResponseEntity
 import org.springframework.http.converter.HttpMessageNotReadableException
@@ -245,6 +246,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(PermanentlyDeactivatedUpdateNotAllowedException::class)
+  fun handlePermanentlyDeactivatedUpdateNotAllowedException(e: PermanentlyDeactivatedUpdateNotAllowedException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Deactivated Location Exception: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.PermanentlyDeactivatedLocationCannotByUpdated,
+          userMessage = "Deactivated Location Exception: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   companion object {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
@@ -256,3 +272,4 @@ class LocationCannotBeReactivatedException(key: String) : Exception("Location ca
 class LocationAlreadyDeactivatedException(key: String) : Exception("$key is already deactivated")
 class CapacityException(workingCapacity: Int, maxCapacity: Int) : ValidationException("Working capacity $workingCapacity exceeded maximum allowed capacity $maxCapacity")
 class CertificationException(capacityOfCertifiedCell: Int) : ValidationException("Certified Cells cannot have a certified capacity of $capacityOfCertifiedCell")
+class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as permanently deactivated")

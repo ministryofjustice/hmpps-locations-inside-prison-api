@@ -99,7 +99,7 @@ open class ResidentialLocation(
       .flatMap { it.specialistCellTypes }
       .toSet()
   }
-  private fun isCurrentCellOrNotPermanentlyInactive(cell: Cell) = !cell.isPermanentlyInactive() || cell == this
+  private fun isCurrentCellOrNotPermanentlyInactive(cell: Cell) = !cell.isPermanentlyDeactivated() || cell == this
 
   private fun getInactiveCellCount() = cellLocations().count { !it.isActive() }
 

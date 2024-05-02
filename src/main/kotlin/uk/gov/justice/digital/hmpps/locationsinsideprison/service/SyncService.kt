@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import java.time.Clock
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
@@ -69,6 +70,9 @@ class SyncService(
     val locationToUpdate = locationRepository.findById(upsert.id!!)
       .orElseThrow { LocationNotFoundException(upsert.toString()) }
 
+    if (locationToUpdate.isPermanentlyDeactivated()) {
+      throw PermanentlyDeactivatedUpdateNotAllowedException("Location ${locationToUpdate.getKey()} cannot be updated as permanently deactivated")
+    }
     findParent(upsert)?.let { parent ->
       if (parent.id == locationToUpdate.id) throw ValidationException("Cannot set parent to self")
       locationToUpdate.setParent(parent)
