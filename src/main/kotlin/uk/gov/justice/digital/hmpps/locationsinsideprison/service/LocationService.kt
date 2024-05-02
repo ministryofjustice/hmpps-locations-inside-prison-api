@@ -52,7 +52,7 @@ class LocationService(
 
   fun getLocationByPrison(prisonId: String): List<LocationDTO> =
     locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
-      .filter { !it.isPermanentlyInactive() }
+      .filter { !it.isPermanentlyDeactivated() }
       .map {
         it.toDto()
       }
@@ -122,7 +122,7 @@ class LocationService(
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    if (locationToUpdate.isPermanentlyInactive()) {
+    if (locationToUpdate.isPermanentlyDeactivated()) {
       throw ValidationException("Cannot update a permanently inactive location")
     }
 
@@ -278,7 +278,7 @@ class LocationService(
           residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
         }
         )
-        .filter { !it.isPermanentlyInactive() }
+        .filter { !it.isPermanentlyDeactivated() }
         .map { it.toDto(countInactiveCells = true) }
 
     return locations
