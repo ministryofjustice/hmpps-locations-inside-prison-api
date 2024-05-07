@@ -628,14 +628,20 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "amendedBy": "user"
                 },
                 {
-                  "attribute": "Converted Cell Type",
-                  "newValue": "Holding room",
+                  "attribute": "Baseline Certified Capacity",
+                  "oldValue": "1",
+                  "newValue": "0",
                   "amendedBy": "user"
                 },
                 {
                   "attribute": "Certified",
                   "oldValue": "true",
                   "newValue": "false",
+                  "amendedBy": "user"
+                },
+                {
+                  "attribute": "Converted Cell Type",
+                  "newValue": "Holding room",
                   "amendedBy": "user"
                 }
               ]
