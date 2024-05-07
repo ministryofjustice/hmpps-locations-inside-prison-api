@@ -880,4 +880,389 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
       }
     }
   }
+  @DisplayName("GET /constants/accommodation-type")
+  @Nested
+  inner class ViewAccommodationTypeConstantsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/constants/accommodation-type")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/constants/accommodation-type")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/constants/accommodation-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve accommodation-type constants`() {
+        webTestClient.get().uri("/constants/accommodation-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+            {
+                "accommodationTypes": [
+                  {
+                    "key": "NORMAL_ACCOMMODATION",
+                    "description": "Normal Accommodation"
+                  },
+                  {
+                    "key": "HEALTHCARE_INPATIENTS",
+                    "description": "Health Care In-patients"
+                  },
+                  {
+                    "key": "CARE_AND_SEPARATION",
+                    "description": "Care and Separation"
+                  },
+                  {
+                    "key": "OTHER_NON_RESIDENTIAL",
+                    "description": "Other Non Residential"
+                  }
+                ]
+              }
+            """.trimIndent(),
+            false,
+          )
+      }
+    }
+  }
+
+  @DisplayName("GET /constants/specialist-cell-type")
+  @Nested
+  inner class ViewSpecialistCellTypeConstantsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/constants/specialist-cell-type")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/constants/specialist-cell-type")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/constants/specialist-cell-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve specialist-cell-type constants`() {
+        webTestClient.get().uri("/constants/specialist-cell-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+            {
+                "accommodationTypes": [
+                  {
+                    "key": "BIOHAZARD_DIRTY_PROTEST",
+                    "description": "Biohazard / dirty protest cell"
+                  },
+                  {
+                    "key": "CAT_A",
+                    "description": "Cat A cell"
+                  },
+                  {
+                    "key": "CONSTANT_SUPERVISION",
+                    "description": "Constant supervision cell"
+                  },
+                  {
+                    "key": "CSU",
+                    "description": "CSU cell"
+                  },
+                  {
+                    "key": "DRY",
+                    "description": "Dry cell"
+                  },
+                  {
+                    "key": "ESCAPE_LIST",
+                    "description": "Escape list cell"
+                  },
+                  {
+                    "key": "FIRE_RESISTANT",
+                    "description": "Fire resistant cell"
+                  },
+                  {
+                    "key": "FIXES_FURNITURE",
+                    "description": "Fixed furniture cell"
+                  }, 
+                  {
+                    "key": "ISOLATION_DISEASES",
+                    "description": "Isolation cell for communicable diseases"
+                  }, 
+                  {
+                    "key": "LIGATURE_RESISTANT",
+                    "description": "Ligature resistant cell"
+                  }, 
+                  {
+                    "key": "LISTENER_CRISIS",
+                    "description": "Listener / crisis cell"
+                  },
+                  {
+                    "key": "LOW_MOBILITY",
+                    "description": "Low mobility cell"
+                  },
+                  {
+                    "key": "MEDICAL",
+                    "description": "Medical cell"
+                  },
+                  {
+                    "key": "MOTHER_AND_BABY",
+                    "description": "Mother and baby cell"
+                  },
+                  {
+                    "key": "SOUND_RESISTANT",
+                    "description": "Sound resistant cell"
+                  },
+                  {
+                    "key": "UNFURNISHED",
+                    "description": "Unfurnished cell"
+                  },
+                  {
+                    "key": "WHEELCHAIR_ACCESSIBLE",
+                    "description": "Wheelchair accessible cells"
+                  },
+                ]
+              }
+            """.trimIndent(),
+            false,
+          )
+      }
+    }
+  }
+
+  @DisplayName("GET /constants/used-for-type")
+  @Nested
+  inner class ViewUsedForTypeConstantsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/constants/used-for-type")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/constants/used-for-type")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/constants/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve used-for-type constants`() {
+        webTestClient.get().uri("/constants/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+            {
+                "usedForTypes": [
+                  {
+                    "key": "STANDARD_ACCOMMODATION",
+                    "description": "Standard accommodation"
+                  },
+                  {
+                    "key": "PERSONALITY_DISORDER,
+                    "description": "Personality Disorder"
+                  },
+                  {
+                    "key": "THERAPEUTIC_COMMUNITY,
+                    "description": "Therapeutic Community"
+                  },
+                  {
+                    "key": "PIPE,
+                    "description": "PIPE"
+                  },
+                  {
+                    "key": "SUB_MISUSE_DRUG_RECOVERY,
+                    "description": "Substance Misuse / Drug Revovery / ISFL"
+                  },
+                  {
+                    "key": "VULNERABLE_PRISONERS,
+                    "description": "Vulnerable Prisoners"
+                  },
+                  {
+                    "key": "FIRST_NIGHT_CENTRE,
+                    "description": "First night centre / Induction"
+                  },  
+                  {
+                    "key": "REMAND,
+                    "description": "Remand"
+                  }, 
+                  {
+                    "key": "MOTHER_AND_BABY,
+                    "description": "Mother and Baby"
+                  },   
+                  {
+                    "key": "YOUNG_PERSONS,
+                    "description": "Young persons"
+                  },    
+                  {
+                    "key": "HIGH_SECURITY,
+                    "description": "High security"
+                  }, 
+                  {
+                    "key": "CLOSE_SUPERVISION_CENTRE,
+                    "description": "Close Supervision Centre (CSC)"
+                  }, 
+                  {
+                    "key": "PATHWAY_TO_PROG,
+                    "description": "Pathway To Progression"
+                  },
+                  {
+                    "key": "IPP_LONG_TERM_SENTENCES,
+                    "description": "IPP / Long Term Sentences"
+                  }
+                ]
+              }
+            """.trimIndent(),
+            false,
+          )
+      }
+    }
+  }
+  @DisplayName("GET /constants/converted-cell-type")
+  @Nested
+  inner class ViewConvertedCellTypeConstantsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/constants/converted-cell-type")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/constants/converted-cell-type")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/constants/converted-cell-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve converted-cell-type constants`() {
+        webTestClient.get().uri("/constants/converted-cell-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+            {
+                "convertedCellTypes": [
+                  {
+                    "key": "OFFICE",
+                    "description": "Office"
+                  },
+                  {
+                    "key": "SHOWER",
+                    "description": "Shower"
+                  },
+                  {
+                    "key": "STORE",
+                    "description": "Store room"
+                  },
+                  {
+                    "key": "UTILITY_ROOM",
+                    "description": "Utility room"
+                  },
+                  {
+                    "key": "HOLDING_ROOM",
+                    "description": "Holding room"
+                  },
+                  {
+                    "key": "INTERVIEW_ROOM",
+                    "description": "Interview Room"
+                  },
+                  {
+                    "key": "KITCHEN_SERVERY",
+                    "description": "Kitchen / Servery"
+                  },
+                  {
+                    "key": "TREATMENT_ROOM",
+                    "description": "Treatment room"
+                  },
+                  {
+                    "key": "STAFF_ROOM",
+                    "description": "Staff room"
+                  },
+                  {
+                    "key": "OTHER",
+                    "description": "Other"
+                  }
+                ]
+              }
+            """.trimIndent(),
+            false,
+          )
+      }
+    }
+  }
 }
