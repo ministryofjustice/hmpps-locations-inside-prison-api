@@ -880,6 +880,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
       }
     }
   }
+  
   @DisplayName("GET /constants/accommodation-type")
   @Nested
   inner class ViewAccommodationTypeConstantsTest {
@@ -1098,6 +1099,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
           .expectStatus().isForbidden
       }
     }
+
     @Nested
     inner class HappyPath {
       @Test
@@ -1174,6 +1176,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
       }
     }
   }
+
   @DisplayName("GET /constants/converted-cell-type")
   @Nested
   inner class ViewConvertedCellTypeConstantsTest {
