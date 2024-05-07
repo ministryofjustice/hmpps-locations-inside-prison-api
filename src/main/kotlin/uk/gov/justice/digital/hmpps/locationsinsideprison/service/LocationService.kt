@@ -234,6 +234,7 @@ class LocationService(
     return locationToUpdate.toDto(includeParent = true)
   }
 
+  @Transactional
   fun convertToNonResidentialCell(id: UUID, convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null): LocationDTO {
     val locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -261,6 +262,7 @@ class LocationService(
     return locationToConvert.toDto(includeParent = true)
   }
 
+  @Transactional
   fun convertToCell(id: UUID, accommodationType: AccommodationType, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, usedForTypes: List<UsedForType>? = null): LocationDTO {
     val locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
