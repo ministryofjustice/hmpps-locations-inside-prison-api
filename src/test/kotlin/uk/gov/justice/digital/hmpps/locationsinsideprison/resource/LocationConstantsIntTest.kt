@@ -991,7 +991,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             """
             {
-                "accommodationTypes": [
+                "specialistCellTypes": [
                   {
                     "key": "BIOHAZARD_DIRTY_PROTEST",
                     "description": "Biohazard / dirty protest cell"
@@ -1117,27 +1117,27 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Standard accommodation"
                   },
                   {
-                    "key": "PERSONALITY_DISORDER,
+                    "key": "PERSONALITY_DISORDER",
                     "description": "Personality Disorder"
                   },
                   {
-                    "key": "THERAPEUTIC_COMMUNITY,
+                    "key": "THERAPEUTIC_COMMUNITY",
                     "description": "Therapeutic Community"
                   },
                   {
-                    "key": "PIPE,
+                    "key": "PIPE",
                     "description": "PIPE"
                   },
                   {
-                    "key": "SUB_MISUSE_DRUG_RECOVERY,
+                    "key": "SUB_MISUSE_DRUG_RECOVERY",
                     "description": "Substance Misuse / Drug Revovery / ISFL"
                   },
                   {
-                    "key": "VULNERABLE_PRISONERS,
+                    "key": "VULNERABLE_PRISONERS",
                     "description": "Vulnerable Prisoners"
                   },
                   {
-                    "key": "FIRST_NIGHT_CENTRE,
+                    "key": "FIRST_NIGHT_CENTRE",
                     "description": "First night centre / Induction"
                   },  
                   {
@@ -1145,27 +1145,27 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Remand"
                   }, 
                   {
-                    "key": "MOTHER_AND_BABY,
+                    "key": "MOTHER_AND_BABY",
                     "description": "Mother and Baby"
                   },   
                   {
-                    "key": "YOUNG_PERSONS,
+                    "key": "YOUNG_PERSONS",
                     "description": "Young persons"
                   },    
                   {
-                    "key": "HIGH_SECURITY,
+                    "key": "HIGH_SECURITY",
                     "description": "High security"
                   }, 
                   {
-                    "key": "CLOSE_SUPERVISION_CENTRE,
+                    "key": "CLOSE_SUPERVISION_CENTRE",
                     "description": "Close Supervision Centre (CSC)"
                   }, 
                   {
-                    "key": "PATHWAY_TO_PROG,
+                    "key": "PATHWAY_TO_PROG",
                     "description": "Pathway To Progression"
                   },
                   {
-                    "key": "IPP_LONG_TERM_SENTENCES,
+                    "key": "IPP_LONG_TERM_SENTENCES",
                     "description": "IPP / Long Term Sentences"
                   }
                 ]
