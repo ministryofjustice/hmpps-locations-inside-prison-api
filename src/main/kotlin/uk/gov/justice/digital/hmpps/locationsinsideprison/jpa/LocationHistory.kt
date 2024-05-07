@@ -102,4 +102,6 @@ enum class LocationAttribute(
   USED_FOR("Used For"),
   PLANET_FM_NUMBER("Planet Fm Number"),
   PERMANENT_DEACTIVATION("Permanent Deactivation"),
+  CONVERTED_CELL_TYPE("Converted Cell Type"),
+  OTHER_CONVERTED_CELL_TYPE("Other converted Cell Type"),
 }

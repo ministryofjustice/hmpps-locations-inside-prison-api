@@ -294,7 +294,7 @@ abstract class Location(
     return getKey().hashCode()
   }
 
-  open fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): Location {
+  open fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): Location {
     if (upsert.code != null && this.getCode() != upsert.code) addHistory(LocationAttribute.CODE, getCode(), upsert.code, updatedBy, LocalDateTime.now(clock))
     setCode(upsert.code ?: this.getCode())
 

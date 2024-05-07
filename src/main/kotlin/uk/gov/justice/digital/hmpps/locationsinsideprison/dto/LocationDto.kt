@@ -342,7 +342,7 @@ data class CreateResidentialLocationRequest(
         },
       )
       attributes?.forEach { attribute ->
-        location.addAttribute(attribute)
+        location.addAttribute(attribute, createdBy, clock)
       }
       return location
     } else {
