@@ -881,7 +881,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     }
   }
 
-  
   @DisplayName("GET /constants/accommodation-type")
   @Nested
   inner class ViewAccommodationTypeConstantsTest {
