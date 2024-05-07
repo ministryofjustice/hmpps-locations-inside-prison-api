@@ -1059,7 +1059,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   {
                     "key": "WHEELCHAIR_ACCESSIBLE",
                     "description": "Wheelchair accessible cells"
-                  },
+                  }
                 ]
               }
             """.trimIndent(),
@@ -1141,7 +1141,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "First night centre / Induction"
                   },  
                   {
-                    "key": "REMAND,
+                    "key": "REMAND",
                     "description": "Remand"
                   }, 
                   {
