@@ -14,4 +14,5 @@ enum class ErrorCode(val errorCode: Int) {
   LocationAlreadyDeactivated(105),
   MaxCapacityLessThanWorkingCapacity(106),
   PermanentlyDeactivatedLocationCannotByUpdated(107),
+  ConvertedCellLocationCannotByUpdated(108),
 }

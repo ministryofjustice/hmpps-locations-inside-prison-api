@@ -49,7 +49,7 @@ fun buildCell(
     active = active,
     pathHierarchy = pathHierarchy,
     createdBy = EXPECTED_USERNAME,
-    whenCreated = LocalDateTime.now(TestBase.clock),
+    whenCreated = LocalDateTime.now(clock),
     childLocations = mutableListOf(),
     orderWithinParentLocation = 99,
     capacity = capacity,
@@ -67,8 +67,8 @@ fun buildCell(
     },
   )
   cell.addAttributes(residentialAttributeValues)
-  cell.addSpecialistCellType(SpecialistCellType.WHEELCHAIR_ACCESSIBLE)
-  cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION)
+  cell.addSpecialistCellType(SpecialistCellType.WHEELCHAIR_ACCESSIBLE, EXPECTED_USERNAME, clock)
+  cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, EXPECTED_USERNAME, clock)
 
   return cell
 }

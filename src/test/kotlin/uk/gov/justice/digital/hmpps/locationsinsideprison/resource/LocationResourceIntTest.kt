@@ -1834,10 +1834,17 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           "newValue": "3"
                         },
                         {
-
                           "attribute": "Working Capacity",
                           "oldValue": "2",
                           "newValue": "3"
+                        },
+                        {
+                          "attribute": "Specialist Cell Type",
+                          "newValue": "Wheelchair accessible cells"
+                        },
+                        {
+                          "attribute": "Used For",
+                          "newValue": "Standard accommodation"
                         }
                       ]
                     },
@@ -1972,6 +1979,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           "attribute": "Baseline Certified Capacity",
                           "oldValue": "2",
                           "newValue": "0"
+                        },
+                        {
+                          "attribute": "Specialist Cell Type",
+                          "newValue": "Wheelchair accessible cells"
+                        },
+                        {
+                          "attribute": "Used For",
+                          "newValue": "Standard accommodation"
                         }
                       ]
                     },
@@ -2068,7 +2083,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Attributes",
                   "oldValue": "CAT_B"
-                }
+                },
+                {
+                  "attribute": "Specialist Cell Type",
+                  "newValue": "Wheelchair accessible cells"
+                },
+                {
+                  "attribute": "Used For",
+                  "newValue": "Standard accommodation"
+                }                
               ]
             }
             """,

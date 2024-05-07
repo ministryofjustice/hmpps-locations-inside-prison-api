@@ -614,6 +614,29 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "newValue": "This is a new cell",
                   "amendedBy": "user1",
                   "amendedDate": "${LocalDateTime.now(clock).minusYears(1)}"
+                },
+                {
+                  "attribute": "Working Capacity",
+                  "oldValue": "1",
+                  "newValue": "0",
+                  "amendedBy": "user"
+                },
+                {
+                  "attribute": "Max Capacity",
+                  "oldValue": "1",
+                  "newValue": "0",
+                  "amendedBy": "user"
+                },
+                {
+                  "attribute": "Converted Cell Type",
+                  "newValue": "Holding room",
+                  "amendedBy": "user"
+                },
+                {
+                  "attribute": "Certified",
+                  "oldValue": "true",
+                  "newValue": "false",
+                  "amendedBy": "user"
                 }
               ]
             }

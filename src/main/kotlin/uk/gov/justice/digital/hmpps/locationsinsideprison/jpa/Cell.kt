@@ -60,7 +60,7 @@ class Cell(
   @Enumerated(EnumType.STRING)
   var convertedCellType: ConvertedCellType? = null,
 
-  var otherConvertedCellType: String? = null,
+  private var otherConvertedCellType: String? = null,
 
 ) : ResidentialLocation(
   id = id,
@@ -94,51 +94,161 @@ class Cell(
 
   fun getCertification() = certification?.toDto()
 
-  fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null) {
+  override fun isConvertedCell() = convertedCellType != null
+
+  fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock) {
+    addHistory(
+      LocationAttribute.CONVERTED_CELL_TYPE,
+      this.convertedCellType?.description,
+      convertedCellType.description,
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
     this.convertedCellType = convertedCellType
+
+    addHistory(
+      LocationAttribute.ACCOMMODATION_TYPE,
+      accommodationType.description,
+      AccommodationType.OTHER_NON_RESIDENTIAL.description,
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
     this.accommodationType = AccommodationType.OTHER_NON_RESIDENTIAL
+
     if (convertedCellType == ConvertedCellType.OTHER) {
+      addHistory(
+        LocationAttribute.OTHER_CONVERTED_CELL_TYPE,
+        accommodationType.description,
+        AccommodationType.OTHER_NON_RESIDENTIAL.description,
+        userOrSystemInContext,
+        LocalDateTime.now(clock),
+      )
+
       this.otherConvertedCellType = otherConvertedCellType
     }
-    capacity = null
-    certification = null
+
+    setCapacity(0, 0, userOrSystemInContext, clock)
+    deCertifyCell(userOrSystemInContext, clock)
+    recordRemovedSpecialistCellTypes(specialistCellTypes.map { it.specialistCellType }.toSet(), userOrSystemInContext, clock)
+    specialistCellTypes.clear()
+
+    recordRemovedUsedForTypes(usedFor.map { it.usedFor }.toSet(), userOrSystemInContext, clock)
+    usedFor.clear()
+
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = LocalDateTime.now(clock)
   }
 
-  fun convertToCell(accommodationType: AccommodationType, usedForTypes: List<UsedForType>? = null, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0) {
+  fun convertToCell(accommodationType: AccommodationType, usedForTypes: List<UsedForType>? = null, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
+    addHistory(
+      LocationAttribute.ACCOMMODATION_TYPE,
+      this.accommodationType.description,
+      accommodationType.description,
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
     this.accommodationType = accommodationType
-    usedForTypes?.forEach { addUsedFor(it) }
-    specialistCellType?.let { addSpecialistCellType(it) }
-    if (accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
-      setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
-      certifyCell(capacityOfCertifiedCell = workingCapacity)
+
+    usedForTypes?.forEach {
+      addUsedFor(it, userOrSystemInContext, clock)
     }
+
+    specialistCellType?.let {
+      addSpecialistCellType(it, userOrSystemInContext, clock)
+    }
+
+    if (accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+      setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock)
+      certifyCell(capacityOfCertifiedCell = workingCapacity, userOrSystemInContext, clock)
+    }
+
+    addHistory(
+      LocationAttribute.CONVERTED_CELL_TYPE,
+      this.convertedCellType?.description,
+      null,
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
     convertedCellType = null
+
+    addHistory(
+      LocationAttribute.OTHER_CONVERTED_CELL_TYPE,
+      this.otherConvertedCellType,
+      null,
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
     otherConvertedCellType = null
   }
 
-  fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0) {
+  fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
     if (workingCapacity > maxCapacity) {
       throw CapacityException(workingCapacity = workingCapacity, maxCapacity = maxCapacity)
     }
-    capacity = if (maxCapacity != 0 && workingCapacity != 0) {
-      Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
-    } else {
+
+    addHistory(
+      LocationAttribute.CAPACITY,
+      capacity?.maxCapacity?.toString(),
+      maxCapacity.toString(),
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
+    addHistory(
+      LocationAttribute.OPERATIONAL_CAPACITY,
+      capacity?.workingCapacity?.toString(),
+      workingCapacity.toString(),
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
+
+    capacity = if (maxCapacity == 0 && workingCapacity == 0) {
       null
+    } else {
+      Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
     }
   }
 
-  fun certifyCell(capacityOfCertifiedCell: Int) {
-    if (capacityOfCertifiedCell < 1) {
+  fun certifyCell(capacityOfCertifiedCell: Int, userOrSystemInContext: String, clock: Clock) {
+    if (isActive() && capacityOfCertifiedCell < 1) {
       throw CertificationException(capacityOfCertifiedCell = capacityOfCertifiedCell)
     }
+    addHistory(
+      LocationAttribute.CERTIFIED,
+      certification?.certified?.toString(),
+      true.toString(),
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
+    addHistory(
+      LocationAttribute.CERTIFIED_CAPACITY,
+      certification?.capacityOfCertifiedCell?.toString(),
+      capacityOfCertifiedCell.toString(),
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
     certification = Certification(certified = true, capacityOfCertifiedCell = capacityOfCertifiedCell)
   }
 
-  fun deCertifyCell() {
+  fun deCertifyCell(userOrSystemInContext: String, clock: Clock) {
+    addHistory(
+      LocationAttribute.CERTIFIED,
+      certification?.certified?.toString(),
+      false.toString(),
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
+    addHistory(
+      LocationAttribute.CERTIFIED_CAPACITY,
+      certification?.capacityOfCertifiedCell?.toString(),
+      "0",
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
     certification = Certification(certified = false, capacityOfCertifiedCell = 0)
   }
 
-  fun addAttribute(attribute: ResidentialAttributeValue): ResidentialAttribute {
+  fun addAttribute(attribute: ResidentialAttributeValue, userOrSystemInContext: String? = null, clock: Clock? = null): ResidentialAttribute {
+    userOrSystemInContext?.let { addHistory(LocationAttribute.ATTRIBUTES, null, attribute.description, userOrSystemInContext, LocalDateTime.now(clock)) }
     val residentialAttribute = ResidentialAttribute(location = this, attributeType = attribute.type, attributeValue = attribute)
     attributes.add(residentialAttribute)
     return residentialAttribute
@@ -148,66 +258,36 @@ class Cell(
     return attributes.map { addAttribute(it) }.toSet()
   }
 
-  fun addSpecialistCellType(specialistCellType: SpecialistCellType): SpecialistCell {
+  fun addSpecialistCellType(specialistCellType: SpecialistCellType, userOrSystemInContext: String? = null, clock: Clock? = null): SpecialistCell {
+    userOrSystemInContext?.let { addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, null, specialistCellType.description, userOrSystemInContext, LocalDateTime.now(clock)) }
     val specialistCell = SpecialistCell(location = this, specialistCellType = specialistCellType)
     this.specialistCellTypes.add(specialistCell)
     return specialistCell
   }
 
-  fun addUsedFor(usedForType: UsedForType): CellUsedFor {
+  fun addUsedFor(usedForType: UsedForType, userOrSystemInContext: String, clock: Clock): CellUsedFor {
+    addHistory(LocationAttribute.USED_FOR, null, usedForType.description, userOrSystemInContext, LocalDateTime.now(clock))
     val cellUsedFor = CellUsedFor(location = this, usedFor = usedForType)
     this.usedFor.add(cellUsedFor)
     return cellUsedFor
   }
 
-  override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): Cell {
-    super.updateWith(upsert, updatedBy, clock)
+  override fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
+    super.updateWith(upsert, userOrSystemInContext, clock)
 
-    if (upsert.capacity != null && upsert.capacity != capacity?.toDto()) {
-      addHistory(
-        LocationAttribute.CAPACITY,
-        capacity?.maxCapacity.toString(),
-        upsert.capacity?.maxCapacity.toString(),
-        updatedBy,
-        LocalDateTime.now(clock),
-      )
-      addHistory(
-        LocationAttribute.OPERATIONAL_CAPACITY,
-        capacity?.workingCapacity.toString(),
-        upsert.capacity?.workingCapacity.toString(),
-        updatedBy,
-        LocalDateTime.now(clock),
-      )
-    }
-    upsert.capacity?.let { setCapacity(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) }
+    upsert.capacity?.let { setCapacity(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity, userOrSystemInContext, clock) }
 
-    if (upsert.certification != null && upsert.certification != certification?.toDto()) {
-      addHistory(
-        LocationAttribute.CERTIFIED,
-        certification?.certified.toString(),
-        upsert.certification?.certified.toString(),
-        updatedBy,
-        LocalDateTime.now(clock),
-      )
-      addHistory(
-        LocationAttribute.CERTIFIED_CAPACITY,
-        certification?.capacityOfCertifiedCell.toString(),
-        upsert.certification?.capacityOfCertifiedCell.toString(),
-        updatedBy,
-        LocalDateTime.now(clock),
-      )
-    }
     upsert.certification?.let {
       if (it.certified) {
-        certifyCell(it.capacityOfCertifiedCell)
+        certifyCell(it.capacityOfCertifiedCell, userOrSystemInContext, clock)
       } else {
-        deCertifyCell()
+        deCertifyCell(userOrSystemInContext, clock)
       }
     }
 
     if (upsert.attributes != null) {
-      recordHistoryOfAttributesChanges(upsert, updatedBy, clock)
-      attributes.retainAll(upsert.attributes!!.map { addAttribute(it) }.toSet())
+      recordRemovedAttributes(upsert.attributes!!, userOrSystemInContext, clock)
+      attributes.retainAll(upsert.attributes!!.map { addAttribute(it, userOrSystemInContext, clock) }.toSet())
     }
 
     if (upsert is PatchLocationRequest) {
@@ -216,64 +296,55 @@ class Cell(
           LocationAttribute.ACCOMMODATION_TYPE,
           this.accommodationType.description,
           upsert.accommodationType.description,
-          updatedBy,
+          userOrSystemInContext,
           LocalDateTime.now(clock),
         )
       }
       this.accommodationType = upsert.accommodationType ?: this.accommodationType
 
       if (upsert.specialistCellTypes != null) {
-        recordHistoryOfSpecialistCellTypeChanges(upsert, updatedBy, clock)
-        specialistCellTypes.retainAll(upsert.specialistCellTypes.map { addSpecialistCellType(it) }.toSet())
+        recordRemovedSpecialistCellTypes(upsert.specialistCellTypes, userOrSystemInContext, clock)
+        specialistCellTypes.retainAll(upsert.specialistCellTypes.map { addSpecialistCellType(it, userOrSystemInContext, clock) }.toSet())
       }
 
       if (upsert.usedFor != null) {
-        recordHistoryOfUsedForChanges(upsert, updatedBy, clock)
-        usedFor.retainAll(upsert.usedFor.map { addUsedFor(it) }.toSet())
+        recordRemovedUsedForTypes(upsert.usedFor, userOrSystemInContext, clock)
+        usedFor.retainAll(upsert.usedFor.map { addUsedFor(it, userOrSystemInContext, clock) }.toSet())
       }
     }
     return this
   }
 
-  private fun recordHistoryOfAttributesChanges(
-    upsert: UpdateLocationRequest,
-    updatedBy: String,
+  private fun recordRemovedAttributes(
+    attributes: Set<ResidentialAttributeValue>,
+    userOrSystemInContext: String,
     clock: Clock,
   ) {
     val oldAttributes = this.attributes.map { it.attributeValue }.toSet()
-    upsert.attributes?.subtract(oldAttributes)?.forEach { newAttribute ->
-      addHistory(LocationAttribute.ATTRIBUTES, null, newAttribute.name, updatedBy, LocalDateTime.now(clock))
-    }
-    oldAttributes.subtract((upsert.attributes?.toSet() ?: emptySet()).toSet()).forEach { removedAttribute ->
-      addHistory(LocationAttribute.ATTRIBUTES, removedAttribute.name, null, updatedBy, LocalDateTime.now(clock))
+    oldAttributes.subtract(attributes).forEach { removedAttribute ->
+      addHistory(LocationAttribute.ATTRIBUTES, removedAttribute.name, null, userOrSystemInContext, LocalDateTime.now(clock))
     }
   }
 
-  private fun recordHistoryOfSpecialistCellTypeChanges(
-    upsert: PatchLocationRequest,
-    updatedBy: String,
+  private fun recordRemovedSpecialistCellTypes(
+    specialistCellTypes: Set<SpecialistCellType>,
+    userOrSystemInContext: String,
     clock: Clock,
   ) {
     val oldSpecialistCellTypes = this.specialistCellTypes.map { it.specialistCellType }.toSet()
-    upsert.specialistCellTypes?.subtract(oldSpecialistCellTypes)?.forEach { newSpecialistCellType ->
-      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, null, newSpecialistCellType.name, updatedBy, LocalDateTime.now(clock))
-    }
-    oldSpecialistCellTypes.subtract((upsert.specialistCellTypes?.toSet() ?: emptySet()).toSet()).forEach { removedSpecialistCellType ->
-      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, removedSpecialistCellType.name, null, updatedBy, LocalDateTime.now(clock))
+    oldSpecialistCellTypes.subtract(specialistCellTypes).forEach { removedSpecialistCellType ->
+      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, removedSpecialistCellType.name, null, userOrSystemInContext, LocalDateTime.now(clock))
     }
   }
 
-  private fun recordHistoryOfUsedForChanges(
-    upsert: PatchLocationRequest,
-    updatedBy: String,
+  private fun recordRemovedUsedForTypes(
+    usedFor: Set<UsedForType>,
+    userOrSystemInContext: String,
     clock: Clock,
   ) {
     val oldUsedFor = this.usedFor.map { it.usedFor }.toSet()
-    upsert.usedFor?.subtract(oldUsedFor)?.forEach { newUsedFor ->
-      addHistory(LocationAttribute.USED_FOR, null, newUsedFor.name, updatedBy, LocalDateTime.now(clock))
-    }
-    oldUsedFor.subtract((upsert.usedFor?.toSet() ?: emptySet()).toSet()).forEach { removedUsedFor ->
-      addHistory(LocationAttribute.USED_FOR, removedUsedFor.name, null, updatedBy, LocalDateTime.now(clock))
+    oldUsedFor.subtract(usedFor).forEach { removedUsedFor ->
+      addHistory(LocationAttribute.USED_FOR, removedUsedFor.name, null, userOrSystemInContext, LocalDateTime.now(clock))
     }
   }
 

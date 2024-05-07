@@ -119,7 +119,7 @@ interface NomisMigrationRequest : UpdateLocationRequest {
     }
 
     if (location is Cell && residentialHousingType == HOLDING_CELL) {
-      location.convertToNonResidentialCell(ConvertedCellType.HOLDING_ROOM)
+      location.convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = lastUpdatedBy, clock = clock)
     }
 
     if (isDeactivated()) {

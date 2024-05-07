@@ -261,6 +261,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(ConvertedCellUpdateNotAllowedException::class)
+  fun handleConvertedCellUpdateNotAllowedException(e: ConvertedCellUpdateNotAllowedException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Converted Cell Exception: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.ConvertedCellLocationCannotByUpdated,
+          userMessage = "Converted Cell Exception: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   companion object {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
@@ -273,3 +288,4 @@ class LocationAlreadyDeactivatedException(key: String) : Exception("$key is alre
 class CapacityException(workingCapacity: Int, maxCapacity: Int) : ValidationException("Working capacity $workingCapacity exceeded maximum allowed capacity $maxCapacity")
 class CertificationException(capacityOfCertifiedCell: Int) : ValidationException("Certified Cells cannot have a certified capacity of $capacityOfCertifiedCell")
 class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as permanently deactivated")
+class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as converted cell")

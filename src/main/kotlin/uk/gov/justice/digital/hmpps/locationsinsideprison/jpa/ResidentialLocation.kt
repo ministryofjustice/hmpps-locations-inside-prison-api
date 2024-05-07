@@ -101,11 +101,13 @@ open class ResidentialLocation(
   }
   private fun isCurrentCellOrNotPermanentlyInactive(cell: Cell) = !cell.isPermanentlyDeactivated() || cell == this
 
+  open fun isConvertedCell(): Boolean = false
+
   private fun getInactiveCellCount() = cellLocations().count { !it.isActive() }
 
   private fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
 
-  override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): ResidentialLocation {
+  override fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
     super.updateWith(upsert, updatedBy, clock)
 
     if (upsert.residentialHousingType != null && this.residentialHousingType != upsert.residentialHousingType) {

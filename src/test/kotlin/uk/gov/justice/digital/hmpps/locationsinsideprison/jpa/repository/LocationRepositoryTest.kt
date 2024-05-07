@@ -83,8 +83,8 @@ class LocationRepositoryTest : TestBase() {
     assertThat(location.findAllLeafLocations()).containsExactlyInAnyOrder(cell001L1, cell002L1, cell002L2, adjRoom)
     location.findAllLeafLocations().forEach {
       if (it is Cell) {
-        it.setCapacity(workingCapacity = 2, maxCapacity = 2)
-        it.certifyCell(2)
+        it.setCapacity(workingCapacity = 2, maxCapacity = 2, userOrSystemInContext = "test", clock = clock)
+        it.certifyCell(2, userOrSystemInContext = "test", clock = clock)
       }
     }
 
@@ -124,7 +124,7 @@ class LocationRepositoryTest : TestBase() {
     val cell3Renamed = repository.findOneByPrisonIdAndPathHierarchy(cell3.prisonId, cell3.getPathHierarchy()) ?: throw Exception("Location not found")
     assertThat(cell3Renamed.getPathHierarchy()).isEqualTo("T-1-003")
 
-    (cell3Renamed as Cell).convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM)
+    (cell3Renamed as Cell).convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = "test", clock = clock)
 
     TestTransaction.flagForCommit()
     TestTransaction.end()
@@ -141,6 +141,8 @@ class LocationRepositoryTest : TestBase() {
       specialistCellType = SpecialistCellType.LOW_MOBILITY,
       maxCapacity = 1,
       workingCapacity = 1,
+      userOrSystemInContext = "test",
+      clock = clock,
     )
 
     TestTransaction.flagForCommit()
@@ -178,7 +180,6 @@ class LocationRepositoryTest : TestBase() {
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "comments",
       childLocations = mutableListOf(),
-
     )
   }
 

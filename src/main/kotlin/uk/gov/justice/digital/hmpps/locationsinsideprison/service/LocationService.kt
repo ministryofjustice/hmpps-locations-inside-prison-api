@@ -15,10 +15,14 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
@@ -228,6 +232,63 @@ class LocationService(
     )
 
     return locationToUpdate.toDto(includeParent = true)
+  }
+
+  fun convertToNonResidentialCell(id: UUID, convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null): LocationDTO {
+    val locationToConvert = residentialLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (locationToConvert is Cell) {
+      locationToConvert.convertToNonResidentialCell(
+        convertedCellType = convertedCellType,
+        otherConvertedCellType = otherConvertedCellType,
+        userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+        clock = clock,
+      )
+    } else {
+      throw LocationNotFoundException(id.toString())
+    }
+
+    telemetryClient.trackEvent(
+      "Converted Location to non-residential cell",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to locationToConvert.prisonId,
+        "path" to locationToConvert.getPathHierarchy(),
+      ),
+      null,
+    )
+    return locationToConvert.toDto(includeParent = true)
+  }
+
+  fun convertToCell(id: UUID, accommodationType: AccommodationType, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, usedForTypes: List<UsedForType>? = null): LocationDTO {
+    val locationToConvert = residentialLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (locationToConvert is Cell && locationToConvert.isConvertedCell()) {
+      locationToConvert.convertToCell(
+        accommodationType = accommodationType,
+        usedForTypes = usedForTypes,
+        specialistCellType = specialistCellType,
+        maxCapacity = maxCapacity,
+        workingCapacity = workingCapacity,
+        userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+        clock = clock,
+      )
+    } else {
+      throw LocationNotFoundException(id.toString())
+    }
+
+    telemetryClient.trackEvent(
+      "Converted non-residential cell to residential cell",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to locationToConvert.prisonId,
+        "path" to locationToConvert.getPathHierarchy(),
+      ),
+      null,
+    )
+    return locationToConvert.toDto(includeParent = true)
   }
 
   private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =

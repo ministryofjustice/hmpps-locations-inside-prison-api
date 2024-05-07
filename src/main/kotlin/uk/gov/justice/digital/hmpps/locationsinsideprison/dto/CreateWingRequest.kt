@@ -118,7 +118,7 @@ data class CreateWingRequest(
             capacityOfCertifiedCell = defaultCellCapacity,
           ),
         )
-        defaultAttributesOfCells?.map { cell.addAttribute(it) }
+        defaultAttributesOfCells?.map { cell.addAttribute(it, createdBy, clock) }
         leaf.addChildLocation(cell)
         LocationService.log.info("Created Cell [${cell.getKey()}]")
       }
