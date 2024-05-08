@@ -206,6 +206,8 @@ abstract class Location(
     }
   }
 
+  fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
+
   fun findAllLeafLocations(): List<Location> {
     val leafLocations = mutableListOf<Location>()
 

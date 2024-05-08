@@ -18,6 +18,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 
 @RestControllerAdvice
 class ApiExceptionHandler {
@@ -276,6 +277,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(LocationContainsPrisonersException::class)
+  fun handleLocationContainsPrisonersException(e: LocationContainsPrisonersException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Cannot deactivate: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.DeactivationErrorLocationsContainPrisoners,
+          userMessage = "Deactivation Exception: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   companion object {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
@@ -289,3 +305,4 @@ class CapacityException(workingCapacity: Int, maxCapacity: Int) : ValidationExce
 class CertificationException(capacityOfCertifiedCell: Int) : ValidationException("Certified Cells cannot have a certified capacity of $capacityOfCertifiedCell")
 class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as permanently deactivated")
 class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as converted cell")
+class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")

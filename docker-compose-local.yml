@@ -1,4 +1,3 @@
-version: "3"
 services:
 
   localstack:
@@ -29,5 +28,14 @@ services:
       - POSTGRES_USER=locations_inside_prison
       - POSTGRES_DB=locations_inside_prison
 
+  prisoner-search:
+    image: wiremock/wiremock:2.35.0
+    networks:
+      - hmpps
+    container_name: prisoner-search
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
 networks:
   hmpps:

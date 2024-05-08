@@ -7,6 +7,7 @@ generic-service:
 
   env:
     API_BASE_URL_OAUTH: https://sign-in.hmpps.service.justice.gov.uk/auth
+    API_BASE_URL_PRISONER_SEARCH: https://prisoner-search.prison.service.justice.gov.uk
 
   postgresDatabaseRestore:
     enabled: true

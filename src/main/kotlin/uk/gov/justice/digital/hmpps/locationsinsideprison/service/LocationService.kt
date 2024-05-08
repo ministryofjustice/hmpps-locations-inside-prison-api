@@ -26,6 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocationResult
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
@@ -41,6 +42,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 class LocationService(
   private val locationRepository: LocationRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
+  private val prisonerSearchService: PrisonerSearchService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
@@ -190,6 +192,16 @@ class LocationService(
   ): LocationDTO {
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    val locationsToCheck = locationToUpdate.cellLocations().map { it.getPathHierarchy() }
+    if (locationsToCheck.isNotEmpty()) {
+      val locationsWithPrisoners =
+        prisonerSearchService.findPrisonersInLocations(locationToUpdate.prisonId, locationsToCheck)
+
+      if (locationsWithPrisoners.isNotEmpty()) {
+        throw LocationContainsPrisonersException(locationsWithPrisoners)
+      }
+    }
 
     locationToUpdate.deactivate(
       deactivatedReason = deactivatedReason,

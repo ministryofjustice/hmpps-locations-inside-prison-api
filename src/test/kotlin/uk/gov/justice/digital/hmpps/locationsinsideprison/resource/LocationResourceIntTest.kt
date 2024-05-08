@@ -63,6 +63,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
   @BeforeEach
   fun setUp() {
+    prisonerSearchMockServer.resetAll()
     repository.deleteAll()
 
     wingZ = repository.save(
@@ -2316,12 +2317,41 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().is4xxClientError
       }
+
+      @Test
+      fun `cannot deactivate a location when prisoner is inside the cell`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), true)
+
+        val now = LocalDate.now(clock)
+        val proposedReactivationDate = now.plusMonths(1)
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(DeactivationLocationRequest(permanentDeactivation = true)))
+          .exchange()
+          .expectStatus().isEqualTo(409)
+      }
+
+      @Test
+      fun `cannot deactivate a wing when prisoners are in cells below`() {
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), true)
+
+        webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(DeactivationLocationRequest(permanentDeactivation = true)))
+          .exchange()
+          .expectStatus().isEqualTo(409)
+      }
     }
 
     @Nested
     inner class HappyPath {
       @Test
       fun `can deactivate a location`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
+
         val now = LocalDate.now(clock)
         val proposedReactivationDate = now.plusMonths(1)
         webTestClient.put().uri("/locations/${cell1.id}/deactivate")
@@ -2544,6 +2574,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can reactivate a location`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
+
         val proposedReactivationDate = LocalDate.now(clock).plusMonths(1)
         webTestClient.put().uri("/locations/${cell1.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
