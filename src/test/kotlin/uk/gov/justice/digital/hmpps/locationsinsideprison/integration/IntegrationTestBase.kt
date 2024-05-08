@@ -13,6 +13,7 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.config.JwtAuthHelper
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.HmppsAuthMockServer
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.PrisonerSearchMockServer
 
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 abstract class IntegrationTestBase : TestBase() {
@@ -35,16 +36,21 @@ abstract class IntegrationTestBase : TestBase() {
     @JvmField
     val hmppsAuthMockServer = HmppsAuthMockServer()
 
+    @JvmField
+    val prisonerSearchMockServer = PrisonerSearchMockServer()
+
     @BeforeAll
     @JvmStatic
     fun startMocks() {
       hmppsAuthMockServer.start()
       hmppsAuthMockServer.stubGrantToken()
+      prisonerSearchMockServer.start()
     }
 
     @AfterAll
     @JvmStatic
     fun stopMocks() {
+      prisonerSearchMockServer.stop()
       hmppsAuthMockServer.stop()
     }
   }

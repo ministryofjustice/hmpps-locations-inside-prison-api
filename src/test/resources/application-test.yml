@@ -9,6 +9,7 @@ api:
   base:
     url:
       oauth: http://localhost:8090/auth
+      prisoner-search: http://localhost:8094
 
 spring:
   datasource:

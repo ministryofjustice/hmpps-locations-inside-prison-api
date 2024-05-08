@@ -105,8 +105,6 @@ open class ResidentialLocation(
 
   private fun getInactiveCellCount() = cellLocations().count { !it.isActive() }
 
-  private fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
-
   override fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
     super.updateWith(upsert, updatedBy, clock)
 
