@@ -2575,7 +2575,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       @Test
       fun `can reactivate a location`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
-        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
 
         val proposedReactivationDate = LocalDate.now(clock).plusMonths(1)
         webTestClient.put().uri("/locations/${cell1.id}/deactivate")
@@ -2584,6 +2583,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
+
+        prisonerSearchMockServer.resetAll()
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
 
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
