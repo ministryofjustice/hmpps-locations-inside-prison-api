@@ -15,21 +15,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PatchMapping
-import org.springframework.web.bind.annotation.PathVariable
-import org.springframework.web.bind.annotation.PostMapping
-import org.springframework.web.bind.annotation.PutMapping
-import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.web.bind.annotation.RestController
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DeactivationLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import org.springframework.web.bind.annotation.*
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
@@ -40,6 +27,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocati
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
+
 @RestController
 @Validated
 @RequestMapping("/locations", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -158,6 +146,40 @@ class LocationResource(
     @PathVariable
     prisonId: String,
   ): List<LocationDTO> = locationService.getLocationByPrison(prisonId)
+
+  @GetMapping("/prison/{prisonId}/archived")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return archived locations for this prison",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns archived locations",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getArchivedLocationForPrison(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
+    prisonId: String,
+  ): List<LocationDTO> = locationService.getArchivedLocations(prisonId)
 
   @GetMapping("/residential/{prisonId}/below-parent")
   @ResponseStatus(HttpStatus.OK)
