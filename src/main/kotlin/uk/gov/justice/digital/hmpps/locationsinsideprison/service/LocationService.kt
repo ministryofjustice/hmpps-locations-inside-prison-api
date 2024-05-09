@@ -193,15 +193,7 @@ class LocationService(
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val locationsToCheck = locationToUpdate.cellLocations().map { it.getPathHierarchy() }
-    if (locationsToCheck.isNotEmpty()) {
-      val locationsWithPrisoners =
-        prisonerSearchService.findPrisonersInLocations(locationToUpdate.prisonId, locationsToCheck)
-
-      if (locationsWithPrisoners.isNotEmpty()) {
-        throw LocationContainsPrisonersException(locationsWithPrisoners)
-      }
-    }
+    checkForPrisonersInLocation(locationToUpdate)
 
     locationToUpdate.deactivate(
       deactivatedReason = deactivatedReason,
@@ -224,6 +216,19 @@ class LocationService(
     )
 
     return locationToUpdate.toDto(includeParent = true)
+  }
+
+  private fun checkForPrisonersInLocation(location: Location) {
+    val locationsToCheck = location.cellLocations().map { it.getPathHierarchy() }.sorted()
+    if (locationsToCheck.isNotEmpty()) {
+      log.info("Checking for prisoners in locations {}", locationsToCheck)
+      val locationsWithPrisoners =
+        prisonerSearchService.findPrisonersInLocations(location.prisonId, locationsToCheck)
+
+      if (locationsWithPrisoners.isNotEmpty()) {
+        throw LocationContainsPrisonersException(locationsWithPrisoners)
+      }
+    }
   }
 
   @Transactional
@@ -250,6 +255,8 @@ class LocationService(
   fun convertToNonResidentialCell(id: UUID, convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null): LocationDTO {
     val locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    checkForPrisonersInLocation(locationToConvert)
 
     if (locationToConvert is Cell) {
       locationToConvert.convertToNonResidentialCell(
