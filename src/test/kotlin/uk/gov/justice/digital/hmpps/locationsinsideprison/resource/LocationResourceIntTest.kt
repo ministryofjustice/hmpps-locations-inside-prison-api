@@ -2322,8 +2322,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       fun `cannot deactivate a location when prisoner is inside the cell`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), true)
 
-        val now = LocalDate.now(clock)
-        val proposedReactivationDate = now.plusMonths(1)
         webTestClient.put().uri("/locations/${cell1.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -2350,7 +2348,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       @Test
       fun `can deactivate a location`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
-        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
 
         val now = LocalDate.now(clock)
         val proposedReactivationDate = now.plusMonths(1)
@@ -2360,6 +2357,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(DeactivationLocationRequest(permanentDeactivation = true)))
           .exchange()
           .expectStatus().isOk
+
+        prisonerSearchMockServer.resetAll()
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
 
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -2585,7 +2585,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectStatus().isOk
 
         prisonerSearchMockServer.resetAll()
-        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy(), cell1.getPathHierarchy()), false)
 
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))

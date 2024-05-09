@@ -46,7 +46,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
           AttributeQuery(
             matchers = listOf(
               Matcher(attribute = "prisonId", condition = "IS", searchTerm = prisonId),
-              Matcher(attribute = "cellLocation", condition = "IN", searchTerm = locations.joinToString(",")),
+              Matcher(attribute = "cellLocation", condition = "IN", searchTerm = locations.sorted().joinToString(",")),
             ),
           ),
         ),

@@ -11,7 +11,6 @@ import jakarta.persistence.OneToOne
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CertificationException
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -209,9 +208,6 @@ class Cell(
   }
 
   fun certifyCell(capacityOfCertifiedCell: Int, userOrSystemInContext: String, clock: Clock) {
-    if (isActive() && capacityOfCertifiedCell < 1) {
-      throw CertificationException(capacityOfCertifiedCell = capacityOfCertifiedCell)
-    }
     addHistory(
       LocationAttribute.CERTIFIED,
       certification?.certified?.toString(),
@@ -229,7 +225,7 @@ class Cell(
     certification = Certification(certified = true, capacityOfCertifiedCell = capacityOfCertifiedCell)
   }
 
-  fun deCertifyCell(userOrSystemInContext: String, clock: Clock) {
+  private fun deCertifyCell(userOrSystemInContext: String, clock: Clock) {
     addHistory(
       LocationAttribute.CERTIFIED,
       certification?.certified?.toString(),
