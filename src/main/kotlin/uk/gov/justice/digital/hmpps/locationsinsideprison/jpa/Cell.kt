@@ -244,9 +244,10 @@ class Cell(
   }
 
   fun addAttribute(attribute: ResidentialAttributeValue, userOrSystemInContext: String? = null, clock: Clock? = null): ResidentialAttribute {
-    userOrSystemInContext?.let { addHistory(LocationAttribute.ATTRIBUTES, null, attribute.description, userOrSystemInContext, LocalDateTime.now(clock)) }
     val residentialAttribute = ResidentialAttribute(location = this, attributeType = attribute.type, attributeValue = attribute)
-    attributes.add(residentialAttribute)
+    if (attributes.add(residentialAttribute)) {
+      userOrSystemInContext?.let { addHistory(LocationAttribute.ATTRIBUTES, null, attribute.description, userOrSystemInContext, LocalDateTime.now(clock)) }
+    }
     return residentialAttribute
   }
 
@@ -255,16 +256,18 @@ class Cell(
   }
 
   fun addSpecialistCellType(specialistCellType: SpecialistCellType, userOrSystemInContext: String? = null, clock: Clock? = null): SpecialistCell {
-    userOrSystemInContext?.let { addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, null, specialistCellType.description, userOrSystemInContext, LocalDateTime.now(clock)) }
     val specialistCell = SpecialistCell(location = this, specialistCellType = specialistCellType)
-    this.specialistCellTypes.add(specialistCell)
+    if (this.specialistCellTypes.add(specialistCell)) {
+      userOrSystemInContext?.let { addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, null, specialistCellType.description, userOrSystemInContext, LocalDateTime.now(clock)) }
+    }
     return specialistCell
   }
 
   fun addUsedFor(usedForType: UsedForType, userOrSystemInContext: String, clock: Clock): CellUsedFor {
-    addHistory(LocationAttribute.USED_FOR, null, usedForType.description, userOrSystemInContext, LocalDateTime.now(clock))
     val cellUsedFor = CellUsedFor(location = this, usedFor = usedForType)
-    this.usedFor.add(cellUsedFor)
+    if (this.usedFor.add(cellUsedFor)) {
+      addHistory(LocationAttribute.USED_FOR, null, usedForType.description, userOrSystemInContext, LocalDateTime.now(clock))
+    }
     return cellUsedFor
   }
 
