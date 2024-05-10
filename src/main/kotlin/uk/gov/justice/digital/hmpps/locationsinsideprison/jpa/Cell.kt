@@ -1,13 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
-import jakarta.persistence.CascadeType
-import jakarta.persistence.DiscriminatorValue
-import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
-import jakarta.persistence.FetchType
-import jakarta.persistence.OneToMany
-import jakarta.persistence.OneToOne
+import jakarta.persistence.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
@@ -38,6 +31,7 @@ class Cell(
   whenCreated: LocalDateTime,
   createdBy: String,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+  archived: Boolean = false,
 
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
   private var capacity: Capacity? = null,
@@ -80,6 +74,7 @@ class Cell(
   whenCreated = whenCreated,
   createdBy = createdBy,
   residentialHousingType = residentialHousingType,
+  archived = archived
 ) {
 
   fun getWorkingCapacity() = capacity?.workingCapacity

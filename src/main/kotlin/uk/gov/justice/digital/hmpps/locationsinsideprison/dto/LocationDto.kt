@@ -5,15 +5,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.*
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime

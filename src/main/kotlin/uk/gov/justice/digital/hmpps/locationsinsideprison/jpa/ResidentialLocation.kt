@@ -32,6 +32,7 @@ open class ResidentialLocation(
   childLocations: MutableList<Location>,
   whenCreated: LocalDateTime,
   createdBy: String,
+  archived: Boolean = false,
 
   @Enumerated(EnumType.STRING)
   open var residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
@@ -47,6 +48,7 @@ open class ResidentialLocation(
   comments = comments,
   orderWithinParentLocation = orderWithinParentLocation,
   active = active,
+  archived = archived,
   deactivatedDate = deactivatedDate,
   deactivatedReason = deactivatedReason,
   proposedReactivationDate = proposedReactivationDate,

@@ -10,21 +10,11 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.security.test.context.support.WithMockUser
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DeactivationLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
@@ -53,6 +43,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   lateinit var cell1: Cell
   lateinit var cell2: Cell
   lateinit var inactiveCell: Cell
+  lateinit var archivedCell: Cell
   lateinit var landing1: ResidentialLocationJPA
   lateinit var landing2: ResidentialLocationJPA
   lateinit var landing3: ResidentialLocationJPA
@@ -110,6 +101,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A, ResidentialAttributeValue.SAFE_CELL, ResidentialAttributeValue.DOUBLE_OCCUPANCY),
 
+      ),
+    )
+    archivedCell = repository.save(
+      buildCell(
+        pathHierarchy = "Z-1-003",
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
+        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        active = false,
+        archived = true,
       ),
     )
     inactiveCell = repository.save(
@@ -852,6 +852,69 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("GET /locations/prison/{prisonId}/archived")
+  @Nested
+  inner class ViewArchivedLocationByPrisonTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/${cell1.prisonId}/archived")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/${cell1.prisonId}/archived")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/${cell1.prisonId}/archived")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve details of archived location`() {
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/archived")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             [{"prisonId":"MDI",
+                "code":"003",
+                "pathHierarchy":"Z-1-003",
+                "locationType":"CELL",
+                "residentialHousingType":"NORMAL_ACCOMMODATION",
+                "permanentlyInactive":true,
+                "capacity":{"maxCapacity":2,"workingCapacity":2},
+                "status":"INACTIVE",
+                "active":false,
+                "deactivatedByParent":false,
+                "deactivatedDate":"2023-12-05",
+                "deactivatedReason":"DAMAGED", 
+                "key":"MDI-Z-1-003"
+                }]
+          """,
+            false,
+          )
+      }
+    }
+  }
   @DisplayName("GET /locations")
   @Nested
   inner class ViewPagedLocationsTest {
@@ -888,7 +951,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a page of locations`() {
-        webTestClient.get().uri("/locations?size=10&sort=pathHierarchy,asc")
+        webTestClient.get().uri("/locations?size=11&sort=pathHierarchy,asc")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -897,10 +960,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
               {
                 "totalPages": 1,
-                "totalElements": 10,
+                "totalElements": 11,
                 "first": true,
                 "last": true,
-                "size": 10,
+                "size": 11,
                 "content": [
                   {
                     "prisonId": "MDI",
@@ -968,6 +1031,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "prisonId": "MDI",
+                    "code": "003",
+                    "pathHierarchy": "Z-1-003",
+                    "locationType": "CELL",
+                    "key": "MDI-Z-1-003"
+                  },
+                  {
+                    "prisonId": "MDI",
                     "code": "001",
                     "pathHierarchy": "B-A-001",
                     "locationType": "CELL",
@@ -980,7 +1050,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "sorted": true,
                   "unsorted": false
                 },
-                "numberOfElements": 10,
+                "numberOfElements": 11,
                 "pageable": {
                   "offset": 0,
                   "sort": {
@@ -988,7 +1058,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "sorted": true,
                     "unsorted": false
                   },
-                  "pageSize": 10,
+                  "pageSize": 11,
                   "pageNumber": 0,
                   "paged": true,
                   "unpaged": false
