@@ -185,37 +185,65 @@ class LocationService(
   @Transactional
   fun deactivateLocation(
     id: UUID,
-    deactivatedReason: DeactivatedReason? = null,
+    deactivatedReason: DeactivatedReason,
     proposedReactivationDate: LocalDate? = null,
     planetFmReference: String? = null,
-    permanentDeactivation: Boolean = false,
   ): LocationDTO {
-    val locationToUpdate = locationRepository.findById(id)
+    val locationToDeactivate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    checkForPrisonersInLocation(locationToUpdate)
+    checkForPrisonersInLocation(locationToDeactivate)
 
-    locationToUpdate.deactivate(
+    locationToDeactivate.temporarilyDeactivate(
       deactivatedReason = deactivatedReason,
       deactivatedDate = LocalDate.now(clock),
       proposedReactivationDate = proposedReactivationDate,
       planetFmReference = planetFmReference,
-      permanentDeactivation = permanentDeactivation,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
     )
 
     telemetryClient.trackEvent(
-      "Deactivated Location",
+      "Temporarily Deactivated Location",
       mapOf(
         "id" to id.toString(),
-        "prisonId" to locationToUpdate.prisonId,
-        "path" to locationToUpdate.getPathHierarchy(),
+        "prisonId" to locationToDeactivate.prisonId,
+        "path" to locationToDeactivate.getPathHierarchy(),
       ),
       null,
     )
 
-    return locationToUpdate.toDto(includeParent = true)
+    return locationToDeactivate.toDto(includeParent = true)
+  }
+
+  @Transactional
+  fun permanentlyDeactivateLocation(
+    id: UUID,
+    reasonForPermanentDeactivation: String,
+  ): LocationDTO {
+    val locationToArchive = locationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    checkForPrisonersInLocation(locationToArchive)
+
+    locationToArchive.permanentlyDeactivate(
+      deactivatedDate = LocalDate.now(clock),
+      reason = reasonForPermanentDeactivation,
+      userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+      clock = clock,
+    )
+
+    telemetryClient.trackEvent(
+      "Permanently Deactivated Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to locationToArchive.prisonId,
+        "path" to locationToArchive.getPathHierarchy(),
+      ),
+      null,
+    )
+
+    return locationToArchive.toDto(includeParent = true)
   }
 
   private fun checkForPrisonersInLocation(location: Location) {

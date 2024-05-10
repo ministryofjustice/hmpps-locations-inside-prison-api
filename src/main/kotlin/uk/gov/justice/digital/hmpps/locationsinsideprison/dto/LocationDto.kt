@@ -3,7 +3,9 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Pattern
+import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
@@ -178,14 +180,15 @@ data class NonResidentialUsageDto(
 @Schema(description = "Capacity")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Capacity(
-  @Schema(description = "Max capacity of the location", example = "2", required = false)
+  @Schema(description = "Max capacity of the location", example = "2", required = true)
+  @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
+  @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
   val maxCapacity: Int = 0,
-  @Schema(description = "Working capacity of the location", example = "2", required = false)
+  @Schema(description = "Working capacity of the location", example = "2", required = true)
+  @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
+  @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
   val workingCapacity: Int = 0,
 ) {
-  fun toNewEntity(): CapacityJPA {
-    return CapacityJPA(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
-  }
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -233,9 +236,6 @@ data class Certification(
   @Schema(description = "Indicates the capacity of the certified location (cell)", example = "1", required = false)
   val capacityOfCertifiedCell: Int = 0,
 ) {
-  fun toNewEntity(): CertificationJPA {
-    return CertificationJPA(certified = certified, capacityOfCertifiedCell = capacityOfCertifiedCell)
-  }
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -421,15 +421,27 @@ data class CreateNonResidentialLocationRequest(
 }
 
 /**
- * Request format deactivating a location
+ * Request format temporarily deactivating a location
  */
-@Schema(description = "Request to deactivate a location")
+@Schema(description = "Request to temporarily deactivate a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-data class DeactivationLocationRequest(
-  val permanentDeactivation: Boolean = false,
-  @Schema(description = "Reason for deactivation, if temp", example = "MOTHBALLED", required = false)
-  val deactivationReason: DeactivatedReason? = null,
-  @Schema(description = "Proposed re-activation date, if temp", example = "2025-01-05", required = false)
+data class TemporaryDeactivationLocationRequest(
+  @Schema(description = "Reason for temporary deactivation", example = "MOTHBALLED", required = true)
+  val deactivationReason: DeactivatedReason,
+  @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
   val proposedReactivationDate: LocalDate? = null,
+  @Schema(description = "Planet FM reference", example = "23423TH/5", required = false)
+  @field:Size(max = 60, message = "Planet FM reference cannot be more than 60 characters")
   val planetFmReference: String? = null,
+)
+
+/**
+ * Request format permanently deactivating a location
+ */
+@Schema(description = "Request to permanently deactivate a location")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class PermanentDeactivationLocationRequest(
+  @Schema(description = "Reason for permanent deactivation", example = "Wing demolished", required = true)
+  @field:Size(max = 200, message = "Reason for permanent deactivation cannot be more than 200 characters")
+  val reason: String,
 )

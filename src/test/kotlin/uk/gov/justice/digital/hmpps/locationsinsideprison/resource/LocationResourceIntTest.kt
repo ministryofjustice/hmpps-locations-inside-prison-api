@@ -13,9 +13,10 @@ import org.springframework.security.test.context.support.WithMockUser
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -2264,43 +2265,43 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
   @DisplayName("PUT /locations/{id}/deactivate")
   @Nested
-  inner class DeactivateLocationTest {
+  inner class TemporarilyDeactivateLocationTest {
 
     @Nested
     inner class Security {
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
           .exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
           .exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with right role, wrong scope`() {
-        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -2310,7 +2311,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class Validation {
       @Test
       fun `access client error bad data`() {
-        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"deactivationReason": ""}""")
@@ -2322,10 +2323,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       fun `cannot deactivate a location when prisoner is inside the cell`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), true)
 
-        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/permanent")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(permanentDeactivation = true)))
+          .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
           .exchange()
           .expectStatus().isEqualTo(409)
       }
@@ -2334,10 +2335,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       fun `cannot deactivate a wing when prisoners are in cells below`() {
         prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), true)
 
-        webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
+        webTestClient.put().uri("/locations/${wingZ.id}/deactivate/permanent")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(permanentDeactivation = true)))
+          .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
           .exchange()
           .expectStatus().isEqualTo(409)
       }
@@ -2351,20 +2352,20 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
         val now = LocalDate.now(clock)
         val proposedReactivationDate = now.plusMonths(1)
-        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/permanent")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(permanentDeactivation = true)))
+          .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Cell destroyed")))
           .exchange()
           .expectStatus().isOk
 
         prisonerSearchMockServer.resetAll()
         prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
 
-        webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
+        webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -2577,20 +2578,20 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
         val proposedReactivationDate = LocalDate.now(clock).plusMonths(1)
-        webTestClient.put().uri("/locations/${cell1.id}/deactivate")
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
 
         prisonerSearchMockServer.resetAll()
         prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy(), cell1.getPathHierarchy()), false)
 
-        webTestClient.put().uri("/locations/${wingZ.id}/deactivate")
+        webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
           .exchange()
           .expectStatus().isOk
 

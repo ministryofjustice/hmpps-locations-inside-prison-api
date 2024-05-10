@@ -13,7 +13,6 @@ import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
-import jakarta.validation.ValidationException
 import org.hibernate.Hibernate
 import org.hibernate.annotations.DiscriminatorFormula
 import org.hibernate.annotations.GenericGenerator
@@ -62,6 +61,7 @@ abstract class Location(
 
   private var active: Boolean = true,
   private var archived: Boolean = false,
+  private var archivedReason: String? = null,
   open var deactivatedDate: LocalDate? = null,
   @Enumerated(EnumType.STRING)
   open var deactivatedReason: DeactivatedReason? = null,
@@ -270,14 +270,14 @@ abstract class Location(
   }
 
   fun getStatus(): LocationStatus {
-    if (isActive()) {
-      return if (isNonResCell()) {
+    return if (isActive()) {
+      if (isNonResCell()) {
         LocationStatus.NON_RESIDENTIAL
       } else {
         LocationStatus.ACTIVE
       }
     } else {
-      return LocationStatus.INACTIVE
+      LocationStatus.INACTIVE
     }
   }
 
@@ -336,7 +336,7 @@ abstract class Location(
   ) {
     if (upsert.deactivationReason != this.deactivatedReason) {
       if (upsert.isDeactivated()) {
-        deactivate(
+        temporarilyDeactivate(
           deactivatedReason = upsert.deactivationReason!!.mapsTo(),
           deactivatedDate = upsert.deactivatedDate ?: LocalDate.now(clock),
           proposedReactivationDate = upsert.proposedReactivationDate,
@@ -349,19 +349,14 @@ abstract class Location(
     }
   }
 
-  fun deactivate(
-    deactivatedReason: DeactivatedReason? = null,
-    permanentDeactivation: Boolean = false,
+  fun temporarilyDeactivate(
+    deactivatedReason: DeactivatedReason,
     deactivatedDate: LocalDate,
     planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
     clock: Clock,
   ) {
-    if (!permanentDeactivation && deactivatedReason == null) {
-      throw ValidationException("Temporary deactivation reason must be specified")
-    }
-
     if (!isActive()) {
       log.warn("Location [$id] is already deactivated")
     } else {
@@ -370,7 +365,7 @@ abstract class Location(
       addHistory(
         LocationAttribute.DEACTIVATED_REASON,
         this.deactivatedReason?.description,
-        deactivatedReason?.description,
+        deactivatedReason.description,
         userOrSystemInContext,
         amendedDate,
       )
@@ -395,14 +390,7 @@ abstract class Location(
         userOrSystemInContext,
         amendedDate,
       )
-      addHistory(
-        LocationAttribute.PERMANENT_DEACTIVATION,
-        this.archived.toString(),
-        permanentDeactivation.toString(),
-        userOrSystemInContext,
-        amendedDate,
-      )
-      this.archived = permanentDeactivation
+
       this.active = false
       this.deactivatedReason = deactivatedReason
       this.deactivatedDate = deactivatedDate
@@ -411,7 +399,43 @@ abstract class Location(
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
 
-      log.info("Deactivated Location [$id] (Permanent = $permanentDeactivation)")
+      log.info("Temporarily Deactivated Location [$id]")
+    }
+  }
+
+  fun permanentlyDeactivate(
+    reason: String,
+    deactivatedDate: LocalDate,
+    userOrSystemInContext: String,
+    clock: Clock,
+  ) {
+    if (isPermanentlyDeactivated()) {
+      log.warn("Location [$id] is already permanently deactivated")
+    } else {
+      val amendedDate = LocalDateTime.now(clock)
+      addHistory(LocationAttribute.ACTIVE, "true", "false", userOrSystemInContext, amendedDate)
+      addHistory(
+        LocationAttribute.PERMANENT_DEACTIVATION,
+        null,
+        reason,
+        userOrSystemInContext,
+        amendedDate,
+      )
+      addHistory(
+        LocationAttribute.DEACTIVATED_DATE,
+        this.deactivatedDate?.toString(),
+        deactivatedDate.toString(),
+        userOrSystemInContext,
+        amendedDate,
+      )
+      this.archived = true
+      this.active = false
+      this.deactivatedDate = deactivatedDate
+      this.archivedReason = reason
+      this.updatedBy = userOrSystemInContext
+      this.whenUpdated = amendedDate
+
+      log.info("Permanently Deactivated Location [$id]")
     }
   }
 
