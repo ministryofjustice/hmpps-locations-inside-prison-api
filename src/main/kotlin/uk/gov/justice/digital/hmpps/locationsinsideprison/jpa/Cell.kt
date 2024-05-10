@@ -38,6 +38,7 @@ class Cell(
   whenCreated: LocalDateTime,
   createdBy: String,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+  archived: Boolean = false,
 
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
   private var capacity: Capacity? = null,
@@ -80,6 +81,7 @@ class Cell(
   whenCreated = whenCreated,
   createdBy = createdBy,
   residentialHousingType = residentialHousingType,
+  archived = archived
 ) {
 
   fun getWorkingCapacity() = capacity?.workingCapacity

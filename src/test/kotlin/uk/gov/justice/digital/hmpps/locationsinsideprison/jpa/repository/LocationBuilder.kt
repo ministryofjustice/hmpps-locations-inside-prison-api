@@ -42,11 +42,13 @@ fun buildCell(
   capacity: Capacity? = null,
   certification: Certification? = null,
   residentialAttributeValues: Set<ResidentialAttributeValue> = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY, ResidentialAttributeValue.CAT_B),
+  archived: Boolean = false,
 ): Cell {
   val cell = Cell(
     prisonId = prisonId,
     code = pathHierarchy.split("-").last(),
     active = active,
+    archived = archived,
     pathHierarchy = pathHierarchy,
     createdBy = EXPECTED_USERNAME,
     whenCreated = LocalDateTime.now(clock),
