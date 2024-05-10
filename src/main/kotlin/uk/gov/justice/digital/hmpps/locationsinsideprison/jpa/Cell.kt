@@ -274,16 +274,6 @@ class Cell(
   override fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
     super.updateWith(upsert, userOrSystemInContext, clock)
 
-    upsert.capacity?.let { setCapacity(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity, userOrSystemInContext, clock) }
-
-    upsert.certification?.let {
-      if (it.certified) {
-        certifyCell(it.capacityOfCertifiedCell, userOrSystemInContext, clock)
-      } else {
-        deCertifyCell(userOrSystemInContext, clock)
-      }
-    }
-
     if (upsert.attributes != null) {
       recordRemovedAttributes(upsert.attributes!!, userOrSystemInContext, clock)
       attributes.retainAll(upsert.attributes!!.map { addAttribute(it, userOrSystemInContext, clock) }.toSet())

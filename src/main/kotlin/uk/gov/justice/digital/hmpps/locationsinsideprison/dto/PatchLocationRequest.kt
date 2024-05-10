@@ -43,12 +43,6 @@ data class PatchLocationRequest(
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   val parentId: UUID? = null,
 
-  @Schema(description = "Capacity details of the location", required = false)
-  override val capacity: Capacity? = null,
-
-  @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
-  override val certification: Certification? = null,
-
   @Schema(description = "Location Attributes", required = false)
   override val attributes: Set<ResidentialAttributeValue>? = null,
 

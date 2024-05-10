@@ -1394,13 +1394,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       code = "3",
     )
 
-    val changeCapacity = PatchLocationRequest(
-      capacity = CapacityDTO(maxCapacity = 3, workingCapacity = 3),
-    )
-    val changeCertification = PatchLocationRequest(
-      certification = CertificationDTO(certified = false),
-    )
-
     val changeAttribute = PatchLocationRequest(
       attributes = setOf(
         ResidentialAttributeValue.SINGLE_OCCUPANCY,
@@ -1744,6 +1737,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           )
       }
 
+/*
       @Test
       fun `can update details of a locations capacity`() {
         webTestClient.patch().uri("/locations/${cell1.id}")
@@ -2027,7 +2021,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             false,
           )
       }
-
+*/
       @Test
       fun `can delete details of a locations attributes`() {
         webTestClient.patch().uri("/locations/${cell1.id}")

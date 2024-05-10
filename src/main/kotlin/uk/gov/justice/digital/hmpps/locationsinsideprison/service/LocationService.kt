@@ -149,12 +149,6 @@ class LocationService(
       theParent?.let { locationToUpdate.setParent(it) }
     }
 
-    val capacityChanged = locationToUpdate is Cell &&
-      patchLocationRequest.capacity != null && patchLocationRequest.capacity != locationToUpdate.getCapacity()
-
-    val certificationChanged = locationToUpdate is Cell &&
-      patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.getCertification()
-
     val attributesChanged = locationToUpdate is Cell && patchLocationRequest.attributes != locationToUpdate.attributes.map { it.attributeValue }.toSet()
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
@@ -168,16 +162,12 @@ class LocationService(
         "path" to locationToUpdate.getPathHierarchy(),
         "codeChanged" to "$codeChanged",
         "parentChanged" to "$parentChanged",
-        "capacityChanged" to "$capacityChanged",
-        "certificationChanged" to "$certificationChanged",
       ),
       null,
     )
 
     return UpdateLocationResult(
-      locationToUpdate.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged || capacityChanged || certificationChanged || attributesChanged),
-      capacityChanged,
-      certificationChanged,
+      locationToUpdate.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged || attributesChanged),
       if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
     )
   }

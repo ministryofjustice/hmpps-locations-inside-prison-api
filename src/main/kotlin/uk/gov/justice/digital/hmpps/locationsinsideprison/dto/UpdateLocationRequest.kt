@@ -11,8 +11,6 @@ interface UpdateLocationRequest {
   val comments: String?
   val orderWithinParentLocation: Int?
   val residentialHousingType: ResidentialHousingType?
-  val capacity: Capacity?
-  val certification: Certification?
   val attributes: Set<ResidentialAttributeValue>?
   val usage: Set<NonResidentialUsageDto>?
   fun isCell() = locationType == LocationType.CELL

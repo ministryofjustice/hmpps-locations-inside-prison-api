@@ -748,7 +748,5 @@ data class ConvertToCellRequest(
 
 data class UpdateLocationResult(
   val location: LocationDTO,
-  val capacityChanged: Boolean = false,
-  val certificationChanged: Boolean = false,
   val otherParentLocationChanged: LocationDTO? = null,
 )
