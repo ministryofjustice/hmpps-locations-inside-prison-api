@@ -6,6 +6,8 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.ValidationException
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.PositiveOrZero
 import org.springdoc.core.annotations.ParameterObject
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -28,8 +30,9 @@ import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
@@ -455,15 +458,15 @@ class LocationResource(
     }
   }
 
-  @PutMapping("/{id}/deactivate")
+  @PutMapping("/{id}/deactivate/temporary")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
-    summary = "Deactivate a location",
+    summary = "Temporarily deactivate a location",
     description = "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
         responseCode = "200",
-        description = "Returns updated location",
+        description = "Returns deactivated location",
       ),
       ApiResponse(
         responseCode = "400",
@@ -487,23 +490,74 @@ class LocationResource(
       ),
     ],
   )
-  fun deactivateLocation(
+  fun temporarilyDeactivateLocation(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
     @RequestBody
     @Validated
-    deactivationLocationRequest: DeactivationLocationRequest,
+    temporaryDeactivationLocationRequest: TemporaryDeactivationLocationRequest,
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_DEACTIVATED,
       {
         locationService.deactivateLocation(
           id,
-          deactivatedReason = deactivationLocationRequest.deactivationReason,
-          proposedReactivationDate = deactivationLocationRequest.proposedReactivationDate,
-          planetFmReference = deactivationLocationRequest.planetFmReference,
-          permanentDeactivation = deactivationLocationRequest.permanentDeactivation,
+          deactivatedReason = temporaryDeactivationLocationRequest.deactivationReason,
+          proposedReactivationDate = temporaryDeactivationLocationRequest.proposedReactivationDate,
+          planetFmReference = temporaryDeactivationLocationRequest.planetFmReference,
+        )
+      },
+      InformationSource.DPS,
+    )
+  }
+
+  @PutMapping("/{id}/deactivate/permanent")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Permanently deactivate a location",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns archived location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun permanentlyDeactivateLocation(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    permanentDeactivationLocationRequest: PermanentDeactivationLocationRequest,
+  ): LocationDTO {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_DEACTIVATED,
+      {
+        locationService.permanentlyDeactivateLocation(
+          id,
+          reasonForPermanentDeactivation = permanentDeactivationLocationRequest.reason,
         )
       },
       InformationSource.DPS,
@@ -668,16 +722,27 @@ class LocationResource(
 
 @Schema(description = "Request to convert a cell to a non-res location")
 data class ConvertCellToNonResidentialLocationRequest(
+  @Schema(description = "Cell type to convert to", example = "SHOWER", required = true)
   val convertedCellType: ConvertedCellType,
+  @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false)
   val otherConvertedCellType: String? = null,
 )
 
 @Schema(description = "Request to convert a non-res location to a cell")
 data class ConvertToCellRequest(
+  @Schema(description = "Accommodation type of the location", example = "NORMAL_ACCOMMODATION", required = true)
   val accommodationType: AccommodationType,
+  @Schema(description = "Specialist cell type", example = "BIOHAZARD_DIRTY_PROTEST", required = false)
   val specialistCellType: SpecialistCellType?,
+  @Schema(description = "Max capacity", example = "2", required = true)
+  @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
+  @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
   val maxCapacity: Int = 0,
+  @Schema(description = "Working capacity", example = "1", required = true)
+  @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
+  @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
   val workingCapacity: Int = 0,
+  @Schema(description = "Used For list", example = "STANDARD_ACCOMMODATION, PERSONALITY_DISORDER", required = false)
   val usedForTypes: List<UsedForType>? = null,
 )
 
