@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.microsoft.applicationinsights.TelemetryClient
+import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.ValidationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -383,22 +385,23 @@ class LocationService(
         ?: throw LocationNotFoundException(it.toString())
     }
 
-  fun getLocationForPrisonBelowParent(
+  fun getResidentialLocations(
     prisonId: String,
     parentLocationId: UUID? = null,
     parentPathHierarchy: String? = null,
-  ): List<LocationDTO> {
-    val parentId =
+  ): ResidentialSummary {
+    val parent =
       if (parentLocationId != null) {
-        locationRepository.findById(parentLocationId).getOrNull()?.id
+        residentialLocationRepository.findById(parentLocationId).getOrNull()
           ?: throw LocationNotFoundException(parentLocationId.toString())
       } else if (parentPathHierarchy != null) {
-        locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, parentPathHierarchy)?.id
+        residentialLocationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, parentPathHierarchy)
           ?: throw LocationNotFoundException("$prisonId-$parentPathHierarchy")
       } else {
         null
       }
 
+    val parentId = parent?.id
     val locations =
       (
         if (parentId != null) {
@@ -408,8 +411,43 @@ class LocationService(
         }
         )
         .filter { !it.isPermanentlyDeactivated() }
+        .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isWingLandingSpur() }
         .map { it.toDto(countInactiveCells = true) }
 
-    return locations
+    return ResidentialSummary(
+      prisonSummary = if (parentId == null) {
+        PrisonSummary(
+          workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
+          maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
+          signedOperationalCapacity = 0,
+        )
+      } else {
+        null
+      },
+      parentLocation = parent?.toDto(countInactiveCells = true),
+      subLocations = locations,
+    )
   }
 }
+
+@Schema(description = "Residential Summary")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ResidentialSummary(
+  @Schema(description = "Prison summary for top level view")
+  val prisonSummary: PrisonSummary? = null,
+  @Schema(description = "The current parent location (e.g Wing or Landing) details")
+  val parentLocation: LocationDTO? = null,
+  @Schema(description = "All residential locations under this parent")
+  val subLocations: List<LocationDTO>,
+)
+
+@Schema(description = "Prison Summary Information")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class PrisonSummary(
+  @Schema(description = "Prison working capacity")
+  val workingCapacity: Int,
+  @Schema(description = "Prison signed operational capacity")
+  val signedOperationalCapacity: Int,
+  @Schema(description = "Prison max capacity")
+  val maxCapacity: Int,
+)

@@ -42,6 +42,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialSummary
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 @RestController
@@ -163,7 +164,7 @@ class LocationResource(
     prisonId: String,
   ): List<LocationDTO> = locationService.getLocationByPrison(prisonId)
 
-  @GetMapping("/residential/{prisonId}/below-parent")
+  @GetMapping("/residential-summary/{prisonId}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @Operation(
@@ -201,7 +202,7 @@ class LocationResource(
     @Schema(description = "Parent location path hierarchy, can be a Wing code, or landing code", example = "A-1", required = false)
     @RequestParam(name = "parentPathHierarchy", required = false)
     parentPathHierarchy: String? = null,
-  ): List<LocationDTO> = locationService.getLocationForPrisonBelowParent(prisonId, parentLocationId, parentPathHierarchy)
+  ): ResidentialSummary = locationService.getResidentialLocations(prisonId, parentLocationId, parentPathHierarchy)
 
   @GetMapping("")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
