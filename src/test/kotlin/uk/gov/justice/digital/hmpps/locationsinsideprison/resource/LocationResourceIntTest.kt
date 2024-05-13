@@ -931,6 +931,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
     }
   }
+
   @DisplayName("GET /locations")
   @Nested
   inner class ViewPagedLocationsTest {
