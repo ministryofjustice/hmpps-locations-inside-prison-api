@@ -195,7 +195,7 @@ class LocationResource(
     @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @PathVariable
     prisonId: String,
-  ): List<LocationDTO> = locationService.getArchivedLocations(prisonId)
+  ) = locationService.getArchivedLocations(prisonId)
 
   @GetMapping("/residential/{prisonId}/below-parent")
   @ResponseStatus(HttpStatus.OK)

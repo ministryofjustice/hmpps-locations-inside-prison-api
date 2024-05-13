@@ -31,7 +31,6 @@ class Cell(
   comments: String? = null,
   orderWithinParentLocation: Int? = null,
   active: Boolean = true,
-  archived: Boolean = false,
   deactivatedDate: LocalDate? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
