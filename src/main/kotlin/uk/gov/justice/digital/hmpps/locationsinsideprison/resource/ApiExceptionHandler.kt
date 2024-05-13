@@ -240,8 +240,8 @@ class ApiExceptionHandler {
       .body(
         ErrorResponse(
           status = BAD_REQUEST,
-          errorCode = ErrorCode.MaxCapacityLessThanWorkingCapacity,
-          userMessage = "Capacity Incorrect: ${e.message}",
+          errorCode = ErrorCode.CapacityValidationFailure,
+          userMessage = "Capacity Validation Error: ${e.message}",
           developerMessage = e.message,
         ),
       )
@@ -301,8 +301,7 @@ class LocationNotFoundException(id: String) : Exception("There is no location fo
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
 class LocationAlreadyDeactivatedException(key: String) : Exception("$key is already deactivated")
-class CapacityException(workingCapacity: Int, maxCapacity: Int) : ValidationException("Working capacity $workingCapacity exceeded maximum allowed capacity $maxCapacity")
-class CertificationException(capacityOfCertifiedCell: Int) : ValidationException("Certified Cells cannot have a certified capacity of $capacityOfCertifiedCell")
+class CapacityException(locationKey: String, message: String) : ValidationException("Capacity for $locationKey incorrect: $message")
 class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as permanently deactivated")
 class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as converted cell")
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")

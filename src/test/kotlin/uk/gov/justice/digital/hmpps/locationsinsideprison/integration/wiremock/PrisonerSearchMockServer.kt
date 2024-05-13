@@ -67,6 +67,14 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
             prisonName = prisonId,
             cellLocation = locations.first(),
           ),
+          Prisoner(
+            prisonerNumber = "A1234AB",
+            firstName = "Test2",
+            lastName = "Test2",
+            prisonId = prisonId,
+            prisonName = prisonId,
+            cellLocation = locations.first(),
+          ),
         ),
       )
     }

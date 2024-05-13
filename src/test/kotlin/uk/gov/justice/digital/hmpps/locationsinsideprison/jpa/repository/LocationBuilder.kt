@@ -41,7 +41,11 @@ fun buildCell(
   active: Boolean = true,
   capacity: Capacity? = null,
   certification: Certification? = null,
-  residentialAttributeValues: Set<ResidentialAttributeValue> = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY, ResidentialAttributeValue.CAT_B),
+  residentialAttributeValues: Set<ResidentialAttributeValue> = setOf(
+    ResidentialAttributeValue.DOUBLE_OCCUPANCY,
+    ResidentialAttributeValue.CAT_B,
+  ),
+  specialistCellType: SpecialistCellType? = null,
 ): Cell {
   val cell = Cell(
     prisonId = prisonId,
@@ -67,7 +71,7 @@ fun buildCell(
     },
   )
   cell.addAttributes(residentialAttributeValues)
-  cell.addSpecialistCellType(SpecialistCellType.WHEELCHAIR_ACCESSIBLE, EXPECTED_USERNAME, clock)
+  specialistCellType?.let { cell.addSpecialistCellType(it, EXPECTED_USERNAME, clock) }
   cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, EXPECTED_USERNAME, clock)
 
   return cell

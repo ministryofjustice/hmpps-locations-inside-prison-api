@@ -25,6 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationHistoryRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
@@ -83,6 +84,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
       certification = Certification(certified = true, capacityOfCertifiedCell = 1),
       residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
+      specialistCellType = SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
     )
     locationHistory = cell.addHistory(
       attributeName = LocationAttribute.DESCRIPTION,
@@ -624,13 +626,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Max Capacity",
                   "oldValue": "1",
-                  "newValue": "0",
                   "amendedBy": "user"
                 },
                 {
                   "attribute": "Baseline Certified Capacity",
                   "oldValue": "1",
-                  "newValue": "0",
                   "amendedBy": "user"
                 },
                 {

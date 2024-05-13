@@ -12,7 +12,7 @@ enum class ErrorCode(val errorCode: Int) {
   LocationAlreadyExists(103),
   LocationCannotBeReactivated(104),
   LocationAlreadyDeactivated(105),
-  MaxCapacityLessThanWorkingCapacity(106),
+  CapacityValidationFailure(106),
   PermanentlyDeactivatedLocationCannotByUpdated(107),
   ConvertedCellLocationCannotByUpdated(108),
   DeactivationErrorLocationsContainPrisoners(109),
