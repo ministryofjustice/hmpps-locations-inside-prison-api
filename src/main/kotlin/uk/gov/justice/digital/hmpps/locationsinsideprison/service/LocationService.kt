@@ -412,4 +412,7 @@ class LocationService(
 
     return locations
   }
+
+  fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map {it.toDto()}
+
 }

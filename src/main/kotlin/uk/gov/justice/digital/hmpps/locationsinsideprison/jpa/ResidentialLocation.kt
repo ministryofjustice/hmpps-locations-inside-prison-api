@@ -32,6 +32,7 @@ open class ResidentialLocation(
   childLocations: MutableList<Location>,
   whenCreated: LocalDateTime,
   createdBy: String,
+  archived: Boolean = false,
 
   @Enumerated(EnumType.STRING)
   open var residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
@@ -54,6 +55,7 @@ open class ResidentialLocation(
   whenCreated = whenCreated,
   whenUpdated = whenCreated,
   updatedBy = createdBy,
+  archived = archived,
 ) {
 
   private fun getWorkingCapacity(): Int {

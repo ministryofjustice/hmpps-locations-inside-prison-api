@@ -46,11 +46,13 @@ fun buildCell(
     ResidentialAttributeValue.CAT_B,
   ),
   specialistCellType: SpecialistCellType? = null,
+  archived: Boolean = false
 ): Cell {
   val cell = Cell(
     prisonId = prisonId,
     code = pathHierarchy.split("-").last(),
     active = active,
+    archived = archived,
     pathHierarchy = pathHierarchy,
     createdBy = EXPECTED_USERNAME,
     whenCreated = LocalDateTime.now(clock),
