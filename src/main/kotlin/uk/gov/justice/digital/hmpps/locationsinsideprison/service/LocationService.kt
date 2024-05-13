@@ -67,6 +67,7 @@ class LocationService(
       .map {
         it.toDto()
       }
+      .sortedBy { it.getKey() }
 
   fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
     if (!key.contains("-")) throw LocationNotFoundException(key)
@@ -413,6 +414,7 @@ class LocationService(
         .filter { !it.isPermanentlyDeactivated() }
         .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isWingLandingSpur() }
         .map { it.toDto(countInactiveCells = true) }
+        .sortedBy { it.getKey() }
 
     return ResidentialSummary(
       prisonSummary = if (parentId == null) {
