@@ -55,6 +55,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   lateinit var cell1: Cell
   lateinit var cell2: Cell
   lateinit var inactiveCell: Cell
+  lateinit var archivedCell: Cell
   lateinit var landing1: ResidentialLocationJPA
   lateinit var landing2: ResidentialLocationJPA
   lateinit var landing3: ResidentialLocationJPA
@@ -123,6 +124,17 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         specialistCellType = SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
       ),
     )
+
+    archivedCell = repository.save(
+      buildCell(
+        pathHierarchy = "Z-1-003",
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
+        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        active = false,
+        archived = true,
+      ),
+    )
+
     visitRoom = repository.save(
       buildNonResidentialLocation(
         pathHierarchy = "VISIT",
@@ -940,6 +952,69 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("GET /locations/prison/{prisonId}/archived")
+  @Nested
+  inner class ViewArchivedLocationByPrisonTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/${archivedCell.prisonId}/archived")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/${archivedCell.prisonId}/archived")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/${archivedCell.prisonId}/archived")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve details of an archived locations`() {
+        webTestClient.get().uri("/locations/prison/${archivedCell.prisonId}/archived")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             [{"prisonId":"MDI",
+                "code":"003",
+                "pathHierarchy":"Z-1-003",
+                "locationType":"CELL",
+                "residentialHousingType":"NORMAL_ACCOMMODATION",
+                "permanentlyInactive":true,
+                "capacity":{"maxCapacity":2,"workingCapacity":2},
+                "status":"INACTIVE",
+                "active":false,
+                "deactivatedByParent":false,
+                "deactivatedDate":"2023-12-05",
+                "key":"MDI-Z-1-003",
+                "permanentlyInactiveReason": "Demolished"
+                }]
+          """,
+            false,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /locations")
   @Nested
   inner class ViewPagedLocationsTest {
@@ -976,7 +1051,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a page of locations`() {
-        webTestClient.get().uri("/locations?size=10&sort=pathHierarchy,asc")
+        webTestClient.get().uri("/locations?size=11&sort=pathHierarchy,asc")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -985,10 +1060,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
               {
                 "totalPages": 1,
-                "totalElements": 10,
+                "totalElements": 11,
                 "first": true,
                 "last": true,
-                "size": 10,
+                "size": 11,
                 "content": [
                   {
                     "prisonId": "MDI",
@@ -1053,6 +1128,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "pathHierarchy": "Z-1-002",
                     "locationType": "CELL",
                     "key": "MDI-Z-1-002"
+                  }, 
+                  {
+                    "prisonId": "MDI",
+                    "code": "003",
+                    "pathHierarchy": "Z-1-003",
+                    "locationType": "CELL",
+                    "key": "MDI-Z-1-003"
                   },
                   {
                     "prisonId": "MDI",
@@ -1068,7 +1150,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "sorted": true,
                   "unsorted": false
                 },
-                "numberOfElements": 10,
+                "numberOfElements": 11,
                 "pageable": {
                   "offset": 0,
                   "sort": {
@@ -1076,7 +1158,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "sorted": true,
                     "unsorted": false
                   },
-                  "pageSize": 10,
+                  "pageSize": 11,
                   "pageNumber": 0,
                   "paged": true,
                   "unpaged": false
