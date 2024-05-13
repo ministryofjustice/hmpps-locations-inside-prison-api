@@ -26,6 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
@@ -110,15 +111,17 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A, ResidentialAttributeValue.SAFE_CELL, ResidentialAttributeValue.DOUBLE_OCCUPANCY),
+        specialistCellType = SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
 
       ),
     )
     inactiveCell = repository.save(
       buildCell(
         pathHierarchy = "B-1-001",
+        active = false,
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
-        active = false,
+        specialistCellType = SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
       ),
     )
     visitRoom = repository.save(
@@ -1394,13 +1397,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       code = "3",
     )
 
-    val changeCapacity = PatchLocationRequest(
-      capacity = CapacityDTO(maxCapacity = 3, workingCapacity = 3),
-    )
-    val changeCertification = PatchLocationRequest(
-      certification = CertificationDTO(certified = false),
-    )
-
     val changeAttribute = PatchLocationRequest(
       attributes = setOf(
         ResidentialAttributeValue.SINGLE_OCCUPANCY,
@@ -1744,6 +1740,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           )
       }
 
+/*
       @Test
       fun `can update details of a locations capacity`() {
         webTestClient.patch().uri("/locations/${cell1.id}")
@@ -2027,7 +2024,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             false,
           )
       }
-
+*/
       @Test
       fun `can delete details of a locations attributes`() {
         webTestClient.patch().uri("/locations/${cell1.id}")
@@ -2085,10 +2082,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Attributes",
                   "oldValue": "CAT_B"
-                },
-                {
-                  "attribute": "Specialist Cell Type",
-                  "newValue": "Wheelchair accessible cells"
                 },
                 {
                   "attribute": "Used For",
@@ -2259,6 +2252,159 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           """,
             false,
           )
+      }
+    }
+  }
+
+  @DisplayName("PUT /locations/{id}/capacity")
+  @Nested
+  inner class CapacityChangeTest {
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/locations/${cell1.id}/capacity")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/locations/${cell1.id}/capacity")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/locations/${cell1.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.put().uri("/locations/${cell1.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.put().uri("/locations/${cell1.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO(workingCapacity = -1, maxCapacity = 999)))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot reduce max capacity of a cell below prisoners in cell`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), true)
+
+        webTestClient.put().uri("/locations/${cell1.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO(workingCapacity = 1, maxCapacity = 1)))
+          .exchange()
+          .expectStatus().isEqualTo(400)
+      }
+
+      @Test
+      fun `cannot have a max cap below a working cap`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cell1.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO(workingCapacity = 3, maxCapacity = 2)))
+          .exchange()
+          .expectStatus().isEqualTo(400)
+      }
+
+      @Test
+      fun `cannot have a max cap of 0`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cell1.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO(workingCapacity = 0, maxCapacity = 0)))
+          .exchange()
+          .expectStatus().isEqualTo(400)
+      }
+
+      @Test
+      fun `cannot have a working cap = 0 when accommodation type = normal accommodation and not a specialist cell`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cell1.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO(workingCapacity = 0, maxCapacity = 2)))
+          .exchange()
+          .expectStatus().isEqualTo(400)
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can change the capacity of a cell`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cell1.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO(workingCapacity = 1, maxCapacity = 2)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "id": "${cell1.id}",
+                "prisonId": "MDI",
+                "code": "001",
+                "pathHierarchy": "Z-1-001",
+                "locationType": "CELL",
+                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "capacity": {
+                  "maxCapacity": 2,
+                  "workingCapacity": 1
+                },
+                "certification": {
+                  "certified": true
+                },
+                "active": true,
+                "isResidential": true,
+                "key": "MDI-Z-1-001"
+              }
+          """,
+            false,
+          )
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
       }
     }
   }

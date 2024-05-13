@@ -23,8 +23,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
@@ -42,6 +44,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 class LocationService(
   private val locationRepository: LocationRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
+  private val cellLocationRepository: CellLocationRepository,
   private val prisonerSearchService: PrisonerSearchService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
@@ -149,12 +152,6 @@ class LocationService(
       theParent?.let { locationToUpdate.setParent(it) }
     }
 
-    val capacityChanged = locationToUpdate is Cell &&
-      patchLocationRequest.capacity != null && patchLocationRequest.capacity != locationToUpdate.getCapacity()
-
-    val certificationChanged = locationToUpdate is Cell &&
-      patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.getCertification()
-
     val attributesChanged = locationToUpdate is Cell && patchLocationRequest.attributes != locationToUpdate.attributes.map { it.attributeValue }.toSet()
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
@@ -168,18 +165,37 @@ class LocationService(
         "path" to locationToUpdate.getPathHierarchy(),
         "codeChanged" to "$codeChanged",
         "parentChanged" to "$parentChanged",
-        "capacityChanged" to "$capacityChanged",
-        "certificationChanged" to "$certificationChanged",
       ),
       null,
     )
 
     return UpdateLocationResult(
-      locationToUpdate.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged || capacityChanged || certificationChanged || attributesChanged),
-      capacityChanged,
-      certificationChanged,
+      locationToUpdate.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged || attributesChanged),
       if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
     )
+  }
+
+  fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int): LocationDTO {
+    val locCapChange = cellLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (locCapChange.isPermanentlyDeactivated()) {
+      throw ValidationException("Cannot change the capacity a permanently deactivated location")
+    }
+
+    val prisoners = prisonersInLocations(locCapChange).flatMap { it.value }
+    if (maxCapacity < prisoners.size) {
+      throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})")
+    }
+
+    locCapChange.setCapacity(
+      maxCapacity = maxCapacity,
+      workingCapacity = workingCapacity,
+      userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+      clock = clock,
+    )
+    log.info("Capacity updated max capacity = $maxCapacity and working capacity = $workingCapacity")
+    return locCapChange.toDto(includeParent = true)
   }
 
   @Transactional
@@ -247,15 +263,18 @@ class LocationService(
   }
 
   private fun checkForPrisonersInLocation(location: Location) {
-    val locationsToCheck = location.cellLocations().map { it.getPathHierarchy() }.sorted()
-    if (locationsToCheck.isNotEmpty()) {
-      log.info("Checking for prisoners in locations {}", locationsToCheck)
-      val locationsWithPrisoners =
-        prisonerSearchService.findPrisonersInLocations(location.prisonId, locationsToCheck)
+    val locationsWithPrisoners = prisonersInLocations(location)
+    if (locationsWithPrisoners.isNotEmpty()) {
+      throw LocationContainsPrisonersException(locationsWithPrisoners)
+    }
+  }
 
-      if (locationsWithPrisoners.isNotEmpty()) {
-        throw LocationContainsPrisonersException(locationsWithPrisoners)
-      }
+  private fun prisonersInLocations(location: Location): Map<String, List<Prisoner>> {
+    val locationsToCheck = location.cellLocations().map { it.getPathHierarchy() }.sorted()
+    return if (locationsToCheck.isNotEmpty()) {
+      prisonerSearchService.findPrisonersInLocations(location.prisonId, locationsToCheck)
+    } else {
+      mapOf()
     }
   }
 

@@ -29,8 +29,8 @@ interface NomisMigrationRequest : UpdateLocationRequest {
   override val comments: String?
   override val orderWithinParentLocation: Int?
   override val residentialHousingType: ResidentialHousingType?
-  override val capacity: Capacity?
-  override val certification: Certification?
+  val capacity: Capacity?
+  val certification: Certification?
   override val attributes: Set<ResidentialAttributeValue>?
   override val usage: Set<NonResidentialUsageDto>?
   val parentId: UUID?
