@@ -254,7 +254,11 @@ abstract class Location(
       prisonId = prisonId,
       parentId = getParent()?.id,
       topLevelId = findTopLevelLocation().id!!,
-      localName = localName,
+      localName = if (!isCell()) {
+        localName
+      } else {
+        null
+      },
       comments = comments,
       orderWithinParentLocation = orderWithinParentLocation,
       active = isActiveAndAllParentsActive(),
@@ -306,10 +310,12 @@ abstract class Location(
     }
     this.locationType = upsert.locationType ?: this.locationType
 
-    if (upsert.localName != null && this.localName != upsert.localName) {
-      addHistory(LocationAttribute.DESCRIPTION, this.localName, upsert.localName, updatedBy, LocalDateTime.now(clock))
+    if (!isCell()) {
+      if (upsert.localName != null && this.localName != upsert.localName) {
+        addHistory(LocationAttribute.DESCRIPTION, this.localName, upsert.localName, updatedBy, LocalDateTime.now(clock))
+      }
+      this.localName = upsert.localName ?: this.localName
     }
-    this.localName = upsert.localName ?: this.localName
 
     if (upsert.comments != null && this.comments != upsert.comments) {
       addHistory(LocationAttribute.COMMENTS, this.comments, upsert.comments, updatedBy, LocalDateTime.now(clock))

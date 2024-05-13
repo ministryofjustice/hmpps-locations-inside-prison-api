@@ -10,4 +10,5 @@ interface ResidentialLocationRepository : JpaRepository<ResidentialLocation, UUI
   fun findAllByPrisonIdAndParentId(prisonId: String, parentId: UUID): List<ResidentialLocation>
   fun findAllByPrisonIdAndParentIsNull(prisonId: String): List<ResidentialLocation>
   fun findAllByPrisonIdAndArchivedIsTrue(prisonId: String): List<ResidentialLocation>
+  fun findOneByPrisonIdAndPathHierarchy(prisonId: String, pathHierarchy: String): ResidentialLocation?
 }

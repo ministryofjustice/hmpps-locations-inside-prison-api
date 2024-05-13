@@ -82,7 +82,7 @@ open class ResidentialLocation(
       .toSet()
   }
 
-  private fun getAccommodationTypes(): Set<AccommodationType> {
+  fun getAccommodationTypes(): Set<AccommodationType> {
     return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .map { it.accommodationType }
       .toSet()
