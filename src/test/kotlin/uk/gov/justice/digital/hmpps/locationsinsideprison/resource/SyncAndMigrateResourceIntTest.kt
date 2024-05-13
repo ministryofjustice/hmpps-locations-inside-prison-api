@@ -253,6 +253,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 id = cell.id,
                 code = "001",
                 attributes = setOf(ResidentialAttributeValue.CAT_A),
+                capacity = CapacityDTO(3, 3),
+                certification = CertificationDTO(false, 0)
               ),
             ),
           )
@@ -274,7 +276,15 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "isResidential": true,
               "attributes": [
                 "CAT_A"
-              ]
+              ],
+              "capacity": {
+                "maxCapacity": 3,
+                "workingCapacity": 3
+              },
+              "certification": {
+                "certified": false,
+                "capacityOfCertifiedCell": 0
+              }
             }
           """,
             false,
@@ -620,7 +630,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Working Capacity",
                   "oldValue": "1",
-                  "newValue": "0",
                   "amendedBy": "user"
                 },
                 {
@@ -631,6 +640,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Baseline Certified Capacity",
                   "oldValue": "1",
+                  "newValue": "0",
                   "amendedBy": "user"
                 },
                 {

@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
@@ -290,6 +291,8 @@ class Cell(
   override fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
     super.updateWith(upsert, userOrSystemInContext, clock)
 
+    handleNomisCapacitySync(upsert, userOrSystemInContext, clock)
+
     if (upsert.attributes != null) {
       recordRemovedAttributes(upsert.attributes!!, userOrSystemInContext, clock)
       attributes.retainAll(upsert.attributes!!.map { addAttribute(it, userOrSystemInContext, clock) }.toSet())
@@ -318,6 +321,56 @@ class Cell(
       }
     }
     return this
+  }
+
+  private fun Cell.handleNomisCapacitySync(
+    upsert: UpdateLocationRequest,
+    userOrSystemInContext: String,
+    clock: Clock,
+  ) {
+    if (upsert is NomisSyncLocationRequest) {
+      upsert.capacity?.let {
+        with(upsert.capacity) {
+          addHistory(
+            LocationAttribute.CAPACITY,
+            capacity?.maxCapacity?.toString(),
+            maxCapacity.toString(),
+            userOrSystemInContext,
+            LocalDateTime.now(clock),
+          )
+          addHistory(
+            LocationAttribute.OPERATIONAL_CAPACITY,
+            capacity?.workingCapacity?.toString(),
+            workingCapacity.toString(),
+            userOrSystemInContext,
+            LocalDateTime.now(clock),
+          )
+
+          capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+        }
+      }
+
+      upsert.certification?.let {
+        with(upsert.certification) {
+          addHistory(
+            LocationAttribute.CERTIFIED,
+            certification?.certified?.toString(),
+            certified.toString(),
+            userOrSystemInContext,
+            LocalDateTime.now(clock),
+          )
+          addHistory(
+            LocationAttribute.CERTIFIED_CAPACITY,
+            certification?.capacityOfCertifiedCell?.toString(),
+            capacityOfCertifiedCell.toString(),
+            userOrSystemInContext,
+            LocalDateTime.now(clock),
+          )
+          certification =
+            Certification(certified = certified, capacityOfCertifiedCell = capacityOfCertifiedCell)
+        }
+      }
+    }
   }
 
   private fun recordRemovedAttributes(
