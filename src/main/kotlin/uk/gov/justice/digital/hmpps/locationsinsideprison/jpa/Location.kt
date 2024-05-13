@@ -259,6 +259,7 @@ abstract class Location(
       orderWithinParentLocation = orderWithinParentLocation,
       active = isActiveAndAllParentsActive(),
       permanentlyInactive = isPermanentlyDeactivated(),
+      permanentlyInactiveReason = archivedReason,
       deactivatedByParent = isActive() && !isActiveAndAllParentsActive(),
       deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,

@@ -74,7 +74,6 @@ class Cell(
   comments = comments,
   orderWithinParentLocation = orderWithinParentLocation,
   active = active,
-  archived = archived,
   deactivatedDate = deactivatedDate,
   deactivatedReason = deactivatedReason,
   proposedReactivationDate = proposedReactivationDate,

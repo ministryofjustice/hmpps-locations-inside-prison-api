@@ -871,7 +871,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   @DisplayName("GET /locations/prison/{prisonId}/archived")
   @Nested
   inner class ViewArchivedLocationByPrisonTest {
-
     @Nested
     inner class Security {
 
@@ -903,7 +902,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
 
       @Test
-      fun `can retrieve details of archived location`() {
+      fun `can retrieve details of an archived cell`() {
         webTestClient.get().uri("/locations/prison/${archivedCell.prisonId}/archived")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
@@ -922,9 +921,52 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "active":false,
                 "deactivatedByParent":false,
                 "deactivatedDate":"2023-12-05",
-                "deactivatedReason":"DAMAGED", 
-                "key":"MDI-Z-1-003"
+                "key":"MDI-Z-1-003",
+                "permanentlyInactiveReason": "Demolished"
                 }]
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of archived locations within a wing`() {
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/archived")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             [{
+                "prisonId": "MDI",
+                "code": "003",
+                "pathHierarchy": "Z-1-003",
+                "locationType": "CELL",
+                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "permanentlyInactive": true,
+                "permanentlyInactiveReason": "Demolished",
+                "capacity": {
+                  "maxCapacity": 2,
+                  "workingCapacity": 2
+                },
+                "certification": {
+                  "certified": true,
+                  "capacityOfCertifiedCell": 2
+                },
+                "attributes": ["CAT_B", "DOUBLE_OCCUPANCY"],
+                "accommodationTypes": ["NORMAL_ACCOMMODATION"],
+                "specialistCellTypes": ["WHEELCHAIR_ACCESSIBLE"],
+                "usedFor": ["STANDARD_ACCOMMODATION"],
+                "orderWithinParentLocation": 99,
+                "status": "INACTIVE",
+                "active": false,
+                "deactivatedByParent": false,
+                "deactivatedDate": "2023-12-05",
+                "deactivatedReason": "DAMAGED",
+                "key": "MDI-Z-1-003",
+                "isResidential": true
+              }]
           """,
             false,
           )

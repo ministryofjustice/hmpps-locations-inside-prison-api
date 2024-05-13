@@ -52,7 +52,6 @@ fun buildCell(
     prisonId = prisonId,
     code = pathHierarchy.split("-").last(),
     active = active,
-    archived = archived,
     pathHierarchy = pathHierarchy,
     createdBy = EXPECTED_USERNAME,
     whenCreated = LocalDateTime.now(clock),
@@ -75,7 +74,9 @@ fun buildCell(
   cell.addAttributes(residentialAttributeValues)
   specialistCellType?.let { cell.addSpecialistCellType(it, EXPECTED_USERNAME, clock) }
   cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, EXPECTED_USERNAME, clock)
-
+  if (archived) {
+    cell.permanentlyDeactivate("Demolished", LocalDate.now(clock), EXPECTED_USERNAME, clock)
+  }
   return cell
 }
 fun buildNonResidentialLocation(
