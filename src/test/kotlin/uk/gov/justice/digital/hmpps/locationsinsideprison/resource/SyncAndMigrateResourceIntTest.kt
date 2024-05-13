@@ -254,7 +254,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 code = "001",
                 attributes = setOf(ResidentialAttributeValue.CAT_A),
                 capacity = CapacityDTO(3, 3),
-                certification = CertificationDTO(false, 0)
+                certification = CertificationDTO(false, 0),
               ),
             ),
           )
