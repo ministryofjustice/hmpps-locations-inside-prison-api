@@ -46,7 +46,7 @@ fun buildCell(
     ResidentialAttributeValue.CAT_B,
   ),
   specialistCellType: SpecialistCellType? = null,
-  archived: Boolean = false
+  archived: Boolean = false,
 ): Cell {
   val cell = Cell(
     prisonId = prisonId,
