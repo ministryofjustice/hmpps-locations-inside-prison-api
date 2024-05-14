@@ -14,7 +14,10 @@ import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.OperationalCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.OperationalCapacityService
 import java.time.LocalDateTime
 
 @RestController
@@ -26,7 +29,8 @@ import java.time.LocalDateTime
 )
 class OperationalCapacityResource(
   private val reactiveUserDetailsService: MapReactiveUserDetailsService,
-  private val locationService: LocationService
+  private val locationService: LocationService,
+  private val operationalCapacityService: OperationalCapacityService
 ) : EventBaseResource() {
 
   /**
@@ -75,7 +79,5 @@ class OperationalCapacityResource(
     dateTime: LocalDateTime,
     approvedBy: String,
 
-  ) = null
-  }
-
+    ): OperationalCapacity? = operationalCapacityService.getOperationalCapacity(prisonId)
 }
