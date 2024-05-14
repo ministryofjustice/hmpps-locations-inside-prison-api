@@ -194,6 +194,9 @@ class Cell(
       LocalDateTime.now(clock),
     )
     otherConvertedCellType = null
+
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = LocalDateTime.now(clock)
   }
 
   fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
@@ -229,6 +232,8 @@ class Cell(
     )
 
     capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = LocalDateTime.now(clock)
   }
 
   fun certifyCell(userOrSystemInContext: String, clock: Clock) {
@@ -240,6 +245,9 @@ class Cell(
       LocalDateTime.now(clock),
     )
     certification = Certification(certified = true, capacityOfCertifiedCell = certification?.capacityOfCertifiedCell ?: 0)
+
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = LocalDateTime.now(clock)
   }
 
   private fun deCertifyCell(userOrSystemInContext: String, clock: Clock) {
@@ -258,6 +266,9 @@ class Cell(
       LocalDateTime.now(clock),
     )
     certification = Certification(certified = false, capacityOfCertifiedCell = certification?.capacityOfCertifiedCell ?: 0)
+
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = LocalDateTime.now(clock)
   }
 
   fun addAttribute(attribute: ResidentialAttributeValue, userOrSystemInContext: String? = null, clock: Clock? = null): ResidentialAttribute {
@@ -323,7 +334,7 @@ class Cell(
     return this
   }
 
-  private fun Cell.handleNomisCapacitySync(
+  private fun handleNomisCapacitySync(
     upsert: UpdateLocationRequest,
     userOrSystemInContext: String,
     clock: Clock,

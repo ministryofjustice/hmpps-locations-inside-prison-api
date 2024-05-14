@@ -198,6 +198,17 @@ class LocationService(
       clock = clock,
     )
     log.info("Capacity updated max capacity = $maxCapacity and working capacity = $workingCapacity")
+
+    telemetryClient.trackEvent(
+      "Capacity updated",
+      mapOf(
+        "id" to id.toString(),
+        "key" to locCapChange.getKey(),
+        "maxCapacity" to maxCapacity.toString(),
+        "workingCapacity" to workingCapacity.toString(),
+      ),
+      null,
+    )
     return locCapChange.toDto(includeParent = true)
   }
 
@@ -210,6 +221,10 @@ class LocationService(
   ): LocationDTO {
     val locationToDeactivate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (locationToDeactivate.isTemporarilyDeactivated()) {
+      throw ValidationException("Cannot deactivate already deactivated location")
+    }
 
     checkForPrisonersInLocation(locationToDeactivate)
 
@@ -242,6 +257,10 @@ class LocationService(
   ): LocationDTO {
     val locationToArchive = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (locationToArchive.isPermanentlyDeactivated()) {
+      throw ValidationException("Cannot deactivate already permanently deactivated location")
+    }
 
     checkForPrisonersInLocation(locationToArchive)
 

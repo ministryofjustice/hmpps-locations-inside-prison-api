@@ -48,7 +48,7 @@ data class Location(
   @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
   val residentialHousingType: ResidentialHousingType? = null,
 
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @Schema(description = "Alternative description to display for location, (Not Cells)", example = "Wing A", required = false)
   val localName: String? = null,
 
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
@@ -125,6 +125,12 @@ data class Location(
 
   @Schema(description = "History of changes", required = false)
   val changeHistory: List<ChangeHistory>? = null,
+
+  @Schema(description = "Staff username who last changed the location", required = true)
+  val lastModifiedBy: String,
+
+  @Schema(description = "Date and time of the last change", required = true)
+  val lastModifiedDate: LocalDateTime,
 ) {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
   fun getKey(): String {
