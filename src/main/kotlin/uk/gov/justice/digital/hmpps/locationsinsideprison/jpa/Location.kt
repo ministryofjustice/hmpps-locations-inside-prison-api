@@ -155,23 +155,17 @@ abstract class Location(
     return findArchivedParent()
   }
 
-  open fun isActive(): Boolean {
-    return active
-  }
+  open fun isActive() = active
 
-  open fun isArchived(): Boolean {
-    return archived
-  }
+  open fun isArchived() = archived
 
-  open fun isActiveAndAllParentsActive(): Boolean {
-    return isActive() && !hasDeactivatedParent()
-  }
+  open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent()
+
+  open fun isTemporarilyDeactivated() = !isActiveAndAllParentsActive() && !isPermanentlyDeactivated()
 
   private fun hasDeactivatedParent() = findDeactivatedParent() != null
 
-  open fun isPermanentlyDeactivated(): Boolean {
-    return findArchivedLocationInHierarchy()?.archived ?: false
-  }
+  open fun isPermanentlyDeactivated() = findArchivedLocationInHierarchy()?.archived ?: false
 
   fun addChildLocation(childLocation: Location): Location {
     childLocation.parent = this
@@ -254,6 +248,8 @@ abstract class Location(
       prisonId = prisonId,
       parentId = getParent()?.id,
       topLevelId = findTopLevelLocation().id!!,
+      lastModifiedDate = whenUpdated,
+      lastModifiedBy = updatedBy,
       localName = if (!isCell()) {
         localName
       } else {
@@ -275,7 +271,7 @@ abstract class Location(
   }
 
   fun getStatus(): LocationStatus {
-    return if (isActive()) {
+    return if (isActiveAndAllParentsActive()) {
       if (isNonResCell()) {
         LocationStatus.NON_RESIDENTIAL
       } else {
@@ -327,7 +323,7 @@ abstract class Location(
     }
     this.orderWithinParentLocation = upsert.orderWithinParentLocation ?: this.orderWithinParentLocation
 
-    this.updatedBy = updatedBy
+    this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
 
     if (upsert is NomisMigrationRequest) {
