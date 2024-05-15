@@ -162,6 +162,164 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     repository.save(wingB)
   }
 
+  @DisplayName("GET /locations")
+  @Nested
+  inner class ViewPagedLocationsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve details of a page of locations`() {
+        webTestClient.get().uri("/locations?size=11&sort=pathHierarchy,asc")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "totalPages": 1,
+                "totalElements": 11,
+                "first": true,
+                "last": true,
+                "size": 11,
+                "content": [
+                  {
+                    "prisonId": "MDI",
+                    "code": "ADJUDICATION",
+                    "pathHierarchy": "ADJUDICATION",
+                    "locationType": "ADJUDICATION_ROOM",
+                    "isResidential": false,
+                    "key": "MDI-ADJUDICATION"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "Z",
+                    "pathHierarchy": "Z",
+                    "locationType": "WING",
+                    "key": "MDI-Z"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "B",
+                    "pathHierarchy": "B",
+                    "locationType": "WING",
+                    "key": "MDI-B"
+                  },
+                  { 
+                    "prisonId": "MDI",
+                    "code": "VISIT",
+                    "pathHierarchy": "Z-VISIT",
+                    "locationType": "VISITS",
+                    "key": "MDI-Z-VISIT"
+                  }, 
+                  {
+                    "prisonId": "MDI",
+                    "code": "1",
+                    "pathHierarchy": "Z-1",
+                    "locationType": "LANDING",
+                    "key": "MDI-Z-1"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "A",
+                    "pathHierarchy": "B-A",
+                    "locationType": "LANDING",
+                    "key": "MDI-B-A"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "2",
+                    "pathHierarchy": "Z-2",
+                    "locationType": "LANDING",
+                    "key": "MDI-Z-2"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "001",
+                    "pathHierarchy": "Z-1-001",
+                    "locationType": "CELL",
+                    "key": "MDI-Z-1-001"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "002",
+                    "pathHierarchy": "Z-1-002",
+                    "locationType": "CELL",
+                    "key": "MDI-Z-1-002"
+                  }, 
+                  {
+                    "prisonId": "MDI",
+                    "code": "003",
+                    "pathHierarchy": "Z-1-003",
+                    "locationType": "CELL",
+                    "key": "MDI-Z-1-003"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "001",
+                    "pathHierarchy": "B-A-001",
+                    "locationType": "CELL",
+                    "key": "MDI-B-A-001"
+                  }
+                ],
+                "number": 0,
+                "sort": {
+                  "empty": false,
+                  "sorted": true,
+                  "unsorted": false
+                },
+                "numberOfElements": 11,
+                "pageable": {
+                  "offset": 0,
+                  "sort": {
+                    "empty": false,
+                    "sorted": true,
+                    "unsorted": false
+                  },
+                  "pageSize": 11,
+                  "pageNumber": 0,
+                  "paged": true,
+                  "unpaged": false
+                },
+                "empty": false
+              }
+
+              """,
+            false,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /locations/{id}")
   @Nested
   inner class ViewLocationTest {
@@ -1015,23 +1173,22 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
-  @DisplayName("GET /locations")
+  @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
   @Nested
-  inner class ViewPagedLocationsTest {
-
+  inner class ViewLocationsByLocationTypeTest {
     @Nested
     inner class Security {
 
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.get().uri("/locations")
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.get().uri("/locations")
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
           .headers(setAuthorisation(roles = listOf()))
           .exchange()
           .expectStatus().isForbidden
@@ -1039,7 +1196,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.get().uri("/locations")
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .exchange()
           .expectStatus().isForbidden
@@ -1050,123 +1207,30 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
 
       @Test
-      fun `can retrieve details of a page of locations`() {
-        webTestClient.get().uri("/locations?size=11&sort=pathHierarchy,asc")
+      fun `can retrieve locations by their type`() {
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
             // language=json
             """
-              {
-                "totalPages": 1,
-                "totalElements": 11,
-                "first": true,
-                "last": true,
-                "size": 11,
-                "content": [
-                  {
-                    "prisonId": "MDI",
-                    "code": "ADJUDICATION",
-                    "pathHierarchy": "ADJUDICATION",
-                    "locationType": "ADJUDICATION_ROOM",
-                    "isResidential": false,
-                    "key": "MDI-ADJUDICATION"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "Z",
-                    "pathHierarchy": "Z",
-                    "locationType": "WING",
-                    "key": "MDI-Z"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "B",
-                    "pathHierarchy": "B",
-                    "locationType": "WING",
-                    "key": "MDI-B"
-                  },
-                  { 
-                    "prisonId": "MDI",
-                    "code": "VISIT",
-                    "pathHierarchy": "Z-VISIT",
-                    "locationType": "VISITS",
-                    "key": "MDI-Z-VISIT"
-                  }, 
-                  {
-                    "prisonId": "MDI",
-                    "code": "1",
-                    "pathHierarchy": "Z-1",
-                    "locationType": "LANDING",
-                    "key": "MDI-Z-1"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "A",
-                    "pathHierarchy": "B-A",
-                    "locationType": "LANDING",
-                    "key": "MDI-B-A"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "2",
-                    "pathHierarchy": "Z-2",
-                    "locationType": "LANDING",
-                    "key": "MDI-Z-2"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "001",
-                    "pathHierarchy": "Z-1-001",
-                    "locationType": "CELL",
-                    "key": "MDI-Z-1-001"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "002",
-                    "pathHierarchy": "Z-1-002",
-                    "locationType": "CELL",
-                    "key": "MDI-Z-1-002"
-                  }, 
-                  {
-                    "prisonId": "MDI",
-                    "code": "003",
-                    "pathHierarchy": "Z-1-003",
-                    "locationType": "CELL",
-                    "key": "MDI-Z-1-003"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "001",
-                    "pathHierarchy": "B-A-001",
-                    "locationType": "CELL",
-                    "key": "MDI-B-A-001"
-                  }
-                ],
-                "number": 0,
-                "sort": {
-                  "empty": false,
-                  "sorted": true,
-                  "unsorted": false
-                },
-                "numberOfElements": 11,
-                "pageable": {
-                  "offset": 0,
-                  "sort": {
-                    "empty": false,
-                    "sorted": true,
-                    "unsorted": false
-                  },
-                  "pageSize": 11,
-                  "pageNumber": 0,
-                  "paged": true,
-                  "unpaged": false
-                },
-                "empty": false
-              }
-
-              """,
+             [{
+              "prisonId": "MDI",
+              "code": "001",
+              "pathHierarchy": "Z-1-001",
+              "locationType": "CELL",
+              "active": true,
+              "key": "MDI-Z-1-001"
+            }, {
+              "prisonId": "MDI",
+              "code": "002",
+              "pathHierarchy": "Z-1-002",
+              "locationType": "CELL",
+              "active": true,
+              "key": "MDI-Z-1-002"
+            }]
+                      """,
             false,
           )
       }
