@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
+import com.microsoft.applicationinsights.TelemetryClient
 import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
@@ -11,7 +12,11 @@ import java.time.LocalDateTime
 
 class OperationalCapacityServiceTest {
   private val operationalCapacityRepository: OperationalCapacityRepository = mock()
-  private val service: OperationalCapacityService = OperationalCapacityService(operationalCapacityRepository)
+  private val telemetryClient: TelemetryClient = mock()
+  private val service: OperationalCapacityService = OperationalCapacityService(
+      operationalCapacityRepository,
+      telemetryClient,
+  )
 
   @Test
   fun `Get operational capacity for the prison when record found`() {
