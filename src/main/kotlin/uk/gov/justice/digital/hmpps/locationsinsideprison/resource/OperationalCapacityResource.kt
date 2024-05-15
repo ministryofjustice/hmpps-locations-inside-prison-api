@@ -10,11 +10,9 @@ import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.userdetails.MapReactiveUserDetailsService
 import org.springframework.validation.annotation.Validated
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.bind.annotation.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.OperationalCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.OperationalCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.OperationalCapacityService
@@ -43,16 +41,16 @@ class OperationalCapacityResource(
    * }
    *
    */
-  @GetMapping("/signed-op-cap/{id}")
-  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @GetMapping("/{prisonId}")
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')") //todo Need create a New Role?
   @ResponseStatus(HttpStatus.OK)
   @Operation(
-    summary = "Get location reference data",
-    description = "Requires the READ_LOCATION_REFERENCE_DATA role.",
+    summary = "Get Operation Capacity",
+    description = "Requires role VIEW_LOCATIONS",
     responses = [
       ApiResponse(
         responseCode = "200",
-        description = "Returns location reference data",
+        description = "Returns Operation Capacity data",
       ),
       ApiResponse(
         responseCode = "401",
@@ -61,7 +59,7 @@ class OperationalCapacityResource(
       ),
       ApiResponse(
         responseCode = "403",
-        description = "Missing required role. Requires the READ_LOCATION_REFERENCE_DATA role",
+        description = "Missing required role. Requires the ROLE_VIEW_LOCATIONS role",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
       ApiResponse(
@@ -72,12 +70,8 @@ class OperationalCapacityResource(
     ],
   )
   fun getOperationalCapacity(
-    @Schema(description = "Prison Id", example = "WWI", required = true)
-    id: String,
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
     prisonId: String,
-    capacity: Int,
-    dateTime: LocalDateTime,
-    approvedBy: String,
-
-    ): OperationalCapacity? = operationalCapacityService.getOperationalCapacity(prisonId)
+    ): OperationalCapacityDto? = OperationalCapacityDto(prisonId="MDI", approvedBy = "MALEMAN", capacity = 100, dateTime = LocalDateTime.now())
 }
