@@ -26,9 +26,6 @@ import java.time.LocalDateTime
   description = "Returns signed operational capacity data per prison.",
 )
 class OperationalCapacityResource(
-  private val reactiveUserDetailsService: MapReactiveUserDetailsService,
-  private val locationService: LocationService,
-  private val operationalCapacityService: OperationalCapacityService
 ) : EventBaseResource() {
 
   /**
