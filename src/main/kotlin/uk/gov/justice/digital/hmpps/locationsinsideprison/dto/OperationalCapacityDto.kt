@@ -2,11 +2,8 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
-import jakarta.validation.constraints.Pattern
-import jakarta.validation.constraints.Size
 
 import java.time.LocalDateTime
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.OperationalCapacity as OperationalCapacityJPA
 
 @Schema(description = "Operational Capacity Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
