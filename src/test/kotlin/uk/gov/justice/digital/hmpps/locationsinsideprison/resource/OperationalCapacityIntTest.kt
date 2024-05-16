@@ -3,7 +3,6 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 
 class OperationalCapacityIntTest : SqsIntegrationTestBase() {
@@ -215,5 +214,4 @@ class OperationalCapacityIntTest : SqsIntegrationTestBase() {
       }
     }
   }
-
 }

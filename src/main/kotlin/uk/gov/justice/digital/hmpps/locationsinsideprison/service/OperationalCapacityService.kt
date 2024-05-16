@@ -19,13 +19,13 @@ class OperationalCapacityService(
   }
 
   fun getOperationalCapacity(prisonId: String): OperationalCapacity? {
-    //TODO need to be changed to dto
+    // TODO need to be changed to dto
     return operationalCapacityRepository.findOneByPrisonId(prisonId)
   }
 
   @Transactional
   fun saveOperationalCapacity(prisonId: String, oc: OperationalCapacity) {
-    //TODO need to be changed to dto
+    // TODO need to be changed to dto
     val opdb = operationalCapacityRepository.findOneByPrisonId(prisonId) ?: OperationalCapacity(
       capacity = oc.capacity,
       prisonId = prisonId,

@@ -14,8 +14,8 @@ class OperationalCapacityServiceTest {
   private val operationalCapacityRepository: OperationalCapacityRepository = mock()
   private val telemetryClient: TelemetryClient = mock()
   private val service: OperationalCapacityService = OperationalCapacityService(
-      operationalCapacityRepository,
-      telemetryClient,
+    operationalCapacityRepository,
+    telemetryClient,
   )
 
   @Test

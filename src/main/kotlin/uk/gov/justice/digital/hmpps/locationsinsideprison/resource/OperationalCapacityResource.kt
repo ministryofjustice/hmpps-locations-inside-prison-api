@@ -8,14 +8,13 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
-import org.springframework.security.core.userdetails.MapReactiveUserDetailsService
 import org.springframework.validation.annotation.Validated
-import org.springframework.web.bind.annotation.*
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.OperationalCapacityDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.OperationalCapacity
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.OperationalCapacityService
 import java.time.LocalDateTime
 
 @RestController
@@ -25,8 +24,7 @@ import java.time.LocalDateTime
   name = "Operational Capacity",
   description = "Returns signed operational capacity data per prison.",
 )
-class OperationalCapacityResource(
-) : EventBaseResource() {
+class OperationalCapacityResource() : EventBaseResource() {
 
   /**
    * MAP-978 Support Signed Operational Capacity
@@ -39,7 +37,7 @@ class OperationalCapacityResource(
    *
    */
   @GetMapping("/{prisonId}")
-  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')") //todo Need create a New Role?
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')") // todo Need create a New Role?
   @ResponseStatus(HttpStatus.OK)
   @Operation(
     summary = "Get Operation Capacity",
@@ -70,5 +68,5 @@ class OperationalCapacityResource(
     @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @PathVariable
     prisonId: String,
-    ): OperationalCapacityDto? = OperationalCapacityDto(prisonId="MDI", approvedBy = "MALEMAN", capacity = 100, dateTime = LocalDateTime.now())
+  ): OperationalCapacityDto? = OperationalCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", capacity = 100, dateTime = LocalDateTime.now())
 }

@@ -2,7 +2,6 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
-
 import java.time.LocalDateTime
 
 @Schema(description = "Operational Capacity Information")
