@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 
-class OperationalCapacityIntTest : SqsIntegrationTestBase() {
+class OperationalCapacityGetIntTest : SqsIntegrationTestBase() {
 
   @DisplayName("GET /signed-op-cap/MDI")
   @Nested
