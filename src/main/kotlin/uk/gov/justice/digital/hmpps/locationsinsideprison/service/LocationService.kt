@@ -77,6 +77,13 @@ class LocationService(
     return locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code)?.toDto(includeChildren = includeChildren, includeHistory = includeHistory)
   }
 
+  fun getLocationsByKeys(keys: List<String>, includeChildren: Boolean = false, includeHistory: Boolean = false): List<LocationDTO> {
+    return locationRepository
+      .findAllByPathHierarchyIn(keys.filter { it.contains("-") })
+      .filter { it.isActive() }
+      .map { it.toDto(includeChildren = includeChildren, includeHistory = includeHistory) }
+  }
+
   fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LocationDTO> {
     return locationRepository.findAll(pageable).map(Location::toDto)
   }

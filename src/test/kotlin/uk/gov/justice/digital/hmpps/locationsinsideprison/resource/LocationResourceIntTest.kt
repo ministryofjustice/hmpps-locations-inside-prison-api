@@ -940,6 +940,109 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("POST /locations/keys")
+  @Nested
+  inner class ViewLocationByKeysTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.post().uri("/locations/keys")
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf("Z"))
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.post().uri("/locations/keys")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf("Z"))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.post().uri("/locations/keys")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf("Z"))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve locations from a list of keys`() {
+        webTestClient.post().uri("/locations/keys?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf("B-A", "B-A-001", "MDI-Z", "Z", "Z-2", "Z-VISIT", "Z-1-003", "XYZ-1-2-3"))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                          [{
+                            "prisonId": "MDI",
+                            "code": "VISIT",
+                            "pathHierarchy": "Z-VISIT",
+                            "locationType": "VISITS",
+                            "orderWithinParentLocation": 99,
+                            "status": "ACTIVE",
+                            "active": true,
+                            "childLocations": [],
+                            "key": "MDI-Z-VISIT",
+                            "isResidential": false
+                            }, 
+                            {
+                            "prisonId": "MDI",
+                            "code": "2",
+                            "pathHierarchy": "Z-2",
+                            "locationType": "LANDING",
+                            "active": true,
+                            "childLocations": [],
+                            "lastModifiedBy": "A_TEST_USER",
+                            "key": "MDI-Z-2",
+                            "isResidential": true
+                            }, 
+                            {
+                            "prisonId": "MDI",
+                            "code": "A",
+                            "pathHierarchy": "B-A",
+                            "locationType": "LANDING",
+                            "active": true,
+                            "childLocations": [{
+                              "prisonId": "MDI",
+                              "code": "001",
+                              "pathHierarchy": "B-A-001",
+                              "locationType": "CELL",
+                              "active": false,
+                              "deactivatedByParent": false,
+                              "deactivatedDate": "2023-12-05",
+                              "deactivatedReason": "DAMAGED",
+                              "childLocations": [],
+                              "key": "MDI-B-A-001",
+                              "isResidential": true
+                            }],
+                            "key": "MDI-B-A",
+                            "isResidential": true
+                          }]
+                         """,
+            false,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /locations/prison/{prisonId}")
   @Nested
   inner class ViewLocationByPrisonTest {
