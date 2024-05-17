@@ -72,7 +72,6 @@ class OperationalCapacityResource() : EventBaseResource() {
     prisonId: String,
   ): OperationalCapacityDto? = OperationalCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", capacity = 100, dateTime = LocalDateTime.now())
 
-
   @PostMapping("/{prisonId}")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @ResponseStatus(HttpStatus.OK)
@@ -106,5 +105,4 @@ class OperationalCapacityResource() : EventBaseResource() {
     @PathVariable
     prisonId: String,
   ): OperationalCapacityDto? = OperationalCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", capacity = 100, dateTime = LocalDateTime.now())
-
 }
