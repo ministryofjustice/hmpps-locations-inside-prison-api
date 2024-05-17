@@ -23,7 +23,7 @@ class LocationTest {
     val history2 = location.addHistory(LocationAttribute.ATTRIBUTES, null, "new", "user", now)
 
     assertThat(history1).isEqualTo(history2)
-    assertThat(location.getHistory()).hasSize(1)
+    assertThat(location.getHistoryAsList()).hasSize(1)
   }
 }
 

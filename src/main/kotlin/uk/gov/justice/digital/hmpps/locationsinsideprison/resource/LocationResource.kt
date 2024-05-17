@@ -36,6 +36,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivat
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
@@ -43,8 +44,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSou
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialSummary
-import java.util.*
+import java.util.UUID
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
+
 @RestController
 @Validated
 @RequestMapping("/locations", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -807,6 +809,43 @@ class LocationResource(
       InformationSource.DPS,
     )
   }
+
+  @GetMapping("/prison/{prisonId}/location-type/{locationType}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return locations by their type for this prison",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns locations",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getLocationsByPrisonAndLocationType(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
+    prisonId: String,
+    @Schema(description = "Location type", example = "CELL", required = true)
+    @PathVariable
+    locationType: LocationType,
+  ): List<LocationDTO> = locationService.getLocationByPrisonAndLocationType(prisonId, locationType)
 }
 
 @Schema(description = "Request to convert a cell to a non-res location")

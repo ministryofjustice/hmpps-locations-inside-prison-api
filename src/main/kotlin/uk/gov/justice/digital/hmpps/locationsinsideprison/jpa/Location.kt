@@ -219,6 +219,22 @@ abstract class Location(
     return leafLocations
   }
 
+  fun findSubLocations(): List<Location> {
+    val subLocations = mutableListOf<Location>()
+
+    fun traverse(location: Location) {
+      if (this != location) {
+        subLocations.add(location)
+      }
+      for (childLocation in location.childLocations) {
+        traverse(childLocation)
+      }
+    }
+
+    traverse(this)
+    return subLocations
+  }
+
   fun addHistory(attributeName: LocationAttribute, oldValue: String?, newValue: String?, amendedBy: String, amendedDate: LocalDateTime): LocationHistory? {
     return if (oldValue != newValue) {
       val locationHistory = LocationHistory(
@@ -236,7 +252,7 @@ abstract class Location(
     }
   }
 
-  open fun getHistory() = history.toList()
+  open fun getHistoryAsList() = history.toList()
 
   open fun toDto(includeChildren: Boolean = false, includeParent: Boolean = false, includeHistory: Boolean = false, countInactiveCells: Boolean = false): LocationDto {
     return LocationDto(
@@ -352,7 +368,7 @@ abstract class Location(
     }
   }
 
-  fun temporarilyDeactivate(
+  open fun temporarilyDeactivate(
     deactivatedReason: DeactivatedReason,
     deactivatedDate: LocalDate,
     planetFmReference: String? = null,
@@ -361,7 +377,7 @@ abstract class Location(
     clock: Clock,
   ) {
     if (!isActive()) {
-      log.warn("Location [$id] is already deactivated")
+      log.warn("Location [${getKey()}] is already deactivated")
     } else {
       val amendedDate = LocalDateTime.now(clock)
       addHistory(LocationAttribute.ACTIVE, "true", "false", userOrSystemInContext, amendedDate)
@@ -402,18 +418,31 @@ abstract class Location(
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
 
-      log.info("Temporarily Deactivated Location [$id]")
+      if (this is ResidentialLocation) {
+        findSubLocations().forEach { location ->
+          location.temporarilyDeactivate(
+            planetFmReference = planetFmReference,
+            proposedReactivationDate = proposedReactivationDate,
+            deactivatedReason = deactivatedReason,
+            deactivatedDate = deactivatedDate,
+            userOrSystemInContext = userOrSystemInContext,
+            clock = clock,
+          )
+        }
+      }
+
+      log.info("Temporarily Deactivated Location [${getKey()}]")
     }
   }
 
-  fun permanentlyDeactivate(
+  open fun permanentlyDeactivate(
     reason: String,
     deactivatedDate: LocalDate,
     userOrSystemInContext: String,
     clock: Clock,
   ) {
     if (isPermanentlyDeactivated()) {
-      log.warn("Location [$id] is already permanently deactivated")
+      log.warn("Location [${getKey()}] is already permanently deactivated")
     } else {
       val amendedDate = LocalDateTime.now(clock)
       addHistory(LocationAttribute.ACTIVE, "true", "false", userOrSystemInContext, amendedDate)
@@ -431,6 +460,7 @@ abstract class Location(
         userOrSystemInContext,
         amendedDate,
       )
+
       this.archived = true
       this.active = false
       this.deactivatedDate = deactivatedDate
@@ -438,56 +468,64 @@ abstract class Location(
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
 
-      log.info("Permanently Deactivated Location [$id]")
+      if (this is ResidentialLocation) {
+        this.cellLocations().forEach { cellLocation ->
+          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, userOrSystemInContext, clock)
+          cellLocation.deCertifyCell(userOrSystemInContext, clock)
+        }
+      }
+      log.info("Permanently Deactivated Location [${getKey()}]")
     }
   }
 
-  fun reactivate(userOrSystemInContext: String, clock: Clock) {
-    if (isActive()) {
-      throw LocationCannotBeReactivatedException("Location [$id] is already active")
-    }
-    if (isPermanentlyDeactivated()) {
-      throw LocationCannotBeReactivatedException("Location [$id] permanently deactivated")
-    }
-    val amendedDate = LocalDateTime.now(clock)
-    addHistory(LocationAttribute.ACTIVE, "false", "true", userOrSystemInContext, amendedDate)
-    addHistory(
-      LocationAttribute.DEACTIVATED_REASON,
-      deactivatedReason?.description,
-      null,
-      userOrSystemInContext,
-      amendedDate,
-    )
-    addHistory(
-      LocationAttribute.DEACTIVATED_DATE,
-      deactivatedDate?.toString(),
-      null,
-      userOrSystemInContext,
-      amendedDate,
-    )
-    addHistory(
-      LocationAttribute.PROPOSED_REACTIVATION_DATE,
-      proposedReactivationDate?.toString(),
-      null,
-      userOrSystemInContext,
-      amendedDate,
-    )
-    addHistory(
-      LocationAttribute.PLANET_FM_NUMBER,
-      planetFmReference,
-      null,
-      userOrSystemInContext,
-      amendedDate,
-    )
-    this.active = true
-    this.deactivatedReason = null
-    this.deactivatedDate = null
-    this.planetFmReference = null
-    this.proposedReactivationDate = null
-    this.updatedBy = userOrSystemInContext
-    this.whenUpdated = amendedDate
+  open fun reactivate(userOrSystemInContext: String, clock: Clock) {
+    this.getParent()?.reactivate(userOrSystemInContext, clock)
+    if (!isActive()) {
+      if (isPermanentlyDeactivated()) {
+        throw LocationCannotBeReactivatedException("Location [${getKey()}] permanently deactivated")
+      }
 
-    log.info("Re-activated Location [$id]")
+      val amendedDate = LocalDateTime.now(clock)
+      addHistory(LocationAttribute.ACTIVE, "false", "true", userOrSystemInContext, amendedDate)
+      addHistory(
+        LocationAttribute.DEACTIVATED_REASON,
+        deactivatedReason?.description,
+        null,
+        userOrSystemInContext,
+        amendedDate,
+      )
+      addHistory(
+        LocationAttribute.DEACTIVATED_DATE,
+        deactivatedDate?.toString(),
+        null,
+        userOrSystemInContext,
+        amendedDate,
+      )
+      addHistory(
+        LocationAttribute.PROPOSED_REACTIVATION_DATE,
+        proposedReactivationDate?.toString(),
+        null,
+        userOrSystemInContext,
+        amendedDate,
+      )
+      addHistory(
+        LocationAttribute.PLANET_FM_NUMBER,
+        planetFmReference,
+        null,
+        userOrSystemInContext,
+        amendedDate,
+      )
+
+      this.active = true
+      this.deactivatedReason = null
+      this.deactivatedDate = null
+      this.planetFmReference = null
+      this.proposedReactivationDate = null
+      this.updatedBy = userOrSystemInContext
+      this.whenUpdated = amendedDate
+
+      log.info("Re-activated Location [${getKey()}]")
+    }
   }
 
   override fun toString(): String {

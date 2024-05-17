@@ -75,10 +75,10 @@ class NonResidentialLocation(
     )
   }
 
-  override fun updateWith(upsert: UpdateLocationRequest, updatedBy: String, clock: Clock): NonResidentialLocation {
-    super.updateWith(upsert, updatedBy, clock)
+  override fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): NonResidentialLocation {
+    super.updateWith(upsert, userOrSystemInContext, clock)
     if (upsert.usage != null) {
-      recordHistoryOfUsages(upsert, updatedBy, clock)
+      recordHistoryOfUsages(upsert, userOrSystemInContext, clock)
       nonResidentialUsages.retainAll(upsert.usage!!.map { addUsage(it.usageType, it.capacity, it.sequence) }.toSet())
     }
     return this

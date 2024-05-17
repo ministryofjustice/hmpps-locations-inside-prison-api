@@ -23,6 +23,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
@@ -37,7 +38,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFa
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
+import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
@@ -79,6 +80,13 @@ class LocationService(
   fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LocationDTO> {
     return locationRepository.findAll(pageable).map(Location::toDto)
   }
+  fun getLocationByPrisonAndLocationType(prisonId: String, locationType: LocationType): List<LocationDTO> =
+    locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId, locationType)
+      .filter { it.isActive() }
+      .map {
+        it.toDto()
+      }
+      .sortedBy { it.getKey() }
 
   @Transactional
   fun createLocation(request: CreateRequest): LocationDTO {
@@ -247,7 +255,7 @@ class LocationService(
       null,
     )
 
-    return locationToDeactivate.toDto(includeParent = true)
+    return locationToDeactivate.toDto(includeParent = true, includeChildren = true)
   }
 
   @Transactional
@@ -281,31 +289,24 @@ class LocationService(
       null,
     )
 
-    return locationToArchive.toDto(includeParent = true)
-  }
-
-  private fun checkForPrisonersInLocation(location: Location) {
-    val locationsWithPrisoners = prisonersInLocations(location)
-    if (locationsWithPrisoners.isNotEmpty()) {
-      throw LocationContainsPrisonersException(locationsWithPrisoners)
-    }
-  }
-
-  private fun prisonersInLocations(location: Location): Map<String, List<Prisoner>> {
-    val locationsToCheck = location.cellLocations().map { it.getPathHierarchy() }.sorted()
-    return if (locationsToCheck.isNotEmpty()) {
-      prisonerSearchService.findPrisonersInLocations(location.prisonId, locationsToCheck)
-    } else {
-      mapOf()
-    }
+    return locationToArchive.toDto(includeParent = true, includeChildren = true)
   }
 
   @Transactional
-  fun reactivateLocation(id: UUID): LocationDTO {
+  fun reactivateLocation(id: UUID, reactivateSubLocations: Boolean = false): LocationDTO {
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     locationToUpdate.reactivate(authenticationFacade.getUserOrSystemInContext(), clock)
+
+    if (reactivateSubLocations) {
+      locationToUpdate.findSubLocations().forEach { location ->
+        location.reactivate(
+          userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+          clock = clock,
+        )
+      }
+    }
 
     telemetryClient.trackEvent(
       "Re-activated Location",
@@ -379,6 +380,22 @@ class LocationService(
       null,
     )
     return locationToConvert.toDto(includeParent = true)
+  }
+
+  private fun checkForPrisonersInLocation(location: Location) {
+    val locationsWithPrisoners = prisonersInLocations(location)
+    if (locationsWithPrisoners.isNotEmpty()) {
+      throw LocationContainsPrisonersException(locationsWithPrisoners)
+    }
+  }
+
+  private fun prisonersInLocations(location: Location): Map<String, List<Prisoner>> {
+    val locationsToCheck = location.cellLocations().map { it.getPathHierarchy() }.sorted()
+    return if (locationsToCheck.isNotEmpty()) {
+      prisonerSearchService.findPrisonersInLocations(location.prisonId, locationsToCheck)
+    } else {
+      mapOf()
+    }
   }
 
   private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =
