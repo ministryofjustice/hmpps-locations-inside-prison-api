@@ -1,0 +1,1 @@
+ALTER TABLE location ADD COLUMN archived_reason varchar(200);

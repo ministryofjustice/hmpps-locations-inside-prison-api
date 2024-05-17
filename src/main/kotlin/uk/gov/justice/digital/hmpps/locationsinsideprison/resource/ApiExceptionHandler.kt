@@ -3,7 +3,6 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 import jakarta.validation.ValidationException
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.LoggerFactory
-import org.springframework.data.jpa.domain.AbstractPersistable_.id
 import org.springframework.http.HttpStatus
 import org.springframework.http.HttpStatus.BAD_REQUEST
 import org.springframework.http.HttpStatus.CONFLICT
@@ -188,21 +187,6 @@ class ApiExceptionHandler {
       )
   }
 
-  @ExceptionHandler(OperationalCapacityNotFoundException::class)
-  fun handleOperationalCapacityNotFoundException(e: OperationalCapacityNotFoundException): ResponseEntity<ErrorResponse?>? {
-    log.debug("Operational Capacity found exception caught: {}", e.message)
-    return ResponseEntity
-      .status(HttpStatus.NOT_FOUND)
-      .body(
-        ErrorResponse(
-          status = HttpStatus.NOT_FOUND,
-          errorCode = ErrorCode.LocationNotFound,
-          userMessage = "Operational Capacity not found: ${e.message}",
-          developerMessage = e.message,
-        ),
-      )
-  }
-
   @ExceptionHandler(LocationAlreadyExistsException::class)
   fun handleLocationAlreadyExists(e: LocationAlreadyExistsException): ResponseEntity<ErrorResponse?>? {
     log.debug("Location already exists exception caught: {}", e.message)
@@ -256,8 +240,8 @@ class ApiExceptionHandler {
       .body(
         ErrorResponse(
           status = BAD_REQUEST,
-          errorCode = ErrorCode.MaxCapacityLessThanWorkingCapacity,
-          userMessage = "Capacity Incorrect: ${e.message}",
+          errorCode = ErrorCode.CapacityValidationFailure,
+          userMessage = "Capacity Validation Error: ${e.message}",
           developerMessage = e.message,
         ),
       )
@@ -314,25 +298,10 @@ class ApiExceptionHandler {
 }
 
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
-class OperationalCapacityNotFoundException(prisonId: String) :
-  Exception("There is no operational capacity found for prison ID = $prisonId")
-
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
-class LocationCannotBeReactivatedException(key: String) :
-  Exception("Location cannot be reactivated if parent is deactivated = $key")
-
+class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
 class LocationAlreadyDeactivatedException(key: String) : Exception("$key is already deactivated")
-class CapacityException(workingCapacity: Int, maxCapacity: Int) :
-  ValidationException("Working capacity $workingCapacity exceeded maximum allowed capacity $maxCapacity")
-
-class CertificationException(capacityOfCertifiedCell: Int) :
-  ValidationException("Certified Cells cannot have a certified capacity of $capacityOfCertifiedCell")
-
-class PermanentlyDeactivatedUpdateNotAllowedException(key: String) :
-  Exception("Location $key cannot be updated as permanently deactivated")
-
-class ConvertedCellUpdateNotAllowedException(key: String) :
-  Exception("Location $key cannot be updated as converted cell")
-
-class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) :
-  Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
+class CapacityException(locationKey: String, message: String) : ValidationException("Capacity for $locationKey incorrect: $message")
+class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as permanently deactivated")
+class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as converted cell")
+class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")

@@ -6,6 +6,8 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.ValidationException
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.PositiveOrZero
 import org.springdoc.core.annotations.ParameterObject
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -25,21 +27,26 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
-import java.util.*
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialSummary
+import java.util.UUID
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
+
 @RestController
 @Validated
 @RequestMapping("/locations", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -159,7 +166,41 @@ class LocationResource(
     prisonId: String,
   ): List<LocationDTO> = locationService.getLocationByPrison(prisonId)
 
-  @GetMapping("/residential/{prisonId}/below-parent")
+  @GetMapping("/prison/{prisonId}/archived")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return archived locations for this prison",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns archived locations",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getArchivedLocationForPrison(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
+    prisonId: String,
+  ) = locationService.getArchivedLocations(prisonId)
+
+  @GetMapping("/residential-summary/{prisonId}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @Operation(
@@ -197,7 +238,7 @@ class LocationResource(
     @Schema(description = "Parent location path hierarchy, can be a Wing code, or landing code", example = "A-1", required = false)
     @RequestParam(name = "parentPathHierarchy", required = false)
     parentPathHierarchy: String? = null,
-  ): List<LocationDTO> = locationService.getLocationForPrisonBelowParent(prisonId, parentLocationId, parentPathHierarchy)
+  ): ResidentialSummary = locationService.getResidentialLocations(prisonId, parentLocationId, parentPathHierarchy)
 
   @GetMapping("")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
@@ -455,15 +496,15 @@ class LocationResource(
     }
   }
 
-  @PutMapping("/{id}/deactivate")
+  @PutMapping("/{id}/capacity")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
-    summary = "Deactivate a location",
+    summary = "Set the capacity of a cell",
     description = "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
         responseCode = "200",
-        description = "Returns updated location",
+        description = "Returns cell location changes",
       ),
       ApiResponse(
         responseCode = "400",
@@ -487,23 +528,127 @@ class LocationResource(
       ),
     ],
   )
-  fun deactivateLocation(
+  fun changeCapacity(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
     @RequestBody
     @Validated
-    deactivationLocationRequest: DeactivationLocationRequest,
+    capacity: Capacity,
+  ): LocationDTO {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_AMENDED,
+      {
+        locationService.updateCellCapacity(
+          id = id,
+          maxCapacity = capacity.maxCapacity,
+          workingCapacity = capacity.workingCapacity,
+        )
+      },
+      InformationSource.DPS,
+    )
+  }
+
+  @PutMapping("/{id}/deactivate/temporary")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Temporarily deactivate a location",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns deactivated location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun temporarilyDeactivateLocation(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    temporaryDeactivationLocationRequest: TemporaryDeactivationLocationRequest,
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_DEACTIVATED,
       {
         locationService.deactivateLocation(
           id,
-          deactivatedReason = deactivationLocationRequest.deactivationReason,
-          proposedReactivationDate = deactivationLocationRequest.proposedReactivationDate,
-          planetFmReference = deactivationLocationRequest.planetFmReference,
-          permanentDeactivation = deactivationLocationRequest.permanentDeactivation,
+          deactivatedReason = temporaryDeactivationLocationRequest.deactivationReason,
+          proposedReactivationDate = temporaryDeactivationLocationRequest.proposedReactivationDate,
+          planetFmReference = temporaryDeactivationLocationRequest.planetFmReference,
+        )
+      },
+      InformationSource.DPS,
+    )
+  }
+
+  @PutMapping("/{id}/deactivate/permanent")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Permanently deactivate a location",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns archived location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun permanentlyDeactivateLocation(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    permanentDeactivationLocationRequest: PermanentDeactivationLocationRequest,
+  ): LocationDTO {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_DEACTIVATED,
+      {
+        locationService.permanentlyDeactivateLocation(
+          id,
+          reasonForPermanentDeactivation = permanentDeactivationLocationRequest.reason,
         )
       },
       InformationSource.DPS,
@@ -664,26 +809,72 @@ class LocationResource(
       InformationSource.DPS,
     )
   }
+
+  @GetMapping("/prison/{prisonId}/location-type/{locationType}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return locations by their type for this prison",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns locations",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getLocationsByPrisonAndLocationType(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
+    prisonId: String,
+    @Schema(description = "Location type", example = "CELL", required = true)
+    @PathVariable
+    locationType: LocationType,
+  ): List<LocationDTO> = locationService.getLocationByPrisonAndLocationType(prisonId, locationType)
 }
 
 @Schema(description = "Request to convert a cell to a non-res location")
 data class ConvertCellToNonResidentialLocationRequest(
+  @Schema(description = "Cell type to convert to", example = "SHOWER", required = true)
   val convertedCellType: ConvertedCellType,
+  @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false)
   val otherConvertedCellType: String? = null,
 )
 
 @Schema(description = "Request to convert a non-res location to a cell")
 data class ConvertToCellRequest(
+  @Schema(description = "Accommodation type of the location", example = "NORMAL_ACCOMMODATION", required = true)
   val accommodationType: AccommodationType,
+  @Schema(description = "Specialist cell type", example = "BIOHAZARD_DIRTY_PROTEST", required = false)
   val specialistCellType: SpecialistCellType?,
+  @Schema(description = "Max capacity", example = "2", required = true)
+  @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
+  @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
   val maxCapacity: Int = 0,
+  @Schema(description = "Working capacity", example = "1", required = true)
+  @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
+  @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
   val workingCapacity: Int = 0,
+  @Schema(description = "Used For list", example = "STANDARD_ACCOMMODATION, PERSONALITY_DISORDER", required = false)
   val usedForTypes: List<UsedForType>? = null,
 )
 
 data class UpdateLocationResult(
   val location: LocationDTO,
-  val capacityChanged: Boolean = false,
-  val certificationChanged: Boolean = false,
   val otherParentLocationChanged: LocationDTO? = null,
 )

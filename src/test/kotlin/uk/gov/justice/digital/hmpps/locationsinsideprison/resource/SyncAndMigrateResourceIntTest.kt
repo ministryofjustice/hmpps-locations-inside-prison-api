@@ -25,6 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationHistoryRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
@@ -83,6 +84,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
       certification = Certification(certified = true, capacityOfCertifiedCell = 1),
       residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
+      specialistCellType = SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
     )
     locationHistory = cell.addHistory(
       attributeName = LocationAttribute.DESCRIPTION,
@@ -105,7 +107,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       prisonId = "ZZGHI",
       code = "003",
       locationType = LocationType.CELL,
-      localName = "A New Cell",
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "This is a new cell",
       orderWithinParentLocation = 1,
@@ -200,7 +201,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-B-1-003",
               "comments": "This is a new cell",
-              "localName": "A New Cell",
               "orderWithinParentLocation": 1,
               "isResidential": true,
               "attributes": ["IMMIGRATION_DETAINEES"]
@@ -230,7 +230,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-B-1-003",
               "comments": "This is a new cell",
-              "localName": "A New Cell",
               "orderWithinParentLocation": 1,
               "isResidential": true,
               "attributes": ["IMMIGRATION_DETAINEES"]
@@ -251,6 +250,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 id = cell.id,
                 code = "001",
                 attributes = setOf(ResidentialAttributeValue.CAT_A),
+                capacity = CapacityDTO(3, 3),
+                certification = CertificationDTO(false, 0),
               ),
             ),
           )
@@ -264,7 +265,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "code": "001",
               "pathHierarchy": "B-1-001",
               "locationType": "CELL",
-              "localName": "A New Cell",
               "residentialHousingType": "NORMAL_ACCOMMODATION",
               "active": true,
               "key": "ZZGHI-B-1-001",
@@ -272,7 +272,15 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "isResidential": true,
               "attributes": [
                 "CAT_A"
-              ]
+              ],
+              "capacity": {
+                "maxCapacity": 3,
+                "workingCapacity": 3
+              },
+              "certification": {
+                "certified": false,
+                "capacityOfCertifiedCell": 0
+              }
             }
           """,
             false,
@@ -323,7 +331,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       prisonId = "ZZGHI",
       code = "006",
       locationType = LocationType.CELL,
-      localName = "A New Inactive Cell",
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "This is a new cell (inactive)",
       deactivatedDate = LocalDateTime.now(clock).minusYears(1).toLocalDate(),
@@ -359,7 +366,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "proposedReactivationDate": "${deactivatedLocationMigration.proposedReactivationDate}",
               "key": "ZZGHI-B-1-006",
               "comments": "This is a new cell (inactive)",
-              "localName": "A New Inactive Cell",
               "orderWithinParentLocation": 6,
               "isResidential": true
             }
@@ -377,7 +383,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       prisonId = "ZZGHI",
       code = "002",
       locationType = LocationType.CELL,
-      localName = "A New Cell",
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "This is a new cell",
       orderWithinParentLocation = 1,
@@ -482,7 +487,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": false,
               "key": "ZZGHI-B-1-002",
               "comments": "This is a new cell",
-              "localName": "A New Cell",
               "orderWithinParentLocation": 1,
               "capacity": {
                 "maxCapacity": 1,
@@ -512,7 +516,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": false,
               "key": "ZZGHI-B-1-002",
               "comments": "This is a new cell",
-              "localName": "A New Cell",
               "orderWithinParentLocation": 1,
               "capacity": {
                 "maxCapacity": 1,
@@ -566,7 +569,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": false,
               "key": "ZZGHI-B-1-002",
               "comments": "This is a new cell",
-              "localName": "A New Cell",
               "orderWithinParentLocation": 1,
               "attributes": ["CAT_B"],
               "deactivatedReason": "${migrateRequest.deactivationReason}",
@@ -596,7 +598,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": false,
               "key": "ZZGHI-B-1-002",
               "comments": "This is a new cell",
-              "localName": "A New Cell",
               "orderWithinParentLocation": 1,
               "attributes": ["CAT_B"],
               "deactivatedReason": "${migrateRequest.deactivationReason}",
@@ -618,13 +619,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Working Capacity",
                   "oldValue": "1",
-                  "newValue": "0",
                   "amendedBy": "user"
                 },
                 {
                   "attribute": "Max Capacity",
                   "oldValue": "1",
-                  "newValue": "0",
                   "amendedBy": "user"
                 },
                 {

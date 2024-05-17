@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.microsoft.applicationinsights.TelemetryClient
+import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.ValidationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -21,10 +23,13 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
@@ -33,7 +38,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFa
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
+import java.util.UUID
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
@@ -42,6 +47,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 class LocationService(
   private val locationRepository: LocationRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
+  private val cellLocationRepository: CellLocationRepository,
   private val prisonerSearchService: PrisonerSearchService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
@@ -62,6 +68,7 @@ class LocationService(
       .map {
         it.toDto()
       }
+      .sortedBy { it.getKey() }
 
   fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
     if (!key.contains("-")) throw LocationNotFoundException(key)
@@ -73,6 +80,13 @@ class LocationService(
   fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LocationDTO> {
     return locationRepository.findAll(pageable).map(Location::toDto)
   }
+  fun getLocationByPrisonAndLocationType(prisonId: String, locationType: LocationType): List<LocationDTO> =
+    locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId, locationType)
+      .filter { it.isActive() }
+      .map {
+        it.toDto()
+      }
+      .sortedBy { it.getKey() }
 
   @Transactional
   fun createLocation(request: CreateRequest): LocationDTO {
@@ -149,12 +163,6 @@ class LocationService(
       theParent?.let { locationToUpdate.setParent(it) }
     }
 
-    val capacityChanged = locationToUpdate is Cell &&
-      patchLocationRequest.capacity != null && patchLocationRequest.capacity != locationToUpdate.getCapacity()
-
-    val certificationChanged = locationToUpdate is Cell &&
-      patchLocationRequest.certification != null && patchLocationRequest.certification != locationToUpdate.getCertification()
-
     val attributesChanged = locationToUpdate is Cell && patchLocationRequest.attributes != locationToUpdate.attributes.map { it.attributeValue }.toSet()
 
     locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
@@ -168,62 +176,136 @@ class LocationService(
         "path" to locationToUpdate.getPathHierarchy(),
         "codeChanged" to "$codeChanged",
         "parentChanged" to "$parentChanged",
-        "capacityChanged" to "$capacityChanged",
-        "certificationChanged" to "$certificationChanged",
       ),
       null,
     )
 
     return UpdateLocationResult(
-      locationToUpdate.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged || capacityChanged || certificationChanged || attributesChanged),
-      capacityChanged,
-      certificationChanged,
+      locationToUpdate.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged || attributesChanged),
       if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
     )
+  }
+
+  fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int): LocationDTO {
+    val locCapChange = cellLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (locCapChange.isPermanentlyDeactivated()) {
+      throw ValidationException("Cannot change the capacity a permanently deactivated location")
+    }
+
+    val prisoners = prisonersInLocations(locCapChange).flatMap { it.value }
+    if (maxCapacity < prisoners.size) {
+      throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})")
+    }
+
+    locCapChange.setCapacity(
+      maxCapacity = maxCapacity,
+      workingCapacity = workingCapacity,
+      userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+      clock = clock,
+    )
+    log.info("Capacity updated max capacity = $maxCapacity and working capacity = $workingCapacity")
+
+    telemetryClient.trackEvent(
+      "Capacity updated",
+      mapOf(
+        "id" to id.toString(),
+        "key" to locCapChange.getKey(),
+        "maxCapacity" to maxCapacity.toString(),
+        "workingCapacity" to workingCapacity.toString(),
+      ),
+      null,
+    )
+    return locCapChange.toDto(includeParent = true)
   }
 
   @Transactional
   fun deactivateLocation(
     id: UUID,
-    deactivatedReason: DeactivatedReason? = null,
+    deactivatedReason: DeactivatedReason,
     proposedReactivationDate: LocalDate? = null,
     planetFmReference: String? = null,
-    permanentDeactivation: Boolean = false,
   ): LocationDTO {
-    val locationToUpdate = locationRepository.findById(id)
+    val locationToDeactivate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val locationsToCheck = locationToUpdate.cellLocations().map { it.getPathHierarchy() }
-    if (locationsToCheck.isNotEmpty()) {
-      val locationsWithPrisoners =
-        prisonerSearchService.findPrisonersInLocations(locationToUpdate.prisonId, locationsToCheck)
-
-      if (locationsWithPrisoners.isNotEmpty()) {
-        throw LocationContainsPrisonersException(locationsWithPrisoners)
-      }
+    if (locationToDeactivate.isTemporarilyDeactivated()) {
+      throw ValidationException("Cannot deactivate already deactivated location")
     }
 
-    locationToUpdate.deactivate(
+    checkForPrisonersInLocation(locationToDeactivate)
+
+    locationToDeactivate.temporarilyDeactivate(
       deactivatedReason = deactivatedReason,
       deactivatedDate = LocalDate.now(clock),
       proposedReactivationDate = proposedReactivationDate,
       planetFmReference = planetFmReference,
-      permanentDeactivation = permanentDeactivation,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
     )
 
     telemetryClient.trackEvent(
-      "Deactivated Location",
+      "Temporarily Deactivated Location",
       mapOf(
         "id" to id.toString(),
-        "prisonId" to locationToUpdate.prisonId,
-        "path" to locationToUpdate.getPathHierarchy(),
+        "prisonId" to locationToDeactivate.prisonId,
+        "path" to locationToDeactivate.getPathHierarchy(),
       ),
       null,
     )
 
-    return locationToUpdate.toDto(includeParent = true)
+    return locationToDeactivate.toDto(includeParent = true)
+  }
+
+  @Transactional
+  fun permanentlyDeactivateLocation(
+    id: UUID,
+    reasonForPermanentDeactivation: String,
+  ): LocationDTO {
+    val locationToArchive = locationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (locationToArchive.isPermanentlyDeactivated()) {
+      throw ValidationException("Cannot deactivate already permanently deactivated location")
+    }
+
+    checkForPrisonersInLocation(locationToArchive)
+
+    locationToArchive.permanentlyDeactivate(
+      deactivatedDate = LocalDate.now(clock),
+      reason = reasonForPermanentDeactivation,
+      userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+      clock = clock,
+    )
+
+    telemetryClient.trackEvent(
+      "Permanently Deactivated Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to locationToArchive.prisonId,
+        "path" to locationToArchive.getPathHierarchy(),
+      ),
+      null,
+    )
+
+    return locationToArchive.toDto(includeParent = true)
+  }
+
+  private fun checkForPrisonersInLocation(location: Location) {
+    val locationsWithPrisoners = prisonersInLocations(location)
+    if (locationsWithPrisoners.isNotEmpty()) {
+      throw LocationContainsPrisonersException(locationsWithPrisoners)
+    }
+  }
+
+  private fun prisonersInLocations(location: Location): Map<String, List<Prisoner>> {
+    val locationsToCheck = location.cellLocations().map { it.getPathHierarchy() }.sorted()
+    return if (locationsToCheck.isNotEmpty()) {
+      prisonerSearchService.findPrisonersInLocations(location.prisonId, locationsToCheck)
+    } else {
+      mapOf()
+    }
   }
 
   @Transactional
@@ -250,6 +332,8 @@ class LocationService(
   fun convertToNonResidentialCell(id: UUID, convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null): LocationDTO {
     val locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    checkForPrisonersInLocation(locationToConvert)
 
     if (locationToConvert is Cell) {
       locationToConvert.convertToNonResidentialCell(
@@ -329,22 +413,23 @@ class LocationService(
         ?: throw LocationNotFoundException(it.toString())
     }
 
-  fun getLocationForPrisonBelowParent(
+  fun getResidentialLocations(
     prisonId: String,
     parentLocationId: UUID? = null,
     parentPathHierarchy: String? = null,
-  ): List<LocationDTO> {
-    val parentId =
+  ): ResidentialSummary {
+    val parent =
       if (parentLocationId != null) {
-        locationRepository.findById(parentLocationId).getOrNull()?.id
+        residentialLocationRepository.findById(parentLocationId).getOrNull()
           ?: throw LocationNotFoundException(parentLocationId.toString())
       } else if (parentPathHierarchy != null) {
-        locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, parentPathHierarchy)?.id
+        residentialLocationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, parentPathHierarchy)
           ?: throw LocationNotFoundException("$prisonId-$parentPathHierarchy")
       } else {
         null
       }
 
+    val parentId = parent?.id
     val locations =
       (
         if (parentId != null) {
@@ -354,8 +439,46 @@ class LocationService(
         }
         )
         .filter { !it.isPermanentlyDeactivated() }
+        .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isWingLandingSpur() }
         .map { it.toDto(countInactiveCells = true) }
+        .sortedBy { it.getKey() }
 
-    return locations
+    return ResidentialSummary(
+      prisonSummary = if (parentId == null) {
+        PrisonSummary(
+          workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
+          maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
+          signedOperationalCapacity = 0,
+        )
+      } else {
+        null
+      },
+      parentLocation = parent?.toDto(countInactiveCells = true),
+      subLocations = locations,
+    )
   }
+
+  fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }
 }
+
+@Schema(description = "Residential Summary")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ResidentialSummary(
+  @Schema(description = "Prison summary for top level view")
+  val prisonSummary: PrisonSummary? = null,
+  @Schema(description = "The current parent location (e.g Wing or Landing) details")
+  val parentLocation: LocationDTO? = null,
+  @Schema(description = "All residential locations under this parent")
+  val subLocations: List<LocationDTO>,
+)
+
+@Schema(description = "Prison Summary Information")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class PrisonSummary(
+  @Schema(description = "Prison working capacity")
+  val workingCapacity: Int,
+  @Schema(description = "Prison signed operational capacity")
+  val signedOperationalCapacity: Int,
+  @Schema(description = "Prison max capacity")
+  val maxCapacity: Int,
+)
