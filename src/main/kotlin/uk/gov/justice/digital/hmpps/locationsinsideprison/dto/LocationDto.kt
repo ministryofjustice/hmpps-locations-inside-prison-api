@@ -353,6 +353,7 @@ data class CreateResidentialLocationRequest(
       attributes?.forEach { attribute ->
         location.addAttribute(attribute, createdBy, clock)
       }
+      location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock)
       return location
     } else {
       ResidentialLocationJPA(
