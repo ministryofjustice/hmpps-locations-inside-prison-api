@@ -940,6 +940,101 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("POST /locations/keys")
+  @Nested
+  inner class ViewLocationByKeysTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.post().uri("/locations/keys")
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf("Z"))
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.post().uri("/locations/keys")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf("Z"))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.post().uri("/locations/keys")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf("Z"))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve locations from a list of keys`() {
+        webTestClient.post().uri("/locations/keys")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf("MDI-B-A", "MDI-B-A-001", "MDI-Z", "MDI-Z", "MDI-Z-2", "MDI-Z-VISIT", "MDI-Z-1-003", "XYZ-1-2-3"))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                          [{
+                            "prisonId": "MDI",
+                            "code": "A",
+                            "pathHierarchy": "B-A",
+                            "key": "MDI-B-A"
+                          }, 
+                          {
+                          
+                            "prisonId": "MDI",
+                            "code": "001",
+                            "pathHierarchy": "B-A-001",
+                            "key": "MDI-B-A-001"
+                          }, 
+                          {
+                            "prisonId": "MDI",
+                            "code": "Z",
+                            "pathHierarchy": "Z",
+                            "key": "MDI-Z"
+                          }, 
+                          {
+                            "prisonId": "MDI",
+                            "code": "003",
+                            "pathHierarchy": "Z-1-003",
+                            "key": "MDI-Z-1-003"
+                          }, 
+                          {
+                            "prisonId": "MDI",
+                            "code": "2",
+                            "pathHierarchy": "Z-2",
+                            "key": "MDI-Z-2"
+                          }, 
+                          {
+                            "prisonId": "MDI",
+                            "code": "VISIT",
+                            "pathHierarchy": "Z-VISIT",
+                            "key": "MDI-Z-VISIT"
+                          }]
+                         """,
+            false,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /locations/prison/{prisonId}")
   @Nested
   inner class ViewLocationByPrisonTest {
