@@ -991,51 +991,62 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             // language=json
             """
-                          [{
+                        [{
+                          "prisonId": "MDI",
+                          "code": "Z",
+                          "pathHierarchy": "Z",
+                          "permanentlyInactive": false,
+                          "active": true,
+                          "childLocations": [{
                             "prisonId": "MDI",
                             "code": "VISIT",
                             "pathHierarchy": "Z-VISIT",
                             "locationType": "VISITS",
-                            "orderWithinParentLocation": 99,
-                            "status": "ACTIVE",
                             "active": true,
                             "childLocations": [],
                             "key": "MDI-Z-VISIT",
                             "isResidential": false
-                            }, 
-                            {
+                          }, 
+                          {
+                            "prisonId": "MDI",
+                            "code": "1",
+                            "pathHierarchy": "Z-1",
+                            "locationType": "LANDING",
+                            "active": true,
+                            "childLocations": [{
+                              "prisonId": "MDI",
+                              "code": "001",
+                              "pathHierarchy": "Z-1-001",
+                              "locationType": "CELL",
+                              "active": true,
+                              "childLocations": [],
+                              "key": "MDI-Z-1-001",
+                              "isResidential": true
+                            }, {
+                              "prisonId": "MDI",
+                              "code": "002",
+                              "pathHierarchy": "Z-1-002",
+                              "locationType": "CELL",
+                              "active": true,
+                              "deactivatedByParent": false,
+                              "childLocations": [],
+                              "key": "MDI-Z-1-002",
+                              "isResidential": true
+                            }],
+                            "key": "MDI-Z-1",
+                            "isResidential": true
+                          }, 
+                          {
                             "prisonId": "MDI",
                             "code": "2",
                             "pathHierarchy": "Z-2",
                             "locationType": "LANDING",
                             "active": true,
                             "childLocations": [],
-                            "lastModifiedBy": "A_TEST_USER",
                             "key": "MDI-Z-2",
                             "isResidential": true
-                            }, 
-                            {
-                            "prisonId": "MDI",
-                            "code": "A",
-                            "pathHierarchy": "B-A",
-                            "locationType": "LANDING",
-                            "active": true,
-                            "childLocations": [{
-                              "prisonId": "MDI",
-                              "code": "001",
-                              "pathHierarchy": "B-A-001",
-                              "locationType": "CELL",
-                              "active": false,
-                              "deactivatedByParent": false,
-                              "deactivatedDate": "2023-12-05",
-                              "deactivatedReason": "DAMAGED",
-                              "childLocations": [],
-                              "key": "MDI-B-A-001",
-                              "isResidential": true
-                            }],
-                            "key": "MDI-B-A",
-                            "isResidential": true
                           }]
+                        }]
                          """,
             false,
           )

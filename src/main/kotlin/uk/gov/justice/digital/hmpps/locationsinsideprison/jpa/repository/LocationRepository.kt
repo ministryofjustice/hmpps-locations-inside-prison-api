@@ -14,5 +14,5 @@ interface LocationRepository : JpaRepository<Location, UUID> {
 
   fun findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId: String, locationType: LocationType): List<Location>
 
-  fun findAllByPathHierarchyIn(pathHierarchy: List<String>): List<Location>
+  fun findAllByPrisonIdAndPathHierarchyIsIn(prisonId: String, pathHierarchy: List<String>): List<Location>
 }

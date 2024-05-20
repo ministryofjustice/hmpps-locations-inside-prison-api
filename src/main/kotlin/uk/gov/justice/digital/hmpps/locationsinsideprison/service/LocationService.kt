@@ -78,10 +78,46 @@ class LocationService(
   }
 
   fun getLocationsByKeys(keys: List<String>, includeChildren: Boolean = false, includeHistory: Boolean = false): List<LocationDTO> {
-    return locationRepository
-      .findAllByPathHierarchyIn(keys.filter { it.contains("-") })
+    data class PrisonAndPathHierarchy(
+      val prisonId: String,
+      val pathHierarchy: String,
+    )
+    data class PrisonAndPathHierarchies(
+      val prisonId: String,
+      val pathHierarchy: List<String>,
+    )
+
+    val keysDeconstructedToPrisonIdsAndPaths = mutableListOf<PrisonAndPathHierarchy>()
+
+    keys.forEach {
+      if (it.contains("-")) {
+        val (prisonId, pathHierarchy) = it.split("-", limit = 2)
+        keysDeconstructedToPrisonIdsAndPaths += PrisonAndPathHierarchy(prisonId, pathHierarchy)
+      }
+    }
+
+    val prisonIds = keysDeconstructedToPrisonIdsAndPaths.map { it.prisonId }.distinct()
+    val locationsGroupedByPrisonId = mutableListOf<PrisonAndPathHierarchies>()
+    val pathHierarchies = mutableListOf<String>()
+
+    for (prisonId in prisonIds) {
+      for (location in keysDeconstructedToPrisonIdsAndPaths) {
+        if (location.prisonId == prisonId) {
+          pathHierarchies += location.pathHierarchy
+        }
+      }
+      locationsGroupedByPrisonId += PrisonAndPathHierarchies(prisonId, pathHierarchies)
+    }
+
+    val queryResponse = mutableListOf<Location>()
+    locationsGroupedByPrisonId.forEach { it ->
+      queryResponse += locationRepository.findAllByPrisonIdAndPathHierarchyIsIn(it.prisonId, it.pathHierarchy)
+    }
+
+    return queryResponse
       .filter { it.isActive() }
       .map { it.toDto(includeChildren = includeChildren, includeHistory = includeHistory) }
+      .sortedBy { it.getKey() }
   }
 
   fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LocationDTO> {
