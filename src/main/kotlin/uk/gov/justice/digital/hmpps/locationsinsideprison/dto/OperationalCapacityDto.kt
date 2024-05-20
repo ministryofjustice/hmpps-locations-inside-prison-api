@@ -9,7 +9,7 @@ import java.time.LocalDateTime
 data class OperationalCapacityDto(
 
   @Schema(description = "Operational Capacity", example = "100", required = true)
-  val capacity: Int,
+  val signedOperationCapacity: Int,
 
   @Schema(description = "Prison ID", example = "MDI", required = true)
   val prisonId: String,

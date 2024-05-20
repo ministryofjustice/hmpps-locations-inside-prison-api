@@ -50,7 +50,7 @@ class OperationalCapacityGetIntTest : SqsIntegrationTestBase() {
             """
               {
                 "signedOperationCapacity": 342,
-                "approvedBy": "MWING"
+                "approvedBy": "MALEMAN"
               }
             """.trimIndent(),
             false,
