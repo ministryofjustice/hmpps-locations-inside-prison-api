@@ -12,10 +12,9 @@ class OperationalCapacity(
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   val id: Long? = null,
-
-  var capacity: Int = 0,
-  var prisonId: String = "",
-  var dateTime: LocalDateTime = LocalDateTime.now(),
+  var capacity: Int,
+  var prisonId: String,
+  var dateTime: LocalDateTime,
   var approvedBy: String,
 ) {
   fun toDto() = (
@@ -29,12 +28,7 @@ class OperationalCapacity(
 
     other as OperationalCapacity
 
-    if (capacity != other.capacity) return false
-    if (prisonId != other.prisonId) return false
-    if (dateTime != other.dateTime) return false
-    if (approvedBy != other.approvedBy) return false
-
-    return true
+    return prisonId == other.prisonId
   }
 
   override fun hashCode(): Int {
