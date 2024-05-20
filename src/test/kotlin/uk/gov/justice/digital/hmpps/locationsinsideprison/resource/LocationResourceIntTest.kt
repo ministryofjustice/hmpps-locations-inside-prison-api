@@ -982,71 +982,52 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve locations from a list of keys`() {
-        webTestClient.post().uri("/locations/keys?includeChildren=true")
+        webTestClient.post().uri("/locations/keys")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
-          .bodyValue(listOf("B-A", "B-A-001", "MDI-Z", "Z", "Z-2", "Z-VISIT", "Z-1-003", "XYZ-1-2-3"))
+          .bodyValue(listOf("MDI-B-A", "MDI-B-A-001", "MDI-Z", "MDI-Z", "MDI-Z-2", "MDI-Z-VISIT", "MDI-Z-1-003", "XYZ-1-2-3"))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
             // language=json
             """
-                        [{
-                          "prisonId": "MDI",
-                          "code": "Z",
-                          "pathHierarchy": "Z",
-                          "permanentlyInactive": false,
-                          "active": true,
-                          "childLocations": [{
+                          [{
                             "prisonId": "MDI",
-                            "code": "VISIT",
-                            "pathHierarchy": "Z-VISIT",
-                            "locationType": "VISITS",
-                            "active": true,
-                            "childLocations": [],
-                            "key": "MDI-Z-VISIT",
-                            "isResidential": false
+                            "code": "A",
+                            "pathHierarchy": "B-A",
+                            "key": "MDI-B-A"
+                          }, 
+                          {
+                          
+                            "prisonId": "MDI",
+                            "code": "001",
+                            "pathHierarchy": "B-A-001",
+                            "key": "MDI-B-A-001"
                           }, 
                           {
                             "prisonId": "MDI",
-                            "code": "1",
-                            "pathHierarchy": "Z-1",
-                            "locationType": "LANDING",
-                            "active": true,
-                            "childLocations": [{
-                              "prisonId": "MDI",
-                              "code": "001",
-                              "pathHierarchy": "Z-1-001",
-                              "locationType": "CELL",
-                              "active": true,
-                              "childLocations": [],
-                              "key": "MDI-Z-1-001",
-                              "isResidential": true
-                            }, {
-                              "prisonId": "MDI",
-                              "code": "002",
-                              "pathHierarchy": "Z-1-002",
-                              "locationType": "CELL",
-                              "active": true,
-                              "deactivatedByParent": false,
-                              "childLocations": [],
-                              "key": "MDI-Z-1-002",
-                              "isResidential": true
-                            }],
-                            "key": "MDI-Z-1",
-                            "isResidential": true
+                            "code": "Z",
+                            "pathHierarchy": "Z",
+                            "key": "MDI-Z"
+                          }, 
+                          {
+                            "prisonId": "MDI",
+                            "code": "003",
+                            "pathHierarchy": "Z-1-003",
+                            "key": "MDI-Z-1-003"
                           }, 
                           {
                             "prisonId": "MDI",
                             "code": "2",
                             "pathHierarchy": "Z-2",
-                            "locationType": "LANDING",
-                            "active": true,
-                            "childLocations": [],
-                            "key": "MDI-Z-2",
-                            "isResidential": true
+                            "key": "MDI-Z-2"
+                          }, 
+                          {
+                            "prisonId": "MDI",
+                            "code": "VISIT",
+                            "pathHierarchy": "Z-VISIT",
+                            "key": "MDI-Z-VISIT"
                           }]
-                        }]
                          """,
             false,
           )
