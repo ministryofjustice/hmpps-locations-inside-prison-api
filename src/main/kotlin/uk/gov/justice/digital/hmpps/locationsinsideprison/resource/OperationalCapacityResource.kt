@@ -74,14 +74,14 @@ class OperationalCapacityResource() : EventBaseResource() {
 
   @PostMapping("/{prisonId}")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
-  @ResponseStatus(HttpStatus.OK)
+  @ResponseStatus(HttpStatus.CREATED)
   @Operation(
     summary = "Post Operation Capacity",
     description = "Requires role ROLE_MAINTAIN_LOCATIONS",
     responses = [
       ApiResponse(
-        responseCode = "200",
-        description = "Returns Operation Capacity data",
+        responseCode = "201",
+        description = "Returns created Operation Capacity",
       ),
       ApiResponse(
         responseCode = "401",
@@ -104,5 +104,5 @@ class OperationalCapacityResource() : EventBaseResource() {
     @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @PathVariable
     prisonId: String,
-  ): OperationalCapacityDto? = OperationalCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", signedOperationCapacity = 342, dateTime = LocalDateTime.now())
+  ): OperationalCapacityDto? = OperationalCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", signedOperationCapacity = 100, dateTime = LocalDateTime.now())
 }

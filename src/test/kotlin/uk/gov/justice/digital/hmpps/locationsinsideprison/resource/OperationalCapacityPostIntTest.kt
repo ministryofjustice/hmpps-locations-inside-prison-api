@@ -43,14 +43,14 @@ class OperationalCapacityPostIntTest : SqsIntegrationTestBase() {
       @Test
       fun `can retrieve location-type constants`() {
         webTestClient.post().uri("/signed-op-cap/MDI")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS")))
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .exchange()
-          .expectStatus().isOk
+          .expectStatus().isCreated
           .expectBody().json(
             """
               {
-                "signedOperationCapacity": 342,
-                "approvedBy": "MWING"
+                "signedOperationCapacity": 100,
+                "approvedBy": "MALEMAN"
               }
             """.trimIndent(),
             false,
