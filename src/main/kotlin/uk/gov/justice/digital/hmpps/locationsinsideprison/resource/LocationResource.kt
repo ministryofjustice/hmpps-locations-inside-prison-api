@@ -169,8 +169,6 @@ class LocationResource(
     @RequestBody
     @Validated
     keys: List<String>,
-    @RequestParam(name = "includeChildren", required = false, defaultValue = "false") includeChildren: Boolean = false,
-    @RequestParam(name = "includeHistory", required = false, defaultValue = "false") includeHistory: Boolean = false,
   ): List<LocationDTO> = locationService.getLocationsByKeys(keys)
 
   @GetMapping("/prison/{prisonId}")
