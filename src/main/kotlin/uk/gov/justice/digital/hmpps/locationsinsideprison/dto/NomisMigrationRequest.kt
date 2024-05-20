@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType.HOLDING_CELL
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -81,6 +82,10 @@ interface NomisMigrationRequest : UpdateLocationRequest {
           location.addAttribute(attribute)
           attribute.mapTo?.let { location.addSpecialistCellType(it) }
         }
+        location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, lastUpdatedBy, clock)
+        if (residentialHousingType == HOLDING_CELL) {
+          location.convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = lastUpdatedBy, clock = clock)
+        }
         location
       } else {
         ResidentialLocation(
@@ -116,10 +121,6 @@ interface NomisMigrationRequest : UpdateLocationRequest {
         location.addUsage(usage.usageType, usage.capacity, usage.sequence)
       }
       location
-    }
-
-    if (location is Cell && residentialHousingType == HOLDING_CELL) {
-      location.convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = lastUpdatedBy, clock = clock)
     }
 
     if (isDeactivated()) {

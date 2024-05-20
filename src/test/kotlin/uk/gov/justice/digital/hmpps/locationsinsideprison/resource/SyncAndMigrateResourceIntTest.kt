@@ -203,7 +203,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "comments": "This is a new cell",
               "orderWithinParentLocation": 1,
               "isResidential": true,
-              "attributes": ["IMMIGRATION_DETAINEES"]
+              "attributes": ["IMMIGRATION_DETAINEES"],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ]
             }
           """,
             false,
@@ -232,7 +235,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "comments": "This is a new cell",
               "orderWithinParentLocation": 1,
               "isResidential": true,
-              "attributes": ["IMMIGRATION_DETAINEES"]
+              "attributes": ["IMMIGRATION_DETAINEES"],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ]
             }
           """,
             false,
@@ -494,7 +500,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               },
               "attributes": ["CAT_B"],
               "deactivatedReason": "${migrateRequest.deactivationReason}",
-              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}"
+              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ]
             }
           """,
             false,
@@ -537,6 +546,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "newValue": "This is a new cell",
                   "amendedBy": "user1",
                   "amendedDate": "${LocalDateTime.now(clock).minusYears(1)}"
+                },
+                {
+                  "attribute": "Used For",
+                  "newValue": "Standard accommodation",
+                  "amendedBy": "user"
                 }
               ]
             }
@@ -641,6 +655,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Converted Cell Type",
                   "newValue": "Holding room",
+                  "amendedBy": "user"
+                },
+                {
+                  "attribute": "Used For",
+                  "newValue": "Standard accommodation",
                   "amendedBy": "user"
                 }
               ]

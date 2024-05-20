@@ -90,10 +90,6 @@ class Cell(
 
   fun isCertified() = certification?.certified ?: false
 
-  fun getCapacity() = capacity?.toDto()
-
-  fun getCertification() = certification?.toDto()
-
   override fun isConvertedCell() = convertedCellType != null
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock) {
@@ -209,10 +205,10 @@ class Cell(
     if (workingCapacity > maxCapacity) {
       throw CapacityException(getKey(), "Working capacity ($workingCapacity) cannot be more than max capacity ($maxCapacity)")
     }
-    if (maxCapacity == 0) {
+    if (maxCapacity == 0 && !isPermanentlyDeactivated()) {
       throw CapacityException(getKey(), "Max capacity cannot be zero")
     }
-    if (workingCapacity == 0 && accommodationType == AccommodationType.NORMAL_ACCOMMODATION && specialistCellTypes.isEmpty()) {
+    if (!(isPermanentlyDeactivated() || isTemporarilyDeactivated()) && workingCapacity == 0 && accommodationType == AccommodationType.NORMAL_ACCOMMODATION && specialistCellTypes.isEmpty()) {
       throw CapacityException(getKey(), "Cannot have a 0 working capacity with normal accommodation and not specialist cell")
     }
 
@@ -250,7 +246,7 @@ class Cell(
     this.whenUpdated = LocalDateTime.now(clock)
   }
 
-  private fun deCertifyCell(userOrSystemInContext: String, clock: Clock) {
+  fun deCertifyCell(userOrSystemInContext: String, clock: Clock) {
     addHistory(
       LocationAttribute.CERTIFIED,
       certification?.certified?.toString(),
