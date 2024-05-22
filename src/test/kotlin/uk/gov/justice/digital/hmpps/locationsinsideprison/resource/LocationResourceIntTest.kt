@@ -1778,6 +1778,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           )
       }
     }
+
     @Nested
     inner class Validation {
       @Test
