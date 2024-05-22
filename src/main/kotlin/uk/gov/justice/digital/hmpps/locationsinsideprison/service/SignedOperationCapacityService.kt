@@ -6,46 +6,46 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperationalCapacity
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.OperationalCapacityRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationalCapacityRepository
 
 @Service
 @Transactional(readOnly = true)
-class OperationalCapacityService(
-  private val operationalCapacityRepository: OperationalCapacityRepository,
+class SignedOperationCapacityService(
+  private val prisonSignedOperationalCapacityRepository: PrisonSignedOperationalCapacityRepository,
   private val telemetryClient: TelemetryClient,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun getOperationalCapacity(prisonId: String): PrisonSignedOperationalCapacity? {
+  fun getSignedOperationalCapacity(prisonId: String): PrisonSignedOperationalCapacity? {
     // TODO need to be changed to dto
-    return operationalCapacityRepository.findOneByPrisonId(prisonId)
+    return prisonSignedOperationalCapacityRepository.findOneByPrisonId(prisonId)
   }
 
   @Transactional
-  fun saveOperationalCapacity(prisonId: String, oc: PrisonSignedOperationalCapacity) {
+  fun saveSignedOperationalCapacity(prisonId: String, oc: PrisonSignedOperationalCapacity) {
     // TODO need to be changed to dto
-    val opdb = operationalCapacityRepository.findOneByPrisonId(prisonId) ?: PrisonSignedOperationalCapacity(
-      capacity = oc.capacity,
+    val opdb = prisonSignedOperationalCapacityRepository.findOneByPrisonId(prisonId) ?: PrisonSignedOperationalCapacity(
+      signedOperationCapacity = oc.signedOperationCapacity,
       prisonId = prisonId,
       dateTime = oc.dateTime,
       approvedBy = oc.approvedBy,
     )
     if (opdb.id != null) {
-      opdb.capacity = oc.capacity
+      opdb.signedOperationCapacity = oc.signedOperationCapacity
       opdb.approvedBy = oc.approvedBy
       opdb.dateTime = oc.dateTime
     }
 
-    val opUpdated = operationalCapacityRepository.save(opdb)
-    log.info("Created operational capacity [${opUpdated.id}] (Capacity=${opUpdated.capacity})")
+    val opUpdated = prisonSignedOperationalCapacityRepository.save(opdb)
+    log.info("Created operational capacity [${opUpdated.id}] (Capacity=${opUpdated.signedOperationCapacity})")
     telemetryClient.trackEvent(
       "Created operational capacity",
       mapOf(
         "id" to opUpdated.id.toString(),
         "prisonId" to prisonId,
-        "capacity" to opUpdated.capacity.toString(),
+        "signedOperationCapacity" to opUpdated.signedOperationCapacity.toString(),
         "approvedBy" to opUpdated.approvedBy,
       ),
       null,

@@ -17,7 +17,7 @@ import java.time.LocalDateTime
 class PrisonSignedOperationalCapacityRepositoryTest : TestBase() {
 
   @Autowired
-  lateinit var repository: OperationalCapacityRepository
+  lateinit var repository: PrisonSignedOperationalCapacityRepository
 
   @BeforeEach
   fun setUp() {
@@ -36,7 +36,7 @@ class PrisonSignedOperationalCapacityRepositoryTest : TestBase() {
     repository.save(operationalCapacity)
     var oc = repository.findOneByPrisonId("MDI")
     assertThat(oc?.id).isNotNull()
-    assertThat(oc?.capacity).isEqualTo(100)
+    assertThat(oc?.signedOperationCapacity).isEqualTo(100)
     assertThat(oc?.prisonId).isEqualTo("MDI")
     assertThat(oc?.dateTime).isEqualTo(LocalDateTime.now(clock))
     assertThat(oc?.approvedBy).isEqualTo("USER")

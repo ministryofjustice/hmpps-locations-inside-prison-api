@@ -5,6 +5,6 @@ import org.springframework.stereotype.Repository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperationalCapacity
 
 @Repository
-interface OperationalCapacityRepository : JpaRepository<PrisonSignedOperationalCapacity, Long> {
+interface PrisonSignedOperationalCapacityRepository : JpaRepository<PrisonSignedOperationalCapacity, Long> {
   fun findOneByPrisonId(prisonId: String): PrisonSignedOperationalCapacity?
 }

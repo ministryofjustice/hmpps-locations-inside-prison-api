@@ -7,30 +7,30 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperationalCapacity
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.OperationalCapacityRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationalCapacityRepository
 import java.time.LocalDateTime
 
-class PrisonSignedOperationalCapacityServiceTest {
-  private val operationalCapacityRepository: OperationalCapacityRepository = mock()
+class SignedOperationCapacityServiceTest {
+  private val prisonSignedOperationalCapacityRepository: PrisonSignedOperationalCapacityRepository = mock()
   private val telemetryClient: TelemetryClient = mock()
-  private val service: OperationalCapacityService = OperationalCapacityService(
-    operationalCapacityRepository,
+  private val service: SignedOperationCapacityService = SignedOperationCapacityService(
+    prisonSignedOperationalCapacityRepository,
     telemetryClient,
   )
 
   @Test
   fun `Get operational capacity for the prison when record found`() {
-    whenever(operationalCapacityRepository.findOneByPrisonId(any())).thenReturn(
+    whenever(prisonSignedOperationalCapacityRepository.findOneByPrisonId(any())).thenReturn(
       PrisonSignedOperationalCapacity(1, 130, "MDI", LocalDateTime.now(), "Approved by"),
     )
-    val result = service.getOperationalCapacity("MDI")
-    assertThat(result?.capacity).isEqualTo(130)
+    val result = service.getSignedOperationalCapacity("MDI")
+    assertThat(result?.signedOperationCapacity).isEqualTo(130)
   }
 
   @Test
   fun `Get null for the prison when record not found`() {
-    whenever(operationalCapacityRepository.findOneByPrisonId(any())).thenReturn(null)
-    val result = service.getOperationalCapacity("MDI")
+    whenever(prisonSignedOperationalCapacityRepository.findOneByPrisonId(any())).thenReturn(null)
+    val result = service.getSignedOperationalCapacity("MDI")
     assertThat(result).isNull()
   }
 }
