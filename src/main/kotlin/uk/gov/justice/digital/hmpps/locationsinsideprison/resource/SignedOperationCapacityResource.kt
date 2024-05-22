@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.OperationalCapacityDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import java.time.LocalDateTime
 
 /**
@@ -33,21 +33,21 @@ import java.time.LocalDateTime
 @Validated
 @RequestMapping("/signed-op-cap", produces = [MediaType.APPLICATION_JSON_VALUE])
 @Tag(
-  name = "Operational Capacity",
-  description = "Returns signed operational capacity data per prison.",
+  name = "Signed Operation Capacity",
+  description = "Returns Signed Operation Capacity data per prison.",
 )
-class OperationalCapacityResource() : EventBaseResource() {
+class SignedOperationCapacityResource() : EventBaseResource() {
 
   @GetMapping("/{prisonId}")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')") // todo Need create a New Role?
   @ResponseStatus(HttpStatus.OK)
   @Operation(
-    summary = "Get Operation Capacity",
+    summary = "Get Signed Operation Capacity",
     description = "Requires role VIEW_LOCATIONS",
     responses = [
       ApiResponse(
         responseCode = "200",
-        description = "Returns Operation Capacity data",
+        description = "Returns Signed Operation Capacity data",
       ),
       ApiResponse(
         responseCode = "401",
@@ -66,22 +66,22 @@ class OperationalCapacityResource() : EventBaseResource() {
       ),
     ],
   )
-  fun getOperationalCapacity(
+  fun getSignedOperationCapacity(
     @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @PathVariable
     prisonId: String,
-  ): OperationalCapacityDto? = OperationalCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", signedOperationCapacity = 342, dateTime = LocalDateTime.now())
+  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", signedOperationCapacity = 342, dateTime = LocalDateTime.now())
 
   @PostMapping("/{prisonId}")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
-    summary = "Post Operation Capacity",
+    summary = "Post Signed Operation Capacity",
     description = "Requires role ROLE_MAINTAIN_LOCATIONS",
     responses = [
       ApiResponse(
         responseCode = "201",
-        description = "Returns created Operation Capacity",
+        description = "Returns created Signed Operation Capacity",
       ),
       ApiResponse(
         responseCode = "401",
@@ -100,9 +100,9 @@ class OperationalCapacityResource() : EventBaseResource() {
       ),
     ],
   )
-  fun postOperationalCapacity(
+  fun postSignedOperationCapacity(
     @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @PathVariable
     prisonId: String,
-  ): OperationalCapacityDto? = OperationalCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", signedOperationCapacity = 100, dateTime = LocalDateTime.now())
+  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", signedOperationCapacity = 100, dateTime = LocalDateTime.now())
 }

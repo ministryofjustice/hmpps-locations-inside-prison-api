@@ -5,11 +5,11 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 
-class OperationalCapacityPostIntTest : SqsIntegrationTestBase() {
+class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
 
   @DisplayName("POST /signed-op-cap/MDI")
   @Nested
-  inner class ViewLocationsConstantsTest {
+  inner class PrisonSignedOperationCapacityPostIntTest {
 
     @Nested
     inner class Security {
@@ -41,7 +41,7 @@ class OperationalCapacityPostIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
       @Test
-      fun `can retrieve location-type constants`() {
+      fun `can create Signed Operation Capacity`() {
         webTestClient.post().uri("/signed-op-cap/MDI")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .exchange()

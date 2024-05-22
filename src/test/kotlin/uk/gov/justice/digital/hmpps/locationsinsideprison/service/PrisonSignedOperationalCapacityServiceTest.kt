@@ -6,11 +6,11 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.OperationalCapacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperationalCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.OperationalCapacityRepository
 import java.time.LocalDateTime
 
-class OperationalCapacityServiceTest {
+class PrisonSignedOperationalCapacityServiceTest {
   private val operationalCapacityRepository: OperationalCapacityRepository = mock()
   private val telemetryClient: TelemetryClient = mock()
   private val service: OperationalCapacityService = OperationalCapacityService(
@@ -21,7 +21,7 @@ class OperationalCapacityServiceTest {
   @Test
   fun `Get operational capacity for the prison when record found`() {
     whenever(operationalCapacityRepository.findOneByPrisonId(any())).thenReturn(
-      OperationalCapacity(1, 130, "MDI", LocalDateTime.now(), "Approved by"),
+      PrisonSignedOperationalCapacity(1, 130, "MDI", LocalDateTime.now(), "Approved by"),
     )
     val result = service.getOperationalCapacity("MDI")
     assertThat(result?.capacity).isEqualTo(130)

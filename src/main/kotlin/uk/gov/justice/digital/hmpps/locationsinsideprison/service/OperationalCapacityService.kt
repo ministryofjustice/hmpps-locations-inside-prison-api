@@ -5,7 +5,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.OperationalCapacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperationalCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.OperationalCapacityRepository
 
 @Service
@@ -18,15 +18,15 @@ class OperationalCapacityService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun getOperationalCapacity(prisonId: String): OperationalCapacity? {
+  fun getOperationalCapacity(prisonId: String): PrisonSignedOperationalCapacity? {
     // TODO need to be changed to dto
     return operationalCapacityRepository.findOneByPrisonId(prisonId)
   }
 
   @Transactional
-  fun saveOperationalCapacity(prisonId: String, oc: OperationalCapacity) {
+  fun saveOperationalCapacity(prisonId: String, oc: PrisonSignedOperationalCapacity) {
     // TODO need to be changed to dto
-    val opdb = operationalCapacityRepository.findOneByPrisonId(prisonId) ?: OperationalCapacity(
+    val opdb = operationalCapacityRepository.findOneByPrisonId(prisonId) ?: PrisonSignedOperationalCapacity(
       capacity = oc.capacity,
       prisonId = prisonId,
       dateTime = oc.dateTime,

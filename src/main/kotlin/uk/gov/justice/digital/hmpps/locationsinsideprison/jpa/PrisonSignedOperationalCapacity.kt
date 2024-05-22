@@ -8,11 +8,11 @@ import org.hibernate.Hibernate
 import java.time.LocalDateTime
 
 @Entity
-class OperationalCapacity(
+class PrisonSignedOperationalCapacity(
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   val id: Long? = null,
-  var capacity: Int,
+  var signedOperationCapacity: Int,
   var prisonId: String,
   var dateTime: LocalDateTime,
   var approvedBy: String,
@@ -26,7 +26,7 @@ class OperationalCapacity(
     if (this === other) return true
     if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
 
-    other as OperationalCapacity
+    other as PrisonSignedOperationalCapacity
 
     return prisonId == other.prisonId
   }
@@ -36,6 +36,6 @@ class OperationalCapacity(
   }
 
   override fun toString(): String {
-    return "Operational capacity(capacity=$capacity, prisonId=$prisonId, dateTime=$dateTime, approvedBy=$approvedBy )"
+    return "Signed Operation Capacity(signedOperationCapacity=$signedOperationCapacity, prisonId=$prisonId, dateTime=$dateTime, approvedBy=$approvedBy )"
   }
 }
