@@ -5,6 +5,7 @@ import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import org.hibernate.Hibernate
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import java.time.LocalDateTime
 
 @Entity
@@ -17,10 +18,12 @@ class PrisonSignedOperationCapacity(
   var dateTime: LocalDateTime,
   var approvedBy: String,
 ) {
-  fun toDto() = (
-    // TODO update when DTO will be created
-    null
-    )
+  fun toDto() = SignedOperationCapacityDto(
+    signedOperationCapacity = signedOperationCapacity,
+    prisonId = prisonId,
+    dateTime = dateTime,
+    approvedBy = approvedBy,
+  )
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

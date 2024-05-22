@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOperationCapacityService
 import java.time.LocalDateTime
 
 /**
@@ -36,7 +37,10 @@ import java.time.LocalDateTime
   name = "Signed Operation Capacity",
   description = "Returns Signed Operation Capacity data per prison.",
 )
-class SignedOperationCapacityResource() : EventBaseResource() {
+class SignedOperationCapacityResource(
+  private val signedOperationCapacityService: SignedOperationCapacityService,
+
+) : EventBaseResource() {
 
   @GetMapping("/{prisonId}")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')") // todo Need create a New Role?
@@ -67,10 +71,18 @@ class SignedOperationCapacityResource() : EventBaseResource() {
     ],
   )
   fun getSignedOperationCapacity(
-    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Schema(
+      description = "Prison Id",
+      example = "MDI",
+      required = true,
+      minLength = 3,
+      maxLength = 5,
+      pattern = "^[A-Z]{2}I|ZZGHI$",
+    )
     @PathVariable
     prisonId: String,
-  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", signedOperationCapacity = 342, dateTime = LocalDateTime.now())
+  ): SignedOperationCapacityDto? = signedOperationCapacityService.getSignedOperationalCapacity(prisonId)
+    ?: throw SignedOperationCapacityNotFoundException(prisonId)
 
   @PostMapping("/{prisonId}")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -101,8 +113,20 @@ class SignedOperationCapacityResource() : EventBaseResource() {
     ],
   )
   fun postSignedOperationCapacity(
-    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Schema(
+      description = "Prison Id",
+      example = "MDI",
+      required = true,
+      minLength = 3,
+      maxLength = 5,
+      pattern = "^[A-Z]{2}I|ZZGHI$",
+    )
     @PathVariable
     prisonId: String,
-  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", signedOperationCapacity = 100, dateTime = LocalDateTime.now())
+  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(
+    prisonId = "MDI",
+    approvedBy = "MALEMAN",
+    signedOperationCapacity = 342,
+    dateTime = LocalDateTime.now(),
+  )
 }

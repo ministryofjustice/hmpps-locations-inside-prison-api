@@ -1,15 +1,27 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.test.context.jdbc.Sql
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 
 class PrisonSignedOperationCapacityGetIntTest : SqsIntegrationTestBase() {
+
+  @Autowired
+  lateinit var repository: PrisonSignedOperationCapacityRepository
 
   @DisplayName("GET /signed-op-cap/MDI")
   @Nested
   inner class PrisonSignedOperationCapacityGetIntTest {
+
+    @AfterEach
+    fun cleanUp() {
+      repository.deleteAll()
+    }
 
     @Nested
     inner class Security {
@@ -41,6 +53,7 @@ class PrisonSignedOperationCapacityGetIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
       @Test
+      @Sql("classpath:repository/insert-prison-signed-operation-capacity.sql")
       fun `can retrieve Signed Operation Capacity`() {
         webTestClient.get().uri("/signed-op-cap/MDI")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
@@ -49,15 +62,17 @@ class PrisonSignedOperationCapacityGetIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             """
               {
-                "signedOperationCapacity": 342,
-                "approvedBy": "MALEMAN"
+                "signedOperationCapacity": 130,
+                "approvedBy": "USER",
+                "prisonId": "MDI",
+                "dateTime": "2023-12-05T12:34:56"
               }
             """.trimIndent(),
             false,
           )
       }
 
-      // @Test
+      @Test
       fun `can't retrieve Signed Operation Capacity`() {
         webTestClient.get().uri("/signed-op-cap/XXX")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
