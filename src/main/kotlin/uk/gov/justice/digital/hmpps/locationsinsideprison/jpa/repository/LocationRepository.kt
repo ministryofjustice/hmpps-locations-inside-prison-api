@@ -23,6 +23,6 @@ interface LocationRepository : JpaRepository<Location, UUID> {
 
 @Repository
 interface NonResidentialLocationRepository : JpaRepository<NonResidentialLocation, UUID> {
-  @Query("select distinct nrl from NonResidentialLocation nrl, Location l left join nrl.nonResidentialUsages u where u.usageType = :usageType and l.prisonId = :prisonId")
+  @Query("select nrl from NonResidentialLocation nrl join nrl.nonResidentialUsages u where u.usageType = :usageType and nrl.prisonId = :prisonId")
   fun findAllByPrisonIdAndNonResidentialUsages(prisonId: String, usageType: NonResidentialUsageType): List<NonResidentialLocation>
 }
