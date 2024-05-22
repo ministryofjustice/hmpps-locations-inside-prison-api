@@ -30,11 +30,11 @@ class SignedOperationCapacityService(
       signedOperationCapacity = oc.signedOperationCapacity,
       prisonId = prisonId,
       dateTime = oc.dateTime,
-      approvedBy = oc.approvedBy,
+      updatedBy = oc.updatedBy,
     )
     if (opdb.id != null) {
       opdb.signedOperationCapacity = oc.signedOperationCapacity
-      opdb.approvedBy = oc.approvedBy
+      opdb.updatedBy = oc.updatedBy
       opdb.dateTime = oc.dateTime
     }
 
@@ -46,7 +46,7 @@ class SignedOperationCapacityService(
         "id" to opUpdated.id.toString(),
         "prisonId" to prisonId,
         "signedOperationCapacity" to opUpdated.signedOperationCapacity.toString(),
-        "approvedBy" to opUpdated.approvedBy,
+        "updatedBy" to opUpdated.updatedBy,
       ),
       null,
     )

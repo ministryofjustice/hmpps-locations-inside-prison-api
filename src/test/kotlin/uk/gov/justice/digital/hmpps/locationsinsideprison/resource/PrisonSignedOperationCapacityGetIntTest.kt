@@ -63,7 +63,7 @@ class PrisonSignedOperationCapacityGetIntTest : SqsIntegrationTestBase() {
             """
               {
                 "signedOperationCapacity": 130,
-                "approvedBy": "USER",
+                "updatedBy": "USER",
                 "prisonId": "MDI",
                 "dateTime": "2023-12-05T12:34:56"
               }

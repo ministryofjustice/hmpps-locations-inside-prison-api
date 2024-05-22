@@ -16,13 +16,13 @@ class PrisonSignedOperationCapacity(
   var signedOperationCapacity: Int,
   var prisonId: String,
   var dateTime: LocalDateTime,
-  var approvedBy: String,
+  var updatedBy: String,
 ) {
   fun toDto() = SignedOperationCapacityDto(
     signedOperationCapacity = signedOperationCapacity,
     prisonId = prisonId,
     dateTime = dateTime,
-    approvedBy = approvedBy,
+    updatedBy = updatedBy,
   )
 
   override fun equals(other: Any?): Boolean {
@@ -39,6 +39,6 @@ class PrisonSignedOperationCapacity(
   }
 
   override fun toString(): String {
-    return "Signed Operation Capacity(signedOperationCapacity=$signedOperationCapacity, prisonId=$prisonId, dateTime=$dateTime, approvedBy=$approvedBy )"
+    return "Signed Operation Capacity(signedOperationCapacity=$signedOperationCapacity, prisonId=$prisonId, dateTime=$dateTime, updatedBy=$updatedBy )"
   }
 }
