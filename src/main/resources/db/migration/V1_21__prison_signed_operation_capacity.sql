@@ -4,5 +4,5 @@ CREATE TABLE prison_signed_operation_capacity
     signed_operation_capacity int not null default 0,
     prison_id varchar(3) not null unique,
     date_time timestamp not null,
-    approved_by varchar(255) not null
+    updated_by varchar(255) not null
 );

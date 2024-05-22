@@ -21,7 +21,7 @@ class SignedOperationCapacityServiceTest {
   @Test
   fun `Get operational capacity for the prison when record found`() {
     whenever(prisonSignedOperationalCapacityRepository.findOneByPrisonId(any())).thenReturn(
-      PrisonSignedOperationCapacity(1, 130, "MDI", LocalDateTime.now(), "Approved by"),
+      PrisonSignedOperationCapacity(1, 130, "MDI", LocalDateTime.now(), "Updated by"),
     )
     val result = service.getSignedOperationalCapacity("MDI")
     assertThat(result?.signedOperationCapacity).isEqualTo(130)

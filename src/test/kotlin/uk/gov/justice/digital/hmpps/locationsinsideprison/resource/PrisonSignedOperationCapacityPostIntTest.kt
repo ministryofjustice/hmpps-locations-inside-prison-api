@@ -50,7 +50,7 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
             """
               {
                 "signedOperationCapacity": 100,
-                "approvedBy": "MALEMAN"
+                "updatedBy": "MALEMAN"
               }
             """.trimIndent(),
             false,

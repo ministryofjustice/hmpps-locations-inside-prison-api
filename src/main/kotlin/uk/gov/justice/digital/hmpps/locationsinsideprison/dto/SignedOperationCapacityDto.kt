@@ -18,6 +18,6 @@ data class SignedOperationCapacityDto(
   val dateTime: LocalDateTime,
 
   @Schema(description = "Updated by", example = "MALEMAN", required = true)
-  val approvedBy: String,
+  val updatedBy: String,
 
 )

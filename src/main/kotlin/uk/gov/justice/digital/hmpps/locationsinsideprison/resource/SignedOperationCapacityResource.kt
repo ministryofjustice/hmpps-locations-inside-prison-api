@@ -25,7 +25,7 @@ import java.time.LocalDateTime
  *  Methods : GET & POST
  * {
  *   "signedOperationCapacity": 342,
- *   "approvedBy": "MALEMAN"
+ *   "updatedBy": "MALEMAN"
  * }
  *
  */
@@ -70,7 +70,7 @@ class SignedOperationCapacityResource() : EventBaseResource() {
     @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @PathVariable
     prisonId: String,
-  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", signedOperationCapacity = 342, dateTime = LocalDateTime.now())
+  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", updatedBy = "MALEMAN", signedOperationCapacity = 342, dateTime = LocalDateTime.now())
 
   @PostMapping("/{prisonId}")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -104,5 +104,5 @@ class SignedOperationCapacityResource() : EventBaseResource() {
     @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @PathVariable
     prisonId: String,
-  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", approvedBy = "MALEMAN", signedOperationCapacity = 100, dateTime = LocalDateTime.now())
+  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", updatedBy = "MALEMAN", signedOperationCapacity = 100, dateTime = LocalDateTime.now())
 }
