@@ -57,7 +57,7 @@ class PrisonSignedOperationCapacityGetIntTest : SqsIntegrationTestBase() {
           )
       }
 
-     // @Test
+      // @Test
       fun `can't retrieve Signed Operation Capacity`() {
         webTestClient.get().uri("/signed-op-cap/XXX")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))

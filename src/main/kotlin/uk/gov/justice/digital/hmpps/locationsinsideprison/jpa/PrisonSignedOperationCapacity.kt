@@ -8,7 +8,7 @@ import org.hibernate.Hibernate
 import java.time.LocalDateTime
 
 @Entity
-class PrisonSignedOperationalCapacity(
+class PrisonSignedOperationCapacity(
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   val id: Long? = null,
@@ -26,7 +26,7 @@ class PrisonSignedOperationalCapacity(
     if (this === other) return true
     if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
 
-    other as PrisonSignedOperationalCapacity
+    other as PrisonSignedOperationCapacity
 
     return prisonId == other.prisonId
   }
