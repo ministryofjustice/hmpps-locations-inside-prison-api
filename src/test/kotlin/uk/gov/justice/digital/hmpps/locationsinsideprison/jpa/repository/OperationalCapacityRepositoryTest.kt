@@ -32,13 +32,13 @@ class OperationalCapacityRepositoryTest : TestBase() {
 
   @Test
   fun `Return result when capacity defined for prison id`() {
-    var operationalCapacity = OperationalCapacity(null, 100, "MDI", LocalDateTime.of(2024, 11, 11, 11, 11), "USER")
+    var operationalCapacity = OperationalCapacity(null, 100, "MDI", LocalDateTime.now(clock), "USER")
     repository.save(operationalCapacity)
     var oc = repository.findOneByPrisonId("MDI")
     assertThat(oc?.id).isNotNull()
     assertThat(oc?.capacity).isEqualTo(100)
     assertThat(oc?.prisonId).isEqualTo("MDI")
-    assertThat(oc?.dateTime).isEqualTo(LocalDateTime.of(2024, 11, 11, 11, 11))
+    assertThat(oc?.dateTime).isEqualTo(LocalDateTime.now(clock))
     assertThat(oc?.approvedBy).isEqualTo("USER")
   }
 }

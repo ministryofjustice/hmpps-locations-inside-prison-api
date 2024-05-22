@@ -32,9 +32,7 @@ class OperationalCapacity(
   }
 
   override fun hashCode(): Int {
-    var result = capacity
-    result = 31 * result + capacity
-    return result
+    return prisonId.hashCode()
   }
 
   override fun toString(): String {
