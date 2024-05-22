@@ -37,6 +37,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivat
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
@@ -318,6 +319,43 @@ class LocationResource(
     }
     return locationService.getLocations(pageable)
   }
+
+  @GetMapping("/prison/{prisonId}/non-residential-usage-type/{usageType}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return non-residential locations by usage for this prison",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns non-residential locations",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getLocationsByPrisonAndNonResidentialUsageType(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
+    prisonId: String,
+    @Schema(description = "Usage type", example = "APPOINTMENTS", required = true)
+    @PathVariable
+    usageType: NonResidentialUsageType,
+  ): List<LocationDTO> = locationService.getLocationsByPrisonAndNonResidentialUsageType(prisonId, usageType)
 
   @PostMapping("/residential", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")

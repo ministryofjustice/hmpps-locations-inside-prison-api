@@ -24,10 +24,12 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
@@ -46,6 +48,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 @Transactional(readOnly = true)
 class LocationService(
   private val locationRepository: LocationRepository,
+  private val nonResidentialLocationRepository: NonResidentialLocationRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val cellLocationRepository: CellLocationRepository,
   private val prisonerSearchService: PrisonerSearchService,
@@ -69,6 +72,12 @@ class LocationService(
         it.toDto()
       }
       .sortedBy { it.getKey() }
+
+  fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =
+    nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
+      .map {
+        it.toDto()
+      }
 
   fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
     if (!key.contains("-")) throw LocationNotFoundException(key)
