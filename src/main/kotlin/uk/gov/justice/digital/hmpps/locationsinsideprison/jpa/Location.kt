@@ -27,7 +27,8 @@ import java.io.Serializable
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
+import java.util.SortedSet
+import java.util.UUID
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
 @Entity
@@ -78,6 +79,8 @@ abstract class Location(
   open val whenCreated: LocalDateTime,
   open var whenUpdated: LocalDateTime,
   open var updatedBy: String,
+  open var whenDeactivated: LocalDateTime? = null,
+  open var deactivatedBy: String? = null,
 ) : Serializable {
 
   companion object {
@@ -283,6 +286,8 @@ abstract class Location(
       childLocations = if (includeChildren) childLocations.filter { !it.isPermanentlyDeactivated() }.map { it.toDto(includeChildren = true, includeHistory = includeHistory) } else null,
       parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true, includeHistory = includeHistory) else null,
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
+      whenDeactivated = whenDeactivated,
+      deactivatedBy = deactivatedBy,
     )
   }
 
@@ -417,6 +422,8 @@ abstract class Location(
       this.planetFmReference = planetFmReference
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
+      this.whenDeactivated = amendedDate
+      this.deactivatedBy = userOrSystemInContext
 
       if (this is ResidentialLocation) {
         findSubLocations().forEach { location ->
@@ -523,6 +530,8 @@ abstract class Location(
       this.proposedReactivationDate = null
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
+      this.whenDeactivated = null
+      this.deactivatedBy = null
 
       log.info("Re-activated Location [${getKey()}]")
     }
