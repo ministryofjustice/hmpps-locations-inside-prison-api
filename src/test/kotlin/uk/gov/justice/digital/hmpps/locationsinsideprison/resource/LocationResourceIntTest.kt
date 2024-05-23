@@ -33,6 +33,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import java.time.Clock
 import java.time.LocalDate
+import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
@@ -2614,6 +2615,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
         val now = LocalDate.now(clock)
+        val nowDateTime = LocalDateTime.now(clock)
         val proposedReactivationDate = now.plusMonths(1)
         webTestClient.put().uri("/locations/${cell1.id}/deactivate/permanent")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -2662,7 +2664,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "proposedReactivationDate": "$proposedReactivationDate",
                 "topLevelId": "${wingZ.id}",
                 "isResidential": true,
-                "key": "MDI-Z"
+                "key": "MDI-Z",
+                "deactivatedBy": "LOCATIONS_INSIDE_PRISON_API",
+                "whenDeactivated": "$nowDateTime"
               }
           """,
             false,
