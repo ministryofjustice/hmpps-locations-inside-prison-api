@@ -40,5 +40,4 @@ data class SignedOperationCapacityValidRequest(
   @Schema(description = "Updated By", example = "USER", required = true)
   @field:Size(min = 1, max = 255, message = "USER")
   val updatedBy: String,
-  )
-
+)
