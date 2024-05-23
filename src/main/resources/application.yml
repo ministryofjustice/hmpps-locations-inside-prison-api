@@ -38,7 +38,9 @@ spring:
       test:
         - "localstack"
         - "stdout"
-
+      seed:
+        - "dev"
+        - "seed"
   jpa:
     open-in-view: false
     show-sql: false
