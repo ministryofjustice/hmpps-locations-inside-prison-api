@@ -105,6 +105,12 @@ data class Location(
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
 
+  @Schema(description = "Staff username who deactivated the location", required = false)
+  val deactivatedBy: String? = null,
+
+  @Schema(description = "Date and time the location was deactivated", required = false)
+  val whenDeactivated: LocalDateTime? = null,
+
   @Schema(description = "Proposed Date for location reactivation", example = "2026-01-24", required = false)
   val proposedReactivationDate: LocalDate? = null,
 
