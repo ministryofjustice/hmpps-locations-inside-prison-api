@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
 import java.time.LocalDateTime
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperationCapacity as PrisonSignedOperationCapacityJPA
 
 @Schema(description = "Signed Operation Capacity Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -25,48 +24,21 @@ data class SignedOperationCapacityDto(
 
 )
 
-interface CreateSignedOperationCapacityRequest {
-  val signedOperationCapacity: Int
-  val prisonId: String
-  val dateTime: LocalDateTime
-  val updatedBy: String
-}
-
 @Schema(description = "Request to create a Signed Operation Capacity Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateSignedOperationCapacityValidRequest(
 
-  @Schema(description = "signedOperationCapacity TODO", example = "1", required = false)
-  override val signedOperationCapacity: Int,
+  @Schema(description = "Signed Operation Capacity value", example = "100", required = false)
+  val signedOperationCapacity: Int,
 
-  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 3, pattern = "^[A-Z]{2}I|ZZZ$")
   @field:Size(min = 3, message = "Prison ID cannot be blank")
-  @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
-  @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
-  override val prisonId: String,
+  @field:Size(max = 3, message = "Prison ID must be 3 characters like MDI")
+  @field:Pattern(regexp = "^[A-Z]{2}I|ZZZ$", message = "Prison ID must be 3 characters like MDI")
+  val prisonId: String,
 
-  @Schema(description = "TODO Type", example = "TODO", required = true)
-  override val dateTime: LocalDateTime,
-
-  @Schema(description = "Updated By", example = "TODO", required = true)
-  @field:Size(max = 255, message = "TODO")
-  override val updatedBy: String,
-
-  ) : CreateSignedOperationCapacityRequest {
-  fun toNewSignedOperationCapacity(
-    signedOperationCapacity: Int,
-    prisonId: String,
-    dateTime: LocalDateTime,
-    updatedBy: String
-  ): PrisonSignedOperationCapacityJPA {
-    val signedOperationCapacityVal = PrisonSignedOperationCapacityJPA(
-      signedOperationCapacity = signedOperationCapacity,
-      prisonId = prisonId,
-      dateTime = LocalDateTime.now(),
-      updatedBy = updatedBy,
-    )
-
-    return signedOperationCapacityVal
-  }
-}
+  @Schema(description = "Updated By", example = "USER", required = true)
+  @field:Size(max = 255, message = "USER")
+  val updatedBy: String,
+  )
 
