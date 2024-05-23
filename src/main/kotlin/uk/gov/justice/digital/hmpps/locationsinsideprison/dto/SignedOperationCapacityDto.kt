@@ -28,7 +28,7 @@ data class SignedOperationCapacityDto(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateSignedOperationCapacityValidRequest(
 
-  @Schema(description = "Signed Operation Capacity value", example = "100", required = false)
+  @Schema(description = "Signed Operation Capacity value", example = "100", required = true)
   val signedOperationCapacity: Int,
 
   @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 3, pattern = "^[A-Z]{2}I|ZZZ$")
@@ -38,7 +38,7 @@ data class CreateSignedOperationCapacityValidRequest(
   val prisonId: String,
 
   @Schema(description = "Updated By", example = "USER", required = true)
-  @field:Size(max = 255, message = "USER")
+  @field:Size(min = 1, max = 255, message = "USER")
   val updatedBy: String,
   )
 
