@@ -26,7 +26,7 @@ data class SignedOperationCapacityDto(
 
 @Schema(description = "Request to create a Signed Operation Capacity Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-data class CreateSignedOperationCapacityValidRequest(
+data class SignedOperationCapacityValidRequest(
 
   @Schema(description = "Signed Operation Capacity value", example = "100", required = true)
   val signedOperationCapacity: Int,

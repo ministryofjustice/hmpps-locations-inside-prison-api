@@ -6,14 +6,18 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperationCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
+import java.time.Clock
+import java.time.LocalDateTime
 
 @Service
 @Transactional(readOnly = true)
 class SignedOperationCapacityService(
   private val prisonSignedOperationalCapacityRepository: PrisonSignedOperationCapacityRepository,
   private val telemetryClient: TelemetryClient,
+  private val clock: Clock,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -24,18 +28,18 @@ class SignedOperationCapacityService(
   }
 
   @Transactional
-  fun saveSignedOperationalCapacity(prisonId: String, oc: PrisonSignedOperationCapacity) {
-    // TODO need to be changed to dto
-    val opdb = prisonSignedOperationalCapacityRepository.findOneByPrisonId(prisonId) ?: PrisonSignedOperationCapacity(
-      signedOperationCapacity = oc.signedOperationCapacity,
-      prisonId = prisonId,
-      dateTime = oc.dateTime,
-      updatedBy = oc.updatedBy,
+  fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): PrisonSignedOperationCapacity {
+
+    val opdb = prisonSignedOperationalCapacityRepository.findOneByPrisonId(request.prisonId) ?: PrisonSignedOperationCapacity(
+      signedOperationCapacity = request.signedOperationCapacity,
+      prisonId = request.prisonId,
+      dateTime = LocalDateTime.now(clock),
+      updatedBy = request.updatedBy,
     )
     if (opdb.id != null) {
-      opdb.signedOperationCapacity = oc.signedOperationCapacity
-      opdb.updatedBy = oc.updatedBy
-      opdb.dateTime = oc.dateTime
+      opdb.signedOperationCapacity = request.signedOperationCapacity
+      opdb.updatedBy = request.updatedBy
+      opdb.dateTime = LocalDateTime.now(clock)
     }
 
     val opUpdated = prisonSignedOperationalCapacityRepository.save(opdb)
@@ -44,11 +48,12 @@ class SignedOperationCapacityService(
       "Created operational capacity",
       mapOf(
         "id" to opUpdated.id.toString(),
-        "prisonId" to prisonId,
+        "prisonId" to request.prisonId,
         "signedOperationCapacity" to opUpdated.signedOperationCapacity.toString(),
         "updatedBy" to opUpdated.updatedBy,
       ),
       null,
     )
+    return opUpdated
   }
 }
