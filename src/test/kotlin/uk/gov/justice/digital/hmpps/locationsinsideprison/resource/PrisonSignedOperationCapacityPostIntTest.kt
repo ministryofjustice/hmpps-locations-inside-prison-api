@@ -57,7 +57,7 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
           .expectStatus().is4xxClientError
       }
 
-    //todo
+    @Test
     fun `post error return bad data -1`() {
       webTestClient.post().uri("/signed-op-cap/")
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -72,6 +72,22 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
         .exchange()
         .expectStatus().is4xxClientError
     }
+
+      @Test
+      fun `post error return bad User`() {
+        webTestClient.post().uri("/signed-op-cap/")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""
+              { 
+                "prisonId": "MDI",
+                "signedOperationCapacity": "100",
+                "updatedBy": ""
+              }
+            """.trimIndent())
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
   }
 
     @Nested
