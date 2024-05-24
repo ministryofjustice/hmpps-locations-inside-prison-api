@@ -29,31 +29,31 @@ class SignedOperationCapacityService(
 
   @Transactional
   fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): PrisonSignedOperationCapacity {
-    val opdb =
+    val record =
       prisonSignedOperationalCapacityRepository.findOneByPrisonId(request.prisonId) ?: PrisonSignedOperationCapacity(
         signedOperationCapacity = request.signedOperationCapacity,
         prisonId = request.prisonId,
-        dateTime = LocalDateTime.now(clock),
+        whenUpdated = LocalDateTime.now(clock),
         updatedBy = request.updatedBy,
       )
-    if (opdb.id != null) {
-      opdb.signedOperationCapacity = request.signedOperationCapacity
-      opdb.updatedBy = request.updatedBy
-      opdb.dateTime = LocalDateTime.now(clock)
+    if (record.id != null) {
+      record.signedOperationCapacity = request.signedOperationCapacity
+      record.updatedBy = request.updatedBy
+      record.whenUpdated = LocalDateTime.now(clock)
     }
 
-    val opUpdated = prisonSignedOperationalCapacityRepository.save(opdb)
-    log.info("Created operational capacity [${opUpdated.id}] (Capacity=${opUpdated.signedOperationCapacity})")
+    val persistedRecord = prisonSignedOperationalCapacityRepository.save(record)
+    log.info("Created operational capacity [${persistedRecord.id}] (Capacity=${persistedRecord.signedOperationCapacity})")
     telemetryClient.trackEvent(
       "Created operational capacity",
       mapOf(
-        "id" to opUpdated.id.toString(),
+        "id" to persistedRecord.id.toString(),
         "prisonId" to request.prisonId,
-        "signedOperationCapacity" to opUpdated.signedOperationCapacity.toString(),
-        "updatedBy" to opUpdated.updatedBy,
+        "signedOperationCapacity" to persistedRecord.signedOperationCapacity.toString(),
+        "updatedBy" to persistedRecord.updatedBy,
       ),
       null,
     )
-    return opUpdated
+    return persistedRecord
   }
 }

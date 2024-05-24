@@ -62,7 +62,7 @@ class SignedOperationCapacityServiceTest {
         signedOperationCapacity = signedOperationCapacity,
         prisonId = prisonId,
         updatedBy = updatedBy,
-        dateTime = LocalDateTime.now(clock),
+        whenUpdated = LocalDateTime.now(clock),
       ),
     )
     verify(telemetryClient).trackEvent(any(), anyMap(), anyOrNull())
@@ -82,7 +82,7 @@ class SignedOperationCapacityServiceTest {
       signedOperationCapacity = signedOperationCapacity,
       prisonId = prisonId,
       updatedBy = updatedBy,
-      dateTime = LocalDateTime.now(clock),
+      whenUpdated = LocalDateTime.now(clock),
     )
 
     whenever(request.signedOperationCapacity).thenReturn(signedOperationCapacity)
@@ -99,7 +99,7 @@ class SignedOperationCapacityServiceTest {
         signedOperationCapacity = signedOperationCapacity,
         prisonId = prisonId,
         updatedBy = updatedBy,
-        dateTime = LocalDateTime.now(clock),
+        whenUpdated = LocalDateTime.now(clock),
       ),
     )
     verify(telemetryClient).trackEvent(any(), anyMap(), anyOrNull())

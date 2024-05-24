@@ -123,5 +123,5 @@ class SignedOperationCapacityResource(
     )
     @PathVariable
     prisonId: String,
-  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", updatedBy = "MALEMAN", signedOperationCapacity = 100, dateTime = LocalDateTime.now())
+  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", updatedBy = "MALEMAN", signedOperationCapacity = 100, whenUpdated = LocalDateTime.now())
 }

@@ -16,10 +16,10 @@ data class SignedOperationCapacityDto(
   @Schema(description = "Prison ID", example = "MDI", required = true)
   val prisonId: String,
 
-  @Schema(description = "Data Time stamp", example = "2024-11-11", required = true)
-  val dateTime: LocalDateTime,
+  @Schema(description = "Date and time of last update", example = "2024-11-11T08:00:00", required = true)
+  val whenUpdated: LocalDateTime,
 
-  @Schema(description = "Updated by", example = "MALEMAN", required = true)
+  @Schema(description = "The user who updated the record", example = "MALEMAN", required = true)
   val updatedBy: String,
 
 )
@@ -37,7 +37,7 @@ data class SignedOperationCapacityValidRequest(
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZZ$", message = "Prison ID must be 3 characters like MDI")
   val prisonId: String,
 
-  @Schema(description = "Updated By", example = "USER", required = true)
+  @Schema(description = "The user who updated the record", example = "USER", required = true)
   @field:Size(min = 1, max = 255, message = "USER")
   val updatedBy: String,
 )

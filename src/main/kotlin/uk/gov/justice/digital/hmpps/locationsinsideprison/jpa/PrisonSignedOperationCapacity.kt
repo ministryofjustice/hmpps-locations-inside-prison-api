@@ -15,13 +15,13 @@ class PrisonSignedOperationCapacity(
   val id: Long? = null,
   var signedOperationCapacity: Int,
   var prisonId: String,
-  var dateTime: LocalDateTime,
+  var whenUpdated: LocalDateTime,
   var updatedBy: String,
 ) {
   fun toDto() = SignedOperationCapacityDto(
     signedOperationCapacity = signedOperationCapacity,
     prisonId = prisonId,
-    dateTime = dateTime,
+    whenUpdated = whenUpdated,
     updatedBy = updatedBy,
   )
 
@@ -39,6 +39,6 @@ class PrisonSignedOperationCapacity(
   }
 
   override fun toString(): String {
-    return "Prison Signed Operation Capacity(id=$id, signedOperationCapacity=$signedOperationCapacity, prisonId=$prisonId, dateTime=$dateTime, updatedBy=$updatedBy )"
+    return "Prison Signed Operation Capacity(id=$id, signedOperationCapacity=$signedOperationCapacity, prisonId=$prisonId, whenUpdated=$whenUpdated, updatedBy=$updatedBy )"
   }
 }

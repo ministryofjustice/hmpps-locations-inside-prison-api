@@ -37,7 +37,7 @@ class PrisonSignedOperationalCapacityRepositoryTest : TestBase() {
     assertThat(oc?.id).isNotNull()
     assertThat(oc?.signedOperationCapacity).isEqualTo(130)
     assertThat(oc?.prisonId).isEqualTo("MDI")
-    assertThat(oc?.dateTime).isEqualTo(LocalDateTime.now(clock))
+    assertThat(oc?.whenUpdated).isEqualTo(LocalDateTime.now(clock))
     assertThat(oc?.updatedBy).isEqualTo("USER")
   }
 }
