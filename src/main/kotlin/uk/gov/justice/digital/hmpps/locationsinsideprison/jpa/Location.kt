@@ -524,6 +524,10 @@ abstract class Location(
       this.archived = true
       this.active = false
       this.deactivatedDate = deactivatedDate
+      this.deactivatedReason = null
+      this.proposedReactivationDate = null
+      this.planetFmReference = null
+      this.deactivatedBy = userOrSystemInContext
       this.archivedReason = reason
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
