@@ -273,6 +273,38 @@ class LocationService(
   }
 
   @Transactional
+  fun updateDeactivatedDetails(
+    id: UUID,
+    deactivatedReason: DeactivatedReason,
+    proposedReactivationDate: LocalDate? = null,
+    planetFmReference: String? = null,
+  ): LocationDTO {
+    val locationToUpdate = locationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (locationToUpdate.isTemporarilyDeactivated()) {
+      locationToUpdate.updateDeactivatedDetails(
+        deactivatedReason = deactivatedReason,
+        proposedReactivationDate = proposedReactivationDate,
+        planetFmReference = planetFmReference,
+        userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+        clock = clock,
+      )
+
+      telemetryClient.trackEvent(
+        "Temporarily Deactivated Location Details Updated",
+        mapOf(
+          "id" to id.toString(),
+          "prisonId" to locationToUpdate.prisonId,
+          "path" to locationToUpdate.getPathHierarchy(),
+        ),
+        null,
+      )
+    }
+    return locationToUpdate.toDto()
+  }
+
+  @Transactional
   fun permanentlyDeactivateLocation(
     id: UUID,
     reasonForPermanentDeactivation: String,
@@ -478,7 +510,13 @@ class LocationService(
       },
       parentLocation = parent?.toDto(countInactiveCells = true),
       subLocations = locations,
+      subLocationName = calculateSubLocationDescription(locations),
     )
+  }
+
+  private fun calculateSubLocationDescription(locations: List<LocationDTO>): String {
+    val mostCommonType = locations.maxByOrNull { it.locationType }
+    return (mostCommonType?.locationType?.description ?: "Location") + "s"
   }
 
   fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }
@@ -487,8 +525,10 @@ class LocationService(
 @Schema(description = "Residential Summary")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ResidentialSummary(
-  @Schema(description = "Prison summary for top level view")
+  @Schema(description = "Prison summary for top level view", required = false)
   val prisonSummary: PrisonSummary? = null,
+  @Schema(description = "The description of the sub locations", required = true, example = "Wings")
+  val subLocationName: String,
   @Schema(description = "The current parent location (e.g Wing or Landing) details")
   val parentLocation: LocationDTO? = null,
   @Schema(description = "All residential locations under this parent")
