@@ -7,7 +7,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegra
 
 class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
 
-  @DisplayName("POST /signed-op-cap/MDI")
+  @DisplayName("POST /signed-op-cap/")
   @Nested
   inner class PrisonSignedOperationCapacityPostIntTest {
 
@@ -15,27 +15,44 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
     inner class Security {
 
       @Test
-      fun `access forbidden when no authority`() {
-        webTestClient.post().uri("/signed-op-cap/MDI")
+      fun `access forbidden when no authority 1`() {
+        webTestClient.post().uri("/signed-op-cap/")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.post().uri("/signed-op-cap/MDI")
+        webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue("""
+              { 
+                "prisonId": "MDI",
+                "signedOperationCapacity": "100",
+                "updatedBy": "MALEMAN"
+              }
+            """.trimIndent())
           .exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.post().uri("/signed-op-cap/MDI")
+        webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""
+              { 
+                "prisonId": "MDI",
+                "signedOperationCapacity": "100",
+                "updatedBy": "MALEMAN"
+              }
+            """.trimIndent())
           .exchange()
           .expectStatus().isForbidden
       }
+
     }
 
     @Nested
@@ -78,7 +95,7 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `bad request missing PrisonId is not valid`() {
+      fun `bad post request when PrisonId is not valid`() {
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -94,7 +111,7 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `post error return bad data -1`() {
+      fun `bad post request when signed op cap -1`() {
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
