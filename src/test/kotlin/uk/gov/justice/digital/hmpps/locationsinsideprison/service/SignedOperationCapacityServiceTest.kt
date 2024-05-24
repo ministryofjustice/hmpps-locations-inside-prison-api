@@ -17,6 +17,7 @@ class SignedOperationCapacityServiceTest {
   private val service: SignedOperationCapacityService = SignedOperationCapacityService(
     prisonSignedOperationalCapacityRepository,
     telemetryClient,
+    clock
   )
 
   @Test
