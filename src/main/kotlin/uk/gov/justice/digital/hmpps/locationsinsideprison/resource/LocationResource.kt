@@ -680,6 +680,60 @@ class LocationResource(
     )
   }
 
+  @PutMapping("/{id}/update/temporary-deactivation")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Update the details of the deactivation of a location",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns deactivated location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun updateDeactivateDetails(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    updateDeactivationDetailsRequest: TemporaryDeactivationLocationRequest,
+  ): LocationDTO {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_AMENDED,
+      {
+        locationService.updateDeactivatedDetails(
+          id,
+          deactivatedReason = updateDeactivationDetailsRequest.deactivationReason,
+          proposedReactivationDate = updateDeactivationDetailsRequest.proposedReactivationDate,
+          planetFmReference = updateDeactivationDetailsRequest.planetFmReference,
+        )
+      },
+      InformationSource.DPS,
+    )
+  }
+
   @PutMapping("/{id}/deactivate/permanent")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
@@ -768,11 +822,12 @@ class LocationResource(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
+    @RequestParam(name = "cascade-reactivation", required = false, defaultValue = "false") reactivateSubLocations: Boolean = false,
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_REACTIVATED,
       {
-        locationService.reactivateLocation(id)
+        locationService.reactivateLocation(id, reactivateSubLocations)
       },
       InformationSource.DPS,
     )

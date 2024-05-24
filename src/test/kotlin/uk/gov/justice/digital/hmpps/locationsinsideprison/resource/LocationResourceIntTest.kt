@@ -2665,8 +2665,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "topLevelId": "${wingZ.id}",
                 "isResidential": true,
                 "key": "MDI-Z",
-                "deactivatedBy": "LOCATIONS_INSIDE_PRISON_API",
-                "whenDeactivated": "$nowDateTime"
+                "deactivatedBy": "LOCATIONS_INSIDE_PRISON_API"
               }
           """,
             false,
