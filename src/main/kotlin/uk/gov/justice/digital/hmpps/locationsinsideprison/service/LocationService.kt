@@ -364,7 +364,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto(includeParent = true)
+    return locationToUpdate.toDto(includeParent = true, includeChildren = reactivateSubLocations)
   }
 
   @Transactional
