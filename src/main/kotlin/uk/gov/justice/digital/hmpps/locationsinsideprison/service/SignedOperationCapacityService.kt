@@ -29,13 +29,13 @@ class SignedOperationCapacityService(
 
   @Transactional
   fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): PrisonSignedOperationCapacity {
-
-    val opdb = prisonSignedOperationalCapacityRepository.findOneByPrisonId(request.prisonId) ?: PrisonSignedOperationCapacity(
-      signedOperationCapacity = request.signedOperationCapacity,
-      prisonId = request.prisonId,
-      dateTime = LocalDateTime.now(clock),
-      updatedBy = request.updatedBy,
-    )
+    val opdb =
+      prisonSignedOperationalCapacityRepository.findOneByPrisonId(request.prisonId) ?: PrisonSignedOperationCapacity(
+        signedOperationCapacity = request.signedOperationCapacity,
+        prisonId = request.prisonId,
+        dateTime = LocalDateTime.now(clock),
+        updatedBy = request.updatedBy,
+      )
     if (opdb.id != null) {
       opdb.signedOperationCapacity = request.signedOperationCapacity
       opdb.updatedBy = request.updatedBy

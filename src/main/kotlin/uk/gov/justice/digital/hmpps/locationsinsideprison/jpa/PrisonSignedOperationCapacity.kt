@@ -39,6 +39,6 @@ class PrisonSignedOperationCapacity(
   }
 
   override fun toString(): String {
-    return "Signed Operation Capacity(signedOperationCapacity=$signedOperationCapacity, prisonId=$prisonId, dateTime=$dateTime, updatedBy=$updatedBy )"
+    return "Prison Signed Operation Capacity(id=$id, signedOperationCapacity=$signedOperationCapacity, prisonId=$prisonId, dateTime=$dateTime, updatedBy=$updatedBy )"
   }
 }
