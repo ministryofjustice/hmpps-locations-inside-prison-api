@@ -39,16 +39,60 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
     }
 
     @Nested
+    inner class Validation {
+
+      @Test
+      fun `bad request missing PrisonId`() {
+        webTestClient.post().uri("/signed-op-cap/")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""
+              { 
+                "prisonId": "",
+                "signedOperationCapacity": "100",
+                "updatedBy": "MALEMAN"
+              }
+            """.trimIndent())
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+    //todo
+    fun `post error return bad data -1`() {
+      webTestClient.post().uri("/signed-op-cap/")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue("""
+              { 
+                "prisonId": "MDI",
+                "signedOperationCapacity": -1,
+                "updatedBy": "MALEMAN"
+              }
+            """.trimIndent())
+        .exchange()
+        .expectStatus().is4xxClientError
+    }
+  }
+
+    @Nested
     inner class HappyPath {
       @Test
       fun `can create Signed Operation Capacity`() {
-        webTestClient.post().uri("/signed-op-cap/MDI")
+        webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""
+              { 
+                "prisonId": "MDI",
+                "signedOperationCapacity": 100,
+                "updatedBy": "MALEMAN"
+              }
+            """.trimIndent())
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(
             """
-              {
+              { 
                 "signedOperationCapacity": 100,
                 "updatedBy": "MALEMAN"
               }

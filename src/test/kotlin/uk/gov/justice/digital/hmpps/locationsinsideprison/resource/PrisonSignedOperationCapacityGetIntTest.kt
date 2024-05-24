@@ -51,6 +51,20 @@ class PrisonSignedOperationCapacityGetIntTest : SqsIntegrationTestBase() {
     }
 
     @Nested
+    inner class Validation {
+
+      @Test
+      fun `post error return bad data`() {
+        webTestClient.get().uri("/signed-op-cap/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().is4xxClientError
+          .expectBody().json("""{"signedOperationCapacity": ""}""")
+      }
+    }
+
+    @Nested
     inner class HappyPath {
       @Test
       @Sql("classpath:repository/insert-prison-signed-operation-capacity.sql")

@@ -12,16 +12,17 @@ import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOperationCapacityService
 import java.time.LocalDateTime
 
 /**
  * MAP-978 Support Signed Operational Capacity
- * @author marcus.aleman
  *
  *  Methods : GET & POST
  * {
@@ -54,6 +55,11 @@ class SignedOperationCapacityResource(
         description = "Returns Signed Operation Capacity data",
       ),
       ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
         responseCode = "401",
         description = "Unauthorized to access this endpoint",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
@@ -84,7 +90,7 @@ class SignedOperationCapacityResource(
   ): SignedOperationCapacityDto? = signedOperationCapacityService.getSignedOperationalCapacity(prisonId)
     ?: throw SignedOperationCapacityNotFoundException(prisonId)
 
-  @PostMapping("/{prisonId}")
+  @PostMapping("/")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
@@ -110,18 +116,16 @@ class SignedOperationCapacityResource(
         description = "PrisonID not found",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Signed Operation Capacity already has this value",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
     ],
   )
   fun postSignedOperationCapacity(
-    @Schema(
-      description = "Prison Id",
-      example = "MDI",
-      required = true,
-      minLength = 3,
-      maxLength = 5,
-      pattern = "^[A-Z]{2}I|ZZGHI$",
-    )
-    @PathVariable
-    prisonId: String,
+    @RequestBody
+    @Validated
+    signedOperationCapacityValidRequest : SignedOperationCapacityValidRequest,
   ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", updatedBy = "MALEMAN", signedOperationCapacity = 100, dateTime = LocalDateTime.now())
 }
