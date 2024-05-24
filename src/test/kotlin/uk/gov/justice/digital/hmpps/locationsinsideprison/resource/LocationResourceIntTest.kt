@@ -33,7 +33,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import java.time.Clock
 import java.time.LocalDate
-import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
