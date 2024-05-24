@@ -278,6 +278,7 @@ abstract class Location(
       active = isActiveAndAllParentsActive(),
       permanentlyInactive = isPermanentlyDeactivated(),
       permanentlyInactiveReason = archivedReason,
+      planetFmReference = planetFmReference,
       deactivatedByParent = isActive() && !isActiveAndAllParentsActive(),
       deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
