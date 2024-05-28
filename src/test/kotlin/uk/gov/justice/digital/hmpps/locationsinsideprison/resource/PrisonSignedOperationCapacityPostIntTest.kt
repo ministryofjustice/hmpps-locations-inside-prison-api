@@ -15,7 +15,7 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
     inner class Security {
 
       @Test
-      fun `access forbidden when no authority 1`() {
+      fun `access forbidden when no authority`() {
         webTestClient.post().uri("/signed-op-cap/")
           .exchange()
           .expectStatus().isUnauthorized
