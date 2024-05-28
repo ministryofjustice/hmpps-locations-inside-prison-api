@@ -18,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationReque
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
@@ -25,7 +26,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
@@ -34,7 +34,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildRe
 import java.time.Clock
 import java.time.LocalDate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
 
@@ -392,7 +391,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "VISIT",
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",
-                  "orderWithinParentLocation": 99,
+                  
                   "active": true,
                   "key": "MDI-Z-VISIT"
                 },
@@ -450,7 +449,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "2",
                   "pathHierarchy": "Z-2",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":[],
                   "capacity": {
                     "maxCapacity": 0,
                     "workingCapacity": 0
@@ -459,7 +458,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "certified": false,
                     "capacityOfCertifiedCell": 0
                   },
-                  "orderWithinParentLocation": 99,
+                  
                   "active": true,
                   "childLocations": [],
                   "isResidential": true,
@@ -587,7 +586,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "code": "Z",
                 "pathHierarchy": "Z",
                 "locationType": "WING",
-                "residentialHousingType": "NORMAL_ACCOMMODATION",
                 "permanentlyInactive": false,
                 "capacity": {
                   "maxCapacity": 4,
@@ -596,12 +594,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "certification": {
                   "certified": true
                 },
-                "attributes": [
-                 "CAT_B",
-                  "DOUBLE_OCCUPANCY",
-                  "SAFE_CELL",
-                  "CAT_A"
-                ],
                 "accommodationTypes": [
                   "NORMAL_ACCOMMODATION"
                 ],
@@ -611,7 +603,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
                 ],
-                "orderWithinParentLocation": 99,
+                
                 "status": "ACTIVE",
                 "active": true,
                 "deactivatedByParent": false,
@@ -651,7 +643,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "2",
                   "pathHierarchy": "Z-2",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":[],
                   "inactiveCells": 0,
                   "capacity": {
                     "maxCapacity": 0,
@@ -661,7 +653,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "certified": false,
                     "capacityOfCertifiedCell": 0
                   },
-                  "orderWithinParentLocation": 99,
+                  
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-2"
@@ -688,7 +680,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "code": "B",
                 "pathHierarchy": "B",
                 "locationType": "WING",
-                "residentialHousingType": "NORMAL_ACCOMMODATION",
                 "permanentlyInactive": false,
                 "capacity": {
                   "maxCapacity": 2,
@@ -697,10 +688,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "certification": {
                   "certified": true
                 },
-                "attributes": [
-                  "CAT_B",
-                  "DOUBLE_OCCUPANCY"
-                ],
                 "accommodationTypes": [
                   "NORMAL_ACCOMMODATION"
                 ],
@@ -710,7 +697,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
                 ],
-                "orderWithinParentLocation": 99,
+                
                 "status": "ACTIVE",
                 "active": true,
                 "deactivatedByParent": false,
@@ -807,7 +794,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           "code": "VISIT",
                           "pathHierarchy": "Z-VISIT",
                           "locationType": "VISITS",
-                          "orderWithinParentLocation": 99,
+                          
                           "active": true,
                           "usage": [
                             {
@@ -830,9 +817,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                               "code": "001",
                               "pathHierarchy": "Z-1-001",
                               "locationType": "CELL",
-                              "orderWithinParentLocation": 99,
+                              
                               "active": true,
-                              "residentialHousingType": "NORMAL_ACCOMMODATION",
+                              "accommodationTypes":["NORMAL_ACCOMMODATION"],
                               "capacity": {
                                 "maxCapacity": 2,
                                 "workingCapacity": 2
@@ -841,10 +828,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                                 "certified": true,
                                 "capacityOfCertifiedCell": 2
                               },
-                              "attributes": [
-                                "DOUBLE_OCCUPANCY",
-                                "CAT_B"
-                              ],
                               "isResidential": true,
                               "key": "MDI-Z-1-001"
                             },
@@ -853,9 +836,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                               "code": "002",
                               "pathHierarchy": "Z-1-002",
                               "locationType": "CELL",
-                              "orderWithinParentLocation": 99,
+                              
                               "active": true,
-                              "residentialHousingType": "NORMAL_ACCOMMODATION",
+                              "accommodationTypes":["NORMAL_ACCOMMODATION"],
                               "capacity": {
                                 "maxCapacity": 2,
                                 "workingCapacity": 2
@@ -864,18 +847,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                                 "certified": true,
                                 "capacityOfCertifiedCell": 2
                               },
-                              "attributes": [
-                                "DOUBLE_OCCUPANCY",
-                                "CAT_A",
-                                "SAFE_CELL"
-                              ],
                               "isResidential": true,
                               "key": "MDI-Z-1-002"
                             }
                           ],
-                          "orderWithinParentLocation": 99,
+                          
                           "active": true,
-                          "residentialHousingType": "NORMAL_ACCOMMODATION",
+                          "accommodationTypes":["NORMAL_ACCOMMODATION"],
                           "capacity": {
                             "maxCapacity": 4,
                             "workingCapacity": 4
@@ -884,12 +862,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                             "certified": true,
                             "capacityOfCertifiedCell": 4
                           },
-                          "attributes": [
-                            "DOUBLE_OCCUPANCY",
-                            "CAT_B",
-                            "CAT_A",
-                            "SAFE_CELL"
-                          ],
                           "isResidential": true,
                           "key": "MDI-Z-1"
                         },
@@ -898,9 +870,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           "code": "2",
                           "pathHierarchy": "Z-2",
                           "locationType": "LANDING",
-                          "orderWithinParentLocation": 99,
                           "active": true,
-                          "residentialHousingType": "NORMAL_ACCOMMODATION",
+                          "accommodationTypes":[],
                           "capacity": {
                             "maxCapacity": 0,
                             "workingCapacity": 0
@@ -913,9 +884,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                           "key": "MDI-Z-2"
                         }
                       ],
-                      "orderWithinParentLocation": 99,
+                      
                       "active": true,
-                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "capacity": {
                         "maxCapacity": 4,
                         "workingCapacity": 4
@@ -924,12 +895,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                         "certified": true,
                         "capacityOfCertifiedCell": 4
                       },
-                      "attributes": [
-                        "DOUBLE_OCCUPANCY",
-                        "CAT_B",
-                        "CAT_A",
-                        "SAFE_CELL"
-                      ],
                       "isResidential": true,
                       "key": "MDI-Z"
                     }
@@ -1100,9 +1065,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "Z",
                   "pathHierarchy": "Z",
                   "locationType": "WING",
-                  "orderWithinParentLocation": 99,
                   "active": true,
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "isResidential": true,
                   "key": "MDI-Z"
                 },
@@ -1111,9 +1075,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "B",
                   "pathHierarchy": "B",
                   "locationType": "WING",
-                  "orderWithinParentLocation": 99,
                   "active": true,
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "isResidential": true,
                   "key": "MDI-B"
                 },
@@ -1122,9 +1085,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "A",
                   "pathHierarchy": "B-A",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "permanentlyInactive": false,
-                  "orderWithinParentLocation": 99,
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-B-A"
@@ -1134,8 +1096,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "001",
                   "pathHierarchy": "B-A-001",
                   "locationType": "CELL",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
-                  "orderWithinParentLocation": 99,
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "active": false,
                   "deactivatedByParent": false,
                   "deactivatedDate": "2023-12-05",
@@ -1148,19 +1109,17 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "orderWithinParentLocation": 99,
                   "active": true,
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "isResidential": true,
                   "key": "MDI-Z-1"
                 },
-                                { 
+                { 
                   "prisonId": "MDI",
                   "code": "2",
                   "pathHierarchy": "Z-2",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
-                  "orderWithinParentLocation": 99,
+                  "accommodationTypes":[],
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-2"
@@ -1170,9 +1129,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "001",
                   "pathHierarchy": "Z-1-001",
                   "locationType": "CELL",
-                  "orderWithinParentLocation": 99,
+                  
                   "active": true,
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "isResidential": true,
                   "key": "MDI-Z-1-001"
                 },
@@ -1181,9 +1140,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "002",
                   "pathHierarchy": "Z-1-002",
                   "locationType": "CELL",
-                  "orderWithinParentLocation": 99,
+                  
                   "active": true,
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "isResidential": true,
                   "key": "MDI-Z-1-002"
                 },
@@ -1192,7 +1151,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "VISIT",
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",
-                  "orderWithinParentLocation": 99,
+                  
                   "active": true,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
@@ -1251,7 +1210,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "code":"003",
                 "pathHierarchy":"Z-1-003",
                 "locationType":"CELL",
-                "residentialHousingType":"NORMAL_ACCOMMODATION",
+                "accommodationTypes":["NORMAL_ACCOMMODATION"],
                 "permanentlyInactive":true,
                 "capacity":{"maxCapacity":0,"workingCapacity":0},
                 "status":"INACTIVE",
@@ -1343,7 +1302,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       numberOfSpursPerLanding = 2,
       numberOfCellsPerSection = 2,
       defaultCellCapacity = 1,
-      defaultAttributesOfCells = setOf(ResidentialAttributeValue.SINGLE_OCCUPANCY),
     )
 
     @Nested
@@ -1390,7 +1348,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "MDI-Y",
               "localName": "Y Wing",
-              "orderWithinParentLocation": 1,
+              
               "capacity": {
                 "maxCapacity": 12,
                 "workingCapacity": 12
@@ -1414,7 +1372,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/locations/create-wing")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(createWingRequest.copy(wingCode = "X", wingDescription = "X Wing", numberOfLandings = 4, numberOfSpursPerLanding = 0, numberOfCellsPerSection = 2, defaultCellCapacity = 2, defaultAttributesOfCells = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY)))
+          .bodyValue(createWingRequest.copy(wingCode = "X", wingDescription = "X Wing", numberOfLandings = 4, numberOfSpursPerLanding = 0, numberOfCellsPerSection = 2, defaultCellCapacity = 2))
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(
@@ -1428,7 +1386,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "MDI-X",
               "localName": "X Wing",
-              "orderWithinParentLocation": 1,
+              
               "capacity": {
                 "maxCapacity": 16,
                 "workingCapacity": 16
@@ -1457,12 +1415,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       code = "004",
       locationType = LocationType.CELL,
       localName = "A New Cell (004)",
-      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-      comments = "This is a new cell",
-      orderWithinParentLocation = 4,
-      attributes = setOf(ResidentialAttributeValue.DOUBLE_OCCUPANCY, ResidentialAttributeValue.CAT_B),
+      accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
       capacity = CapacityDTO(maxCapacity = 2, workingCapacity = 2),
-      certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 2),
+      certified = true,
     )
 
     @Nested
@@ -1556,25 +1511,19 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "code": "004",
               "pathHierarchy": "Z-1-004",
               "locationType": "CELL",
-              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
               "active": true,
               "key": "MDI-Z-1-004",
-              "comments": "This is a new cell",
-              "orderWithinParentLocation": 4,
               "capacity": {
                 "maxCapacity": 2,
                 "workingCapacity": 2
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 2
+                "capacityOfCertifiedCell": 0
               },
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
-              ],
-              "attributes": [
-                "DOUBLE_OCCUPANCY",
-                "CAT_B"
               ]
             }
           """,
@@ -1601,8 +1550,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       code = "ADJ",
       locationType = LocationType.ADJUDICATION_ROOM,
       localName = "Adjudication Room",
-      comments = "This room is for adjudications",
-      orderWithinParentLocation = 1,
       usage = setOf(
         NonResidentialUsageDto(usageType = NonResidentialUsageType.ADJUDICATION_HEARING, capacity = 15, sequence = 1),
       ),
@@ -1691,9 +1638,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "${createNonResidentialLocationRequest.locationType}",
               "active": true,
               "key": "MDI-Z-ADJ",
-              "comments": "${createNonResidentialLocationRequest.comments}",
               "localName": "${createNonResidentialLocationRequest.localName}",
-              "orderWithinParentLocation": 1,
               "usage": [
                 {
                   "usageType": "ADJUDICATION_HEARING",
@@ -1954,7 +1899,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "code": "1",
                 "pathHierarchy": "B-1",
                 "locationType": "LANDING",
-                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
                 "capacity": {
                   "maxCapacity": 4,
                   "workingCapacity": 4
@@ -2002,7 +1947,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "sequence": 1
                     }
                   ],
-                  "orderWithinParentLocation": 99,
+                  
                   "active": true,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
@@ -2053,7 +1998,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "A",
                   "pathHierarchy": "B-A",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
                   "permanentlyInactive": false,
                   "capacity": {
                     "maxCapacity": 2,
@@ -2071,7 +2016,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "code": "001",
                       "pathHierarchy": "B-A-001",
                       "locationType": "CELL",
-                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
                       "permanentlyInactive": false,
                       "capacity": {
                         "maxCapacity": 2,
@@ -2160,12 +2105,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "CELL",
               "active": true,
               "key": "MDI-Z-1-001",
-              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
               "capacity": {
                 "maxCapacity": 2,
                 "workingCapacity": 2
-              },
-              "attributes": []
+              }
             }
           """,
             false,
@@ -2185,12 +2129,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "CELL",
               "active": true,
               "key": "MDI-Z-1-001",
-              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
               "capacity": {
                 "maxCapacity": 2,
                 "workingCapacity": 2
               },
-              "attributes": [],
               "changeHistory": [
                 {
                   "attribute": "Attributes",
@@ -2229,15 +2172,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "locationType": "CELL",
               "active": true,
               "key": "MDI-Z-1-001",
-              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
               "capacity": {
                 "maxCapacity": 2,
                 "workingCapacity": 2
-              },
-              "attributes": [
-                "SINGLE_OCCUPANCY",
-                "CAT_C"
-              ]
+              }
             }
           """,
             false,
@@ -2499,7 +2438,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "code": "001",
                 "pathHierarchy": "Z-1-001",
                 "locationType": "CELL",
-                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "accommodationTypes": [
+                  "NORMAL_ACCOMMODATION"
+                ],
                 "capacity": {
                   "maxCapacity": 2,
                   "workingCapacity": 1
@@ -2640,7 +2581,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "code": "Z",
                 "pathHierarchy": "Z",
                 "locationType": "WING",
-                "residentialHousingType": "NORMAL_ACCOMMODATION",
+                "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
                 "capacity": {
                   "maxCapacity": 2,
                   "workingCapacity": 0
@@ -2649,12 +2590,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "certified": true,
                   "capacityOfCertifiedCell": 2
                 },
-                "attributes": [
-                  "SAFE_CELL",
-                  "DOUBLE_OCCUPANCY",
-                  "CAT_A"
-                ],
-                "orderWithinParentLocation": 99,
                 "active": false,
                 "deactivatedDate": "$now",
                 "deactivatedReason": "DAMAGED",
@@ -2707,11 +2642,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "maxCapacity": 2,
                 "workingCapacity": 0
               },
-              "attributes": [
-                "SAFE_CELL",
-                "DOUBLE_OCCUPANCY",
-                "CAT_A"
-              ],
               "certification": {
                 "certified": true,
                 "capacityOfCertifiedCell": 2
@@ -2736,7 +2666,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
                   "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "active": false,
                   "deactivatedByParent": false,
@@ -2746,18 +2675,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "permanentlyInactive": false,
                   "isResidential": true,
                   "key": "MDI-Z-1",
-                  "attributes": [
-                      "SAFE_CELL",
-                      "DOUBLE_OCCUPANCY",
-                      "CAT_A"
-                    ],
                   "childLocations": [
                     {
                       "prisonId": "MDI",
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "residentialHousingType": "NORMAL_ACCOMMODATION",
                       "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "active": false,
                       "deactivatedByParent": false,
@@ -2765,12 +2688,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "deactivatedDate": "$now",
                       "deactivatedReason": "DAMAGED",
                       "isResidential": true,
-                      "key": "MDI-Z-1-002",
-                      "attributes": [
-                        "DOUBLE_OCCUPANCY",
-                        "CAT_A",
-                        "SAFE_CELL"
-                      ]
+                      "key": "MDI-Z-1-002"
                     }
                   ]
                 },
@@ -2779,15 +2697,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "2",
                   "pathHierarchy": "Z-2",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":[],
                   "active": false,
                   "deactivatedByParent": false,
                   "proposedReactivationDate": "$proposedReactivationDate",
                   "deactivatedDate": "$now",
                   "deactivatedReason": "DAMAGED",
                   "isResidential": true,
-                  "key": "MDI-Z-2",
-                  "attributes": [ ]
+                  "key": "MDI-Z-2"
                 }
               ]
             }
@@ -2838,7 +2755,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "code": "001",
                 "pathHierarchy": "Z-1-001",
                 "locationType": "CELL",
-                "residentialHousingType": "NORMAL_ACCOMMODATION",
                 "accommodationTypes":["NORMAL_ACCOMMODATION"],
                 "active": false,
                 "deactivatedByParent": false,
@@ -2970,7 +2886,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-1",
@@ -2980,7 +2896,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "code": "001",
                       "pathHierarchy": "Z-1-001",
                       "locationType": "CELL",
-                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-001"
@@ -2990,7 +2906,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-002"
@@ -3002,7 +2918,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "2",
                   "pathHierarchy": "Z-2",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":[],
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-2"
@@ -3097,7 +3013,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-1",
@@ -3107,7 +3023,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "code": "001",
                       "pathHierarchy": "Z-1-001",
                       "locationType": "CELL",
-                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-001"
@@ -3117,7 +3033,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "residentialHousingType": "NORMAL_ACCOMMODATION",
+                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "active": false,
                       "deactivatedReason": "MOTHBALLED",
                       "isResidential": true,
@@ -3130,7 +3046,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "2",
                   "pathHierarchy": "Z-2",
                   "locationType": "LANDING",
-                  "residentialHousingType": "NORMAL_ACCOMMODATION",
+                  "accommodationTypes":[],
                   "active": false,
                   "deactivatedReason": "MOTHBALLED",
                   "isResidential": true,

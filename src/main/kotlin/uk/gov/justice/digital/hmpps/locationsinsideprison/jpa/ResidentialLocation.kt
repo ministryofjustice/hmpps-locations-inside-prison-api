@@ -125,7 +125,6 @@ open class ResidentialLocation(
 
   override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean, countInactiveCells: Boolean): LocationDto {
     return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory, countInactiveCells = countInactiveCells).copy(
-      residentialHousingType = residentialHousingType,
 
       capacity = CapacityDto(
         maxCapacity = getMaxCapacity(),
@@ -137,7 +136,6 @@ open class ResidentialLocation(
         capacityOfCertifiedCell = getBaselineCapacity(),
       ),
 
-      attributes = getAttributes().map { it.attributeValue }.distinct(),
       accommodationTypes = getAccommodationTypes().map { it }.distinct(),
       usedFor = getUsedFor().map { it.usedFor }.distinct(),
 

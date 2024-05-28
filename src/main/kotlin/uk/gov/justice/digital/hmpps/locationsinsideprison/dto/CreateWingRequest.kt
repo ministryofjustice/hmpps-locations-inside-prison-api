@@ -5,12 +5,13 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import java.time.Clock
 import java.time.LocalDateTime
@@ -41,8 +42,6 @@ data class CreateWingRequest(
   @Schema(description = "Default Cell Capacity", example = "1", required = true, defaultValue = "1")
   @field:Max(value = 10, message = "Max of 10")
   val defaultCellCapacity: Int = 1,
-  @Schema(description = "Default set of attributes", example = "SINGLE_OCCUPANCY", required = false)
-  val defaultAttributesOfCells: Set<ResidentialAttributeValue>?,
 ) {
 
   fun toEntity(createdBy: String, clock: Clock): ResidentialLocation {
@@ -105,6 +104,7 @@ data class CreateWingRequest(
           code = code,
           pathHierarchy = "${leaf.getPathHierarchy()}-$code",
           localName = "Cell $cellNumber on ${leaf.getCode()}",
+          accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
           orderWithinParentLocation = cellNumber,
           createdBy = createdBy,
           whenCreated = LocalDateTime.now(clock),
@@ -118,7 +118,7 @@ data class CreateWingRequest(
             capacityOfCertifiedCell = defaultCellCapacity,
           ),
         )
-        defaultAttributesOfCells?.map { cell.addAttribute(it, createdBy, clock) }
+        cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock)
         leaf.addChildLocation(cell)
         LocationService.log.info("Created Cell [${cell.getKey()}]")
       }

@@ -275,7 +275,6 @@ abstract class Location(
         null
       },
       comments = comments,
-      orderWithinParentLocation = orderWithinParentLocation,
       active = isActiveAndAllParentsActive(),
       permanentlyInactive = isPermanentlyDeactivated(),
       permanentlyInactiveReason = archivedReason,
