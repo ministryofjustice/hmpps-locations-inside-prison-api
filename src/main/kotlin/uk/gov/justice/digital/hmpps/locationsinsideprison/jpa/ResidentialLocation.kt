@@ -165,24 +165,6 @@ open class ResidentialLocation(
       attributes = getAttributes().map { it.attributeValue }.distinct(),
     )
   }
-
-  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
-    return super.toLegacyDto(includeHistory = includeHistory).copy(
-      residentialHousingType = residentialHousingType,
-
-      capacity = CapacityDto(
-        maxCapacity = getMaxCapacity(),
-        workingCapacity = getWorkingCapacity(),
-      ),
-
-      certification = CertificationDto(
-        certified = hasCertifiedCells(),
-        capacityOfCertifiedCell = getBaselineCapacity(),
-      ),
-
-      attributes = getAttributes().map { it.attributeValue }.distinct(),
-    )
-  }
 }
 
 enum class ResidentialHousingType(
