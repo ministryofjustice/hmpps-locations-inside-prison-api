@@ -496,7 +496,7 @@ class LocationService(
         .filter { !it.isPermanentlyDeactivated() }
         .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isWingLandingSpur() }
         .map { it.toDto(countInactiveCells = true) }
-        .sortedBy { it.getKey() }
+        .sortedWith(NaturalOrderComparator())
 
     return ResidentialSummary(
       prisonSummary = if (parentId == null) {
