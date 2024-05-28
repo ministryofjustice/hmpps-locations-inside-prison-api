@@ -138,7 +138,7 @@ class LocationRepositoryTest : TestBase() {
     cell3Converted.convertToCell(
       accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
       usedForTypes = listOf(UsedForType.FIRST_NIGHT_CENTRE, UsedForType.MOTHER_AND_BABY),
-      specialistCellType = SpecialistCellType.LOW_MOBILITY,
+      specialistCellType = SpecialistCellType.SAFE_CELL,
       maxCapacity = 1,
       workingCapacity = 1,
       userOrSystemInContext = "test",
