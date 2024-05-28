@@ -80,7 +80,7 @@ enum class ResidentialAttributeValue(
   E_LIST_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "E List Cell", SpecialistCellType.ESCAPE_LIST),
   GATED_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Gated Cell", SpecialistCellType.CONSTANT_SUPERVISION),
   LISTENER_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Listener Cell", SpecialistCellType.LISTENER_CRISIS),
-  LOCATE_FLAT(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Locate Flat", SpecialistCellType.LOW_MOBILITY),
+  LOCATE_FLAT(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Locate Flat", SpecialistCellType.LOCATE_FLAT_CELL),
   MULTIPLE_OCCUPANCY(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Multiple Occupancy"),
   NON_SMOKER_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Non Smoker Cell"),
   OBSERVATION_CELL(
@@ -88,7 +88,7 @@ enum class ResidentialAttributeValue(
     "Observation Cell",
     SpecialistCellType.CONSTANT_SUPERVISION,
   ),
-  SAFE_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Safe Cell"),
+  SAFE_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Safe Cell", SpecialistCellType.SAFE_CELL),
   SINGLE_OCCUPANCY(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Single Occupancy"),
   SPECIAL_CELL(ResidentialAttributeType.LOCATION_ATTRIBUTE, "Special Cell"),
   WHEELCHAIR_ACCESS(
