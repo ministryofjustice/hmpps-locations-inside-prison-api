@@ -14,7 +14,7 @@ data class SignedOperationCapacityDto(
   @Schema(description = "Signed Operation Capacity", example = "100", required = true)
   val signedOperationCapacity: Int,
 
-  @Schema(description = "Prison ID", example = "MDI", required = true)
+  @Schema(description = "The prison ID where for this signed operation capacity", example = "MDI", required = true)
   val prisonId: String,
 
   @Schema(description = "Date and time of last update", example = "2024-11-11T08:00:00", required = true)

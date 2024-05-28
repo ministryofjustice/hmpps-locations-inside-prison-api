@@ -189,14 +189,14 @@ class ApiExceptionHandler {
 
   @ExceptionHandler(SignedOperationCapacityNotFoundException::class)
   fun handleOperationalCapacityNotFoundException(e: SignedOperationCapacityNotFoundException): ResponseEntity<ErrorResponse?>? {
-    log.debug("Operational Capacity found exception caught: {}", e.message)
+    log.debug("Signed Operation Capacity not found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
       .body(
         ErrorResponse(
           status = HttpStatus.NOT_FOUND,
           errorCode = ErrorCode.LocationNotFound,
-          userMessage = "Operational Capacity not found: ${e.message}",
+          userMessage = "Signed Operation Capacity not found: ${e.message}",
           developerMessage = e.message,
         ),
       )
