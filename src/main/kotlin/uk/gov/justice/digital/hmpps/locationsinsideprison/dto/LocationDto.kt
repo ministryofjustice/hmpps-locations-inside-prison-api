@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SortAttribute
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -137,9 +138,10 @@ data class Location(
 
   @Schema(description = "Date and time of the last change", required = true)
   val lastModifiedDate: LocalDateTime,
-) {
+
+) : SortAttribute {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
-  fun getKey(): String {
+  override fun getKey(): String {
     return "$prisonId-$pathHierarchy"
   }
 
