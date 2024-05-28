@@ -6,6 +6,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -15,7 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import java.time.Clock
 import java.util.*
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 @Transactional
@@ -29,7 +30,11 @@ class SyncService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun sync(upsert: NomisSyncLocationRequest): LocationDTO {
+  fun getLegacyLocation(id: UUID, includeHistory: Boolean = false): LegacyLocation? {
+    return locationRepository.findById(id).getOrNull()?.toLegacyDto(includeHistory = includeHistory)
+  }
+
+  fun sync(upsert: NomisSyncLocationRequest): LegacyLocation {
     val location = if (upsert.id != null) {
       updateLocation(upsert)
     } else {
@@ -51,7 +56,7 @@ class SyncService(
     return location
   }
 
-  fun migrate(upsert: NomisMigrationRequest): LocationDTO {
+  fun migrate(upsert: NomisMigrationRequest): LegacyLocation {
     val location = createLocation(upsert)
 
     log.info("Migrated Location: ${location.id}")
@@ -67,7 +72,7 @@ class SyncService(
     return location
   }
 
-  private fun updateLocation(upsert: NomisSyncLocationRequest): LocationDTO {
+  private fun updateLocation(upsert: NomisSyncLocationRequest): LegacyLocation {
     val locationToUpdate = locationRepository.findById(upsert.id!!)
       .orElseThrow { LocationNotFoundException(upsert.toString()) }
 
@@ -84,13 +89,13 @@ class SyncService(
     }
     locationToUpdate.updateWith(upsert, upsert.lastUpdatedBy, clock)
 
-    return locationToUpdate.toDto()
+    return locationToUpdate.toLegacyDto()
   }
 
-  private fun createLocation(upsert: NomisMigrationRequest): LocationDTO {
+  private fun createLocation(upsert: NomisMigrationRequest): LegacyLocation {
     val locationToCreate = upsert.toNewEntity(clock)
     findParent(upsert)?.let { locationToCreate.setParent(it) }
-    return locationRepository.save(locationToCreate).toDto()
+    return locationRepository.save(locationToCreate).toLegacyDto()
   }
 
   private fun findParent(upsert: NomisMigrationRequest): Location? {
@@ -104,9 +109,9 @@ class SyncService(
     }
   }
 
-  fun deleteLocation(id: UUID): LocationDTO {
+  fun deleteLocation(id: UUID): LegacyLocation {
     val deletedLocation = locationRepository.findById(id)
-      .orElseThrow { LocationNotFoundException(id.toString()) }.toDto()
+      .orElseThrow { LocationNotFoundException(id.toString()) }.toLegacyDto()
 
     locationRepository.deleteById(id)
     log.info("Deleted Location: $id (${deletedLocation.getKey()})")

@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import org.springframework.stereotype.Service
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import java.time.Clock
 import java.time.LocalDateTime
@@ -51,6 +52,33 @@ class EventPublishAndAuditService(
       traverseUp(eventType = eventType, location = location.parentLocation, source = source)
     }
   }
+
+  fun legacyPublishEvent(
+    eventType: InternalLocationDomainEventType,
+    location: LegacyLocation,
+    auditData: Any? = null,
+  ) {
+    snsService.publishDomainEvent(
+      eventType = eventType,
+      description = "${location.getKey()} ${eventType.description}",
+      occurredAt = LocalDateTime.now(clock),
+      additionalInformation = AdditionalInformation(
+        id = location.id,
+        key = location.getKey(),
+        source = InformationSource.NOMIS,
+      ),
+    )
+
+    auditData?.let {
+      auditEvent(
+        auditType = eventType.auditType,
+        id = location.id.toString(),
+        auditData = it,
+        source = InformationSource.NOMIS,
+      )
+    }
+  }
+
   private fun publishEvent(
     event: InternalLocationDomainEventType,
     location: Location,
