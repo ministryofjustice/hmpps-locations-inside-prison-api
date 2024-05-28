@@ -27,7 +27,8 @@ import java.io.Serializable
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
+import java.util.SortedSet
+import java.util.UUID
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
 @Entity
@@ -78,6 +79,7 @@ abstract class Location(
   open val whenCreated: LocalDateTime,
   open var whenUpdated: LocalDateTime,
   open var updatedBy: String,
+  open var deactivatedBy: String? = null,
 ) : Serializable {
 
   companion object {
@@ -276,6 +278,7 @@ abstract class Location(
       active = isActiveAndAllParentsActive(),
       permanentlyInactive = isPermanentlyDeactivated(),
       permanentlyInactiveReason = archivedReason,
+      planetFmReference = planetFmReference,
       deactivatedByParent = isActive() && !isActiveAndAllParentsActive(),
       deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
@@ -283,6 +286,7 @@ abstract class Location(
       childLocations = if (includeChildren) childLocations.filter { !it.isPermanentlyDeactivated() }.map { it.toDto(includeChildren = true, includeHistory = includeHistory) } else null,
       parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true, includeHistory = includeHistory) else null,
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
+      deactivatedBy = deactivatedBy,
     )
   }
 
@@ -417,6 +421,7 @@ abstract class Location(
       this.planetFmReference = planetFmReference
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
+      this.deactivatedBy = userOrSystemInContext
 
       if (this is ResidentialLocation) {
         findSubLocations().forEach { location ->
@@ -432,6 +437,61 @@ abstract class Location(
       }
 
       log.info("Temporarily Deactivated Location [${getKey()}]")
+    }
+  }
+
+  open fun updateDeactivatedDetails(
+    deactivatedReason: DeactivatedReason,
+    planetFmReference: String? = null,
+    proposedReactivationDate: LocalDate? = null,
+    userOrSystemInContext: String,
+    clock: Clock,
+  ) {
+    if (!isTemporarilyDeactivated()) {
+      log.warn("Location [${getKey()}] is not deactivated")
+    } else {
+      val amendedDate = LocalDateTime.now(clock)
+      addHistory(
+        LocationAttribute.DEACTIVATED_REASON,
+        this.deactivatedReason?.description,
+        deactivatedReason.description,
+        userOrSystemInContext,
+        amendedDate,
+      )
+      addHistory(
+        LocationAttribute.PROPOSED_REACTIVATION_DATE,
+        this.proposedReactivationDate?.toString(),
+        proposedReactivationDate?.toString(),
+        userOrSystemInContext,
+        amendedDate,
+      )
+      addHistory(
+        LocationAttribute.PLANET_FM_NUMBER,
+        this.planetFmReference,
+        planetFmReference,
+        userOrSystemInContext,
+        amendedDate,
+      )
+
+      this.deactivatedReason = deactivatedReason
+      this.proposedReactivationDate = proposedReactivationDate
+      this.planetFmReference = planetFmReference
+      this.updatedBy = userOrSystemInContext
+      this.whenUpdated = amendedDate
+
+      if (this is ResidentialLocation) {
+        findSubLocations().forEach { location ->
+          location.updateDeactivatedDetails(
+            planetFmReference = planetFmReference,
+            proposedReactivationDate = proposedReactivationDate,
+            deactivatedReason = deactivatedReason,
+            userOrSystemInContext = userOrSystemInContext,
+            clock = clock,
+          )
+        }
+      }
+
+      log.info("Temporarily Deactivated Location Updated [${getKey()}]")
     }
   }
 
@@ -464,6 +524,10 @@ abstract class Location(
       this.archived = true
       this.active = false
       this.deactivatedDate = deactivatedDate
+      this.deactivatedReason = null
+      this.proposedReactivationDate = null
+      this.planetFmReference = null
+      this.deactivatedBy = userOrSystemInContext
       this.archivedReason = reason
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
@@ -523,6 +587,7 @@ abstract class Location(
       this.proposedReactivationDate = null
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
+      this.deactivatedBy = null
 
       log.info("Re-activated Location [${getKey()}]")
     }

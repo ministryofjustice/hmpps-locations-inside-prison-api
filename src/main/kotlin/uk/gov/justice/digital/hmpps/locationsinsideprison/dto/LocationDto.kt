@@ -105,8 +105,14 @@ data class Location(
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
 
+  @Schema(description = "Staff username who deactivated the location", required = false)
+  val deactivatedBy: String? = null,
+
   @Schema(description = "Proposed Date for location reactivation", example = "2026-01-24", required = false)
   val proposedReactivationDate: LocalDate? = null,
+
+  @Schema(description = "Planet FM Reference", example = "2323/45M", required = false)
+  val planetFmReference: String? = null,
 
   @Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
   val topLevelId: UUID,

@@ -37,6 +37,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivat
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
@@ -131,6 +132,45 @@ class LocationResource(
     @RequestParam(name = "includeHistory", required = false, defaultValue = "false") includeHistory: Boolean = false,
   ) =
     locationService.getLocationByKey(key = key, includeChildren = includeChildren, includeHistory = includeHistory) ?: throw LocationNotFoundException(key)
+
+  @PostMapping("/keys", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Gets locations by their keys",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getLocationsByKeys(
+    @RequestBody
+    @Validated
+    keys: List<String>,
+  ): List<LocationDTO> = locationService.getLocationsByKeys(keys)
 
   @GetMapping("/prison/{prisonId}")
   @ResponseStatus(HttpStatus.OK)
@@ -279,6 +319,43 @@ class LocationResource(
     }
     return locationService.getLocations(pageable)
   }
+
+  @GetMapping("/prison/{prisonId}/non-residential-usage-type/{usageType}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return non-residential locations by usage for this prison",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns non-residential locations",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getLocationsByPrisonAndNonResidentialUsageType(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
+    prisonId: String,
+    @Schema(description = "Usage type", example = "APPOINTMENTS", required = true)
+    @PathVariable
+    usageType: NonResidentialUsageType,
+  ): List<LocationDTO> = locationService.getLocationsByPrisonAndNonResidentialUsageType(prisonId, usageType)
 
   @PostMapping("/residential", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -603,6 +680,60 @@ class LocationResource(
     )
   }
 
+  @PutMapping("/{id}/update/temporary-deactivation")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Update the details of the deactivation of a location",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns deactivated location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun updateDeactivateDetails(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    updateDeactivationDetailsRequest: TemporaryDeactivationLocationRequest,
+  ): LocationDTO {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_AMENDED,
+      {
+        locationService.updateDeactivatedDetails(
+          id,
+          deactivatedReason = updateDeactivationDetailsRequest.deactivationReason,
+          proposedReactivationDate = updateDeactivationDetailsRequest.proposedReactivationDate,
+          planetFmReference = updateDeactivationDetailsRequest.planetFmReference,
+        )
+      },
+      InformationSource.DPS,
+    )
+  }
+
   @PutMapping("/{id}/deactivate/permanent")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
@@ -691,11 +822,12 @@ class LocationResource(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
+    @RequestParam(name = "cascade-reactivation", required = false, defaultValue = "false") reactivateSubLocations: Boolean = false,
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_REACTIVATED,
       {
-        locationService.reactivateLocation(id)
+        locationService.reactivateLocation(id, reactivateSubLocations)
       },
       InformationSource.DPS,
     )
