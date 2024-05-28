@@ -1037,8 +1037,12 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Listener / crisis cell"
                   },
                   {
-                    "key": "LOW_MOBILITY",
-                    "description": "Low mobility cell"
+                    "key": "SAFE_CELL",
+                    "description": "Safe cell"
+                  },
+                  {
+                    "key": "LOCATE_FLAT_CELL",
+                    "description": "Locate flat cell"
                   },
                   {
                     "key": "MEDICAL",
