@@ -5,6 +5,7 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import java.time.Clock
 import java.time.LocalDate
@@ -71,6 +72,12 @@ class NonResidentialLocation(
 
   override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean, countInactiveCells: Boolean): LocationDto {
     return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory, countInactiveCells = countInactiveCells).copy(
+      usage = nonResidentialUsages.map { it.toDto() },
+    )
+  }
+
+  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
+    return super.toLegacyDto(includeHistory = includeHistory).copy(
       usage = nonResidentialUsages.map { it.toDto() },
     )
   }
