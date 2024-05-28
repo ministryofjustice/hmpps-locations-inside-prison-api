@@ -12,10 +12,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SortAttribute
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -45,9 +45,6 @@ data class Location(
   @Schema(description = "Location Type", example = "CELL", required = true)
   val locationType: LocationType,
 
-  @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
-  val residentialHousingType: ResidentialHousingType? = null,
-
   @Schema(description = "Alternative description to display for location, (Not Cells)", example = "Wing A", required = false)
   val localName: String? = null,
 
@@ -66,9 +63,6 @@ data class Location(
   @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
   val certification: Certification? = null,
 
-  @Schema(description = "Location Attributes", required = false)
-  val attributes: List<ResidentialAttributeValue>? = null,
-
   @Schema(description = "Location Usage", required = false)
   val usage: List<NonResidentialUsageDto>? = null,
 
@@ -80,9 +74,6 @@ data class Location(
 
   @Schema(description = "Usage For", required = false)
   val usedFor: List<UsedForType>? = null,
-
-  @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
-  val orderWithinParentLocation: Int? = null,
 
   @Schema(description = "Status of the location", example = "ACTIVE", required = true)
   val status: LocationStatus,
@@ -137,15 +128,16 @@ data class Location(
 
   @Schema(description = "Date and time of the last change", required = true)
   val lastModifiedDate: LocalDateTime,
-) {
+
+) : SortAttribute {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
-  fun getKey(): String {
+  override fun getKey(): String {
     return "$prisonId-$pathHierarchy"
   }
 
   @Schema(description = "Indicates if the location is a residential location", example = "true", required = true)
   fun isResidential(): Boolean {
-    return residentialHousingType != null
+    return accommodationTypes != null
   }
 
   @JsonIgnore
@@ -276,8 +268,6 @@ interface CreateRequest {
   val code: String
   val locationType: LocationType
   val localName: String?
-  val comments: String?
-  val orderWithinParentLocation: Int?
   val parentId: UUID?
   fun toNewEntity(createdBy: String, clock: Clock): LocationJPA
   fun isCell(): Boolean = locationType == LocationType.CELL
@@ -300,8 +290,8 @@ data class CreateResidentialLocationRequest(
   @field:Size(max = 12, message = "Code must be up to 12 characters")
   override val code: String,
 
-  @Schema(description = "residential location type", example = "NORMAL_ACCOMMODATION", required = true)
-  val residentialHousingType: ResidentialHousingType,
+  @Schema(description = "Accommodation Type", required = false, example = "NORMAL_ACCOMMODATION")
+  val accommodationType: AccommodationType,
 
   @Schema(description = "Location Type", example = "CELL", required = true)
   override val locationType: LocationType,
@@ -310,27 +300,14 @@ data class CreateResidentialLocationRequest(
   @field:Size(max = 80, message = "Description must be less than 81 characters")
   override val localName: String? = null,
 
-  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
-  @field:Size(max = 255, message = "Comments must be less than 256 characters")
-  override val comments: String? = null,
-
-  @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
-  override val orderWithinParentLocation: Int? = null,
-
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   override val parentId: UUID? = null,
 
   @Schema(description = "Capacity of the residential location", required = false)
   val capacity: Capacity? = null,
 
-  @Schema(description = "Certified status of the residential location", required = false)
-  val certification: Certification? = null,
-
-  @Schema(description = "Location Attributes", required = false)
-  val attributes: Set<ResidentialAttributeValue>? = null,
-
-  @Schema(description = "Accommodation Type", required = false)
-  val accommodationType: AccommodationType? = null,
+  @Schema(description = "Certified status of the residential location", required = false, defaultValue = "false")
+  val certified: Boolean = false,
 ) : CreateRequest {
 
   override fun toNewEntity(createdBy: String, clock: Clock): ResidentialLocationJPA {
@@ -341,24 +318,18 @@ data class CreateResidentialLocationRequest(
         locationType = locationType,
         pathHierarchy = code,
         localName = localName,
-        residentialHousingType = residentialHousingType,
-        comments = comments,
-        orderWithinParentLocation = orderWithinParentLocation,
+        residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
         createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
         childLocations = mutableListOf(),
-        accommodationType = accommodationType ?: AccommodationType.NORMAL_ACCOMMODATION,
+        accommodationType = accommodationType,
         capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
-        certification = certification?.let {
-          CertificationJPA(
-            certified = it.certified,
-            capacityOfCertifiedCell = it.capacityOfCertifiedCell,
-          )
-        },
+        certification =
+        CertificationJPA(
+          certified = certified,
+          capacityOfCertifiedCell = 0,
+        ),
       )
-      attributes?.forEach { attribute ->
-        location.addAttribute(attribute, createdBy, clock)
-      }
       location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock)
       return location
     } else {
@@ -369,9 +340,7 @@ data class CreateResidentialLocationRequest(
         locationType = locationType,
         pathHierarchy = code,
         localName = localName,
-        residentialHousingType = residentialHousingType,
-        comments = comments,
-        orderWithinParentLocation = orderWithinParentLocation,
+        residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
         createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
         childLocations = mutableListOf(),
@@ -401,13 +370,6 @@ data class CreateNonResidentialLocationRequest(
   @field:Size(max = 80, message = "Description must be less than 81 characters")
   override val localName: String? = null,
 
-  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
-  @field:Size(max = 255, message = "Comments must be less than 256 characters")
-  override val comments: String? = null,
-
-  @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
-  override val orderWithinParentLocation: Int? = null,
-
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   override val parentId: UUID? = null,
 
@@ -423,8 +385,6 @@ data class CreateNonResidentialLocationRequest(
       locationType = locationType,
       pathHierarchy = code,
       localName = localName,
-      comments = comments,
-      orderWithinParentLocation = orderWithinParentLocation,
       createdBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
       childLocations = mutableListOf(),

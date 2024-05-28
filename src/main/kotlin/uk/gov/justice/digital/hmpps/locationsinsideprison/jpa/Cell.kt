@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
@@ -419,6 +420,13 @@ class Cell(
       certification = certification?.toDto(),
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
+    )
+  }
+
+  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
+    return super.toLegacyDto(includeHistory = includeHistory).copy(
+      capacity = capacity?.toDto(),
+      certification = certification?.toDto(),
     )
   }
 }

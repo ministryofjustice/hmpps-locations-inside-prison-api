@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.springframework.beans.factory.annotation.Autowired
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.EventPublishAndAuditService
@@ -46,6 +47,18 @@ abstract class EventBaseResource {
         auditType = auditType,
         id = id,
         auditData = auditData,
+      )
+    }
+
+  protected fun legacyEventPublishAndAudit(
+    event: InternalLocationDomainEventType,
+    function: () -> LegacyLocation,
+  ) =
+    function().also { location ->
+      eventPublishAndAuditService.legacyPublishEvent(
+        eventType = event,
+        location = location,
+        auditData = location.copy(changeHistory = null),
       )
     }
 }

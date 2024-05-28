@@ -118,15 +118,9 @@ class LocationService(
     val capacityChanged = request is CreateResidentialLocationRequest && request.isCell() &&
       request.capacity != null
 
-    val certificationChanged = request is CreateResidentialLocationRequest && request.isCell() &&
-      request.certification != null
-
-    val attributesChanged = request is CreateResidentialLocationRequest && request.isCell() &&
-      request.attributes != null
-
     val usageChanged = request is CreateNonResidentialLocationRequest && request.usage != null
 
-    val location = locationRepository.save(locationToCreate).toDto(includeParent = certificationChanged || capacityChanged || attributesChanged || usageChanged)
+    val location = locationRepository.save(locationToCreate).toDto(includeParent = capacityChanged || usageChanged)
 
     log.info("Created Location [${location.id}] (Residential=${location.isResidential()})")
     telemetryClient.trackEvent(
@@ -496,7 +490,7 @@ class LocationService(
         .filter { !it.isPermanentlyDeactivated() }
         .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isWingLandingSpur() }
         .map { it.toDto(countInactiveCells = true) }
-        .sortedBy { it.getKey() }
+        .sortedWith(NaturalOrderComparator())
 
     return ResidentialSummary(
       prisonSummary = if (parentId == null) {

@@ -4,6 +4,7 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import java.time.Clock
 import java.time.LocalDate
@@ -124,6 +125,31 @@ open class ResidentialLocation(
 
   override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean, countInactiveCells: Boolean): LocationDto {
     return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory, countInactiveCells = countInactiveCells).copy(
+
+      capacity = CapacityDto(
+        maxCapacity = getMaxCapacity(),
+        workingCapacity = getWorkingCapacity(),
+      ),
+
+      certification = CertificationDto(
+        certified = hasCertifiedCells(),
+        capacityOfCertifiedCell = getBaselineCapacity(),
+      ),
+
+      accommodationTypes = getAccommodationTypes().map { it }.distinct(),
+      usedFor = getUsedFor().map { it.usedFor }.distinct(),
+
+      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct(),
+      inactiveCells = if (countInactiveCells) {
+        getInactiveCellCount()
+      } else {
+        null
+      },
+    )
+  }
+
+  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
+    return super.toLegacyDto(includeHistory = includeHistory).copy(
       residentialHousingType = residentialHousingType,
 
       capacity = CapacityDto(
@@ -137,15 +163,6 @@ open class ResidentialLocation(
       ),
 
       attributes = getAttributes().map { it.attributeValue }.distinct(),
-      accommodationTypes = getAccommodationTypes().map { it }.distinct(),
-      usedFor = getUsedFor().map { it.usedFor }.distinct(),
-
-      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct(),
-      inactiveCells = if (countInactiveCells) {
-        getInactiveCellCount()
-      } else {
-        null
-      },
     )
   }
 }

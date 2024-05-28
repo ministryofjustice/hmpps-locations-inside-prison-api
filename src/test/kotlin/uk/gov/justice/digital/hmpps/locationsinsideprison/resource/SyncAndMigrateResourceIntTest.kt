@@ -202,11 +202,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "key": "ZZGHI-B-1-003",
               "comments": "This is a new cell",
               "orderWithinParentLocation": 1,
-              "isResidential": true,
-              "attributes": ["IMMIGRATION_DETAINEES"],
-              "usedFor": [
-                "STANDARD_ACCOMMODATION"
-              ]
+              "attributes": ["IMMIGRATION_DETAINEES"]
             }
           """,
             false,
@@ -234,11 +230,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "key": "ZZGHI-B-1-003",
               "comments": "This is a new cell",
               "orderWithinParentLocation": 1,
-              "isResidential": true,
-              "attributes": ["IMMIGRATION_DETAINEES"],
-              "usedFor": [
-                "STANDARD_ACCOMMODATION"
-              ]
+              "attributes": ["IMMIGRATION_DETAINEES"]
             }
           """,
             false,
@@ -275,7 +267,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-B-1-001",
               "orderWithinParentLocation": 1,
-              "isResidential": true,
               "attributes": [
                 "CAT_A"
               ],
@@ -314,7 +305,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "comments": "This is a visit room",
               "localName": "Visit Hall",
               "orderWithinParentLocation": 1,
-              "isResidential": false,
               "usage": [
                 {
                   "usageType": "VISIT",
@@ -372,8 +362,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "proposedReactivationDate": "${deactivatedLocationMigration.proposedReactivationDate}",
               "key": "ZZGHI-B-1-006",
               "comments": "This is a new cell (inactive)",
-              "orderWithinParentLocation": 6,
-              "isResidential": true
+              "orderWithinParentLocation": 6
             }
           """,
             false,
@@ -500,10 +489,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               },
               "attributes": ["CAT_B"],
               "deactivatedReason": "${migrateRequest.deactivationReason}",
-              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
-              "usedFor": [
-                "STANDARD_ACCOMMODATION"
-              ]
+              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}"
             }
           """,
             false,
@@ -521,16 +507,13 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "code": "002",
               "pathHierarchy": "B-1-002",
               "locationType": "CELL",
-              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "accommodationTypes": ["NORMAL_ACCOMMODATION"],
               "active": false,
               "key": "ZZGHI-B-1-002",
-              "comments": "This is a new cell",
-              "orderWithinParentLocation": 1,
               "capacity": {
                 "maxCapacity": 1,
                 "workingCapacity": 1
               },
-              "attributes": ["CAT_B"],
               "deactivatedReason": "${migrateRequest.deactivationReason}",
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
               "changeHistory": [
@@ -576,10 +559,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "pathHierarchy": "B-1-002",
               "locationType": "CELL",
               "residentialHousingType": "HOLDING_CELL",
-              "accommodationTypes": [
-                "OTHER_NON_RESIDENTIAL"
-              ],
-              "convertedCellType": "HOLDING_ROOM",
               "active": false,
               "key": "ZZGHI-B-1-002",
               "comments": "This is a new cell",
@@ -604,16 +583,12 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "code": "002",
               "pathHierarchy": "B-1-002",
               "locationType": "CELL",
-              "residentialHousingType": "HOLDING_CELL",
               "accommodationTypes": [
                 "OTHER_NON_RESIDENTIAL"
               ],
               "convertedCellType": "HOLDING_ROOM",
               "active": false,
               "key": "ZZGHI-B-1-002",
-              "comments": "This is a new cell",
-              "orderWithinParentLocation": 1,
-              "attributes": ["CAT_B"],
               "deactivatedReason": "${migrateRequest.deactivationReason}",
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
               "changeHistory": [
