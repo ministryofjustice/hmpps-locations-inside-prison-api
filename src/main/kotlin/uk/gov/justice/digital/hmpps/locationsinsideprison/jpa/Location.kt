@@ -19,6 +19,7 @@ import org.hibernate.annotations.GenericGenerator
 import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
@@ -599,4 +600,25 @@ abstract class Location(
 
   fun isCell() = locationType == LocationType.CELL
   fun isWingLandingSpur() = locationType in listOf(LocationType.WING, LocationType.LANDING, LocationType.SPUR)
+
+  open fun toLegacyDto(includeHistory: Boolean = false): LegacyLocation {
+    return LegacyLocation(
+      id = id!!,
+      code = getCode(),
+      locationType = locationType,
+      pathHierarchy = pathHierarchy,
+      prisonId = prisonId,
+      parentId = getParent()?.id,
+      lastModifiedDate = whenUpdated,
+      lastModifiedBy = updatedBy,
+      localName = localName,
+      comments = comments,
+      orderWithinParentLocation = orderWithinParentLocation,
+      active = isActiveAndAllParentsActive(),
+      deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
+      deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
+      proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
+      changeHistory = if (includeHistory) history.map { it.toDto() } else null,
+    )
+  }
 }

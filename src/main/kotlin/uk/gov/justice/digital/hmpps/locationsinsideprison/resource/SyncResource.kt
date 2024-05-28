@@ -11,15 +11,16 @@ import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SyncService
 import java.util.*
@@ -35,6 +36,42 @@ import java.util.*
 class SyncResource(
   private val syncService: SyncService,
 ) : EventBaseResource() {
+
+  @GetMapping("/id/{id}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Returns location information for this ID in Legacy NOMIS format",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns location in NOMIS format",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getLocation(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestParam(name = "includeHistory", required = false, defaultValue = "false") includeHistory: Boolean = false,
+  ) =
+    syncService.getLegacyLocation(id = id, includeHistory = includeHistory) ?: throw LocationNotFoundException(id.toString())
 
   @PostMapping("/upsert")
   @Operation(
@@ -75,19 +112,18 @@ class SyncResource(
     @RequestBody
     @Validated
     syncRequest: NomisSyncLocationRequest,
-  ): ResponseEntity<Location> {
+  ): ResponseEntity<LegacyLocation> {
     val eventType = if (syncRequest.id != null) {
       InternalLocationDomainEventType.LOCATION_AMENDED
     } else {
       InternalLocationDomainEventType.LOCATION_CREATED
     }
     return ResponseEntity(
-      eventPublishAndAudit(
+      legacyEventPublishAndAudit(
         eventType,
         function = {
           syncService.sync(syncRequest)
         },
-        informationSource = InformationSource.NOMIS,
       ),
       if (syncRequest.id != null) {
         HttpStatus.OK
@@ -133,10 +169,8 @@ class SyncResource(
     @Schema(description = "Location UUID to remove", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
     @PathVariable id: UUID,
   ) {
-    eventPublishAndAudit(
+    legacyEventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_DELETED,
-      { syncService.deleteLocation(id) },
-      informationSource = InformationSource.NOMIS,
-    )
+    ) { syncService.deleteLocation(id) }
   }
 }

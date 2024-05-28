@@ -4,6 +4,7 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import java.time.Clock
 import java.time.LocalDate
@@ -146,6 +147,24 @@ open class ResidentialLocation(
       } else {
         null
       },
+    )
+  }
+
+  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
+    return super.toLegacyDto(includeHistory = includeHistory).copy(
+      residentialHousingType = residentialHousingType,
+
+      capacity = CapacityDto(
+        maxCapacity = getMaxCapacity(),
+        workingCapacity = getWorkingCapacity(),
+      ),
+
+      certification = CertificationDto(
+        certified = hasCertifiedCells(),
+        capacityOfCertifiedCell = getBaselineCapacity(),
+      ),
+
+      attributes = getAttributes().map { it.attributeValue }.distinct(),
     )
   }
 }
