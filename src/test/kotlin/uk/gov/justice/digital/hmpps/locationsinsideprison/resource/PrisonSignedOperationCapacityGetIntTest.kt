@@ -54,13 +54,27 @@ class PrisonSignedOperationCapacityGetIntTest : SqsIntegrationTestBase() {
     inner class Validation {
 
       @Test
-      fun `post error return bad data`() {
-        webTestClient.get().uri("/signed-op-cap/MDI")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
+      fun `bad GET error response ERROR when URL is wrong`() {
+        webTestClient.get().uri("/XXX/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().is4xxClientError
-          .expectBody().json("""{"signedOperationCapacity": ""}""")
+      }
+
+      @Test
+      fun `bad GET request when prisonID is not valid signed op cap`() {
+        webTestClient.get().uri("/signed-op-cap/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `bad GET error response ERROR when prisonID is not valid`() {
+        webTestClient.get().uri("/signed-op-cap/XXXXX")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().is4xxClientError
       }
     }
 

@@ -26,13 +26,15 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
-          .bodyValue("""
+          .bodyValue(
+            """
               { 
                 "prisonId": "MDI",
                 "signedOperationCapacity": "100",
                 "updatedBy": "MALEMAN"
               }
-            """.trimIndent())
+            """.trimIndent(),
+          )
           .exchange()
           .expectStatus().isForbidden
       }
@@ -42,17 +44,18 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
-          .bodyValue("""
+          .bodyValue(
+            """
               { 
                 "prisonId": "MDI",
                 "signedOperationCapacity": "100",
                 "updatedBy": "MALEMAN"
               }
-            """.trimIndent())
+            """.trimIndent(),
+          )
           .exchange()
           .expectStatus().isForbidden
       }
-
     }
 
     @Nested
@@ -99,13 +102,15 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue("""
+          .bodyValue(
+            """
               { 
                 "prisonId": "X6_XXX",
                 "signedOperationCapacity": "100",
                 "updatedBy": "MALEMAN"
               }
-            """.trimIndent())
+            """.trimIndent(),
+          )
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -115,13 +120,15 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue("""
+          .bodyValue(
+            """
                 { 
                   "prisonId": "MDI",
                   "signedOperationCapacity": -1,
                   "updatedBy": "MALEMAN"
                 }
-              """.trimIndent())
+            """.trimIndent(),
+          )
           .exchange()
           .expectStatus().is4xxClientError
       }
