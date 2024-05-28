@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOperationCapacityService
-import java.time.LocalDateTime
 
 @RestController
 @Validated
@@ -117,5 +116,5 @@ class SignedOperationCapacityResource(
     @RequestBody
     @Validated
     signedOperationCapacityValidRequest: SignedOperationCapacityValidRequest,
-  ): SignedOperationCapacityDto? = SignedOperationCapacityDto(prisonId = "MDI", updatedBy = "MALEMAN", signedOperationCapacity = 100, whenUpdated = LocalDateTime.now())
+  ): SignedOperationCapacityDto? = signedOperationCapacityService.saveSignedOperationalCapacity(signedOperationCapacityValidRequest)
 }

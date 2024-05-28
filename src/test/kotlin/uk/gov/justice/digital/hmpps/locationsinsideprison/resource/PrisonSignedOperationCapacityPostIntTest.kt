@@ -1,11 +1,22 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 
 class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
+
+  @Autowired
+  lateinit var repository: PrisonSignedOperationCapacityRepository
+
+  @AfterEach
+  fun cleanUp() {
+    repository.deleteAll()
+  }
 
   @DisplayName("POST /signed-op-cap/")
   @Nested

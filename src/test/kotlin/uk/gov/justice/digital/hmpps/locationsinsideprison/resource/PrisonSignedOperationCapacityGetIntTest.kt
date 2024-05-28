@@ -70,8 +70,16 @@ class PrisonSignedOperationCapacityGetIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `bad GET error response ERROR when prisonID is not valid`() {
+      fun `bad GET error response ERROR when prisonID doesn't exist`() {
         webTestClient.get().uri("/signed-op-cap/XXXXX")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `bad GET error response ERROR when prisonID is not valid`() {
+        webTestClient.get().uri("/signed-op-cap/XXXXXX")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().is4xxClientError

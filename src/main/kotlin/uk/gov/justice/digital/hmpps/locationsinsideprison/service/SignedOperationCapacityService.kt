@@ -28,7 +28,7 @@ class SignedOperationCapacityService(
   }
 
   @Transactional
-  fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): PrisonSignedOperationCapacity {
+  fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignedOperationCapacityDto {
     val record =
       prisonSignedOperationalCapacityRepository.findOneByPrisonId(request.prisonId) ?: PrisonSignedOperationCapacity(
         signedOperationCapacity = request.signedOperationCapacity,
@@ -54,6 +54,6 @@ class SignedOperationCapacityService(
       ),
       null,
     )
-    return persistedRecord
+    return persistedRecord.toDto()
   }
 }
