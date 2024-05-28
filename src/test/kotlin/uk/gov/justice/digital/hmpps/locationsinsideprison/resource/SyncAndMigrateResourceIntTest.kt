@@ -507,16 +507,13 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "code": "002",
               "pathHierarchy": "B-1-002",
               "locationType": "CELL",
-              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "accommodationTypes": ["NORMAL_ACCOMMODATION"],
               "active": false,
               "key": "ZZGHI-B-1-002",
-              "comments": "This is a new cell",
-              "orderWithinParentLocation": 1,
               "capacity": {
                 "maxCapacity": 1,
                 "workingCapacity": 1
               },
-              "attributes": ["CAT_B"],
               "deactivatedReason": "${migrateRequest.deactivationReason}",
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
               "changeHistory": [
@@ -586,16 +583,12 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "code": "002",
               "pathHierarchy": "B-1-002",
               "locationType": "CELL",
-              "residentialHousingType": "HOLDING_CELL",
               "accommodationTypes": [
                 "OTHER_NON_RESIDENTIAL"
               ],
               "convertedCellType": "HOLDING_ROOM",
               "active": false,
               "key": "ZZGHI-B-1-002",
-              "comments": "This is a new cell",
-              "orderWithinParentLocation": 1,
-              "attributes": ["CAT_B"],
               "deactivatedReason": "${migrateRequest.deactivationReason}",
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
               "changeHistory": [
