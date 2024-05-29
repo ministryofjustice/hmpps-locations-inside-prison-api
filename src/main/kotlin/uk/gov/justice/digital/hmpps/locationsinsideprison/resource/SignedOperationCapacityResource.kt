@@ -60,7 +60,7 @@ class SignedOperationCapacityResource(
       ),
       ApiResponse(
         responseCode = "404",
-        description = "PrisonID not found",
+        description = "Signed operation capacity not found",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
     ],
@@ -76,7 +76,7 @@ class SignedOperationCapacityResource(
     )
     @PathVariable
     prisonId: String,
-  ): SignedOperationCapacityDto? = signedOperationCapacityService.getSignedOperationalCapacity(prisonId)
+  ): SignedOperationCapacityDto = signedOperationCapacityService.getSignedOperationalCapacity(prisonId)
     ?: throw SignedOperationCapacityNotFoundException(prisonId)
 
   @PostMapping("/")
@@ -116,5 +116,5 @@ class SignedOperationCapacityResource(
     @RequestBody
     @Validated
     signedOperationCapacityValidRequest: SignedOperationCapacityValidRequest,
-  ): SignedOperationCapacityDto? = signedOperationCapacityService.saveSignedOperationalCapacity(signedOperationCapacityValidRequest)
+  ): SignedOperationCapacityDto = signedOperationCapacityService.saveSignedOperationalCapacity(signedOperationCapacityValidRequest)
 }

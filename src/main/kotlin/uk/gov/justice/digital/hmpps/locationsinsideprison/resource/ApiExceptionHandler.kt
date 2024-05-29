@@ -195,7 +195,7 @@ class ApiExceptionHandler {
       .body(
         ErrorResponse(
           status = HttpStatus.NOT_FOUND,
-          errorCode = ErrorCode.LocationNotFound,
+          errorCode = ErrorCode.SignedOperationCapacityForPrisonNotFound,
           userMessage = "Signed Operation Capacity not found: ${e.message}",
           developerMessage = e.message,
         ),
