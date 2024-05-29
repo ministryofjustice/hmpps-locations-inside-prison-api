@@ -16,4 +16,5 @@ enum class ErrorCode(val errorCode: Int) {
   PermanentlyDeactivatedLocationCannotByUpdated(107),
   ConvertedCellLocationCannotByUpdated(108),
   DeactivationErrorLocationsContainPrisoners(109),
+  SignedOperationCapacityForPrisonNotFound(110),
 }

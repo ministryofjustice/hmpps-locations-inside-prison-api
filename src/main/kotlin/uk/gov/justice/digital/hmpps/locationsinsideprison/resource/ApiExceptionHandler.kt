@@ -187,6 +187,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(SignedOperationCapacityNotFoundException::class)
+  fun handleOperationalCapacityNotFoundException(e: SignedOperationCapacityNotFoundException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Signed Operation Capacity not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.SignedOperationCapacityForPrisonNotFound,
+          userMessage = "Signed Operation Capacity not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(LocationAlreadyExistsException::class)
   fun handleLocationAlreadyExists(e: LocationAlreadyExistsException): ResponseEntity<ErrorResponse?>? {
     log.debug("Location already exists exception caught: {}", e.message)
@@ -298,6 +313,9 @@ class ApiExceptionHandler {
 }
 
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
+class SignedOperationCapacityNotFoundException(prisonId: String) :
+  Exception("There is no signed operation capacity found for prison ID = $prisonId")
+
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
 class LocationAlreadyDeactivatedException(key: String) : Exception("$key is already deactivated")
