@@ -114,6 +114,11 @@ enum class InternalLocationDomainEventType(val value: String, val description: S
     "A location inside prison has been deleted",
     AuditType.LOCATION_DELETED,
   ),
+  SIGNED_OP_CAP_AMENDED(
+    "location.inside.prison.signed-op-cap.amended",
+    "Signed Op Cap changed",
+    AuditType.SIGNED_OP_CAP_AMENDED,
+  ),
 }
 
 fun Instant.toOffsetDateFormat(): String =

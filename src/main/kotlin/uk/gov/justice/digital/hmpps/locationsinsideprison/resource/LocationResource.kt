@@ -40,8 +40,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialSummary
@@ -402,11 +400,9 @@ class LocationResource(
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_CREATED,
-      {
-        locationService.createLocation(createResidentialLocationRequest)
-      },
-      InformationSource.DPS,
-    )
+    ) {
+      locationService.createLocation(createResidentialLocationRequest)
+    }
   }
 
   @PostMapping("/create-wing", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -449,11 +445,9 @@ class LocationResource(
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_CREATED,
-      {
-        locationService.createWing(createWingRequest)
-      },
-      InformationSource.DPS,
-    )
+    ) {
+      locationService.createWing(createWingRequest)
+    }
   }
 
   @PostMapping("/non-residential", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -501,11 +495,9 @@ class LocationResource(
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_CREATED,
-      {
-        locationService.createLocation(createNonResidentialLocationRequest)
-      },
-      InformationSource.DPS,
-    )
+    ) {
+      locationService.createLocation(createNonResidentialLocationRequest)
+    }
   }
 
   @PatchMapping("/{id}")
@@ -555,7 +547,7 @@ class LocationResource(
   ): LocationDTO {
     val results = locationService.updateLocation(id, patchLocationRequest)
     eventPublish(buildEvents(results))
-    audit(AuditType.LOCATION_AMENDED, id.toString()) { results.location.copy(childLocations = null, parentLocation = null) }
+    audit(id.toString()) { results.location.copy(childLocations = null, parentLocation = null) }
     return results.location
   }
 
@@ -615,15 +607,13 @@ class LocationResource(
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
-      {
-        locationService.updateCellCapacity(
-          id = id,
-          maxCapacity = capacity.maxCapacity,
-          workingCapacity = capacity.workingCapacity,
-        )
-      },
-      InformationSource.DPS,
-    )
+    ) {
+      locationService.updateCellCapacity(
+        id = id,
+        maxCapacity = capacity.maxCapacity,
+        workingCapacity = capacity.workingCapacity,
+      )
+    }
   }
 
   @PutMapping("/{id}/deactivate/temporary")
@@ -668,16 +658,14 @@ class LocationResource(
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_DEACTIVATED,
-      {
-        locationService.deactivateLocation(
-          id,
-          deactivatedReason = temporaryDeactivationLocationRequest.deactivationReason,
-          proposedReactivationDate = temporaryDeactivationLocationRequest.proposedReactivationDate,
-          planetFmReference = temporaryDeactivationLocationRequest.planetFmReference,
-        )
-      },
-      InformationSource.DPS,
-    )
+    ) {
+      locationService.deactivateLocation(
+        id,
+        deactivatedReason = temporaryDeactivationLocationRequest.deactivationReason,
+        proposedReactivationDate = temporaryDeactivationLocationRequest.proposedReactivationDate,
+        planetFmReference = temporaryDeactivationLocationRequest.planetFmReference,
+      )
+    }
   }
 
   @PutMapping("/{id}/update/temporary-deactivation")
@@ -722,16 +710,14 @@ class LocationResource(
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
-      {
-        locationService.updateDeactivatedDetails(
-          id,
-          deactivatedReason = updateDeactivationDetailsRequest.deactivationReason,
-          proposedReactivationDate = updateDeactivationDetailsRequest.proposedReactivationDate,
-          planetFmReference = updateDeactivationDetailsRequest.planetFmReference,
-        )
-      },
-      InformationSource.DPS,
-    )
+    ) {
+      locationService.updateDeactivatedDetails(
+        id,
+        deactivatedReason = updateDeactivationDetailsRequest.deactivationReason,
+        proposedReactivationDate = updateDeactivationDetailsRequest.proposedReactivationDate,
+        planetFmReference = updateDeactivationDetailsRequest.planetFmReference,
+      )
+    }
   }
 
   @PutMapping("/{id}/deactivate/permanent")
@@ -776,14 +762,12 @@ class LocationResource(
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_DEACTIVATED,
-      {
-        locationService.permanentlyDeactivateLocation(
-          id,
-          reasonForPermanentDeactivation = permanentDeactivationLocationRequest.reason,
-        )
-      },
-      InformationSource.DPS,
-    )
+    ) {
+      locationService.permanentlyDeactivateLocation(
+        id,
+        reasonForPermanentDeactivation = permanentDeactivationLocationRequest.reason,
+      )
+    }
   }
 
   @PutMapping("/{id}/reactivate")
@@ -826,11 +810,9 @@ class LocationResource(
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_REACTIVATED,
-      {
-        locationService.reactivateLocation(id, reactivateSubLocations)
-      },
-      InformationSource.DPS,
-    )
+    ) {
+      locationService.reactivateLocation(id, reactivateSubLocations)
+    }
   }
 
   @PutMapping("/{id}/convert-cell-to-non-res-cell")
@@ -875,13 +857,11 @@ class LocationResource(
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
-      {
-        with(convertCellToNonResidentialLocationRequest) {
-          locationService.convertToNonResidentialCell(id, convertedCellType, otherConvertedCellType)
-        }
-      },
-      InformationSource.DPS,
-    )
+    ) {
+      with(convertCellToNonResidentialLocationRequest) {
+        locationService.convertToNonResidentialCell(id, convertedCellType, otherConvertedCellType)
+      }
+    }
   }
 
   @PutMapping("/{id}/convert-to-cell")
@@ -926,20 +906,18 @@ class LocationResource(
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
-      {
-        with(convertToCellRequest) {
-          locationService.convertToCell(
-            id = id,
-            accommodationType = accommodationType,
-            specialistCellType = specialistCellType,
-            maxCapacity = maxCapacity,
-            workingCapacity = workingCapacity,
-            usedForTypes = usedForTypes,
-          )
-        }
-      },
-      InformationSource.DPS,
-    )
+    ) {
+      with(convertToCellRequest) {
+        locationService.convertToCell(
+          id = id,
+          accommodationType = accommodationType,
+          specialistCellType = specialistCellType,
+          maxCapacity = maxCapacity,
+          workingCapacity = workingCapacity,
+          usedForTypes = usedForTypes,
+        )
+      }
+    }
   }
 
   @GetMapping("/prison/{prisonId}/location-type/{locationType}")
