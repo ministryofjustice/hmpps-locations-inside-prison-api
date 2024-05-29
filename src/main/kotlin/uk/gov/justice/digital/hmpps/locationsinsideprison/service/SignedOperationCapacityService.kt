@@ -28,23 +28,29 @@ class SignedOperationCapacityService(
   }
 
   @Transactional
-  fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignedOperationCapacityDto {
-    var operation = "Created"
+  fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignOpCapResult {
+    var newRecord = true
+
     val record =
-      prisonSignedOperationalCapacityRepository.findOneByPrisonId(request.prisonId) ?: PrisonSignedOperationCapacity(
-        signedOperationCapacity = request.signedOperationCapacity,
-        prisonId = request.prisonId,
-        whenUpdated = LocalDateTime.now(clock),
-        updatedBy = request.updatedBy,
+      prisonSignedOperationalCapacityRepository.findOneByPrisonId(request.prisonId)?.also {
+        it.signedOperationCapacity = request.signedOperationCapacity
+        it.updatedBy = request.updatedBy
+        it.whenUpdated = LocalDateTime.now(clock)
+        newRecord = false
+      } ?: prisonSignedOperationalCapacityRepository.save(
+        PrisonSignedOperationCapacity(
+          signedOperationCapacity = request.signedOperationCapacity,
+          prisonId = request.prisonId,
+          whenUpdated = LocalDateTime.now(clock),
+          updatedBy = request.updatedBy,
+        ),
       )
-    if (record.id != null) {
-      record.signedOperationCapacity = request.signedOperationCapacity
-      record.updatedBy = request.updatedBy
-      record.whenUpdated = LocalDateTime.now(clock)
-      operation = "Updated"
+    val operation = if (newRecord) {
+      "Created"
+    } else {
+      "Updated"
     }
-    prisonSignedOperationalCapacityRepository.save(record)
-    log.info("$operation operational capacity [${record.id}] (Capacity=${record.signedOperationCapacity})")
+    log.info("$operation operational capacity [${record.prisonId}] (Capacity=${record.signedOperationCapacity})")
     telemetryClient.trackEvent(
       "$operation operational capacity",
       mapOf(
@@ -55,6 +61,11 @@ class SignedOperationCapacityService(
       ),
       null,
     )
-    return record.toDto()
+    return SignOpCapResult(signedOperationCapacityDto = record.toDto(), newRecord = newRecord)
   }
 }
+
+data class SignOpCapResult(
+  val signedOperationCapacityDto: SignedOperationCapacityDto,
+  val newRecord: Boolean,
+)

@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -190,6 +191,62 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
             """.trimIndent(),
             false,
           )
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.signed-op-cap.amended" to "MDI",
+          )
+        }
+      }
+
+      @Test
+      fun `can update Signed Operation Capacity`() {
+        webTestClient.post().uri("/signed-op-cap/")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            """
+              { 
+                "prisonId": "MDI",
+                "signedOperationCapacity": 100,
+                "updatedBy": "MALEMAN"
+              }
+            """.trimIndent(),
+          )
+          .exchange()
+          .expectStatus().isCreated
+
+        webTestClient.post().uri("/signed-op-cap/")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            """
+              { 
+                "prisonId": "MDI",
+                "signedOperationCapacity": 200,
+                "updatedBy": "TEST"
+              }
+            """.trimIndent(),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              { 
+                "prisonId": "MDI",
+                "signedOperationCapacity": 200,
+                "updatedBy": "TEST"
+              }
+            """.trimIndent(),
+            false,
+          )
+
+        getDomainEvents(2).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.signed-op-cap.amended" to "MDI",
+            "location.inside.prison.signed-op-cap.amended" to "MDI",
+          )
+        }
       }
     }
   }

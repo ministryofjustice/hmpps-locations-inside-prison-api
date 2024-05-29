@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOperationCapacityService
 
 @RestController
@@ -81,9 +83,8 @@ class SignedOperationCapacityResource(
 
   @PostMapping("/")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
-  @ResponseStatus(HttpStatus.CREATED)
   @Operation(
-    summary = "Post Signed Operation Capacity",
+    summary = "Create or update the signed operation capacity",
     description = "Requires role ROLE_MAINTAIN_LOCATIONS",
     responses = [
       ApiResponse(
@@ -112,9 +113,25 @@ class SignedOperationCapacityResource(
       ),
     ],
   )
-  fun postSignedOperationCapacity(
+  fun updateSignedOperationCapacity(
     @RequestBody
     @Validated
     signedOperationCapacityValidRequest: SignedOperationCapacityValidRequest,
-  ): SignedOperationCapacityDto = signedOperationCapacityService.saveSignedOperationalCapacity(signedOperationCapacityValidRequest)
+  ): ResponseEntity<SignedOperationCapacityDto> {
+    val saveSignedOperationalCapacity = signedOperationCapacityService.saveSignedOperationalCapacity(signedOperationCapacityValidRequest)
+    val response = publishSignedOpCapChange(
+      InternalLocationDomainEventType.SIGNED_OP_CAP_AMENDED,
+    ) {
+      saveSignedOperationalCapacity.signedOperationCapacityDto
+    }
+
+    return ResponseEntity(
+      response,
+      if (saveSignedOperationalCapacity.newRecord) {
+        HttpStatus.CREATED
+      } else {
+        HttpStatus.OK
+      },
+    )
+  }
 }

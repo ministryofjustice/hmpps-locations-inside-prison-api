@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.EventPublishAndAuditService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
@@ -14,17 +15,28 @@ abstract class EventBaseResource {
   @Autowired
   private lateinit var eventPublishAndAuditService: EventPublishAndAuditService
 
+  protected fun publishSignedOpCapChange(
+    event: InternalLocationDomainEventType,
+    function: () -> SignedOperationCapacityDto,
+  ) =
+    function().also { signedOpCap ->
+      eventPublishAndAuditService.signedOpCapEvent(
+        eventType = event,
+        signedOperationCapacity = signedOpCap,
+        auditData = signedOpCap,
+      )
+    }
+
   protected fun eventPublishAndAudit(
     event: InternalLocationDomainEventType,
     function: () -> Location,
-    informationSource: InformationSource = InformationSource.DPS,
   ) =
     function().also { location ->
       eventPublishAndAuditService.publishEvent(
         eventType = event,
         locationDetail = location,
         auditData = location.copy(childLocations = null, parentLocation = null, changeHistory = null),
-        source = informationSource,
+        source = InformationSource.DPS,
       )
     }
 
@@ -41,10 +53,10 @@ abstract class EventBaseResource {
       }
     }
 
-  protected fun audit(auditType: AuditType, id: String, function: () -> LocationDTO) =
+  protected fun audit(id: String, function: () -> Location) =
     function().also { auditData ->
       eventPublishAndAuditService.auditEvent(
-        auditType = auditType,
+        auditType = AuditType.LOCATION_AMENDED,
         id = id,
         auditData = auditData,
       )

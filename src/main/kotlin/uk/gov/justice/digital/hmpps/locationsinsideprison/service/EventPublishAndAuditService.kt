@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import java.time.Clock
 import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
@@ -107,6 +108,31 @@ class EventPublishAndAuditService(
       id = id,
       details = auditData,
     )
+  }
+
+  fun signedOpCapEvent(
+    eventType: InternalLocationDomainEventType,
+    signedOperationCapacity: SignedOperationCapacityDto,
+    auditData: Any? = null,
+  ) {
+    snsService.publishDomainEvent(
+      eventType = eventType,
+      description = "Signed Op-Cap changed for ${signedOperationCapacity.prisonId} to ${signedOperationCapacity.signedOperationCapacity}",
+      occurredAt = LocalDateTime.now(clock),
+      additionalInformation = AdditionalInformation(
+        key = signedOperationCapacity.prisonId,
+        source = InformationSource.DPS,
+      ),
+    )
+
+    auditData?.let {
+      auditEvent(
+        auditType = eventType.auditType,
+        id = signedOperationCapacity.prisonId,
+        auditData = it,
+        source = InformationSource.DPS,
+      )
+    }
   }
 }
 

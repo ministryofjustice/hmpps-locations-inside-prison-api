@@ -9,6 +9,7 @@ import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.Companion.clock
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperationCapacity
@@ -48,13 +49,21 @@ class SignedOperationCapacityServiceTest {
     val request: SignedOperationCapacityValidRequest = mock()
     val prisonSignedOperationCapacity: PrisonSignedOperationCapacity = mock()
 
+    val prisonSignedOperationCap = SignedOperationCapacityDto(
+      signedOperationCapacity = signedOperationCapacity,
+      prisonId = prisonId,
+      updatedBy = updatedBy,
+      whenUpdated = LocalDateTime.now(clock),
+    )
     whenever(request.signedOperationCapacity).thenReturn(signedOperationCapacity)
     whenever(request.prisonId).thenReturn(prisonId)
     whenever(request.updatedBy).thenReturn(updatedBy)
+    whenever(prisonSignedOperationCapacity.toDto()).thenReturn(prisonSignedOperationCap)
     whenever(prisonSignedOperationalCapacityRepository.findOneByPrisonId(any())).thenReturn(null)
     whenever(prisonSignedOperationalCapacityRepository.save(any())).thenReturn(prisonSignedOperationCapacity)
 
-    service.saveSignedOperationalCapacity(request)
+    val result = service.saveSignedOperationalCapacity(request)
+    assertThat(result.newRecord).isTrue()
 
     verify(prisonSignedOperationalCapacityRepository).save(
       PrisonSignedOperationCapacity(
@@ -93,15 +102,6 @@ class SignedOperationCapacityServiceTest {
 
     service.saveSignedOperationalCapacity(request)
 
-    verify(prisonSignedOperationalCapacityRepository).save(
-      PrisonSignedOperationCapacity(
-        id = id,
-        signedOperationCapacity = signedOperationCapacity,
-        prisonId = prisonId,
-        updatedBy = updatedBy,
-        whenUpdated = LocalDateTime.now(clock),
-      ),
-    )
     verify(telemetryClient).trackEvent(any(), anyMap(), anyOrNull())
   }
 }
