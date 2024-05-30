@@ -150,6 +150,14 @@ class Cell(
     this.whenUpdated = LocalDateTime.now(clock)
   }
 
+  fun convertToNonCell() {
+    attributes.clear()
+    usedFor.clear()
+    specialistCellTypes.clear()
+    capacity = null
+    certification = null
+  }
+
   fun convertToCell(accommodationType: AccommodationType, usedForTypes: List<UsedForType>? = null, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
     addHistory(
       LocationAttribute.ACCOMMODATION_TYPE,
