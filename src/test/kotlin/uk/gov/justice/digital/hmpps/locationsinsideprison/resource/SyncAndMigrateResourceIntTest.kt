@@ -800,6 +800,12 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "amendedDate": "${LocalDateTime.now(clock).minusYears(1)}"
                 },
                 {
+                  "attribute": "Location Type",
+                  "oldValue": "CELL",
+                  "newValue": "ROOM",
+                  "amendedBy": "user"
+                },
+                {
                   "attribute": "Working Capacity",
                   "oldValue": "1",
                   "amendedBy": "user"
