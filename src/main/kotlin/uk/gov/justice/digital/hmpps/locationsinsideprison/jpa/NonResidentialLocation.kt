@@ -6,7 +6,9 @@ import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -82,26 +84,46 @@ class NonResidentialLocation(
     )
   }
 
-  override fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): NonResidentialLocation {
-    super.updateWith(upsert, userOrSystemInContext, clock)
-    if (upsert.usage != null) {
-      recordHistoryOfUsages(upsert, userOrSystemInContext, clock)
-      nonResidentialUsages.retainAll(upsert.usage!!.map { addUsage(it.usageType, it.capacity, it.sequence) }.toSet())
+  fun update(upsert: PatchNonResidentialLocationRequest, userOrSystemInContext: String, clock: Clock): NonResidentialLocation {
+    updateCode(upsert.code, userOrSystemInContext, clock)
+    updateUsage(upsert.usage, userOrSystemInContext, clock)
+
+    if (upsert.locationType != null) {
+      addHistory(LocationAttribute.LOCATION_TYPE, this.locationType.description, upsert.locationType.description, updatedBy, LocalDateTime.now(clock))
+      this.locationType = upsert.locationType.baseType
     }
+
     return this
   }
 
+  override fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): NonResidentialLocation {
+    super.sync(upsert, userOrSystemInContext, clock)
+    updateUsage(upsert.usage, userOrSystemInContext, clock)
+    return this
+  }
+
+  private fun updateUsage(
+    usage: Set<NonResidentialUsageDto>?,
+    userOrSystemInContext: String,
+    clock: Clock,
+  ) {
+    if (usage != null) {
+      recordHistoryOfUsages(usage, userOrSystemInContext, clock)
+      nonResidentialUsages.retainAll(usage.map { addUsage(it.usageType, it.capacity, it.sequence) }.toSet())
+    }
+  }
+
   private fun recordHistoryOfUsages(
-    upsert: UpdateLocationRequest,
+    usage: Set<NonResidentialUsageDto>,
     updatedBy: String,
     clock: Clock,
   ) {
     val oldUsages = this.nonResidentialUsages.map { it.usageType }.toSet()
-    val newUsages = (upsert.usage?.map { it.usageType } ?: emptySet()).toSet()
+    val newUsages = (usage.map { it.usageType } ?: emptySet()).toSet()
 
     newUsages.subtract(oldUsages).forEach { newAttribute ->
       addHistory(LocationAttribute.USAGE, null, newAttribute.name, updatedBy, LocalDateTime.now(clock))
-      upsert.usage?.find { it.usageType == newAttribute }?.capacity?.let { capacity ->
+      usage.find { it.usageType == newAttribute }?.capacity?.let { capacity ->
         addHistory(LocationAttribute.NON_RESIDENTIAL_CAPACITY, null, capacity.toString(), updatedBy, LocalDateTime.now(clock))
       }
     }
@@ -111,7 +133,7 @@ class NonResidentialLocation(
     }
 
     newUsages.intersect(oldUsages).forEach { existingType ->
-      val newUsage = upsert.usage?.find { it.usageType == existingType }
+      val newUsage = usage.find { it.usageType == existingType }
       val oldUsage = this.nonResidentialUsages.find { it.usageType == existingType }
       if (newUsage != null && oldUsage != null && newUsage.capacity != oldUsage.capacity) {
         addHistory(

@@ -10,8 +10,7 @@ import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import java.time.Clock
 import java.time.LocalDate
@@ -296,87 +295,90 @@ class Cell(
     return cellUsedFor
   }
 
-  override fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
-    super.updateWith(upsert, userOrSystemInContext, clock)
+  override fun update(upsert: PatchResidentialLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
+    update(upsert, userOrSystemInContext, clock)
+
+    if (upsert.accommodationType != null && this.accommodationType != upsert.accommodationType) {
+      addHistory(
+        LocationAttribute.ACCOMMODATION_TYPE,
+        this.accommodationType.description,
+        upsert.accommodationType.description,
+        userOrSystemInContext,
+        LocalDateTime.now(clock),
+      )
+    }
+    this.accommodationType = upsert.accommodationType ?: this.accommodationType
+
+    if (upsert.specialistCellTypes != null) {
+      recordRemovedSpecialistCellTypes(upsert.specialistCellTypes, userOrSystemInContext, clock)
+      specialistCellTypes.retainAll(upsert.specialistCellTypes.map { addSpecialistCellType(it, userOrSystemInContext, clock) }.toSet())
+    }
+
+    if (upsert.usedFor != null) {
+      recordRemovedUsedForTypes(upsert.usedFor, userOrSystemInContext, clock)
+      usedFor.retainAll(upsert.usedFor.map { addUsedFor(it, userOrSystemInContext, clock) }.toSet())
+    }
+
+    return this
+  }
+
+  override fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
+    super.sync(upsert, userOrSystemInContext, clock)
 
     handleNomisCapacitySync(upsert, userOrSystemInContext, clock)
 
     if (upsert.attributes != null) {
-      recordRemovedAttributes(upsert.attributes!!, userOrSystemInContext, clock)
-      attributes.retainAll(upsert.attributes!!.map { addAttribute(it, userOrSystemInContext, clock) }.toSet())
+      recordRemovedAttributes(upsert.attributes, userOrSystemInContext, clock)
+      attributes.retainAll(upsert.attributes.map { addAttribute(it, userOrSystemInContext, clock) }.toSet())
     }
 
-    if (upsert is PatchLocationRequest) {
-      if (upsert.accommodationType != null && this.accommodationType != upsert.accommodationType) {
-        addHistory(
-          LocationAttribute.ACCOMMODATION_TYPE,
-          this.accommodationType.description,
-          upsert.accommodationType.description,
-          userOrSystemInContext,
-          LocalDateTime.now(clock),
-        )
-      }
-      this.accommodationType = upsert.accommodationType ?: this.accommodationType
-
-      if (upsert.specialistCellTypes != null) {
-        recordRemovedSpecialistCellTypes(upsert.specialistCellTypes, userOrSystemInContext, clock)
-        specialistCellTypes.retainAll(upsert.specialistCellTypes.map { addSpecialistCellType(it, userOrSystemInContext, clock) }.toSet())
-      }
-
-      if (upsert.usedFor != null) {
-        recordRemovedUsedForTypes(upsert.usedFor, userOrSystemInContext, clock)
-        usedFor.retainAll(upsert.usedFor.map { addUsedFor(it, userOrSystemInContext, clock) }.toSet())
-      }
-    }
     return this
   }
 
   private fun handleNomisCapacitySync(
-    upsert: UpdateLocationRequest,
+    upsert: NomisSyncLocationRequest,
     userOrSystemInContext: String,
     clock: Clock,
   ) {
-    if (upsert is NomisSyncLocationRequest) {
-      upsert.capacity?.let {
-        with(upsert.capacity) {
-          addHistory(
-            LocationAttribute.CAPACITY,
-            capacity?.maxCapacity?.toString(),
-            maxCapacity.toString(),
-            userOrSystemInContext,
-            LocalDateTime.now(clock),
-          )
-          addHistory(
-            LocationAttribute.OPERATIONAL_CAPACITY,
-            capacity?.workingCapacity?.toString(),
-            workingCapacity.toString(),
-            userOrSystemInContext,
-            LocalDateTime.now(clock),
-          )
+    upsert.capacity?.let {
+      with(upsert.capacity) {
+        addHistory(
+          LocationAttribute.CAPACITY,
+          capacity?.maxCapacity?.toString(),
+          maxCapacity.toString(),
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+        )
+        addHistory(
+          LocationAttribute.OPERATIONAL_CAPACITY,
+          capacity?.workingCapacity?.toString(),
+          workingCapacity.toString(),
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+        )
 
-          capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
-        }
+        capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
       }
+    }
 
-      upsert.certification?.let {
-        with(upsert.certification) {
-          addHistory(
-            LocationAttribute.CERTIFIED,
-            certification?.certified?.toString(),
-            certified.toString(),
-            userOrSystemInContext,
-            LocalDateTime.now(clock),
-          )
-          addHistory(
-            LocationAttribute.CERTIFIED_CAPACITY,
-            certification?.capacityOfCertifiedCell?.toString(),
-            capacityOfCertifiedCell.toString(),
-            userOrSystemInContext,
-            LocalDateTime.now(clock),
-          )
-          certification =
-            Certification(certified = certified, capacityOfCertifiedCell = capacityOfCertifiedCell)
-        }
+    upsert.certification?.let {
+      with(upsert.certification) {
+        addHistory(
+          LocationAttribute.CERTIFIED,
+          certification?.certified?.toString(),
+          certified.toString(),
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+        )
+        addHistory(
+          LocationAttribute.CERTIFIED_CAPACITY,
+          certification?.capacityOfCertifiedCell?.toString(),
+          capacityOfCertifiedCell.toString(),
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+        )
+        certification =
+          Certification(certified = certified, capacityOfCertifiedCell = capacityOfCertifiedCell)
       }
     }
   }

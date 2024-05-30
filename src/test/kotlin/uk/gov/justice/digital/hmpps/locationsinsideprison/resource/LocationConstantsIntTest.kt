@@ -100,7 +100,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "OFFICE",
-                    "description": "Other"
+                    "description": "Office"
                   },
                   {
                     "key": "ADMINISTRATION_AREA",

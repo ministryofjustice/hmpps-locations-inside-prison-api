@@ -5,7 +5,8 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -106,19 +107,24 @@ open class ResidentialLocation(
 
   private fun getInactiveCellCount() = cellLocations().count { !it.isActive() }
 
-  override fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
-    super.updateWith(upsert, updatedBy, clock)
+  open fun update(upsert: PatchResidentialLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
+    updateCode(upsert.code, userOrSystemInContext, clock)
+    return this
+  }
 
-    if (upsert.residentialHousingType != null && this.residentialHousingType != upsert.residentialHousingType) {
-      addHistory(
-        LocationAttribute.RESIDENTIAL_HOUSING_TYPE,
-        this.residentialHousingType.name,
-        upsert.residentialHousingType?.name,
-        updatedBy,
-        LocalDateTime.now(clock),
-      )
+  override fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
+    super.sync(upsert, updatedBy, clock)
+
+    addHistory(
+      LocationAttribute.RESIDENTIAL_HOUSING_TYPE,
+      this.residentialHousingType.name,
+      upsert.residentialHousingType?.name,
+      updatedBy,
+      LocalDateTime.now(clock),
+    )
+    upsert.residentialHousingType?.let {
+      this.residentialHousingType = it
     }
-    this.residentialHousingType = upsert.residentialHousingType ?: this.residentialHousingType
 
     return this
   }

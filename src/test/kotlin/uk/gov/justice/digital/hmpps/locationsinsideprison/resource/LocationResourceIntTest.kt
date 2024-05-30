@@ -14,7 +14,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidenti
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
@@ -24,8 +25,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
@@ -1413,7 +1416,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     var createResidentialLocationRequest = CreateResidentialLocationRequest(
       prisonId = "MDI",
       code = "004",
-      locationType = LocationType.CELL,
+      locationType = ResidentialLocationType.CELL,
       localName = "A New Cell (004)",
       accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
       capacity = CapacityDTO(maxCapacity = 2, workingCapacity = 2),
@@ -1548,7 +1551,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     var createNonResidentialLocationRequest = CreateNonResidentialLocationRequest(
       prisonId = "MDI",
       code = "ADJ",
-      locationType = LocationType.ADJUDICATION_ROOM,
+      locationType = NonResidentialLocationType.ADJUDICATION_ROOM,
       localName = "Adjudication Room",
       usage = setOf(
         NonResidentialUsageDto(usageType = NonResidentialUsageType.ADJUDICATION_HEARING, capacity = 15, sequence = 1),
@@ -1737,33 +1740,22 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
-  @DisplayName("PATCH /locations/{id}")
+  @DisplayName("PATCH /locations/residential/{id}")
   @Nested
   inner class PatchLocationTest {
-    val changeCode = PatchLocationRequest(
+    val changeCode = PatchResidentialLocationRequest(
       code = "3",
     )
 
-    val changeAttribute = PatchLocationRequest(
-      attributes = setOf(
-        ResidentialAttributeValue.SINGLE_OCCUPANCY,
-        ResidentialAttributeValue.CAT_C,
-      ),
-    )
-
-    val removeAttributes = PatchLocationRequest(
-      attributes = emptySet(),
-    )
-
-    val changeUsage = PatchLocationRequest(
+    val changeUsage = PatchNonResidentialLocationRequest(
       code = "MEDICAL",
-      locationType = LocationType.APPOINTMENTS,
+      locationType = NonResidentialLocationType.APPOINTMENTS,
       usage = setOf(
         NonResidentialUsageDto(usageType = NonResidentialUsageType.APPOINTMENT, capacity = 20, sequence = 1),
       ),
     )
 
-    val removeUsage = PatchLocationRequest(
+    val removeUsage = PatchNonResidentialLocationRequest(
       usage = emptySet(),
     )
 
@@ -1771,14 +1763,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class Security {
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.patch().uri("/locations/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landing1.id}")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.patch().uri("/locations/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landing1.id}")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeCode))
@@ -1788,7 +1780,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.patch().uri("/locations/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landing1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeCode))
@@ -1798,7 +1790,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with right role, wrong scope`() {
-        webTestClient.patch().uri("/locations/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landing1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeCode))
@@ -1811,7 +1803,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class Validation {
       @Test
       fun `access client error bad data`() {
-        webTestClient.patch().uri("/locations/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landing1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"code": ""}""")
@@ -1821,7 +1813,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `cannot update to existing location`() {
-        webTestClient.patch().uri("/locations/${adjRoom.id}")
+        webTestClient.patch().uri("/locations/non-residential/${adjRoom.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(changeCode.copy(code = "VISIT", parentId = wingZ.id))
@@ -1834,7 +1826,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can update details of a locations code`() {
-        webTestClient.patch().uri("/locations/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landing1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeCode))
@@ -1885,10 +1877,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update parent of a location`() {
-        webTestClient.patch().uri("/locations/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landing1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(PatchLocationRequest(parentId = wingB.id)))
+          .bodyValue(jsonString(PatchResidentialLocationRequest(parentId = wingB.id)))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -2088,104 +2080,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `can delete details of a locations attributes`() {
-        webTestClient.patch().uri("/locations/${cell1.id}")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(removeAttributes))
-          .exchange()
-          .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-             {
-              "prisonId": "MDI",
-              "code": "001",
-              "pathHierarchy": "Z-1-001",
-              "locationType": "CELL",
-              "active": true,
-              "key": "MDI-Z-1-001",
-              "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
-              "capacity": {
-                "maxCapacity": 2,
-                "workingCapacity": 2
-              }
-            }
-          """,
-            false,
-          )
-
-        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
-          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-          .exchange()
-          .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-               {
-              "prisonId": "MDI",
-              "code": "001",
-              "pathHierarchy": "Z-1-001",
-              "locationType": "CELL",
-              "active": true,
-              "key": "MDI-Z-1-001",
-              "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
-              "capacity": {
-                "maxCapacity": 2,
-                "workingCapacity": 2
-              },
-              "changeHistory": [
-                {
-                  "attribute": "Attributes",
-                  "oldValue": "DOUBLE_OCCUPANCY"
-                },
-                {
-                  "attribute": "Attributes",
-                  "oldValue": "CAT_B"
-                },
-                {
-                  "attribute": "Used For",
-                  "newValue": "Standard accommodation"
-                }                
-              ]
-            }
-            """,
-            false,
-          )
-      }
-
-      @Test
-      fun `can update details of a locations attributes`() {
-        webTestClient.patch().uri("/locations/${cell1.id}")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(changeAttribute))
-          .exchange()
-          .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-             {
-              "prisonId": "MDI",
-              "code": "001",
-              "pathHierarchy": "Z-1-001",
-              "locationType": "CELL",
-              "active": true,
-              "key": "MDI-Z-1-001",
-              "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
-              "capacity": {
-                "maxCapacity": 2,
-                "workingCapacity": 2
-              }
-            }
-          """,
-            false,
-          )
-      }
-
-      @Test
       fun `can update details of a locations non-res usage`() {
-        webTestClient.patch().uri("/locations/${visitRoom.id}")
+        webTestClient.patch().uri("/locations/non-residential/${visitRoom.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeUsage))
@@ -2260,7 +2156,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can remove details of a locations non-res usage`() {
-        webTestClient.patch().uri("/locations/${visitRoom.id}")
+        webTestClient.patch().uri("/locations/non-residential/${visitRoom.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(removeUsage))

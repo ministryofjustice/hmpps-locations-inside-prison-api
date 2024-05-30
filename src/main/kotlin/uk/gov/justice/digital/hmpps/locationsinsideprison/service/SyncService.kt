@@ -87,7 +87,7 @@ class SyncService(
       if (parent.id == locationToUpdate.id) throw ValidationException("Cannot set parent to self")
       locationToUpdate.setParent(parent)
     }
-    locationToUpdate.updateWith(upsert, upsert.lastUpdatedBy, clock)
+    locationToUpdate.sync(upsert, upsert.lastUpdatedBy, clock)
 
     return locationToUpdate.toLegacyDto()
   }
