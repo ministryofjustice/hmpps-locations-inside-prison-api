@@ -460,7 +460,7 @@ abstract class Location(
       this.deactivatedBy = userOrSystemInContext
 
       if (this is ResidentialLocation) {
-        findSubLocations().forEach { location ->
+        findSubLocations().filterIsInstance<ResidentialLocation>().forEach { location ->
           location.temporarilyDeactivate(
             planetFmReference = planetFmReference,
             proposedReactivationDate = proposedReactivationDate,
