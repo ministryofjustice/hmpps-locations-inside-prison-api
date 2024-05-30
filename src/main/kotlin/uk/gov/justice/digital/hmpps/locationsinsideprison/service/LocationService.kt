@@ -13,10 +13,12 @@ import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
@@ -105,7 +107,7 @@ class LocationService(
       .sortedBy { it.getKey() }
 
   @Transactional
-  fun createLocation(request: CreateRequest): LocationDTO {
+  fun createResidentialLocation(request: CreateResidentialLocationRequest): LocationDTO {
     val parentLocation = getParentLocation(request.parentId)
 
     checkParentValid(
@@ -117,16 +119,44 @@ class LocationService(
     val locationToCreate = request.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
     parentLocation?.let { locationToCreate.setParent(it) }
 
-    val capacityChanged = request is CreateResidentialLocationRequest && request.isCell() &&
-      request.capacity != null
+    val capacityChanged = request.isCell() && request.capacity != null
 
-    val usageChanged = request is CreateNonResidentialLocationRequest && request.usage != null
+    val location = locationRepository.save(locationToCreate).toDto(includeParent = capacityChanged)
 
-    val location = locationRepository.save(locationToCreate).toDto(includeParent = capacityChanged || usageChanged)
-
-    log.info("Created Location [${location.id}] (Residential=${location.isResidential()})")
+    log.info("Created Residential Location [${location.getKey()}]")
     telemetryClient.trackEvent(
-      "Created Location (Residential=${location.isResidential()})",
+      "Created Residential Location",
+      mapOf(
+        "id" to location.id.toString(),
+        "prisonId" to location.prisonId,
+        "path" to location.pathHierarchy,
+      ),
+      null,
+    )
+
+    return location
+  }
+
+  @Transactional
+  fun createNonResidentialLocation(request: CreateNonResidentialLocationRequest): LocationDTO {
+    val parentLocation = getParentLocation(request.parentId)
+
+    checkParentValid(
+      parentLocation = parentLocation,
+      code = request.code,
+      prisonId = request.prisonId,
+    ) // check that code doesn't clash with existing location
+
+    val locationToCreate = request.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
+    parentLocation?.let { locationToCreate.setParent(it) }
+
+    val usageChanged = request.usage != null
+
+    val location = locationRepository.save(locationToCreate).toDto(includeParent = usageChanged)
+
+    log.info("Created Non-Residential Location [${location.getKey()}]")
+    telemetryClient.trackEvent(
+      "Created Non-Residential Location",
       mapOf(
         "id" to location.id.toString(),
         "prisonId" to location.prisonId,
@@ -148,10 +178,65 @@ class LocationService(
   }
 
   @Transactional
-  fun updateLocation(id: UUID, patchLocationRequest: PatchLocationRequest): UpdateLocationResult {
-    val locationToUpdate = locationRepository.findById(id)
+  fun updateResidentialLocation(id: UUID, patchLocationRequest: PatchResidentialLocationRequest): UpdateLocationResult {
+    val residentialLocation = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
+    val (codeChanged, oldParent, parentChanged) = updateLocation(residentialLocation, patchLocationRequest)
+
+    residentialLocation.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
+
+    log.info("Updated Residential Location [$residentialLocation]")
+    telemetryClient.trackEvent(
+      "Updated Residential Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to residentialLocation.prisonId,
+        "path" to residentialLocation.getPathHierarchy(),
+        "codeChanged" to "$codeChanged",
+        "parentChanged" to "$parentChanged",
+      ),
+      null,
+    )
+
+    return UpdateLocationResult(
+      residentialLocation.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged),
+      if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
+    )
+  }
+
+  @Transactional
+  fun updateNonResidentialLocation(id: UUID, patchLocationRequest: PatchNonResidentialLocationRequest): UpdateLocationResult {
+    val nonResLocation = nonResidentialLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    val (codeChanged, oldParent, parentChanged) = updateLocation(nonResLocation, patchLocationRequest)
+
+    nonResLocation.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
+
+    log.info("Updated Non Residential Location [$nonResLocation]")
+    telemetryClient.trackEvent(
+      "Updated Non Residential Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to nonResLocation.prisonId,
+        "path" to nonResLocation.getPathHierarchy(),
+        "codeChanged" to "$codeChanged",
+        "parentChanged" to "$parentChanged",
+      ),
+      null,
+    )
+
+    return UpdateLocationResult(
+      nonResLocation.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged),
+      if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
+    )
+  }
+
+  private fun updateLocation(
+    locationToUpdate: Location,
+    patchLocationRequest: PatchLocationRequest,
+  ): UpdatedSummary {
     if (locationToUpdate.isPermanentlyDeactivated()) {
       throw ValidationException("Cannot update a permanently inactive location")
     }
@@ -160,7 +245,15 @@ class LocationService(
     val oldParent = locationToUpdate.getParent()
     val parentChanged = patchLocationRequest.parentId != null && patchLocationRequest.parentId != oldParent?.id
 
-    if (parentChanged) locationToUpdate.addHistory(LocationAttribute.PARENT_LOCATION, oldParent?.id?.toString(), patchLocationRequest.parentId?.toString(), authenticationFacade.getUserOrSystemInContext(), LocalDateTime.now(clock))
+    if (parentChanged) {
+      locationToUpdate.addHistory(
+        LocationAttribute.PARENT_LOCATION,
+        oldParent?.id?.toString(),
+        patchLocationRequest.parentId?.toString(),
+        authenticationFacade.getUserOrSystemInContext(),
+        LocalDateTime.now(clock),
+      )
+    }
 
     if (codeChanged || parentChanged) {
       val newCode = patchLocationRequest.code ?: locationToUpdate.getCode()
@@ -169,31 +262,10 @@ class LocationService(
       } ?: oldParent
       checkParentValid(theParent, newCode, locationToUpdate.prisonId)
 
-      if (parentChanged && theParent?.id == id) throw ValidationException("Cannot set parent to self")
+      if (parentChanged && theParent?.id == locationToUpdate.id) throw ValidationException("Cannot set parent to self")
       theParent?.let { locationToUpdate.setParent(it) }
     }
-
-    val attributesChanged = locationToUpdate is Cell && patchLocationRequest.attributes != locationToUpdate.attributes.map { it.attributeValue }.toSet()
-
-    locationToUpdate.updateWith(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
-
-    log.info("Updated Location [$locationToUpdate]")
-    telemetryClient.trackEvent(
-      "Updated Location",
-      mapOf(
-        "id" to id.toString(),
-        "prisonId" to locationToUpdate.prisonId,
-        "path" to locationToUpdate.getPathHierarchy(),
-        "codeChanged" to "$codeChanged",
-        "parentChanged" to "$parentChanged",
-      ),
-      null,
-    )
-
-    return UpdateLocationResult(
-      locationToUpdate.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged || attributesChanged),
-      if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
-    )
+    return UpdatedSummary(codeChanged = codeChanged, oldParent = oldParent, parentChanged = parentChanged)
   }
 
   fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int): LocationDTO {
@@ -228,6 +300,40 @@ class LocationService(
       null,
     )
     return locCapChange.toDto(includeParent = true)
+  }
+
+  @Transactional
+  fun updateLocation(id: UUID, updateLocationRequest: UpdateLocationRequest): LocationDTO {
+    val location = locationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (location.isPermanentlyDeactivated()) {
+      throw ValidationException("Cannot change the local name of a permanently deactivated location")
+    }
+
+    location.updateLocalName(
+      localName = updateLocationRequest.localName,
+      userOrSystemInContext = updateLocationRequest.updatedBy,
+      clock = clock,
+    )
+
+    location.updateComments(
+      comments = updateLocationRequest.comments,
+      userOrSystemInContext = updateLocationRequest.updatedBy,
+      clock = clock,
+    )
+
+    log.info("Location updated [${location.getKey()}")
+
+    telemetryClient.trackEvent(
+      "Location updated",
+      mapOf(
+        "id" to id.toString(),
+        "key" to location.getKey(),
+      ),
+      null,
+    )
+    return location.toDto()
   }
 
   @Transactional
@@ -540,4 +646,10 @@ data class PrisonSummary(
   val signedOperationalCapacity: Int,
   @Schema(description = "Prison max capacity")
   val maxCapacity: Int,
+)
+
+data class UpdatedSummary(
+  val codeChanged: Boolean = false,
+  val oldParent: Location? = null,
+  val parentChanged: Boolean = false,
 )

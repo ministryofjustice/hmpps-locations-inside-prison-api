@@ -11,8 +11,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SortAttribute
@@ -283,39 +285,45 @@ data class CreateResidentialLocationRequest(
   @field:Size(min = 3, message = "Prison ID cannot be blank")
   @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
-  override val prisonId: String,
+  val prisonId: String,
 
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be up to 12 characters")
-  override val code: String,
+  val code: String,
 
   @Schema(description = "Accommodation Type", required = false, example = "NORMAL_ACCOMMODATION")
   val accommodationType: AccommodationType,
 
   @Schema(description = "Location Type", example = "CELL", required = true)
-  override val locationType: LocationType,
+  val locationType: ResidentialLocationType,
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 80, message = "Description must be less than 81 characters")
-  override val localName: String? = null,
+  val localName: String? = null,
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
-  override val parentId: UUID? = null,
+  val parentId: UUID? = null,
 
   @Schema(description = "Capacity of the residential location", required = false)
   val capacity: Capacity? = null,
 
   @Schema(description = "Certified status of the residential location", required = false, defaultValue = "false")
   val certified: Boolean = false,
-) : CreateRequest {
 
-  override fun toNewEntity(createdBy: String, clock: Clock): ResidentialLocationJPA {
-    return if (locationType == LocationType.CELL) {
+  @Schema(description = "Used For Types", required = false)
+  val usedFor: Set<UsedForType>? = null,
+
+  @Schema(description = "Specialist Cell Types", required = false)
+  val specialistCellTypes: Set<SpecialistCellType>? = null,
+) {
+
+  fun toNewEntity(createdBy: String, clock: Clock): ResidentialLocationJPA {
+    return if (isCell()) {
       val location = CellJPA(
         prisonId = prisonId,
         code = code,
-        locationType = locationType,
+        locationType = locationType.baseType,
         pathHierarchy = code,
         localName = localName,
         residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
@@ -330,14 +338,20 @@ data class CreateResidentialLocationRequest(
           capacityOfCertifiedCell = 0,
         ),
       )
-      location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock)
+      usedFor?.forEach {
+        location.addUsedFor(it, createdBy, clock)
+      } ?: location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock)
+
+      specialistCellTypes?.forEach {
+        location.addSpecialistCellType(it, createdBy, clock)
+      }
       return location
     } else {
       ResidentialLocationJPA(
         id = null,
         prisonId = prisonId,
         code = code,
-        locationType = locationType,
+        locationType = locationType.baseType,
         pathHierarchy = code,
         localName = localName,
         residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
@@ -347,6 +361,8 @@ data class CreateResidentialLocationRequest(
       )
     }
   }
+
+  fun isCell() = locationType == ResidentialLocationType.CELL
 }
 
 @Schema(description = "Request to create a non-residential location")
@@ -356,33 +372,33 @@ data class CreateNonResidentialLocationRequest(
   @field:Size(min = 3, message = "Prison ID cannot be blank")
   @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
-  override val prisonId: String,
+  val prisonId: String,
 
   @Schema(description = "Code of the location", required = true, example = "ADJ", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be no more than 12 characters")
-  override val code: String,
+  val code: String,
 
   @Schema(description = "Location Type", example = "ADJUDICATION_ROOM", required = true)
-  override val locationType: LocationType,
+  val locationType: NonResidentialLocationType,
 
   @Schema(description = "Alternative description to display for location", example = "Adj Room", required = false)
   @field:Size(max = 80, message = "Description must be less than 81 characters")
-  override val localName: String? = null,
+  val localName: String? = null,
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
-  override val parentId: UUID? = null,
+  val parentId: UUID? = null,
 
   @Schema(description = "Location Usage", required = false)
   val usage: Set<NonResidentialUsageDto>? = null,
-) : CreateRequest {
+) {
 
-  override fun toNewEntity(createdBy: String, clock: Clock): NonResidentialLocationJPA {
+  fun toNewEntity(createdBy: String, clock: Clock): NonResidentialLocationJPA {
     val location = NonResidentialLocationJPA(
       id = null,
       prisonId = prisonId,
       code = code,
-      locationType = locationType,
+      locationType = locationType.baseType,
       pathHierarchy = code,
       localName = localName,
       createdBy = createdBy,

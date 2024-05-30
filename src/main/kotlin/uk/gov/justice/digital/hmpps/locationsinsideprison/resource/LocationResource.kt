@@ -31,9 +31,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -401,7 +403,7 @@ class LocationResource(
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_CREATED,
     ) {
-      locationService.createLocation(createResidentialLocationRequest)
+      locationService.createResidentialLocation(createResidentialLocationRequest)
     }
   }
 
@@ -496,11 +498,11 @@ class LocationResource(
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_CREATED,
     ) {
-      locationService.createLocation(createNonResidentialLocationRequest)
+      locationService.createNonResidentialLocation(createNonResidentialLocationRequest)
     }
   }
 
-  @PatchMapping("/{id}")
+  @PatchMapping("/residential/{id}")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
     summary = "Partial update of a location",
@@ -537,15 +539,66 @@ class LocationResource(
       ),
     ],
   )
-  fun patchLocation(
+  fun patchResidentialLocation(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
     @RequestBody
     @Validated
-    patchLocationRequest: PatchLocationRequest,
+    patchLocationRequest: PatchResidentialLocationRequest,
   ): LocationDTO {
-    val results = locationService.updateLocation(id, patchLocationRequest)
+    val results = locationService.updateResidentialLocation(id, patchLocationRequest)
+    eventPublish(buildEvents(results))
+    audit(id.toString()) { results.location.copy(childLocations = null, parentLocation = null) }
+    return results.location
+  }
+
+  @PatchMapping("/non-residential/{id}")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Partial update of a non-residential location",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns updated location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location already exists",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun patchNonResidentialLocation(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    patchLocationRequest: PatchNonResidentialLocationRequest,
+  ): LocationDTO {
+    val results = locationService.updateNonResidentialLocation(id, patchLocationRequest)
     eventPublish(buildEvents(results))
     audit(id.toString()) { results.location.copy(childLocations = null, parentLocation = null) }
     return results.location
@@ -612,6 +665,56 @@ class LocationResource(
         id = id,
         maxCapacity = capacity.maxCapacity,
         workingCapacity = capacity.workingCapacity,
+      )
+    }
+  }
+
+  @PutMapping("/{id}")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Update basic details of a location: local name, comments",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns cell location changes",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun updateLocation(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    updateLocationRequest: UpdateLocationRequest,
+  ): LocationDTO {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_AMENDED,
+    ) {
+      locationService.updateLocation(
+        id = id,
+        updateLocationRequest = updateLocationRequest,
       )
     }
   }

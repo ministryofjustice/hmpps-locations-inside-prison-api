@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import java.io.Serializable
 import java.time.Clock
@@ -238,7 +238,13 @@ abstract class Location(
     return subLocations
   }
 
-  fun addHistory(attributeName: LocationAttribute, oldValue: String?, newValue: String?, amendedBy: String, amendedDate: LocalDateTime): LocationHistory? {
+  fun addHistory(
+    attributeName: LocationAttribute,
+    oldValue: String?,
+    newValue: String?,
+    amendedBy: String,
+    amendedDate: LocalDateTime,
+  ): LocationHistory? {
     return if (oldValue != newValue) {
       val locationHistory = LocationHistory(
         location = this,
@@ -257,7 +263,12 @@ abstract class Location(
 
   open fun getHistoryAsList() = history.toList()
 
-  open fun toDto(includeChildren: Boolean = false, includeParent: Boolean = false, includeHistory: Boolean = false, countInactiveCells: Boolean = false): LocationDto {
+  open fun toDto(
+    includeChildren: Boolean = false,
+    includeParent: Boolean = false,
+    includeHistory: Boolean = false,
+    countInactiveCells: Boolean = false,
+  ): LocationDto {
     return LocationDto(
       id = id!!,
       code = getCode(),
@@ -283,8 +294,21 @@ abstract class Location(
       deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
-      childLocations = if (includeChildren) childLocations.filter { !it.isPermanentlyDeactivated() }.map { it.toDto(includeChildren = true, includeHistory = includeHistory) } else null,
-      parentLocation = if (includeParent) getParent()?.toDto(includeChildren = false, includeParent = true, includeHistory = includeHistory) else null,
+      childLocations = if (includeChildren) {
+        childLocations.filter { !it.isPermanentlyDeactivated() }
+          .map { it.toDto(includeChildren = true, includeHistory = includeHistory) }
+      } else {
+        null
+      },
+      parentLocation = if (includeParent) {
+        getParent()?.toDto(
+          includeChildren = false,
+          includeParent = true,
+          includeHistory = includeHistory,
+        )
+      } else {
+        null
+      },
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
       deactivatedBy = deactivatedBy,
     )
@@ -317,38 +341,48 @@ abstract class Location(
     return getKey().hashCode()
   }
 
-  open fun updateWith(upsert: UpdateLocationRequest, userOrSystemInContext: String, clock: Clock): Location {
-    if (upsert.code != null && this.getCode() != upsert.code) addHistory(LocationAttribute.CODE, getCode(), upsert.code, updatedBy, LocalDateTime.now(clock))
-    setCode(upsert.code ?: this.getCode())
-
-    if (upsert.locationType != null && this.locationType != upsert.locationType) {
-      addHistory(LocationAttribute.LOCATION_TYPE, this.locationType.description, upsert.locationType?.description, updatedBy, LocalDateTime.now(clock))
-    }
-    this.locationType = upsert.locationType ?: this.locationType
-
+  open fun updateLocalName(localName: String?, userOrSystemInContext: String, clock: Clock) {
     if (!isCell()) {
-      if (upsert.localName != null && this.localName != upsert.localName) {
-        addHistory(LocationAttribute.DESCRIPTION, this.localName, upsert.localName, updatedBy, LocalDateTime.now(clock))
-      }
-      this.localName = upsert.localName ?: this.localName
+      addHistory(LocationAttribute.DESCRIPTION, this.localName, localName, updatedBy, LocalDateTime.now(clock))
+      this.localName = localName
     }
+  }
 
-    if (upsert.comments != null && this.comments != upsert.comments) {
-      addHistory(LocationAttribute.COMMENTS, this.comments, upsert.comments, updatedBy, LocalDateTime.now(clock))
-    }
-    this.comments = upsert.comments ?: this.comments
+  open fun updateComments(comments: String?, userOrSystemInContext: String, clock: Clock) {
+    addHistory(LocationAttribute.COMMENTS, this.comments, comments, updatedBy, LocalDateTime.now(clock))
+    this.comments = comments
+  }
 
-    if (upsert.orderWithinParentLocation != null && this.orderWithinParentLocation != upsert.orderWithinParentLocation) {
-      addHistory(LocationAttribute.ORDER_WITHIN_PARENT_LOCATION, this.orderWithinParentLocation?.toString(), upsert.orderWithinParentLocation?.toString(), updatedBy, LocalDateTime.now(clock))
+  open fun updateCode(code: String?, userOrSystemInContext: String, clock: Clock): Location {
+    if (code != null && this.getCode() != code) {
+      addHistory(LocationAttribute.CODE, getCode(), code, updatedBy, LocalDateTime.now(clock))
+      setCode(code)
+      this.updatedBy = userOrSystemInContext
+      this.whenUpdated = LocalDateTime.now(clock)
     }
-    this.orderWithinParentLocation = upsert.orderWithinParentLocation ?: this.orderWithinParentLocation
+    return this
+  }
+
+  open fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): Location {
+    addHistory(LocationAttribute.CODE, getCode(), upsert.code, updatedBy, LocalDateTime.now(clock))
+    setCode(upsert.code)
+
+    addHistory(LocationAttribute.LOCATION_TYPE, this.locationType.description, upsert.locationType.description, updatedBy, LocalDateTime.now(clock))
+    this.locationType = upsert.locationType
+
+    addHistory(LocationAttribute.DESCRIPTION, this.localName, upsert.localName, updatedBy, LocalDateTime.now(clock))
+    this.localName = upsert.localName
+
+    addHistory(LocationAttribute.COMMENTS, this.comments, upsert.comments, updatedBy, LocalDateTime.now(clock))
+    this.comments = upsert.comments
+
+    addHistory(LocationAttribute.ORDER_WITHIN_PARENT_LOCATION, this.orderWithinParentLocation?.toString(), upsert.orderWithinParentLocation?.toString(), updatedBy, LocalDateTime.now(clock))
+    this.orderWithinParentLocation = upsert.orderWithinParentLocation
 
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
 
-    if (upsert is NomisMigrationRequest) {
-      updateActiveStatusSyncOnly(upsert, clock, updatedBy)
-    }
+    updateActiveStatusSyncOnly(upsert, clock, updatedBy)
     return this
   }
 

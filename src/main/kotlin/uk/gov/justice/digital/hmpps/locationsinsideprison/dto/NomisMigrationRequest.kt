@@ -20,20 +20,20 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity as Capaci
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification as CertificationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 
-interface NomisMigrationRequest : UpdateLocationRequest {
+interface NomisMigrationRequest {
   fun toNewEntity(clock: Clock): LocationJPA
 
   val prisonId: String
-  override val code: String
-  override val locationType: LocationType
-  override val localName: String?
-  override val comments: String?
-  override val orderWithinParentLocation: Int?
-  override val residentialHousingType: ResidentialHousingType?
+  val code: String
+  val locationType: LocationType
+  val localName: String?
+  val comments: String?
+  val orderWithinParentLocation: Int?
+  val residentialHousingType: ResidentialHousingType?
   val capacity: Capacity?
   val certification: Certification?
-  override val attributes: Set<ResidentialAttributeValue>?
-  override val usage: Set<NonResidentialUsageDto>?
+  val attributes: Set<ResidentialAttributeValue>?
+  val usage: Set<NonResidentialUsageDto>?
   val parentId: UUID?
   val parentLocationPath: String?
   val deactivationReason: NomisDeactivatedReason?
@@ -45,7 +45,7 @@ interface NomisMigrationRequest : UpdateLocationRequest {
 
   fun createLocation(clock: Clock): Location {
     val location = if (residentialHousingType != null) {
-      if (isCell()) {
+      if (locationType == LocationType.CELL) {
         val location = Cell(
           id = null,
           prisonId = prisonId,
