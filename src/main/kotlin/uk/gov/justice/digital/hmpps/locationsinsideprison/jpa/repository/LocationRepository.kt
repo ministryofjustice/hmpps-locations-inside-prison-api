@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository
 
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -19,6 +20,18 @@ interface LocationRepository : JpaRepository<Location, UUID> {
 
   @Query("select l from Location l where concat(l.prisonId,'-',l.pathHierarchy) IN (:keys)")
   fun findAllByKeys(keys: List<String>): List<Location>
+
+  @Query("update location set residential_housing_type = :residentialHousingType where id = :id", nativeQuery = true)
+  @Modifying
+  fun updateResidentialHousingType(id: UUID, residentialHousingType: String)
+
+  @Query("update location set residential_housing_type = null where id = :id", nativeQuery = true)
+  @Modifying
+  fun updateResidentialHousingTypeToNull(id: UUID)
+
+  @Query("update location set location_type = :locationType where id = :id", nativeQuery = true)
+  @Modifying
+  fun updateLocationType(id: UUID, locationType: String)
 }
 
 @Repository

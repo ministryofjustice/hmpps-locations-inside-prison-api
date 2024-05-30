@@ -10,6 +10,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
@@ -73,8 +74,10 @@ class SyncService(
   }
 
   private fun updateLocation(upsert: NomisSyncLocationRequest): LegacyLocation {
-    val locationToUpdate = locationRepository.findById(upsert.id!!)
-      .orElseThrow { LocationNotFoundException(upsert.toString()) }
+    val locationId = upsert.id!!
+
+    val locationToUpdate = locationRepository.findById(locationId).getOrNull()
+      ?: throw LocationNotFoundException(locationId.toString())
 
     if (locationToUpdate.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException("Location ${locationToUpdate.getKey()} cannot be updated as permanently deactivated")
@@ -83,13 +86,31 @@ class SyncService(
     if (locationToUpdate is ResidentialLocation && locationToUpdate.isConvertedCell()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException("Location ${locationToUpdate.getKey()} cannot be updated as has been converted to non-res cell")
     }
-    findParent(upsert)?.let { parent ->
-      if (parent.id == locationToUpdate.id) throw ValidationException("Cannot set parent to self")
-      locationToUpdate.setParent(parent)
-    }
-    locationToUpdate.sync(upsert, upsert.lastUpdatedBy, clock)
 
-    return locationToUpdate.toLegacyDto()
+    if (upsert.residentialHousingType == null) {
+      if (locationToUpdate !is ResidentialLocation) {
+        locationRepository.updateResidentialHousingTypeToNull(locationId)
+      }
+    } else {
+      if (locationToUpdate is NonResidentialLocation) {
+        locationRepository.updateResidentialHousingType(locationId, upsert.residentialHousingType.name)
+      }
+    }
+    if (upsert.locationType != locationToUpdate.locationType) {
+      locationRepository.updateLocationType(locationId, upsert.locationType.name)
+    }
+
+    // reload?
+    val location = locationRepository.findById(locationId).getOrNull()
+      ?: throw LocationNotFoundException(locationId.toString())
+
+    findParent(upsert)?.let { parent ->
+      if (parent.id == locationId) throw ValidationException("Cannot set parent to self")
+      location.setParent(parent)
+    }
+    location.sync(upsert, upsert.lastUpdatedBy, clock)
+
+    return location.toLegacyDto()
   }
 
   private fun createLocation(upsert: NomisMigrationRequest): LegacyLocation {
