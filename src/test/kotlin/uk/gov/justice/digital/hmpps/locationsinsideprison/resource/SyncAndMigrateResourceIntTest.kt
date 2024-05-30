@@ -21,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
@@ -29,6 +30,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationHistoryRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import java.time.Clock
 import java.time.LocalDateTime
@@ -55,6 +57,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var wingB: ResidentialLocation
   lateinit var landing1: ResidentialLocation
   lateinit var cell: Cell
+  lateinit var room: ResidentialLocation
+  lateinit var nonRes: NonResidentialLocation
   lateinit var locationHistory: LocationHistory
 
   @BeforeEach
@@ -86,6 +90,21 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
       specialistCellType = SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
     )
+    nonRes = repository.save(
+      buildNonResidentialLocation(
+        prisonId = "ZZGHI",
+        pathHierarchy = "B-1-VISIT",
+        locationType = LocationType.VISITS,
+        nonResidentialUsageType = NonResidentialUsageType.VISIT,
+      ),
+    )
+    room = repository.save(
+      buildResidentialLocation(
+        prisonId = "ZZGHI",
+        pathHierarchy = "B-1-012",
+        locationType = LocationType.ROOM,
+      ),
+    )
     locationHistory = cell.addHistory(
       attributeName = LocationAttribute.DESCRIPTION,
       oldValue = "2",
@@ -97,6 +116,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
     wingB.addChildLocation(landing1)
     landing1.addChildLocation(cell)
+    landing1.addChildLocation(room)
+    landing1.addChildLocation(nonRes)
     repository.save(wingB)
   }
 
@@ -277,6 +298,179 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "certification": {
                 "certified": false,
                 "capacityOfCertifiedCell": 0
+              }
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can sync an existing res location and update it the location type from cell to room`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncResRequest.copy(
+                id = cell.id,
+                code = "001",
+                locationType = LocationType.ROOM,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "001",
+              "pathHierarchy": "B-1-001",
+              "locationType": "ROOM",
+              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "active": true,
+              "key": "ZZGHI-B-1-001",
+              "orderWithinParentLocation": 1,
+              "capacity": {
+                "maxCapacity": 0,
+                "workingCapacity": 0
+              },
+              "certification": {
+                "certified": false,
+                "capacityOfCertifiedCell": 0
+              }
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can sync an existing res location and update it to a non-res location`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncResRequest.copy(
+                id = cell.id,
+                code = "VISIT-ROOM",
+                locationType = LocationType.VISITS,
+                residentialHousingType = null,
+                usage = setOf(NonResidentialUsageDto(usageType = NonResidentialUsageType.VISIT)),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "VISIT-ROOM",
+              "pathHierarchy": "B-1-VISIT-ROOM",
+              "locationType": "VISITS",
+              "active": true,
+              "key": "ZZGHI-B-1-VISIT-ROOM",
+              "orderWithinParentLocation": 1,
+              "usage": [
+                {
+                  "usageType": "VISIT",
+                  "sequence": 99
+                }
+              ]
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can sync an existing room res location and update it the location type from room to cell`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncResRequest.copy(
+                id = room.id,
+                code = "012",
+                locationType = LocationType.CELL,
+                capacity = CapacityDTO(1, 1),
+                certification = CertificationDTO(true, 1),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "012",
+              "pathHierarchy": "B-1-012",
+              "locationType": "CELL",
+              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "active": true,
+              "key": "ZZGHI-B-1-012",
+              "orderWithinParentLocation": 1,
+              "capacity": {
+                "maxCapacity": 1,
+                "workingCapacity": 1
+              },
+              "certification": {
+                "certified": true,
+                "capacityOfCertifiedCell": 1
+              }
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can sync an existing non res location and update to cell`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncResRequest.copy(
+                id = nonRes.id,
+                code = "005",
+                parentLocationPath = "B-1",
+                residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+                locationType = LocationType.CELL,
+                capacity = CapacityDTO(1, 1),
+                certification = CertificationDTO(true, 1),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "005",
+              "pathHierarchy": "B-1-005",
+              "locationType": "CELL",
+              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "active": true,
+              "key": "ZZGHI-B-1-005",
+              "orderWithinParentLocation": 1,
+              "capacity": {
+                "maxCapacity": 1,
+                "workingCapacity": 1
+              },
+              "certification": {
+                "certified": true,
+                "capacityOfCertifiedCell": 1
               }
             }
           """,
