@@ -273,7 +273,11 @@ abstract class Location(
       id = id!!,
       code = getCode(),
       status = getStatus(),
-      locationType = locationType,
+      locationType = if (this is Cell && convertedCellType != null) {
+        LocationType.ROOM
+      } else {
+        locationType
+      },
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
       parentId = getParent()?.id,

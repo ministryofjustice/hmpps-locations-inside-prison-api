@@ -8,7 +8,7 @@ enum class ConvertedCellType(
   STORE("Store room"),
   UTILITY_ROOM("Utility room"),
   HOLDING_ROOM("Holding room"),
-  INTERVIEW_ROOM("Interview Room"),
+  INTERVIEW_ROOM("Interview room"),
   KITCHEN_SERVERY("Kitchen / Servery"),
   TREATMENT_ROOM("Treatment room"),
   STAFF_ROOM("Staff room"),
