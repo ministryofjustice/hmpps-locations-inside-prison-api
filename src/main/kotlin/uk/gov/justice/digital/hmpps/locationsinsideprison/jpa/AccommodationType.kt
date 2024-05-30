@@ -3,8 +3,8 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 enum class AccommodationType(
   val description: String,
 ) {
-  NORMAL_ACCOMMODATION("Normal Accommodation"),
-  HEALTHCARE_INPATIENTS("Health Care In-patients"),
-  CARE_AND_SEPARATION("Care and Separation"),
-  OTHER_NON_RESIDENTIAL("Other Non Residential"),
+  NORMAL_ACCOMMODATION("Normal accommodation"),
+  HEALTHCARE_INPATIENTS("Health care in-patients"),
+  CARE_AND_SEPARATION("Care and separation"),
+  OTHER_NON_RESIDENTIAL("Other"),
 }

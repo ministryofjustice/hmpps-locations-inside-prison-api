@@ -72,23 +72,23 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "HOLDING_AREA",
-                    "description": "Holding Area"
+                    "description": "Holding area"
                   },
                   {
                     "key": "MOVEMENT_AREA",
-                    "description": "Movement Area"
+                    "description": "Movement area"
                   },
                   {
                     "key": "RESIDENTIAL_UNIT",
-                    "description": "Residential Unit"
+                    "description": "Residential unit"
                   },
                   {
                     "key": "EXTERNAL_GROUNDS",
-                    "description": "External Grounds"
+                    "description": "External grounds"
                   },
                   {
                     "key": "HOLDING_CELL",
-                    "description": "Holding Cell"
+                    "description": "Holding cell"
                   },
                   {
                     "key": "MEDICAL",
@@ -104,7 +104,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "ADMINISTRATION_AREA",
-                    "description": "Administration Area"
+                    "description": "Administration area"
                   },
                   {
                     "key": "BOOTH",
@@ -116,7 +116,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "RETURN_TO_UNIT",
-                    "description": "Return to Unit"
+                    "description": "Return to unit"
                   },
                   {
                     "key": "CLASSROOM",
@@ -124,15 +124,15 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "TRAINING_AREA",
-                    "description": "Training Area"
+                    "description": "Training area"
                   },
                   {
                     "key": "TRAINING_ROOM",
-                    "description": "Training Room"
+                    "description": "Training room"
                   },
                   {
                     "key": "EXERCISE_AREA",
-                    "description": "Exercise Area"
+                    "description": "Exercise area"
                   },
                   {
                     "key": "AREA",
@@ -148,19 +148,19 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "INSIDE_PARTY",
-                    "description": "Inside Party"
+                    "description": "Inside party"
                   },
                   {
                     "key": "OUTSIDE_PARTY",
-                    "description": "Outside Party"
+                    "description": "Outside party"
                   },
                   {
                     "key": "FAITH_AREA",
-                    "description": "Faith Area"
+                    "description": "Faith area"
                   },
                   {
                     "key": "ADJUDICATION_ROOM",
-                    "description": "Adjudication Room"
+                    "description": "Adjudication room"
                   },
                   {
                     "key": "APPOINTMENTS",
@@ -172,7 +172,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "VIDEO_LINK",
-                    "description": "Video Link"
+                    "description": "Video link"
                   },
                   {
                     "key": "ASSOCIATION",
@@ -180,7 +180,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "INTERNAL_GROUNDS",
-                    "description": "Internal Grounds"
+                    "description": "Internal grounds"
                   },
                   {
                     "key": "INTERVIEW",
@@ -926,19 +926,19 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 "accommodationTypes": [
                   {
                     "key": "NORMAL_ACCOMMODATION",
-                    "description": "Normal Accommodation"
+                    "description": "Normal accommodation"
                   },
                   {
                     "key": "HEALTHCARE_INPATIENTS",
-                    "description": "Health Care In-patients"
+                    "description": "Health care in-patients"
                   },
                   {
                     "key": "CARE_AND_SEPARATION",
-                    "description": "Care and Separation"
+                    "description": "Care and separation"
                   },
                   {
                     "key": "OTHER_NON_RESIDENTIAL",
-                    "description": "Other Non Residential"
+                    "description": "Other"
                   }
                 ]
               }
@@ -1122,11 +1122,11 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "PERSONALITY_DISORDER",
-                    "description": "Personality Disorder"
+                    "description": "Personality disorder"
                   },
                   {
                     "key": "THERAPEUTIC_COMMUNITY",
-                    "description": "Therapeutic Community"
+                    "description": "Therapeutic community"
                   },
                   {
                     "key": "PIPE",
@@ -1134,11 +1134,11 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "SUB_MISUSE_DRUG_RECOVERY",
-                    "description": "Substance Misuse / Drug Revovery / ISFL"
+                    "description": "Substance misuse / Drug revovery / ISFL"
                   },
                   {
                     "key": "VULNERABLE_PRISONERS",
-                    "description": "Vulnerable Prisoners"
+                    "description": "Vulnerable prisoners"
                   },
                   {
                     "key": "FIRST_NIGHT_CENTRE",
@@ -1150,7 +1150,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   }, 
                   {
                     "key": "MOTHER_AND_BABY",
-                    "description": "Mother and Baby"
+                    "description": "Mother and baby"
                   },   
                   {
                     "key": "YOUNG_PERSONS",
@@ -1162,15 +1162,15 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   }, 
                   {
                     "key": "CLOSE_SUPERVISION_CENTRE",
-                    "description": "Close Supervision Centre (CSC)"
+                    "description": "Close supervision centre (CSC)"
                   }, 
                   {
                     "key": "PATHWAY_TO_PROG",
-                    "description": "Pathway To Progression"
+                    "description": "Pathway To progression"
                   },
                   {
                     "key": "IPP_LONG_TERM_SENTENCES",
-                    "description": "IPP / Long Term Sentences"
+                    "description": "IPP / Long term sentences"
                   }
                 ]
               }
@@ -1246,7 +1246,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "INTERVIEW_ROOM",
-                    "description": "Interview Room"
+                    "description": "Interview room"
                   },
                   {
                     "key": "KITCHEN_SERVERY",
