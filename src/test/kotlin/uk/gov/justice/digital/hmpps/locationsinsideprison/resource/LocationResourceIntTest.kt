@@ -2549,7 +2549,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",
                   "active": false,
-                  "deactivatedByParent": false,
+                  "deactivatedByParent": true,
                   "proposedReactivationDate": "$proposedReactivationDate",
                   "deactivatedDate": "$now",
                   "deactivatedReason": "DAMAGED",
@@ -2899,8 +2899,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "VISIT",
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",
-                  "active": false,
-                  "deactivatedReason": "MOTHBALLED",
+                  "active": true,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
                 },
