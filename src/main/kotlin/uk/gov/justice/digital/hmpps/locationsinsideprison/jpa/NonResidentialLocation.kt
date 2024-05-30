@@ -102,7 +102,7 @@ class NonResidentialLocation(
     return this
   }
 
-  private fun updateUsage(
+  fun updateUsage(
     usage: Set<NonResidentialUsageDto>?,
     userOrSystemInContext: String,
     clock: Clock,
