@@ -88,7 +88,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
       certification = Certification(certified = true, capacityOfCertifiedCell = 1),
       residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
-      specialistCellType = SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
+      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
     )
     nonRes = repository.save(
       buildNonResidentialLocation(

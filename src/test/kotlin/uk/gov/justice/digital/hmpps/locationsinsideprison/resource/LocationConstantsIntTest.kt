@@ -1002,11 +1002,11 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "CONSTANT_SUPERVISION",
-                    "description": "Constant supervision cell"
+                    "description": "Constant Supervision Cell"
                   },
                   {
                     "key": "CSU",
-                    "description": "CSU cell"
+                    "description": "Case and separation unit cell"
                   },
                   {
                     "key": "DRY",
@@ -1017,20 +1017,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Escape list cell"
                   },
                   {
-                    "key": "FIRE_RESISTANT",
-                    "description": "Fire resistant cell"
-                  },
-                  {
-                    "key": "FIXES_FURNITURE",
-                    "description": "Fixed furniture cell"
-                  }, 
-                  {
                     "key": "ISOLATION_DISEASES",
                     "description": "Isolation cell for communicable diseases"
-                  }, 
-                  {
-                    "key": "LIGATURE_RESISTANT",
-                    "description": "Ligature resistant cell"
                   }, 
                   {
                     "key": "LISTENER_CRISIS",
@@ -1042,7 +1030,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "LOCATE_FLAT_CELL",
-                    "description": "Locate flat cell"
+                    "description": "Locate flat"
                   },
                   {
                     "key": "MEDICAL",
@@ -1053,16 +1041,12 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Mother and baby cell"
                   },
                   {
-                    "key": "SOUND_RESISTANT",
-                    "description": "Sound resistant cell"
-                  },
-                  {
                     "key": "UNFURNISHED",
                     "description": "Unfurnished cell"
                   },
                   {
-                    "key": "WHEELCHAIR_ACCESSIBLE",
-                    "description": "Wheelchair accessible cells"
+                    "key": "ACCESSIBLE_CELL",
+                    "description": "Accessible cell"
                   }
                 ]
               }
@@ -1134,7 +1118,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "SUB_MISUSE_DRUG_RECOVERY",
-                    "description": "Substance misuse / Drug revovery / ISFL"
+                    "description": "Substance misuse / Drug recovery / ISFL"
                   },
                   {
                     "key": "VULNERABLE_PRISONERS",
@@ -1150,7 +1134,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   }, 
                   {
                     "key": "MOTHER_AND_BABY",
-                    "description": "Mother and baby"
+                    "description": "Mother and Baby"
                   },   
                   {
                     "key": "YOUNG_PERSONS",
@@ -1162,11 +1146,11 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   }, 
                   {
                     "key": "CLOSE_SUPERVISION_CENTRE",
-                    "description": "Close supervision centre (CSC)"
+                    "description": "Close Supervision Centre (CSC)"
                   }, 
                   {
                     "key": "PATHWAY_TO_PROG",
-                    "description": "Pathway To progression"
+                    "description": "Pathway to progression"
                   },
                   {
                     "key": "IPP_LONG_TERM_SENTENCES",

@@ -45,7 +45,7 @@ INSERT INTO capacity (max_capacity, working_capacity) VALUES (2,1);
 INSERT INTO certification (certified, capacity_of_certified_cell) VALUES (true, 1);
 UPDATE location set capacity_id = currval('capacity_id_seq'), certification_id = currval('certification_id_seq') WHERE prison_id = 'LEI' and path_hierarchy = 'A-1-002';
 INSERT INTO cell_used_for (location_id, used_for) values ((select id from location where prison_id = 'LEI' and path_hierarchy = 'A-1-002'), 'PIPE');
-INSERT INTO specialist_cell (location_id, specialist_cell_type) values ((select id from location where prison_id = 'LEI' and path_hierarchy = 'A-1-002'), 'WHEELCHAIR_ACCESSIBLE');
+INSERT INTO specialist_cell (location_id, specialist_cell_type) values ((select id from location where prison_id = 'LEI' and path_hierarchy = 'A-1-002'), 'ACCESSIBLE_CELL');
 
 INSERT INTO capacity (max_capacity, working_capacity) VALUES (1,1);
 INSERT INTO certification (certified, capacity_of_certified_cell) VALUES (true, 1);

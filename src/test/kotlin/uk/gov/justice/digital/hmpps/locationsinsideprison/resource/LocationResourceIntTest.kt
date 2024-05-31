@@ -114,7 +114,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A, ResidentialAttributeValue.SAFE_CELL, ResidentialAttributeValue.DOUBLE_OCCUPANCY),
-        specialistCellType = SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
+        specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       ),
     )
     inactiveCell = repository.save(
@@ -123,7 +123,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         active = false,
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
-        specialistCellType = SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
+        specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       ),
     )
 
@@ -386,7 +386,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "STANDARD_ACCOMMODATION"
               ],
               "specialistCellTypes": [
-                "WHEELCHAIR_ACCESSIBLE"
+                "ACCESSIBLE_CELL"
               ],
               "childLocations": [
                 {
@@ -548,7 +548,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "STANDARD_ACCOMMODATION"
               ],
               "specialistCellTypes": [
-                "WHEELCHAIR_ACCESSIBLE"
+                "ACCESSIBLE_CELL"
               ]
             },
              {
@@ -601,7 +601,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "NORMAL_ACCOMMODATION"
                 ],
                 "specialistCellTypes": [
-                  "WHEELCHAIR_ACCESSIBLE"
+                  "ACCESSIBLE_CELL"
                 ],
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
@@ -638,7 +638,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "STANDARD_ACCOMMODATION"
                 ],
                 "specialistCellTypes": [
-                  "WHEELCHAIR_ACCESSIBLE"
+                  "ACCESSIBLE_CELL"
                 ]
               },
                {
@@ -695,7 +695,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "NORMAL_ACCOMMODATION"
                 ],
                 "specialistCellTypes": [
-                  "WHEELCHAIR_ACCESSIBLE"
+                  "ACCESSIBLE_CELL"
                 ],
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
@@ -731,7 +731,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "STANDARD_ACCOMMODATION"
                   ],
                   "specialistCellTypes": [
-                    "WHEELCHAIR_ACCESSIBLE"
+                    "ACCESSIBLE_CELL"
                   ]
                 }
               ]
