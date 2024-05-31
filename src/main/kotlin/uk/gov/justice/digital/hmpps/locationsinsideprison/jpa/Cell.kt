@@ -94,6 +94,12 @@ class Cell(
 
   fun isCertified() = certification?.certified ?: false
 
+  override fun getDerivedLocationType() = if (isConvertedCell()) {
+    LocationType.ROOM
+  } else {
+    locationType
+  }
+
   override fun isConvertedCell() = convertedCellType != null
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock) {
@@ -106,6 +112,13 @@ class Cell(
     )
     this.convertedCellType = convertedCellType
 
+    addHistory(
+      LocationAttribute.LOCATION_TYPE,
+      locationType.name,
+      getDerivedLocationType().name,
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
     addHistory(
       LocationAttribute.ACCOMMODATION_TYPE,
       accommodationType.description,

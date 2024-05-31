@@ -25,7 +25,6 @@ import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity as CapacityJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell as CellJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification as CertificationJPA
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
 
@@ -263,16 +262,6 @@ data class Certification(
     result = 31 * result + capacityOfCertifiedCell
     return result
   }
-}
-
-interface CreateRequest {
-  val prisonId: String
-  val code: String
-  val locationType: LocationType
-  val localName: String?
-  val parentId: UUID?
-  fun toNewEntity(createdBy: String, clock: Clock): LocationJPA
-  fun isCell(): Boolean = locationType == LocationType.CELL
 }
 
 /**

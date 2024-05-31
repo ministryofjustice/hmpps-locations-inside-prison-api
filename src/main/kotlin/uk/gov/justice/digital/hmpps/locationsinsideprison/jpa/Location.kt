@@ -97,6 +97,8 @@ abstract class Location(
     updateHierarchicalPath()
   }
 
+  open fun getDerivedLocationType() = locationType
+
   open fun getPathHierarchy(): String {
     return pathHierarchy
   }
@@ -276,11 +278,7 @@ abstract class Location(
       id = id!!,
       code = getCode(),
       status = getStatus(),
-      locationType = if (this is Cell && convertedCellType != null) {
-        LocationType.ROOM
-      } else {
-        locationType
-      },
+      locationType = getDerivedLocationType(),
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
       parentId = getParent()?.id,
@@ -374,7 +372,7 @@ abstract class Location(
     addHistory(LocationAttribute.CODE, getCode(), upsert.code, updatedBy, LocalDateTime.now(clock))
     setCode(upsert.code)
 
-    addHistory(LocationAttribute.LOCATION_TYPE, this.locationType.description, upsert.locationType.description, updatedBy, LocalDateTime.now(clock))
+    addHistory(LocationAttribute.LOCATION_TYPE, getDerivedLocationType().description, upsert.locationType.description, updatedBy, LocalDateTime.now(clock))
     this.locationType = upsert.locationType
 
     addHistory(LocationAttribute.DESCRIPTION, this.localName, upsert.localName, updatedBy, LocalDateTime.now(clock))
@@ -465,7 +463,7 @@ abstract class Location(
       this.deactivatedBy = userOrSystemInContext
 
       if (this is ResidentialLocation) {
-        findSubLocations().forEach { location ->
+        findSubLocations().filterIsInstance<ResidentialLocation>().forEach { location ->
           location.temporarilyDeactivate(
             planetFmReference = planetFmReference,
             proposedReactivationDate = proposedReactivationDate,

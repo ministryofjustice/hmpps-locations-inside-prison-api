@@ -89,7 +89,7 @@ class NonResidentialLocation(
     updateUsage(upsert.usage, userOrSystemInContext, clock)
 
     if (upsert.locationType != null) {
-      addHistory(LocationAttribute.LOCATION_TYPE, this.locationType.description, upsert.locationType.description, updatedBy, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.LOCATION_TYPE, getDerivedLocationType().description, upsert.locationType.description, updatedBy, LocalDateTime.now(clock))
       this.locationType = upsert.locationType.baseType
     }
 
