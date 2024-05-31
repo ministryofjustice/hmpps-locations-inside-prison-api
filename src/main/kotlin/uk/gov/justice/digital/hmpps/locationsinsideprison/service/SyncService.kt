@@ -155,20 +155,23 @@ class SyncService(
   }
 
   fun deleteLocation(id: UUID): LegacyLocation {
-    val deletedLocation = locationRepository.findById(id)
-      .orElseThrow { LocationNotFoundException(id.toString()) }.toLegacyDto()
+    return locationRepository.findById(id).getOrNull()?.also {
+      if (it.findSubLocations().isNotEmpty()) {
+        throw ValidationException("Cannot delete location with sub-locations")
+      }
 
-    locationRepository.deleteById(id)
-    log.info("Deleted Location: $id (${deletedLocation.getKey()})")
-    telemetryClient.trackEvent(
-      "Deleted Location",
-      mapOf(
-        "id" to id.toString(),
-        "prisonId" to deletedLocation.prisonId,
-        "key" to deletedLocation.getKey(),
-      ),
-      null,
-    )
-    return deletedLocation
+      locationRepository.deleteLocationById(id)
+      log.info("Deleted Location: $id (${it.getKey()})")
+      telemetryClient.trackEvent(
+        "Deleted Location",
+        mapOf(
+          "id" to id.toString(),
+          "prisonId" to it.prisonId,
+          "key" to it.getKey(),
+        ),
+        null,
+      )
+    }?.toLegacyDto()
+      ?: throw LocationNotFoundException(id.toString())
   }
 }
