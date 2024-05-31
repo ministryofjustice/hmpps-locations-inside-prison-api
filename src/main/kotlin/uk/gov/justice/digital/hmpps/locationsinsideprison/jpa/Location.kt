@@ -225,9 +225,6 @@ abstract class Location(
     return leafLocations
   }
 
-  fun clearSubLocations() {
-    childLocations.clear()
-  }
   fun findSubLocations(): List<Location> {
     val subLocations = mutableListOf<Location>()
 
