@@ -109,6 +109,12 @@ data class Location(
   @Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
   val topLevelId: UUID,
 
+  @Schema(description = "Current Level with hierarchy", example = "1", required = true)
+  val level: Int,
+
+  @Schema(description = "Indicates this is the lowest level, often a cell", example = "false", required = true)
+  val leafLevel: Boolean,
+
   @Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
   val parentId: UUID?,
 
@@ -132,8 +138,12 @@ data class Location(
 
 ) : SortAttribute {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
-  override fun getKey(): String {
+  fun getKey(): String {
     return "$prisonId-$pathHierarchy"
+  }
+
+  override fun getSortName(): String {
+    return localName?.capitalizeWords() ?: pathHierarchy
   }
 
   @Schema(description = "Indicates if the location is a residential location", example = "true", required = true)
@@ -426,3 +436,10 @@ data class PermanentDeactivationLocationRequest(
   @field:Size(max = 200, message = "Reason for permanent deactivation cannot be more than 200 characters")
   val reason: String,
 )
+
+fun String.capitalizeWords(delimiter: String = " ") =
+  split(delimiter).joinToString(delimiter) { word ->
+
+    val smallCaseWord = word.lowercase()
+    smallCaseWord.replaceFirstChar(Char::titlecaseChar)
+  }

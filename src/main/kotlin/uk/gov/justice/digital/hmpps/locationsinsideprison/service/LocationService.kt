@@ -25,6 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
@@ -574,8 +575,9 @@ class LocationService(
     prisonId: String,
     parentLocationId: UUID? = null,
     parentPathHierarchy: String? = null,
+    latestHistory: Boolean = false,
   ): ResidentialSummary {
-    val parent =
+    val currentLocation =
       if (parentLocationId != null) {
         residentialLocationRepository.findById(parentLocationId).getOrNull()
           ?: throw LocationNotFoundException(parentLocationId.toString())
@@ -586,22 +588,25 @@ class LocationService(
         null
       }
 
-    val parentId = parent?.id
-    val locations =
-      (
-        if (parentId != null) {
-          residentialLocationRepository.findAllByPrisonIdAndParentId(prisonId, parentId)
-        } else {
-          residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
-        }
-        )
-        .filter { !it.isPermanentlyDeactivated() }
-        .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isWingLandingSpur() }
-        .map { it.toDto(countInactiveCells = true) }
-        .sortedWith(NaturalOrderComparator())
+    val id = currentLocation?.id
+    val locations = (
+      if (id != null) {
+        residentialLocationRepository.findAllByPrisonIdAndParentId(prisonId, id)
+      } else {
+        residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+      }
+      )
+      .filter { !it.isPermanentlyDeactivated() }
+      .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isWingLandingSpur() }
+      .map { it.toDto(countInactiveCells = true) }
+      .sortedWith(NaturalOrderComparator())
 
+    val prisonLevel = LocationSummary(prisonId = prisonId, code = prisonId, level = 0)
+    val locationHierarchy = (currentLocation?.getHierarchy()?.plus(prisonLevel) ?: listOf(prisonLevel)).sortedBy { it.level }
+
+    val parentLocation = currentLocation?.toDto(countInactiveCells = true, includeHistory = latestHistory)
     return ResidentialSummary(
-      prisonSummary = if (parentId == null) {
+      prisonSummary = if (id == null) {
         PrisonSummary(
           workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
           maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
@@ -610,7 +615,8 @@ class LocationService(
       } else {
         null
       },
-      parentLocation = parent?.toDto(countInactiveCells = true),
+      locationHierarchy = locationHierarchy,
+      parentLocation = parentLocation,
       subLocations = locations,
       subLocationName = calculateSubLocationDescription(locations),
     )
@@ -629,6 +635,8 @@ class LocationService(
 data class ResidentialSummary(
   @Schema(description = "Prison summary for top level view", required = false)
   val prisonSummary: PrisonSummary? = null,
+  @Schema(description = "Parent locations, top to bottom", required = true)
+  val locationHierarchy: List<LocationSummary>,
   @Schema(description = "The description of the sub locations", required = true, example = "Wings")
   val subLocationName: String,
   @Schema(description = "The current parent location (e.g Wing or Landing) details")

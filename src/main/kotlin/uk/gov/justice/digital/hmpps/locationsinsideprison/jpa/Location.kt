@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -24,6 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import java.io.Serializable
 import java.time.Clock
@@ -193,6 +196,42 @@ abstract class Location(
     return getParent()?.findTopLevelLocation() ?: this
   }
 
+  private fun getLevel(): Int {
+    fun goUp(location: Location?, level: Int): Int {
+      if (location == null) {
+        return level
+      }
+      return goUp(location.getParent(), level.inc())
+    }
+
+    return goUp(this, 0)
+  }
+
+  fun getHierarchy(): List<LocationSummary> {
+    val locationSummary = mutableListOf<LocationSummary>()
+
+    fun goUp(location: Location?) {
+      if (location != null) {
+        locationSummary.add(location.getLocationSummary())
+        goUp(location.parent)
+      }
+    }
+
+    goUp(this)
+    return locationSummary.sortedBy { it.level }
+  }
+
+  private fun getLocationSummary(): LocationSummary {
+    return LocationSummary(
+      id = id,
+      code = getCode(),
+      pathHierarchy = getPathHierarchy(),
+      prisonId = prisonId,
+      localName = localName?.capitalizeWords(),
+      level = getLevel(),
+    )
+  }
+
   private fun updateHierarchicalPath() {
     pathHierarchy = getHierarchicalPath()
     for (childLocation in childLocations) {
@@ -283,10 +322,12 @@ abstract class Location(
       prisonId = prisonId,
       parentId = getParent()?.id,
       topLevelId = findTopLevelLocation().id!!,
+      level = getLevel(),
+      leafLevel = findSubLocations().isEmpty(),
       lastModifiedDate = whenUpdated,
       lastModifiedBy = updatedBy,
       localName = if (!isCell()) {
-        localName
+        localName?.capitalizeWords()
       } else {
         null
       },
@@ -660,3 +701,14 @@ abstract class Location(
     )
   }
 }
+
+@Schema(description = "Location Summary")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class LocationSummary(
+  val id: UUID? = null,
+  val prisonId: String,
+  val code: String,
+  val localName: String? = null,
+  val pathHierarchy: String? = null,
+  val level: Int,
+)

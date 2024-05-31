@@ -36,8 +36,8 @@ class NaturalOrderComparator : Comparator<SortAttribute> {
     if ((key1 == null) || (key2 == null)) {
       return 0
     }
-    val s1 = key1.getKey()
-    val s2 = key2.getKey()
+    val s1 = key1.getSortName()
+    val s2 = key2.getSortName()
 
     var thisMarker = 0
     var thatMarker = 0
@@ -78,5 +78,5 @@ class NaturalOrderComparator : Comparator<SortAttribute> {
 }
 
 interface SortAttribute {
-  fun getKey(): String
+  fun getSortName(): String
 }
