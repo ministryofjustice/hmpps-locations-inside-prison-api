@@ -521,18 +521,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             // language=json
             """
             {
+              "topLevelLocationType": "Wings",
               "prisonSummary": {
                 "workingCapacity": 4,
                 "signedOperationalCapacity": 0,
                 "maxCapacity": 6
               },
-               "locationHierarchy": [
-                  {
-                    "prisonId": "MDI",
-                    "code": "MDI",
-                    "level": 0
-                  }
-                ],
               "subLocations":
             [
              {
@@ -634,12 +628,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "amendedBy": "A_TEST_USER"
                 }
               ],
+              "topLevelLocationType": "Wings",
                "locationHierarchy": [
-                  {
-                    "prisonId": "MDI",
-                    "code": "MDI",
-                    "level": 0
-                  },
                   {
                     "prisonId": "MDI",
                     "code": "Z",
@@ -714,6 +704,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             // language=json
             """
            {
+              "topLevelLocationType": "Wings",
               "parentLocation": {
                 "prisonId": "MDI",
                 "code": "1",
@@ -746,18 +737,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                "locationHierarchy": [
                   {
                     "prisonId": "MDI",
-                    "code": "MDI",
-                    "level": 0
-                  },
-                  {
-                    "prisonId": "MDI",
                     "code": "Z",
+                    "type": "WING",
                     "pathHierarchy": "Z",
                     "level": 1
                   },
                   {
                     "prisonId": "MDI",
                     "code": "1",
+                    "type": "LANDING",
                     "pathHierarchy": "Z-1",
                     "level": 2
                  }

@@ -604,15 +604,18 @@ class LocationService(
       .map { it.toDto(countInactiveCells = true) }
       .sortedWith(NaturalOrderComparator())
 
-    val prisonLevel = LocationSummary(prisonId = prisonId, code = prisonId, level = 0)
-    val locationHierarchy = (currentLocation?.getHierarchy()?.plus(prisonLevel) ?: listOf(prisonLevel)).sortedBy { it.level }
-
     val latestHistory = if (id != null && returnLatestHistory) {
       locationHistoryRepository.findTop10ByLocationIdOrderByAmendedDateDesc(id).map { it.toDto() }
     } else {
       null
     }
+    val subLocationTypes = calculateSubLocationDescription(locations)
     return ResidentialSummary(
+      topLevelLocationType = if (currentLocation == null) {
+        subLocationTypes
+      } else {
+        currentLocation.getHierarchy()[0].type.description + "s"
+      },
       prisonSummary = if (id == null) {
         PrisonSummary(
           workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
@@ -622,11 +625,11 @@ class LocationService(
       } else {
         null
       },
-      locationHierarchy = locationHierarchy,
+      locationHierarchy = currentLocation?.getHierarchy(),
       parentLocation = currentLocation?.toDto(countInactiveCells = true),
       latestHistory = latestHistory,
       subLocations = locations,
-      subLocationName = calculateSubLocationDescription(locations),
+      subLocationName = subLocationTypes,
     )
   }
 
@@ -643,9 +646,11 @@ class LocationService(
 data class ResidentialSummary(
   @Schema(description = "Prison summary for top level view", required = false)
   val prisonSummary: PrisonSummary? = null,
+  @Schema(description = "The top level type of locations", required = true, example = "Wings")
+  val topLevelLocationType: String,
   @Schema(description = "Parent locations, top to bottom", required = true)
-  val locationHierarchy: List<LocationSummary>,
-  @Schema(description = "The description of the sub locations", required = true, example = "Wings")
+  val locationHierarchy: List<LocationSummary>? = null,
+  @Schema(description = "The description of the type of sub locations most common", required = true, examples = ["Wings", "Landings", "Spurs", "Cells"])
   val subLocationName: String,
   @Schema(description = "The current parent location (e.g Wing or Landing) details")
   val parentLocation: LocationDTO? = null,
