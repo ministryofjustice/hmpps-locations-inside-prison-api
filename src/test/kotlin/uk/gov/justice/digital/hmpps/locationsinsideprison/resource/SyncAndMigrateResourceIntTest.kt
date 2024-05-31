@@ -895,6 +895,14 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().is4xxClientError
       }
+
+      @Test
+      fun `cannot delete an existing location which as children`() {
+        webTestClient.delete().uri("/sync/delete/${wingB.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
     }
 
     @Nested

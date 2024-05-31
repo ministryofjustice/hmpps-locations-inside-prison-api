@@ -32,6 +32,10 @@ interface LocationRepository : JpaRepository<Location, UUID> {
   @Query("update location set location_type = :locationType where id = :id", nativeQuery = true)
   @Modifying
   fun updateLocationType(id: UUID, locationType: String)
+
+  @Query("delete from location where id = :id", nativeQuery = true)
+  @Modifying
+  fun deleteLocationById(id: UUID)
 }
 
 @Repository

@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
+import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.DiscriminatorFormula
 import org.hibernate.annotations.GenericGenerator
 import org.hibernate.annotations.SortNatural
@@ -51,7 +52,7 @@ abstract class Location(
 
   open val prisonId: String,
 
-  @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST])
+  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST])
   @JoinColumn(name = "parent_id")
   private var parent: Location? = null,
 
@@ -70,9 +71,11 @@ abstract class Location(
   open var proposedReactivationDate: LocalDate? = null,
   open var planetFmReference: String? = null,
 
-  @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  @BatchSize(size = 1000)
+  @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
   protected open val childLocations: MutableList<Location> = mutableListOf(),
 
+  @BatchSize(size = 100)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
   protected open val history: SortedSet<LocationHistory> = sortedSetOf(),
@@ -222,6 +225,9 @@ abstract class Location(
     return leafLocations
   }
 
+  fun clearSubLocations() {
+    childLocations.clear()
+  }
   fun findSubLocations(): List<Location> {
     val subLocations = mutableListOf<Location>()
 
