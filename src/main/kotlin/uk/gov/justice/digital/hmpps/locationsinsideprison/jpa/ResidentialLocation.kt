@@ -28,7 +28,7 @@ open class ResidentialLocation(
   comments: String? = null,
   orderWithinParentLocation: Int? = 1,
   active: Boolean = true,
-  deactivatedDate: LocalDate? = null,
+  deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
   childLocations: MutableList<Location>,

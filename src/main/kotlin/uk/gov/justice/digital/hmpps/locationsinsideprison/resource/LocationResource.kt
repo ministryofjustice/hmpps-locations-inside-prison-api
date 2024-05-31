@@ -31,6 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
@@ -313,7 +314,7 @@ class LocationResource(
     @ParameterObject
     @PageableDefault(page = 0, size = 20, sort = ["id"], direction = Sort.Direction.ASC)
     pageable: Pageable,
-  ): Page<LocationDTO> {
+  ): Page<LegacyLocation> {
     if (pageable.pageSize > 200) {
       throw ValidationException("Page size must be 200 or less")
     }

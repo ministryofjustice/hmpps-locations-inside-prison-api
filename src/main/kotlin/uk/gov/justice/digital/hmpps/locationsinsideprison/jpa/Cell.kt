@@ -32,7 +32,7 @@ class Cell(
   comments: String? = null,
   orderWithinParentLocation: Int? = null,
   active: Boolean = true,
-  deactivatedDate: LocalDate? = null,
+  deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
   childLocations: MutableList<Location>,
