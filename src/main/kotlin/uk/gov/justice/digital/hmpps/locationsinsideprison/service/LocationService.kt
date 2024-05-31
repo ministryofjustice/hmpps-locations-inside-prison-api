@@ -12,6 +12,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
@@ -31,6 +32,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationHistoryRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
@@ -55,6 +57,7 @@ class LocationService(
   private val nonResidentialLocationRepository: NonResidentialLocationRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val signedOperationCapacityRepository: PrisonSignedOperationCapacityRepository,
+  private val locationHistoryRepository: LocationHistoryRepository,
   private val cellLocationRepository: CellLocationRepository,
   private val prisonerSearchService: PrisonerSearchService,
   private val clock: Clock,
@@ -575,7 +578,7 @@ class LocationService(
     prisonId: String,
     parentLocationId: UUID? = null,
     parentPathHierarchy: String? = null,
-    latestHistory: Boolean = false,
+    returnLatestHistory: Boolean = false,
   ): ResidentialSummary {
     val currentLocation =
       if (parentLocationId != null) {
@@ -604,7 +607,11 @@ class LocationService(
     val prisonLevel = LocationSummary(prisonId = prisonId, code = prisonId, level = 0)
     val locationHierarchy = (currentLocation?.getHierarchy()?.plus(prisonLevel) ?: listOf(prisonLevel)).sortedBy { it.level }
 
-    val parentLocation = currentLocation?.toDto(countInactiveCells = true, includeHistory = latestHistory)
+    val latestHistory = if (id != null && returnLatestHistory) {
+      locationHistoryRepository.findTop10ByLocationIdOrderByAmendedDateDesc(id).map { it.toDto() }
+    } else {
+      null
+    }
     return ResidentialSummary(
       prisonSummary = if (id == null) {
         PrisonSummary(
@@ -616,7 +623,8 @@ class LocationService(
         null
       },
       locationHierarchy = locationHierarchy,
-      parentLocation = parentLocation,
+      parentLocation = currentLocation?.toDto(countInactiveCells = true),
+      latestHistory = latestHistory,
       subLocations = locations,
       subLocationName = calculateSubLocationDescription(locations),
     )
@@ -641,6 +649,8 @@ data class ResidentialSummary(
   val subLocationName: String,
   @Schema(description = "The current parent location (e.g Wing or Landing) details")
   val parentLocation: LocationDTO? = null,
+  @Schema(description = "The latest history for this location")
+  val latestHistory: List<ChangeHistory>? = null,
   @Schema(description = "All residential locations under this parent")
   val subLocations: List<LocationDTO>,
 )

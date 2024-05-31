@@ -278,7 +278,15 @@ class LocationResource(
     @Schema(description = "Parent location path hierarchy, can be a Wing code, or landing code", example = "A-1", required = false)
     @RequestParam(name = "parentPathHierarchy", required = false)
     parentPathHierarchy: String? = null,
-  ): ResidentialSummary = locationService.getResidentialLocations(prisonId, parentLocationId, parentPathHierarchy)
+    @Schema(description = "Include latest history", required = false, defaultValue = "false")
+    @RequestParam(name = "latestHistory", required = false, defaultValue = "false")
+    latestHistory: Boolean = false,
+  ): ResidentialSummary = locationService.getResidentialLocations(
+    prisonId = prisonId,
+    parentLocationId = parentLocationId,
+    parentPathHierarchy = parentPathHierarchy,
+    returnLatestHistory = latestHistory,
+  )
 
   @GetMapping("")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")

@@ -159,6 +159,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       )
       .addChildLocation(landing2)
 
+    wingZ.updateComments("A New Comment", "Older user", clock)
+
     wingB.addChildLocation(landing3.addChildLocation(inactiveCell))
     repository.save(wingZ)
     repository.save(wingB)
@@ -586,7 +588,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a locations on a wing`() {
-        webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${wingZ.id}")
+        webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${wingZ.id}&latestHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -625,6 +627,13 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "key": "MDI-Z",
                 "isResidential": true
               },
+              "latestHistory": [
+                {
+                  "attribute": "Comments",
+                  "newValue": "A New Comment",
+                  "amendedBy": "A_TEST_USER"
+                }
+              ],
                "locationHierarchy": [
                   {
                     "prisonId": "MDI",
