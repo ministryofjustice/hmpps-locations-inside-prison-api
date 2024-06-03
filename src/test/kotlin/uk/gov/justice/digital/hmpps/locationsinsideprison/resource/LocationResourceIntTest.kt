@@ -160,6 +160,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       )
       .addChildLocation(landing2)
 
+    wingZ.updateComments("A New Comment", "Older user", clock)
+
     wingB.addChildLocation(landing3.addChildLocation(inactiveCell))
     repository.save(wingZ)
     repository.save(wingB)
@@ -510,7 +512,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
       @Test
-      fun `can retrieve details of a locations on a wing`() {
+      fun `can retrieve details of a locations at establishment level`() {
         webTestClient.get().uri("/locations/residential-summary/MDI")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
@@ -519,6 +521,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             // language=json
             """
             {
+              "topLevelLocationType": "Wings",
               "prisonSummary": {
                 "workingCapacity": 4,
                 "signedOperationalCapacity": 0,
@@ -531,6 +534,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "code": "Z",
               "pathHierarchy": "Z",
               "locationType": "WING",
+              "level": 1,
+              "leafLevel": false,
               "active": true,
               "key": "MDI-Z",
               "inactiveCells": 0,
@@ -557,6 +562,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "pathHierarchy": "B",
               "locationType": "WING",
               "active": true,
+              "level": 1,
               "key": "MDI-B",
               "inactiveCells": 1,
               "capacity": {
@@ -575,8 +581,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `can retrieve details of a locations on a landing`() {
-        webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${wingZ.id}")
+      fun `can retrieve details of a locations on a wing`() {
+        webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${wingZ.id}&latestHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -589,6 +595,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "code": "Z",
                 "pathHierarchy": "Z",
                 "locationType": "WING",
+                "level": 1,
                 "permanentlyInactive": false,
                 "capacity": {
                   "maxCapacity": 4,
@@ -614,6 +621,22 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "key": "MDI-Z",
                 "isResidential": true
               },
+              "latestHistory": [
+                {
+                  "attribute": "Comments",
+                  "newValue": "A New Comment",
+                  "amendedBy": "A_TEST_USER"
+                }
+              ],
+              "topLevelLocationType": "Wings",
+               "locationHierarchy": [
+                  {
+                    "prisonId": "MDI",
+                    "code": "Z",
+                    "pathHierarchy": "Z",
+                    "level": 1
+                  }
+                ],
               "subLocations":               
               [
                 {
@@ -621,6 +644,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "code": "1",
                 "pathHierarchy": "Z-1",
                 "locationType": "LANDING",
+                "level": 2,
+                "leafLevel": false,
                 "active": true,
                 "key": "MDI-Z-1",
                 "inactiveCells": 0,
@@ -646,6 +671,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "code": "2",
                   "pathHierarchy": "Z-2",
                   "locationType": "LANDING",
+                  "level": 2,
                   "accommodationTypes":[],
                   "inactiveCells": 0,
                   "capacity": {
@@ -661,6 +687,125 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "isResidential": true,
                   "key": "MDI-Z-2"
               }
+            ]
+          }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of a locations on a landing`() {
+        webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${landing1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+           {
+              "topLevelLocationType": "Wings",
+              "parentLocation": {
+                "prisonId": "MDI",
+                "code": "1",
+                "pathHierarchy": "Z-1",
+                "locationType": "LANDING",
+                "level": 2,
+                "permanentlyInactive": false,
+                "capacity": {
+                  "maxCapacity": 4,
+                  "workingCapacity": 4
+                },
+                "certification": {
+                  "certified": true
+                },
+                "accommodationTypes": [
+                  "NORMAL_ACCOMMODATION"
+                ],
+                "specialistCellTypes": [
+                  "WHEELCHAIR_ACCESSIBLE"
+                ],
+                "usedFor": [
+                  "STANDARD_ACCOMMODATION"
+                ],
+                
+                "status": "ACTIVE",
+                "active": true,
+                "inactiveCells": 0,
+                "key": "MDI-Z-1"
+              },
+               "locationHierarchy": [
+                  {
+                    "prisonId": "MDI",
+                    "code": "Z",
+                    "type": "WING",
+                    "pathHierarchy": "Z",
+                    "level": 1
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "1",
+                    "type": "LANDING",
+                    "pathHierarchy": "Z-1",
+                    "level": 2
+                 }
+                ],
+              "subLocations":               
+              [
+                 {
+                    "prisonId": "MDI",
+                    "code": "001",
+                    "pathHierarchy": "Z-1-001",
+                    "locationType": "CELL",
+                    "leafLevel": true,
+                    "capacity": {
+                      "maxCapacity": 2,
+                      "workingCapacity": 2
+                    },
+                    "certification": {
+                      "certified": true,
+                      "capacityOfCertifiedCell": 2
+                    },
+                    "accommodationTypes": [
+                      "NORMAL_ACCOMMODATION"
+                    ],
+                    "usedFor": [
+                      "STANDARD_ACCOMMODATION"
+                    ],
+                    "status": "ACTIVE",
+                    "active": true,
+                    "level": 3,
+                    "key": "MDI-Z-1-001"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "002",
+                    "pathHierarchy": "Z-1-002",
+                    "locationType": "CELL",
+                    "leafLevel": true,
+                    "capacity": {
+                      "maxCapacity": 2,
+                      "workingCapacity": 2
+                    },
+                    "certification": {
+                      "certified": true,
+                      "capacityOfCertifiedCell": 2
+                    },
+                    "accommodationTypes": [
+                      "NORMAL_ACCOMMODATION"
+                    ],
+                    "specialistCellTypes": [
+                      "WHEELCHAIR_ACCESSIBLE"
+                    ],
+                    "usedFor": [
+                      "STANDARD_ACCOMMODATION"
+                    ],
+                    "status": "ACTIVE",
+                    "active": true,
+                    "level": 3,
+                    "inactiveCells": 0,
+                    "key": "MDI-Z-1-002"
+                  }
             ]
           }
           """,
