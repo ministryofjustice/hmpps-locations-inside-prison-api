@@ -60,7 +60,7 @@ class LocationService(
   private val signedOperationCapacityRepository: PrisonSignedOperationCapacityRepository,
   private val locationHistoryRepository: LocationHistoryRepository,
   private val cellLocationRepository: CellLocationRepository,
-  private val prisonerSearchService: PrisonerSearchService,
+  private val prisonerLocationService: PrisonerLocationService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
@@ -281,7 +281,7 @@ class LocationService(
       throw ValidationException("Cannot change the capacity a permanently deactivated location")
     }
 
-    val prisoners = prisonersInLocations(locCapChange).flatMap { it.value }
+    val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
     if (maxCapacity < prisoners.size) {
       throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})")
     }
@@ -535,22 +535,6 @@ class LocationService(
     return locationToConvert.toDto(includeParent = true)
   }
 
-  private fun checkForPrisonersInLocation(location: Location) {
-    val locationsWithPrisoners = prisonersInLocations(location)
-    if (locationsWithPrisoners.isNotEmpty()) {
-      throw LocationContainsPrisonersException(locationsWithPrisoners)
-    }
-  }
-
-  private fun prisonersInLocations(location: Location): Map<String, List<Prisoner>> {
-    val locationsToCheck = location.cellLocations().map { it.getPathHierarchy() }.sorted()
-    return if (locationsToCheck.isNotEmpty()) {
-      prisonerSearchService.findPrisonersInLocations(location.prisonId, locationsToCheck)
-    } else {
-      mapOf()
-    }
-  }
-
   private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =
     if (parentLocation != null) {
       parentLocation.getPathHierarchy() + "-"
@@ -649,11 +633,18 @@ class LocationService(
     }
 
     return (
-      startLocation?.findAllLeafLocations() ?: cellLocationRepository.findAllByPrisonIdAndActiveIsFalse(prisonId)
+      startLocation?.findAllLeafLocations() ?: cellLocationRepository.findAllByPrisonIdAndActive(prisonId, false)
       )
       .filter { !it.isPermanentlyDeactivated() && !it.isActiveAndAllParentsActive() }
       .map { it.toDto() }
       .sortedWith(NaturalOrderComparator())
+  }
+
+  private fun checkForPrisonersInLocation(location: Location) {
+    val locationsWithPrisoners = prisonerLocationService.prisonersInLocations(location).groupBy { it.cellLocation }
+    if (locationsWithPrisoners.isNotEmpty()) {
+      throw LocationContainsPrisonersException(locationsWithPrisoners)
+    }
   }
 }
 

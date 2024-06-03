@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import io.swagger.v3.oas.annotations.media.Schema
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -23,7 +25,7 @@ class PrisonerSearchService(
   fun findPrisonersInLocations(
     prisonId: String,
     locations: List<String>,
-  ): Map<String, List<Prisoner>> {
+  ): List<Prisoner> {
     val searchTerm = locations.sorted().joinToString(",")
     val requestBody = AttributeSearch(
       queries = listOf(
@@ -46,7 +48,7 @@ class PrisonerSearchService(
       .retrieve()
       .bodyToMono<SearchResult>()
       .block()!!
-      .content.groupBy { it.cellLocation }
+      .content
 
     return prisonersInLocations
   }
@@ -56,12 +58,20 @@ data class SearchResult(
   val content: List<Prisoner>,
 )
 
+@Schema(description = "Prisoner Information")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class Prisoner(
+  @Schema(description = "Prisoner Information", example = "A1234AA", required = true)
   val prisonerNumber: String,
+  @Schema(description = "Prisoner first name", example = "Dave", required = true)
   val firstName: String,
+  @Schema(description = "Prisoner last name", example = "Jones", required = true)
   val lastName: String,
+  @Schema(description = "Prison ID", example = "LEI", required = false)
   val prisonId: String?,
+  @Schema(description = "Prison Name", example = "HMP Leeds", required = false)
   val prisonName: String?,
+  @Schema(description = "Cell location of the prisoner", example = "1-1-001", required = true)
   val cellLocation: String,
 )
 
