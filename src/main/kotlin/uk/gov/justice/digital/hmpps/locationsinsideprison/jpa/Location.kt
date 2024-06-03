@@ -65,7 +65,7 @@ abstract class Location(
   private var active: Boolean = true,
   private var archived: Boolean = false,
   private var archivedReason: String? = null,
-  open var deactivatedDate: LocalDate? = null,
+  open var deactivatedDate: LocalDateTime? = null,
   @Enumerated(EnumType.STRING)
   open var deactivatedReason: DeactivatedReason? = null,
   open var proposedReactivationDate: LocalDate? = null,
@@ -400,7 +400,7 @@ abstract class Location(
       if (upsert.isDeactivated()) {
         temporarilyDeactivate(
           deactivatedReason = upsert.deactivationReason!!.mapsTo(),
-          deactivatedDate = upsert.deactivatedDate ?: LocalDate.now(clock),
+          deactivatedDate = upsert.deactivatedDate?.atStartOfDay() ?: LocalDateTime.now(clock),
           proposedReactivationDate = upsert.proposedReactivationDate,
           userOrSystemInContext = updatedBy,
           clock = clock,
@@ -413,7 +413,7 @@ abstract class Location(
 
   open fun temporarilyDeactivate(
     deactivatedReason: DeactivatedReason,
-    deactivatedDate: LocalDate,
+    deactivatedDate: LocalDateTime,
     planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
@@ -536,7 +536,7 @@ abstract class Location(
 
   open fun permanentlyDeactivate(
     reason: String,
-    deactivatedDate: LocalDate,
+    deactivatedDate: LocalDateTime,
     userOrSystemInContext: String,
     clock: Clock,
   ) {
@@ -653,7 +653,7 @@ abstract class Location(
       comments = comments,
       orderWithinParentLocation = orderWithinParentLocation,
       active = isActiveAndAllParentsActive(),
-      deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
+      deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate?.toLocalDate(),
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,

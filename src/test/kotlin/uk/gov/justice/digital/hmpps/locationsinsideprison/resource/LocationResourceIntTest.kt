@@ -36,6 +36,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import java.time.Clock
 import java.time.LocalDate
+import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
@@ -219,7 +220,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "code": "ADJUDICATION",
                     "pathHierarchy": "ADJUDICATION",
                     "locationType": "ADJUDICATION_ROOM",
-                    "isResidential": false,
                     "key": "MDI-ADJUDICATION"
                   },
                   {
@@ -1102,7 +1102,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "active": false,
                   "deactivatedByParent": false,
-                  "deactivatedDate": "2023-12-05",
+                  "deactivatedDate": "2023-12-05T12:34:56",
                   "deactivatedReason": "DAMAGED",
                   "isResidential": true,
                   "key": "MDI-B-A-001"
@@ -1219,7 +1219,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "status":"INACTIVE",
                 "active":false,
                 "deactivatedByParent":false,
-                "deactivatedDate":"2023-12-05",
+                "deactivatedDate":"2023-12-05T12:34:56",
                 "key":"MDI-Z-1-003",
                 "permanentlyInactiveReason": "Demolished"
                 }]
@@ -2020,7 +2020,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       },
                       "active": false,
                       "deactivatedByParent": false,
-                      "deactivatedDate": "2023-12-05",
+                      "deactivatedDate": "2023-12-05T12:34:56",
                       "deactivatedReason": "DAMAGED",
                       "childLocations": [],
                       "isResidential": true,
@@ -2450,8 +2450,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       fun `can deactivate a location`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        val now = LocalDate.now(clock)
-        val proposedReactivationDate = now.plusMonths(1)
+        val now = LocalDateTime.now(clock)
+        val proposedReactivationDate = now.plusMonths(1).toLocalDate()
         webTestClient.put().uri("/locations/${cell1.id}/deactivate/permanent")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -2613,7 +2613,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       fun `can update a deactivated location`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        val now = LocalDate.now(clock)
+        val now = LocalDateTime.now(clock)
         webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -2621,7 +2621,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        val proposedReactivationDate = now.plusMonths(1)
+        val proposedReactivationDate = now.plusMonths(1).toLocalDate()
         webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")

@@ -15,7 +15,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME
-import java.time.LocalDate
 import java.time.LocalDateTime
 
 fun buildResidentialLocation(
@@ -66,7 +65,7 @@ fun buildCell(
       null
     },
     deactivatedDate = if (!active) {
-      LocalDate.now(clock)
+      LocalDateTime.now(clock)
     } else {
       null
     },
@@ -75,7 +74,7 @@ fun buildCell(
   specialistCellType?.let { cell.addSpecialistCellType(it, EXPECTED_USERNAME, clock) }
   cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, EXPECTED_USERNAME, clock)
   if (archived) {
-    cell.permanentlyDeactivate("Demolished", LocalDate.now(clock), EXPECTED_USERNAME, clock)
+    cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), EXPECTED_USERNAME, clock)
   }
   return cell
 }

@@ -91,8 +91,8 @@ data class Location(
   @Schema(description = "Indicates the location in inactive as a parent is deactivated", example = "false", required = true)
   val deactivatedByParent: Boolean = false,
 
-  @Schema(description = "Date the location was deactivated", example = "2023-01-23", required = false)
-  val deactivatedDate: LocalDate? = null,
+  @Schema(description = "Date the location was deactivated", example = "2023-01-23T12:23:00", required = false)
+  val deactivatedDate: LocalDateTime? = null,
 
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,

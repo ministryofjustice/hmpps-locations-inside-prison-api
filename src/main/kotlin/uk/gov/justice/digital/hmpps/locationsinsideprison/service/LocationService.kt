@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -95,8 +96,8 @@ class LocationService(
       .map { it.toDto() }
       .sortedBy { it.getKey() }
 
-  fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LocationDTO> {
-    return locationRepository.findAll(pageable).map(Location::toDto)
+  fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LegacyLocation> {
+    return locationRepository.findAll(pageable).map(Location::toLegacyDto)
   }
   fun getLocationByPrisonAndLocationType(prisonId: String, locationType: LocationType): List<LocationDTO> =
     locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId, locationType)
@@ -354,7 +355,7 @@ class LocationService(
 
     locationToDeactivate.temporarilyDeactivate(
       deactivatedReason = deactivatedReason,
-      deactivatedDate = LocalDate.now(clock),
+      deactivatedDate = LocalDateTime.now(clock),
       proposedReactivationDate = proposedReactivationDate,
       planetFmReference = planetFmReference,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
@@ -421,7 +422,7 @@ class LocationService(
     checkForPrisonersInLocation(locationToArchive)
 
     locationToArchive.permanentlyDeactivate(
-      deactivatedDate = LocalDate.now(clock),
+      deactivatedDate = LocalDateTime.now(clock),
       reason = reasonForPermanentDeactivation,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
