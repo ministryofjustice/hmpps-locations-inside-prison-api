@@ -635,7 +635,7 @@ class LocationService(
     return (
       startLocation?.findAllLeafLocations() ?: cellLocationRepository.findAllByPrisonIdAndActive(prisonId, false)
       )
-      .filter { !it.isPermanentlyDeactivated() && !it.isActiveAndAllParentsActive() }
+      .filter { it.isTemporarilyDeactivated() }
       .map { it.toDto() }
       .sortedWith(NaturalOrderComparator())
   }
