@@ -125,7 +125,7 @@ interface NomisMigrationRequest {
 
     if (isDeactivated()) {
       location.deactivatedReason = deactivationReason!!.mapsTo()
-      location.deactivatedDate = deactivatedDate
+      location.deactivatedDate = deactivatedDate?.atStartOfDay()
       location.proposedReactivationDate = proposedReactivationDate
     }
 

@@ -7,5 +7,5 @@ import java.util.UUID
 
 @Repository
 interface LocationHistoryRepository : JpaRepository<LocationHistory, Long> {
-  fun findAllByLocationIdOrderByAmendedDate(locationId: UUID): List<LocationHistory>
+  fun findTop10ByLocationIdOrderByAmendedDateDesc(locationId: UUID): List<LocationHistory>
 }

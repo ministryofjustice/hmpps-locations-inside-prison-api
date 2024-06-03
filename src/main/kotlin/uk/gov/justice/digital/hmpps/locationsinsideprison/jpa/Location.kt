@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
@@ -24,6 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import java.io.Serializable
 import java.time.Clock
@@ -65,7 +68,7 @@ abstract class Location(
   private var active: Boolean = true,
   private var archived: Boolean = false,
   private var archivedReason: String? = null,
-  open var deactivatedDate: LocalDate? = null,
+  open var deactivatedDate: LocalDateTime? = null,
   @Enumerated(EnumType.STRING)
   open var deactivatedReason: DeactivatedReason? = null,
   open var proposedReactivationDate: LocalDate? = null,
@@ -193,6 +196,43 @@ abstract class Location(
     return getParent()?.findTopLevelLocation() ?: this
   }
 
+  private fun getLevel(): Int {
+    fun goUp(location: Location?, level: Int): Int {
+      if (location == null) {
+        return level
+      }
+      return goUp(location.getParent(), level.inc())
+    }
+
+    return goUp(this, 0)
+  }
+
+  fun getHierarchy(): List<LocationSummary> {
+    val locationSummary = mutableListOf<LocationSummary>()
+
+    fun goUp(location: Location?) {
+      if (location != null) {
+        locationSummary.add(location.getLocationSummary())
+        goUp(location.parent)
+      }
+    }
+
+    goUp(this)
+    return locationSummary.sortedBy { it.level }
+  }
+
+  private fun getLocationSummary(): LocationSummary {
+    return LocationSummary(
+      id = id,
+      code = getCode(),
+      type = getDerivedLocationType(),
+      pathHierarchy = getPathHierarchy(),
+      prisonId = prisonId,
+      localName = localName?.capitalizeWords(),
+      level = getLevel(),
+    )
+  }
+
   private fun updateHierarchicalPath() {
     pathHierarchy = getHierarchicalPath()
     for (childLocation in childLocations) {
@@ -283,10 +323,12 @@ abstract class Location(
       prisonId = prisonId,
       parentId = getParent()?.id,
       topLevelId = findTopLevelLocation().id!!,
+      level = getLevel(),
+      leafLevel = findSubLocations().isEmpty(),
       lastModifiedDate = whenUpdated,
       lastModifiedBy = updatedBy,
       localName = if (!isCell()) {
-        localName
+        localName?.capitalizeWords()
       } else {
         null
       },
@@ -400,7 +442,7 @@ abstract class Location(
       if (upsert.isDeactivated()) {
         temporarilyDeactivate(
           deactivatedReason = upsert.deactivationReason!!.mapsTo(),
-          deactivatedDate = upsert.deactivatedDate ?: LocalDate.now(clock),
+          deactivatedDate = upsert.deactivatedDate?.atStartOfDay() ?: LocalDateTime.now(clock),
           proposedReactivationDate = upsert.proposedReactivationDate,
           userOrSystemInContext = updatedBy,
           clock = clock,
@@ -413,7 +455,7 @@ abstract class Location(
 
   open fun temporarilyDeactivate(
     deactivatedReason: DeactivatedReason,
-    deactivatedDate: LocalDate,
+    deactivatedDate: LocalDateTime,
     planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
@@ -536,7 +578,7 @@ abstract class Location(
 
   open fun permanentlyDeactivate(
     reason: String,
-    deactivatedDate: LocalDate,
+    deactivatedDate: LocalDateTime,
     userOrSystemInContext: String,
     clock: Clock,
   ) {
@@ -639,6 +681,8 @@ abstract class Location(
   fun isCell() = locationType == LocationType.CELL
   fun isWingLandingSpur() = locationType in listOf(LocationType.WING, LocationType.LANDING, LocationType.SPUR)
 
+  fun isResidentialType() = locationType in ResidentialLocationType.entries.map { it.baseType }
+
   open fun toLegacyDto(includeHistory: Boolean = false): LegacyLocation {
     return LegacyLocation(
       id = id!!,
@@ -653,10 +697,29 @@ abstract class Location(
       comments = comments,
       orderWithinParentLocation = orderWithinParentLocation,
       active = isActiveAndAllParentsActive(),
-      deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
+      deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate?.toLocalDate(),
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
     )
   }
 }
+
+@Schema(description = "Location Hierarchy Summary")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class LocationSummary(
+  @Schema(description = "ID of location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
+  val id: UUID? = null,
+  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  val prisonId: String,
+  @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
+  val code: String,
+  @Schema(description = "Location type", example = "WING", required = true)
+  val type: LocationType,
+  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  val localName: String? = null,
+  @Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
+  val pathHierarchy: String? = null,
+  @Schema(description = "Current Level within hierarchy, starts at 1, e.g Wing = 1", examples = ["1", "2", "3"], required = true)
+  val level: Int,
+)

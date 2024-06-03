@@ -31,6 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
@@ -210,7 +211,7 @@ class LocationResource(
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @Operation(
-    summary = "Return archived locations for this prison",
+    summary = "Return residential archived locations for this prison",
     description = "Requires role VIEW_LOCATIONS",
     responses = [
       ApiResponse(
@@ -239,6 +240,38 @@ class LocationResource(
     @PathVariable
     prisonId: String,
   ) = locationService.getArchivedLocations(prisonId)
+
+  @GetMapping("/prison/{prisonId}/inactive-cells")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return residential inactive cells for this prison",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns inactive locations",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getInactiveLocationsForPrison(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
+    prisonId: String,
+    @Schema(description = "location ID below which all inactive cells will be returned", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = false)
+    @RequestParam(name = "parentLocationId", required = false)
+    parentLocationId: UUID? = null,
+  ) = locationService.getResidentialInactiveLocations(prisonId, parentLocationId)
 
   @GetMapping("/residential-summary/{prisonId}")
   @ResponseStatus(HttpStatus.OK)
@@ -278,7 +311,15 @@ class LocationResource(
     @Schema(description = "Parent location path hierarchy, can be a Wing code, or landing code", example = "A-1", required = false)
     @RequestParam(name = "parentPathHierarchy", required = false)
     parentPathHierarchy: String? = null,
-  ): ResidentialSummary = locationService.getResidentialLocations(prisonId, parentLocationId, parentPathHierarchy)
+    @Schema(description = "Include latest history", required = false, defaultValue = "false")
+    @RequestParam(name = "latestHistory", required = false, defaultValue = "false")
+    latestHistory: Boolean = false,
+  ): ResidentialSummary = locationService.getResidentialLocations(
+    prisonId = prisonId,
+    parentLocationId = parentLocationId,
+    parentPathHierarchy = parentPathHierarchy,
+    returnLatestHistory = latestHistory,
+  )
 
   @GetMapping("")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
@@ -313,7 +354,7 @@ class LocationResource(
     @ParameterObject
     @PageableDefault(page = 0, size = 20, sort = ["id"], direction = Sort.Direction.ASC)
     pageable: Pageable,
-  ): Page<LocationDTO> {
+  ): Page<LegacyLocation> {
     if (pageable.pageSize > 200) {
       throw ValidationException("Page size must be 200 or less")
     }

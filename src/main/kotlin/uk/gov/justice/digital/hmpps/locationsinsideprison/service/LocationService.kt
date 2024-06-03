@@ -12,9 +12,11 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -25,11 +27,13 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationHistoryRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
@@ -54,8 +58,9 @@ class LocationService(
   private val nonResidentialLocationRepository: NonResidentialLocationRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val signedOperationCapacityRepository: PrisonSignedOperationCapacityRepository,
+  private val locationHistoryRepository: LocationHistoryRepository,
   private val cellLocationRepository: CellLocationRepository,
-  private val prisonerSearchService: PrisonerSearchService,
+  private val prisonerLocationService: PrisonerLocationService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
@@ -95,8 +100,8 @@ class LocationService(
       .map { it.toDto() }
       .sortedBy { it.getKey() }
 
-  fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LocationDTO> {
-    return locationRepository.findAll(pageable).map(Location::toDto)
+  fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LegacyLocation> {
+    return locationRepository.findAll(pageable).map(Location::toLegacyDto)
   }
   fun getLocationByPrisonAndLocationType(prisonId: String, locationType: LocationType): List<LocationDTO> =
     locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId, locationType)
@@ -276,7 +281,7 @@ class LocationService(
       throw ValidationException("Cannot change the capacity a permanently deactivated location")
     }
 
-    val prisoners = prisonersInLocations(locCapChange).flatMap { it.value }
+    val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
     if (maxCapacity < prisoners.size) {
       throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})")
     }
@@ -354,7 +359,7 @@ class LocationService(
 
     locationToDeactivate.temporarilyDeactivate(
       deactivatedReason = deactivatedReason,
-      deactivatedDate = LocalDate.now(clock),
+      deactivatedDate = LocalDateTime.now(clock),
       proposedReactivationDate = proposedReactivationDate,
       planetFmReference = planetFmReference,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
@@ -421,7 +426,7 @@ class LocationService(
     checkForPrisonersInLocation(locationToArchive)
 
     locationToArchive.permanentlyDeactivate(
-      deactivatedDate = LocalDate.now(clock),
+      deactivatedDate = LocalDateTime.now(clock),
       reason = reasonForPermanentDeactivation,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
@@ -530,22 +535,6 @@ class LocationService(
     return locationToConvert.toDto(includeParent = true)
   }
 
-  private fun checkForPrisonersInLocation(location: Location) {
-    val locationsWithPrisoners = prisonersInLocations(location)
-    if (locationsWithPrisoners.isNotEmpty()) {
-      throw LocationContainsPrisonersException(locationsWithPrisoners)
-    }
-  }
-
-  private fun prisonersInLocations(location: Location): Map<String, List<Prisoner>> {
-    val locationsToCheck = location.cellLocations().map { it.getPathHierarchy() }.sorted()
-    return if (locationsToCheck.isNotEmpty()) {
-      prisonerSearchService.findPrisonersInLocations(location.prisonId, locationsToCheck)
-    } else {
-      mapOf()
-    }
-  }
-
   private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =
     if (parentLocation != null) {
       parentLocation.getPathHierarchy() + "-"
@@ -574,8 +563,9 @@ class LocationService(
     prisonId: String,
     parentLocationId: UUID? = null,
     parentPathHierarchy: String? = null,
+    returnLatestHistory: Boolean = false,
   ): ResidentialSummary {
-    val parent =
+    val currentLocation =
       if (parentLocationId != null) {
         residentialLocationRepository.findById(parentLocationId).getOrNull()
           ?: throw LocationNotFoundException(parentLocationId.toString())
@@ -586,22 +576,32 @@ class LocationService(
         null
       }
 
-    val parentId = parent?.id
-    val locations =
-      (
-        if (parentId != null) {
-          residentialLocationRepository.findAllByPrisonIdAndParentId(prisonId, parentId)
-        } else {
-          residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
-        }
-        )
-        .filter { !it.isPermanentlyDeactivated() }
-        .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isWingLandingSpur() }
-        .map { it.toDto(countInactiveCells = true) }
-        .sortedWith(NaturalOrderComparator())
+    val id = currentLocation?.id
+    val locations = (
+      if (id != null) {
+        residentialLocationRepository.findAllByPrisonIdAndParentId(prisonId, id)
+      } else {
+        residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+      }
+      )
+      .filter { !it.isPermanentlyDeactivated() }
+      .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isResidentialType() }
+      .map { it.toDto(countInactiveCells = true) }
+      .sortedWith(NaturalOrderComparator())
 
+    val latestHistory = if (id != null && returnLatestHistory) {
+      locationHistoryRepository.findTop10ByLocationIdOrderByAmendedDateDesc(id).map { it.toDto() }
+    } else {
+      null
+    }
+    val subLocationTypes = calculateSubLocationDescription(locations)
     return ResidentialSummary(
-      prisonSummary = if (parentId == null) {
+      topLevelLocationType = if (currentLocation == null) {
+        subLocationTypes
+      } else {
+        currentLocation.getHierarchy()[0].type.description + "s"
+      },
+      prisonSummary = if (id == null) {
         PrisonSummary(
           workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
           maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
@@ -610,9 +610,11 @@ class LocationService(
       } else {
         null
       },
-      parentLocation = parent?.toDto(countInactiveCells = true),
+      locationHierarchy = currentLocation?.getHierarchy(),
+      parentLocation = currentLocation?.toDto(countInactiveCells = true),
+      latestHistory = latestHistory,
       subLocations = locations,
-      subLocationName = calculateSubLocationDescription(locations),
+      subLocationName = subLocationTypes,
     )
   }
 
@@ -622,6 +624,28 @@ class LocationService(
   }
 
   fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }
+
+  fun getResidentialInactiveLocations(prisonId: String, parentLocationId: UUID?): List<LocationDTO> {
+    val startLocation = parentLocationId?.let {
+      residentialLocationRepository.findById(parentLocationId).getOrNull() ?: throw LocationNotFoundException(
+        parentLocationId.toString(),
+      )
+    }
+
+    return (
+      startLocation?.findAllLeafLocations() ?: cellLocationRepository.findAllByPrisonIdAndActive(prisonId, false)
+      )
+      .filter { !it.isPermanentlyDeactivated() && !it.isActiveAndAllParentsActive() }
+      .map { it.toDto() }
+      .sortedWith(NaturalOrderComparator())
+  }
+
+  private fun checkForPrisonersInLocation(location: Location) {
+    val locationsWithPrisoners = prisonerLocationService.prisonersInLocations(location).groupBy { it.cellLocation }
+    if (locationsWithPrisoners.isNotEmpty()) {
+      throw LocationContainsPrisonersException(locationsWithPrisoners)
+    }
+  }
 }
 
 @Schema(description = "Residential Summary")
@@ -629,12 +653,18 @@ class LocationService(
 data class ResidentialSummary(
   @Schema(description = "Prison summary for top level view", required = false)
   val prisonSummary: PrisonSummary? = null,
-  @Schema(description = "The description of the sub locations", required = true, example = "Wings")
+  @Schema(description = "The top level type of locations", required = true, example = "Wings")
+  val topLevelLocationType: String,
+  @Schema(description = "The description of the type of sub locations most common", required = true, examples = ["Wings", "Landings", "Spurs", "Cells"])
   val subLocationName: String,
+  @Schema(description = "Parent locations, top to bottom", required = true)
+  val locationHierarchy: List<LocationSummary>? = null,
   @Schema(description = "The current parent location (e.g Wing or Landing) details")
   val parentLocation: LocationDTO? = null,
   @Schema(description = "All residential locations under this parent")
   val subLocations: List<LocationDTO>,
+  @Schema(description = "The latest history for this location")
+  val latestHistory: List<ChangeHistory>? = null,
 )
 
 @Schema(description = "Prison Summary Information")

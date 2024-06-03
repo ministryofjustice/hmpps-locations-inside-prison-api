@@ -930,7 +930,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "HEALTHCARE_INPATIENTS",
-                    "description": "Health care in-patients"
+                    "description": "Healthcare inpatients"
                   },
                   {
                     "key": "CARE_AND_SEPARATION",
@@ -1106,7 +1106,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "PERSONALITY_DISORDER",
-                    "description": "Personality disorder"
+                    "description": "Personality disorder unit"
                   },
                   {
                     "key": "THERAPEUTIC_COMMUNITY",
@@ -1114,11 +1114,11 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "PIPE",
-                    "description": "PIPE"
+                    "description": "Psychologically informed planned environment (PIPE)"
                   },
                   {
                     "key": "SUB_MISUSE_DRUG_RECOVERY",
-                    "description": "Substance misuse / Drug recovery / ISFL"
+                    "description": "Drug recovery / Incentivised substance free living (ISFL)"
                   },
                   {
                     "key": "VULNERABLE_PRISONERS",
@@ -1142,7 +1142,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },    
                   {
                     "key": "HIGH_SECURITY",
-                    "description": "High security"
+                    "description": "High security unit"
                   }, 
                   {
                     "key": "CLOSE_SUPERVISION_CENTRE",
@@ -1154,7 +1154,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "IPP_LONG_TERM_SENTENCES",
-                    "description": "IPP / Long term sentences"
+                    "description": "Long-term sentences / Imprisonment for public protection (IPP)"
                   }
                 ]
               }
