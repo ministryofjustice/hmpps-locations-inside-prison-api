@@ -601,7 +601,7 @@ class LocationService(
       }
       )
       .filter { !it.isPermanentlyDeactivated() }
-      .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isWingLandingSpur() }
+      .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isResidentialType() }
       .map { it.toDto(countInactiveCells = true) }
       .sortedWith(NaturalOrderComparator())
 
@@ -640,6 +640,21 @@ class LocationService(
   }
 
   fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }
+
+  fun getResidentialInactiveLocations(prisonId: String, parentLocationId: UUID?): List<LocationDTO> {
+    val startLocation = parentLocationId?.let {
+      residentialLocationRepository.findById(parentLocationId).getOrNull() ?: throw LocationNotFoundException(
+        parentLocationId.toString(),
+      )
+    }
+
+    return (
+      startLocation?.findAllLeafLocations() ?: cellLocationRepository.findAllByPrisonIdAndActiveIsFalse(prisonId)
+      )
+      .filter { !it.isPermanentlyDeactivated() && !it.isActiveAndAllParentsActive() }
+      .map { it.toDto() }
+      .sortedWith(NaturalOrderComparator())
+  }
 }
 
 @Schema(description = "Residential Summary")
@@ -649,16 +664,16 @@ data class ResidentialSummary(
   val prisonSummary: PrisonSummary? = null,
   @Schema(description = "The top level type of locations", required = true, example = "Wings")
   val topLevelLocationType: String,
-  @Schema(description = "Parent locations, top to bottom", required = true)
-  val locationHierarchy: List<LocationSummary>? = null,
   @Schema(description = "The description of the type of sub locations most common", required = true, examples = ["Wings", "Landings", "Spurs", "Cells"])
   val subLocationName: String,
+  @Schema(description = "Parent locations, top to bottom", required = true)
+  val locationHierarchy: List<LocationSummary>? = null,
   @Schema(description = "The current parent location (e.g Wing or Landing) details")
   val parentLocation: LocationDTO? = null,
-  @Schema(description = "The latest history for this location")
-  val latestHistory: List<ChangeHistory>? = null,
   @Schema(description = "All residential locations under this parent")
   val subLocations: List<LocationDTO>,
+  @Schema(description = "The latest history for this location")
+  val latestHistory: List<ChangeHistory>? = null,
 )
 
 @Schema(description = "Prison Summary Information")

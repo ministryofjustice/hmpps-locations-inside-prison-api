@@ -6,4 +6,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import java.util.UUID
 
 @Repository
-interface CellLocationRepository : JpaRepository<Cell, UUID>
+interface CellLocationRepository : JpaRepository<Cell, UUID> {
+  fun findAllByPrisonIdAndActiveIsFalse(prisonId: String): List<Cell>
+}

@@ -57,11 +57,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   lateinit var repository: LocationRepository
   lateinit var cell1: Cell
   lateinit var cell2: Cell
-  lateinit var inactiveCell: Cell
+  lateinit var inactiveCellB3001: Cell
   lateinit var archivedCell: Cell
-  lateinit var landing1: ResidentialLocationJPA
-  lateinit var landing2: ResidentialLocationJPA
-  lateinit var landing3: ResidentialLocationJPA
+  lateinit var landingZ1: ResidentialLocationJPA
+  lateinit var landingZ2: ResidentialLocationJPA
+  lateinit var landingB3: ResidentialLocationJPA
   lateinit var wingZ: ResidentialLocationJPA
   lateinit var wingB: ResidentialLocationJPA
   lateinit var visitRoom: NonResidentialLocationJPA
@@ -84,19 +84,19 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         locationType = LocationType.WING,
       ),
     )
-    landing1 = repository.save(
+    landingZ1 = repository.save(
       buildResidentialLocation(
         pathHierarchy = "Z-1",
         locationType = LocationType.LANDING,
       ),
     )
-    landing2 = repository.save(
+    landingZ2 = repository.save(
       buildResidentialLocation(
         pathHierarchy = "Z-2",
         locationType = LocationType.LANDING,
       ),
     )
-    landing3 = repository.save(
+    landingB3 = repository.save(
       buildResidentialLocation(
         pathHierarchy = "B-A",
         locationType = LocationType.LANDING,
@@ -118,9 +118,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         specialistCellType = SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
       ),
     )
-    inactiveCell = repository.save(
+    inactiveCellB3001 = repository.save(
       buildCell(
-        pathHierarchy = "B-1-001",
+        pathHierarchy = "B-A-001",
         active = false,
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
@@ -154,15 +154,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     )
     wingZ.addChildLocation(visitRoom)
       .addChildLocation(
-        landing1
+        landingZ1
           .addChildLocation(cell1)
           .addChildLocation(cell2),
       )
-      .addChildLocation(landing2)
+      .addChildLocation(landingZ2)
 
     wingZ.updateComments("A New Comment", "Older user", clock)
 
-    wingB.addChildLocation(landing3.addChildLocation(inactiveCell))
+    wingB.addChildLocation(landingB3.addChildLocation(inactiveCellB3001))
     repository.save(wingZ)
     repository.save(wingB)
   }
@@ -696,7 +696,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a locations on a landing`() {
-        webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${landing1.id}")
+        webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${landingZ1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -1375,6 +1375,191 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("GET /locations/prison/{prisonId}/inactive-cells")
+  @Nested
+  inner class ViewInactiveCellsTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/${wingB.prisonId}/inactive-cells")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/${wingB.prisonId}/inactive-cells")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/${wingB.prisonId}/inactive-cells")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve details of an inactive cells for establishment`() {
+        webTestClient.get().uri("/locations/prison/${wingB.prisonId}/inactive-cells")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+[
+                {
+                  "id": "${inactiveCellB3001.id}",
+                  "prisonId": "MDI",
+                  "code": "001",
+                  "pathHierarchy": "B-A-001",
+                  "locationType": "CELL",
+                  "permanentlyInactive": false,
+                  "capacity": {
+                    "maxCapacity": 2,
+                    "workingCapacity": 2
+                  },
+                  "certification": {
+                    "certified": true,
+                    "capacityOfCertifiedCell": 2
+                  },
+                  "status": "INACTIVE",
+                  "active": false,
+                  "deactivatedByParent": false,
+                  "deactivatedDate": "2023-12-05T12:34:56",
+                  "deactivatedReason": "DAMAGED",
+                  "topLevelId": "${wingB.id}",
+                  "level": 3,
+                  "leafLevel": true,
+                  "parentId": "${landingB3.id}",
+                  "lastModifiedBy": "A_TEST_USER",
+                  "lastModifiedDate": "2023-12-05T12:34:56",
+                  "key": "MDI-B-A-001",
+                  "isResidential": true
+                }
+              ]
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of an inactive cells for different wing`() {
+        webTestClient.get().uri("/locations/prison/${wingB.prisonId}/inactive-cells?parentLocationId=${wingZ.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                [ ]
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of an inactive cells for wing`() {
+        webTestClient.get().uri("/locations/prison/${wingB.prisonId}/inactive-cells?parentLocationId=${wingB.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+[
+                {
+                  "id": "${inactiveCellB3001.id}",
+                  "prisonId": "MDI",
+                  "code": "001",
+                  "pathHierarchy": "B-A-001",
+                  "locationType": "CELL",
+                  "permanentlyInactive": false,
+                  "capacity": {
+                    "maxCapacity": 2,
+                    "workingCapacity": 2
+                  },
+                  "certification": {
+                    "certified": true,
+                    "capacityOfCertifiedCell": 2
+                  },
+                  "status": "INACTIVE",
+                  "active": false,
+                  "deactivatedByParent": false,
+                  "deactivatedDate": "2023-12-05T12:34:56",
+                  "deactivatedReason": "DAMAGED",
+                  "topLevelId": "${wingB.id}",
+                  "level": 3,
+                  "leafLevel": true,
+                  "parentId": "${landingB3.id}",
+                  "lastModifiedBy": "A_TEST_USER",
+                  "lastModifiedDate": "2023-12-05T12:34:56",
+                  "key": "MDI-B-A-001",
+                  "isResidential": true
+                }
+              ]
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of an inactive cells for landing`() {
+        webTestClient.get().uri("/locations/prison/${wingB.prisonId}/inactive-cells?parentLocationId=${landingB3.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              [
+                {
+                  "id": "${inactiveCellB3001.id}",
+                  "prisonId": "MDI",
+                  "code": "001",
+                  "pathHierarchy": "B-A-001",
+                  "locationType": "CELL",
+                  "permanentlyInactive": false,
+                  "capacity": {
+                    "maxCapacity": 2,
+                    "workingCapacity": 2
+                  },
+                  "certification": {
+                    "certified": true,
+                    "capacityOfCertifiedCell": 2
+                  },
+                  "status": "INACTIVE",
+                  "active": false,
+                  "deactivatedByParent": false,
+                  "deactivatedDate": "2023-12-05T12:34:56",
+                  "deactivatedReason": "DAMAGED",
+                  "topLevelId": "${wingB.id}",
+                  "level": 3,
+                  "leafLevel": true,
+                  "parentId": "${landingB3.id}",
+                  "lastModifiedBy": "A_TEST_USER",
+                  "lastModifiedDate": "2023-12-05T12:34:56",
+                  "key": "MDI-B-A-001",
+                  "isResidential": true
+                }
+              ]
+          """,
+            false,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
   @Nested
   inner class ViewLocationsByLocationTypeTest {
@@ -1625,7 +1810,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/locations/residential")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(createResidentialLocationRequest.copy(code = "001", parentId = landing1.id)))
+          .bodyValue(jsonString(createResidentialLocationRequest.copy(code = "001", parentId = landingZ1.id)))
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -1648,7 +1833,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/locations/residential")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(createResidentialLocationRequest.copy(parentId = landing1.id)))
+          .bodyValue(jsonString(createResidentialLocationRequest.copy(parentId = landingZ1.id)))
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(
@@ -1908,14 +2093,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class Security {
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.patch().uri("/locations/residential/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.patch().uri("/locations/residential/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeCode))
@@ -1925,7 +2110,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.patch().uri("/locations/residential/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeCode))
@@ -1935,7 +2120,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `access forbidden with right role, wrong scope`() {
-        webTestClient.patch().uri("/locations/residential/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeCode))
@@ -1948,7 +2133,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class Validation {
       @Test
       fun `access client error bad data`() {
-        webTestClient.patch().uri("/locations/residential/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"code": ""}""")
@@ -1971,7 +2156,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can update details of a locations code`() {
-        webTestClient.patch().uri("/locations/residential/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeCode))
@@ -2022,7 +2207,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update parent of a location`() {
-        webTestClient.patch().uri("/locations/residential/${landing1.id}")
+        webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(PatchResidentialLocationRequest(parentId = wingB.id)))
