@@ -681,6 +681,8 @@ abstract class Location(
   fun isCell() = locationType == LocationType.CELL
   fun isWingLandingSpur() = locationType in listOf(LocationType.WING, LocationType.LANDING, LocationType.SPUR)
 
+  fun isResidentialType() = locationType in ResidentialLocationType.entries.map { it.baseType }
+
   open fun toLegacyDto(includeHistory: Boolean = false): LegacyLocation {
     return LegacyLocation(
       id = id!!,

@@ -142,8 +142,9 @@ data class Location(
     return "$prisonId-$pathHierarchy"
   }
 
+  @JsonIgnore
   override fun getSortName(): String {
-    return localName?.capitalizeWords() ?: pathHierarchy
+    return "$prisonId-$pathHierarchy"
   }
 
   @Schema(description = "Indicates if the location is a residential location", example = "true", required = true)
