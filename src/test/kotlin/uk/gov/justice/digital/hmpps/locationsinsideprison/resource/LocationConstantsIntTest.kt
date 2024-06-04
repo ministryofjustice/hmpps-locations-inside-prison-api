@@ -1002,11 +1002,11 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "CONSTANT_SUPERVISION",
-                    "description": "Constant supervision cell"
+                    "description": "Constant Supervision Cell"
                   },
                   {
                     "key": "CSU",
-                    "description": "CSU cell"
+                    "description": "Case and separation unit cell"
                   },
                   {
                     "key": "DRY",
@@ -1017,20 +1017,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Escape list cell"
                   },
                   {
-                    "key": "FIRE_RESISTANT",
-                    "description": "Fire resistant cell"
-                  },
-                  {
-                    "key": "FIXES_FURNITURE",
-                    "description": "Fixed furniture cell"
-                  }, 
-                  {
                     "key": "ISOLATION_DISEASES",
                     "description": "Isolation cell for communicable diseases"
-                  }, 
-                  {
-                    "key": "LIGATURE_RESISTANT",
-                    "description": "Ligature resistant cell"
                   }, 
                   {
                     "key": "LISTENER_CRISIS",
@@ -1042,7 +1030,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "LOCATE_FLAT_CELL",
-                    "description": "Locate flat cell"
+                    "description": "Locate flat"
                   },
                   {
                     "key": "MEDICAL",
@@ -1053,16 +1041,12 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Mother and baby cell"
                   },
                   {
-                    "key": "SOUND_RESISTANT",
-                    "description": "Sound resistant cell"
-                  },
-                  {
                     "key": "UNFURNISHED",
                     "description": "Unfurnished cell"
                   },
                   {
-                    "key": "WHEELCHAIR_ACCESSIBLE",
-                    "description": "Wheelchair accessible cells"
+                    "key": "ACCESSIBLE_CELL",
+                    "description": "Accessible cell"
                   }
                 ]
               }

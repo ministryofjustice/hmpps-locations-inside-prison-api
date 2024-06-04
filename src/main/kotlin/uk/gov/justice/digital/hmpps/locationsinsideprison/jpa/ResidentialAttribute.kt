@@ -94,7 +94,7 @@ enum class ResidentialAttributeValue(
   WHEELCHAIR_ACCESS(
     ResidentialAttributeType.LOCATION_ATTRIBUTE,
     "Wheelchair Access",
-    SpecialistCellType.WHEELCHAIR_ACCESSIBLE,
+    SpecialistCellType.ACCESSIBLE_CELL,
   ),
 
   UNCONVICTED_JUVENILES(ResidentialAttributeType.USED_FOR, "Unconvicted Juveniles"),
