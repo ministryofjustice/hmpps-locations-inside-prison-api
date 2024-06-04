@@ -149,7 +149,7 @@ data class Location(
 
   @Schema(description = "Indicates if the location is a residential location", example = "true", required = true)
   fun isResidential(): Boolean {
-    return accommodationTypes != null
+    return accommodationTypes != null && convertedCellType == null
   }
 
   @JsonIgnore

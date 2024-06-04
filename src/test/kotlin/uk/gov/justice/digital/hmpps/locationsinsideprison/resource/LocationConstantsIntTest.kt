@@ -1134,7 +1134,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   }, 
                   {
                     "key": "MOTHER_AND_BABY",
-                    "description": "Mother and Baby"
+                    "description": "Mother and baby"
                   },   
                   {
                     "key": "YOUNG_PERSONS",

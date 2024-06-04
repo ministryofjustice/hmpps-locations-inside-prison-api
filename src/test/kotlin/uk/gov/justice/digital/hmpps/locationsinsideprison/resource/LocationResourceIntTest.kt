@@ -723,7 +723,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "NORMAL_ACCOMMODATION"
                 ],
                 "specialistCellTypes": [
-                  "WHEELCHAIR_ACCESSIBLE"
+                  "ACCESSIBLE_CELL"
                 ],
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
@@ -795,7 +795,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "NORMAL_ACCOMMODATION"
                     ],
                     "specialistCellTypes": [
-                      "WHEELCHAIR_ACCESSIBLE"
+                      "ACCESSIBLE_CELL"
                     ],
                     "usedFor": [
                       "STANDARD_ACCOMMODATION"
