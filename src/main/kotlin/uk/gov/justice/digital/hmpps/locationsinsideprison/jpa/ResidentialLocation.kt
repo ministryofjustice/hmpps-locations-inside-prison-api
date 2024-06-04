@@ -105,7 +105,7 @@ open class ResidentialLocation(
 
   open fun isConvertedCell(): Boolean = false
 
-  private fun getInactiveCellCount() = cellLocations().count { !it.isActive() }
+  private fun getInactiveCellCount() = cellLocations().count { it.isTemporarilyDeactivated() }
 
   open fun update(upsert: PatchResidentialLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
     updateCode(upsert.code, userOrSystemInContext, clock)
