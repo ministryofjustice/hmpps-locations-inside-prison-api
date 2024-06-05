@@ -208,7 +208,7 @@ class LocationResource(
     prisonId: String,
   ): List<LocationDTO> = locationService.getLocationByPrison(prisonId)
 
-  @GetMapping("/agencies/{agencyId}/groups")
+  @GetMapping("/agencies/{prisonId}/groups")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @Operation(
@@ -239,8 +239,8 @@ class LocationResource(
   fun getLocationGroupsForPrison(
     @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @PathVariable
-    agencyId: String,
-  ): List<LocationGroupDto> = locationService.getLocationGroupsForAgency(agencyId)
+    prisonId: String,
+  ): List<LocationGroupDto> = locationService.getLocationGroupsForPrison(prisonId)
 
   @GetMapping("/prison/{prisonId}/archived")
   @ResponseStatus(HttpStatus.OK)

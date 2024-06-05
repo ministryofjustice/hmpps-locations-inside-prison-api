@@ -84,13 +84,11 @@ class LocationService(
       }
       .sortedBy { it.getKey() }
 
-  fun getLocationGroupsForAgency(agencyId: String): List<LocationGroupDto> {
-    val groups = locationGroupFromPropertiesService.getLocationGroups(agencyId)
-    return if (locationGroupFromPropertiesService.getLocationGroups(agencyId).isNotEmpty()) {
-      groups
-    } else {
-      locationRepository.findAllByPrisonIdOrderByPathHierarchy(agencyId)
-        .filter { !it.isPermanentlyDeactivated() }
+  fun getLocationGroupsForPrison(prisonId: String): List<LocationGroupDto> {
+    val groups = locationGroupFromPropertiesService.getLocationGroups(prisonId)
+    return groups.ifEmpty {
+      locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
+        .filter { it.isActiveAndAllParentsActive() }
         .map {
           it.toLocationGroupDto()
         }

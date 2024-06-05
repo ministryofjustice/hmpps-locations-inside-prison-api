@@ -357,6 +357,14 @@ abstract class Location(
     )
   }
 
+  fun toLocationGroupDto(): LocationGroupDto {
+    return LocationGroupDto(
+      key = pathHierarchy,
+      name = getDerivedLocalName(),
+      children = getActiveResidentialLocationsBelowThisLevel().map { it.toLocationGroupDto() },
+    )
+  }
+
   fun getDerivedLocalName() = if (!isCell()) {
     localName?.capitalizeWords()
   } else {

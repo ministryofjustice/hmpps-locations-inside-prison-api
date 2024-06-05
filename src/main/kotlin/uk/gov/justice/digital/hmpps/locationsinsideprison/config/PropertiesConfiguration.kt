@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.config
 
-
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.beans.factory.config.PropertiesFactoryBean
