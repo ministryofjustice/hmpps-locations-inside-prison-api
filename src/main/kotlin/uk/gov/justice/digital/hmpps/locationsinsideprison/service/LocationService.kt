@@ -17,6 +17,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidenti
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -64,6 +65,7 @@ class LocationService(
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
+  private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -81,6 +83,20 @@ class LocationService(
         it.toDto()
       }
       .sortedBy { it.getKey() }
+
+  fun getLocationGroupsForAgency(agencyId: String): List<LocationGroupDto> {
+    val groups = locationGroupFromPropertiesService.getLocationGroups(agencyId)
+    return if (locationGroupFromPropertiesService.getLocationGroups(agencyId).isNotEmpty()) {
+      groups
+    } else {
+      locationRepository.findAllByPrisonIdOrderByPathHierarchy(agencyId)
+        .filter { !it.isPermanentlyDeactivated() }
+        .map {
+          it.toLocationGroupDto()
+        }
+        .sortedBy { it.name }
+    }
+  }
 
   fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =
     nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)

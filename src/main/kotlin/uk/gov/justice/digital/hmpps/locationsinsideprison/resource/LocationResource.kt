@@ -32,6 +32,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidenti
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
@@ -206,6 +207,40 @@ class LocationResource(
     @PathVariable
     prisonId: String,
   ): List<LocationDTO> = locationService.getLocationByPrison(prisonId)
+
+  @GetMapping("/agencies/{agencyId}/groups")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return location groups for this prison",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns location groupss",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getLocationGroupsForPrison(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
+    agencyId: String,
+  ): List<LocationGroupDto> = locationService.getLocationGroupsForAgency(agencyId)
 
   @GetMapping("/prison/{prisonId}/archived")
   @ResponseStatus(HttpStatus.OK)
