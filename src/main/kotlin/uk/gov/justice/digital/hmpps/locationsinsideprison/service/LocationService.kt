@@ -597,7 +597,7 @@ class LocationService(
     val subLocationTypes = calculateSubLocationDescription(locations)
     return ResidentialSummary(
       topLevelLocationType = if (currentLocation == null) {
-        subLocationTypes
+        subLocationTypes ?: "Wings"
       } else {
         currentLocation.getHierarchy()[0].type.description + "s"
       },
@@ -618,9 +618,14 @@ class LocationService(
     )
   }
 
-  private fun calculateSubLocationDescription(locations: List<LocationDTO>): String {
-    val mostCommonType = locations.maxByOrNull { it.locationType }
-    return (mostCommonType?.locationType?.description ?: "Location") + "s"
+  private fun calculateSubLocationDescription(locations: List<LocationDTO>): String? {
+    if (locations.isEmpty()) return null
+    val mostCommonType = mostCommon(locations.map { it.locationType })
+    return (mostCommonType?.description) + "s"
+  }
+
+  fun <T> mostCommon(list: List<T>): T? {
+    return list.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
   }
 
   fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }
@@ -655,8 +660,8 @@ data class ResidentialSummary(
   val prisonSummary: PrisonSummary? = null,
   @Schema(description = "The top level type of locations", required = true, example = "Wings")
   val topLevelLocationType: String,
-  @Schema(description = "The description of the type of sub locations most common", required = true, examples = ["Wings", "Landings", "Spurs", "Cells"])
-  val subLocationName: String,
+  @Schema(description = "The description of the type of sub locations most common", required = false, examples = ["Wings", "Landings", "Spurs", "Cells"])
+  val subLocationName: String? = null,
   @Schema(description = "Parent locations, top to bottom", required = true)
   val locationHierarchy: List<LocationSummary>? = null,
   @Schema(description = "The current parent location (e.g Wing or Landing) details")
