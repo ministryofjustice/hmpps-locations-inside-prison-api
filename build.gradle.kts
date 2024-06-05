@@ -27,7 +27,7 @@ dependencies {
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
   implementation("com.zaxxer:HikariCP:5.1.0")
   runtimeOnly("org.postgresql:postgresql")
-
+  implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.0")
 
