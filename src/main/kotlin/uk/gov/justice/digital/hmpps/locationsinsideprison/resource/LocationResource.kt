@@ -208,7 +208,7 @@ class LocationResource(
     prisonId: String,
   ): List<LocationDTO> = locationService.getLocationByPrison(prisonId)
 
-  @GetMapping("/agencies/{prisonId}/groups")
+  @GetMapping("/prison/{prisonId}/groups")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @Operation(

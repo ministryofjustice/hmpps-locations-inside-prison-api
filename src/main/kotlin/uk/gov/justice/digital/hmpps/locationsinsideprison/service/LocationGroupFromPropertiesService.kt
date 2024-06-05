@@ -7,11 +7,11 @@ import java.util.Properties
 
 @Service
 class LocationGroupFromPropertiesService(
-  @Qualifier("whereaboutsGroups") private val groupsProperties: Properties,
+  @Qualifier("locationsPatternsProperties") private val properties: Properties,
 ) {
 
   fun getLocationGroups(prisonId: String): List<LocationGroupDto> {
-    val fullKeys = groupsProperties.stringPropertyNames()
+    val fullKeys = properties.stringPropertyNames()
     return fullKeys.asSequence()
       .filter { it.startsWith(prisonId) }
       .map { it.substring(prisonId.length + 1) }
@@ -22,7 +22,7 @@ class LocationGroupFromPropertiesService(
   }
 
   private fun getAvailableSubGroups(prisonId: String, groupName: String): List<LocationGroupDto> {
-    val fullKeys = groupsProperties.stringPropertyNames()
+    val fullKeys = properties.stringPropertyNames()
     val agencyAndGroupName = "${prisonId}_${groupName}_"
     return fullKeys.asSequence()
       .filter { it.startsWith(agencyAndGroupName) }

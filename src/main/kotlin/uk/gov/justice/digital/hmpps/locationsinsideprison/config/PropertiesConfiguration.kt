@@ -9,14 +9,14 @@ import org.springframework.core.io.Resource
 
 @Configuration
 open class PropertiesConfiguration(
-  @Value("classpath:whereabouts/patterns/*.properties") private val resources: Array<Resource>,
+  @Value("classpath:locations/patterns/*.properties") private val resources: Array<Resource>,
 ) {
 
   @Bean
-  @Qualifier("whereaboutsGroups")
-  open fun pfb(): PropertiesFactoryBean {
-    val pfb = PropertiesFactoryBean()
-    pfb.setLocations(*resources)
-    return pfb
+  @Qualifier("locationsPatternsProperties")
+  open fun generatePropertiesBean(): PropertiesFactoryBean {
+    val properties = PropertiesFactoryBean()
+    properties.setLocations(*resources)
+    return properties
   }
 }
