@@ -7,7 +7,7 @@ import java.util.Properties
 
 @Service
 class LocationGroupFromPropertiesService(
-  @Qualifier("locationsPatternsProperties") private val properties: Properties,
+  @Qualifier("residentialGroups") private val properties: Properties,
 ) {
 
   fun getLocationGroups(prisonId: String): List<LocationGroupDto> {

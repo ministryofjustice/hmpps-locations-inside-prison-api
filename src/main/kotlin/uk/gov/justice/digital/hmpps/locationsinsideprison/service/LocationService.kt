@@ -92,7 +92,6 @@ class LocationService(
         .map {
           it.toLocationGroupDto()
         }
-        .sortedBy { it.name }
     }
   }
 

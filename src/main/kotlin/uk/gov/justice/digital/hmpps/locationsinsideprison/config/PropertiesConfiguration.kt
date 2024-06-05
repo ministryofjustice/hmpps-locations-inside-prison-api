@@ -13,7 +13,7 @@ open class PropertiesConfiguration(
 ) {
 
   @Bean
-  @Qualifier("locationsPatternsProperties")
+  @Qualifier("residentialGroups")
   open fun generatePropertiesBean(): PropertiesFactoryBean {
     val properties = PropertiesFactoryBean()
     properties.setLocations(*resources)
