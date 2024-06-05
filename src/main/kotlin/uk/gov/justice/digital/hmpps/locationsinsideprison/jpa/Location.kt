@@ -228,7 +228,7 @@ abstract class Location(
       type = getDerivedLocationType(),
       pathHierarchy = getPathHierarchy(),
       prisonId = prisonId,
-      localName = localName?.capitalizeWords(),
+      localName = getDerivedLocalName(),
       level = getLevel(),
     )
   }
@@ -247,6 +247,8 @@ abstract class Location(
       "${getParent()!!.getHierarchicalPath()}-${getCode()}"
     }
   }
+
+  fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
 
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
 
@@ -327,11 +329,7 @@ abstract class Location(
       leafLevel = findSubLocations().isEmpty(),
       lastModifiedDate = whenUpdated,
       lastModifiedBy = updatedBy,
-      localName = if (!isCell()) {
-        localName?.capitalizeWords()
-      } else {
-        null
-      },
+      localName = getDerivedLocalName(),
       comments = comments,
       active = isActiveAndAllParentsActive(),
       permanentlyInactive = isPermanentlyDeactivated(),
@@ -359,6 +357,12 @@ abstract class Location(
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
       deactivatedBy = deactivatedBy,
     )
+  }
+
+  fun getDerivedLocalName() = if (!isCell()) {
+    localName?.capitalizeWords()
+  } else {
+    null
   }
 
   fun getStatus(): LocationStatus {
