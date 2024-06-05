@@ -8,7 +8,6 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
-import jakarta.persistence.GeneratedValue
 import jakarta.persistence.Id
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
@@ -18,7 +17,6 @@ import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
 import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.DiscriminatorFormula
-import org.hibernate.annotations.GenericGenerator
 import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -27,6 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import java.io.Serializable
 import java.time.Clock
@@ -41,8 +40,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 abstract class Location(
   @Id
-  @GeneratedValue(generator = "UUID")
-  @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
+  @GeneratedUuidV7
   @Column(name = "id", updatable = false, nullable = false)
   open val id: UUID? = null,
 
@@ -438,7 +436,7 @@ abstract class Location(
     clock: Clock,
     updatedBy: String,
   ) {
-    if (upsert.deactivationReason != this.deactivatedReason) {
+    if (upsert.deactivationReason?.mapsTo() != this.deactivatedReason) {
       if (upsert.isDeactivated()) {
         temporarilyDeactivate(
           deactivatedReason = upsert.deactivationReason!!.mapsTo(),
