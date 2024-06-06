@@ -321,7 +321,7 @@ class Cell(
   }
 
   override fun update(upsert: PatchResidentialLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
-    update(upsert, userOrSystemInContext, clock)
+    super.update(upsert, userOrSystemInContext, clock)
 
     if (upsert.accommodationType != null && this.accommodationType != upsert.accommodationType) {
       addHistory(
