@@ -103,7 +103,6 @@ class LocationService(
       .map { it.toDto() }
       .sortedWith(NaturalOrderComparator())
 
-
   fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =
     nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
       .map {
