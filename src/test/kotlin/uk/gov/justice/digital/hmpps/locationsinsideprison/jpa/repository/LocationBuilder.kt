@@ -21,6 +21,7 @@ fun buildResidentialLocation(
   prisonId: String = "MDI",
   pathHierarchy: String,
   locationType: LocationType,
+  localName: String? = null,
 ): ResidentialLocation {
   return ResidentialLocation(
     prisonId = prisonId,
@@ -31,6 +32,7 @@ fun buildResidentialLocation(
     whenCreated = LocalDateTime.now(TestBase.clock),
     childLocations = mutableListOf(),
     orderWithinParentLocation = 99,
+    localName = localName,
   )
 }
 
