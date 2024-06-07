@@ -247,7 +247,7 @@ abstract class Location(
     }
   }
 
-  fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
+  private fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
 
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
 
@@ -362,11 +362,13 @@ abstract class Location(
     return LocationGroupDto(
       key = pathHierarchy,
       name = getDerivedLocalName(),
-      children = getActiveResidentialLocationsBelowThisLevel().map { it.toLocationGroupDto() },
+      children = getActiveResidentialLocationsBelowThisLevel()
+        .filter { it.isWingLandingSpur() }
+        .map { it.toLocationGroupDto() },
     )
   }
 
-  fun getDerivedLocalName() = if (!isCell()) {
+  private fun getDerivedLocalName() = if (!isCell()) {
     localName?.capitalizeWords()
   } else {
     null
