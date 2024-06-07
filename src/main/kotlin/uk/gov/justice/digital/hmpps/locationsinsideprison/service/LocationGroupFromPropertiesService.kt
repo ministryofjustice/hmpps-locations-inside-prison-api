@@ -42,7 +42,7 @@ class LocationGroupFromPropertiesService(
     val patternStrings = patterns.split(",")
     return patternStrings.asSequence()
       .map(Pattern::compile)
-      .map { pattern -> Predicate { l: Location -> pattern.matcher(l.getPathHierarchy()).matches() } }
+      .map { pattern -> Predicate { l: Location -> pattern.matcher(l.getKey()).matches() } }
       .reduce(Predicate<Location>::or)
   }
 }

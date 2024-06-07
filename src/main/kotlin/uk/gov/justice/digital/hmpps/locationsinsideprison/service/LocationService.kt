@@ -92,6 +92,7 @@ class LocationService(
         .map {
           it.toLocationGroupDto()
         }
+        .sortedWith(NaturalOrderComparator())
     }
   }
 
@@ -100,7 +101,8 @@ class LocationService(
       .filter(locationGroupFromPropertiesService.locationGroupFilter(prisonId, groupName)::test)
       .toMutableList()
       .map { it.toDto() }
-      .toList()
+      .sortedWith(NaturalOrderComparator())
+
 
   fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =
     nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
