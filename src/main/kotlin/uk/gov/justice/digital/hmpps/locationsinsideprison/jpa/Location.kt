@@ -21,6 +21,7 @@ import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -354,6 +355,14 @@ abstract class Location(
       },
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
       deactivatedBy = deactivatedBy,
+    )
+  }
+
+  fun toLocationGroupDto(): LocationGroupDto {
+    return LocationGroupDto(
+      key = pathHierarchy,
+      name = getDerivedLocalName(),
+      children = getActiveResidentialLocationsBelowThisLevel().map { it.toLocationGroupDto() },
     )
   }
 

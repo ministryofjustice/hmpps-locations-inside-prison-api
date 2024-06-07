@@ -17,6 +17,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidenti
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -64,6 +65,7 @@ class LocationService(
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
+  private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -81,6 +83,24 @@ class LocationService(
         it.toDto()
       }
       .sortedBy { it.getKey() }
+
+  fun getLocationGroupsForPrison(prisonId: String): List<LocationGroupDto> {
+    val groups = locationGroupFromPropertiesService.getLocationGroups(prisonId)
+    return groups.ifEmpty {
+      residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+        .filter { it.isActiveAndAllParentsActive() && it.isWingLandingSpur() }
+        .map {
+          it.toLocationGroupDto()
+        }
+    }
+  }
+
+  fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> =
+    cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true)
+      .filter(locationGroupFromPropertiesService.locationGroupFilter(prisonId, groupName)::test)
+      .toMutableList()
+      .map { it.toDto() }
+      .toList()
 
   fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =
     nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
