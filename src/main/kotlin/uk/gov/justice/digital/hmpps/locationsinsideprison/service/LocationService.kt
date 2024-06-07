@@ -87,13 +87,20 @@ class LocationService(
   fun getLocationGroupsForPrison(prisonId: String): List<LocationGroupDto> {
     val groups = locationGroupFromPropertiesService.getLocationGroups(prisonId)
     return groups.ifEmpty {
-      locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
-        .filter { it.isActiveAndAllParentsActive() }
+      residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+        .filter { it.isActiveAndAllParentsActive() && it.isWingLandingSpur() }
         .map {
           it.toLocationGroupDto()
         }
     }
   }
+
+  fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> =
+    cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true)
+      .filter(locationGroupFromPropertiesService.locationGroupFilter(prisonId, groupName)::test)
+      .toMutableList()
+      .map { it.toDto() }
+      .toList()
 
   fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =
     nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
