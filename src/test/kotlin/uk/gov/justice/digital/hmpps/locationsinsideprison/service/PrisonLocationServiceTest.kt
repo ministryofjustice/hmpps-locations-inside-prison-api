@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
-
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatExceptionOfType
 import org.junit.jupiter.api.Test
@@ -42,14 +41,12 @@ class PrisonLocationServiceTest {
 
   @Test
   fun `Get prisoners by prison id when cell location exist and location is active and the location is empty`() {
-
     whenever(cellLocationRepository.findAllByPrisonIdAndActive(any(), any())).thenReturn(listOf())
     whenever(prisonerSearchService.findPrisonersInLocations(any(), any())).thenReturn(
       listOf(),
     )
     val result = service.prisonersInPrison("MDI")
     assertThat(result.size).isEqualTo(0)
-
   }
 
   @Test
@@ -67,7 +64,6 @@ class PrisonLocationServiceTest {
     )
     val result = service.prisonersInLocations("C1")
     assertThat(result[0].prisoners[0]).isEqualTo(prisoner)
-
   }
 
   @Test
@@ -93,7 +89,6 @@ class PrisonLocationServiceTest {
     )
     val result = service.prisonersInLocations(UUID.randomUUID())
     assertThat(result[0].prisoners[0]).isEqualTo(prisoner)
-
   }
 
   @Test
@@ -103,5 +98,4 @@ class PrisonLocationServiceTest {
       service.prisonersInLocations(UUID.randomUUID())
     }
   }
-
 }
