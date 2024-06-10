@@ -21,6 +21,7 @@ import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -246,7 +247,7 @@ abstract class Location(
     }
   }
 
-  fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
+  private fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
 
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
 
@@ -357,7 +358,17 @@ abstract class Location(
     )
   }
 
-  fun getDerivedLocalName() = if (!isCell()) {
+  fun toLocationGroupDto(): LocationGroupDto {
+    return LocationGroupDto(
+      key = pathHierarchy,
+      name = getDerivedLocalName(),
+      children = getActiveResidentialLocationsBelowThisLevel()
+        .filter { it.isWingLandingSpur() }
+        .map { it.toLocationGroupDto() },
+    )
+  }
+
+  private fun getDerivedLocalName() = if (!isCell()) {
     localName?.capitalizeWords()
   } else {
     null

@@ -62,8 +62,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   lateinit var landingZ1: ResidentialLocationJPA
   lateinit var landingZ2: ResidentialLocationJPA
   lateinit var landingB3: ResidentialLocationJPA
+  lateinit var landingN1: ResidentialLocationJPA
   lateinit var wingZ: ResidentialLocationJPA
   lateinit var wingB: ResidentialLocationJPA
+  lateinit var wingN: ResidentialLocationJPA
   lateinit var visitRoom: NonResidentialLocationJPA
   lateinit var adjRoom: NonResidentialLocationJPA
 
@@ -71,6 +73,27 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   fun setUp() {
     prisonerSearchMockServer.resetAll()
     repository.deleteAll()
+
+    wingN = repository.save(
+      buildResidentialLocation(
+        prisonId = "NMI",
+        pathHierarchy = "A",
+        locationType = LocationType.WING,
+        localName = "WING A",
+      ),
+    )
+
+    landingN1 = repository.save(
+      buildResidentialLocation(
+        prisonId = "NMI",
+        pathHierarchy = "A-1",
+        locationType = LocationType.LANDING,
+        localName = "LANDING A",
+      ),
+    )
+
+    wingN.addChildLocation(landingN1)
+    repository.save(wingN)
 
     wingZ = repository.save(
       buildResidentialLocation(
@@ -203,7 +226,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a page of locations`() {
-        webTestClient.get().uri("/locations?size=11&sort=pathHierarchy,asc")
+        webTestClient.get().uri("/locations?size=13&sort=pathHierarchy,asc")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -212,11 +235,27 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             """
               {
                 "totalPages": 1,
-                "totalElements": 11,
+                "totalElements": 13,
                 "first": true,
                 "last": true,
-                "size": 11,
+                "size": 13,
                 "content": [
+                  {
+                    "prisonId": "NMI",
+                    "code": "A",
+                    "pathHierarchy": "A",
+                    "locationType": "WING",
+                    "localName": "WING A",
+                    "key": "NMI-A"
+                  }, 
+                  {
+                    "prisonId": "NMI",
+                    "code": "1",
+                    "pathHierarchy": "A-1",
+                    "locationType": "LANDING",
+                    "localName": "LANDING A",
+                    "key": "NMI-A-1"
+                  }, 
                   {
                     "prisonId": "MDI",
                     "code": "ADJUDICATION",
@@ -301,7 +340,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "sorted": true,
                   "unsorted": false
                 },
-                "numberOfElements": 11,
+                "numberOfElements": 13,
                 "pageable": {
                   "offset": 0,
                   "sort": {
@@ -309,7 +348,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                     "sorted": true,
                     "unsorted": false
                   },
-                  "pageSize": 11,
+                  "pageSize": 13,
                   "pageNumber": 0,
                   "paged": true,
                   "unpaged": false
@@ -1312,7 +1351,230 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
-  @DisplayName("GET /locations/prison/{prisonId}/archived")
+  @DisplayName("GET /locations/prison/{prisonId}/groups")
+  @Nested
+  inner class ViewLocationGroupsInPropertiesByPrisonTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/MDI/groups")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/MDI/groups")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/MDI/groups")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve residential groups for a prison included in the properties file`() {
+        webTestClient.get().uri("/locations/prison/MDI/groups")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                       [
+                        {
+                          "name": "Houseblock 1",
+                          "key": "Houseblock 1",
+                          "children": [
+                            {
+                              "name": "A-Wing",
+                              "key": "A-Wing",
+                              "children": []
+                            },
+                            {
+                              "name": "B-Wing",
+                              "key": "B-Wing",
+                              "children": []
+                            },
+                            {
+                              "name": "C-Wing",
+                              "key": "C-Wing",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "name": "Houseblock 2",
+                          "key": "Houseblock 2",
+                          "children": [
+                            {
+                              "name": "A-Wing",
+                              "key": "A-Wing",
+                              "children": []
+                            },
+                            {
+                              "name": "B-Wing",
+                              "key": "B-Wing",
+                              "children": []
+                            },
+                            {
+                              "name": "C-Wing",
+                              "key": "C-Wing",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "name": "Houseblock 3",
+                          "key": "Houseblock 3",
+                          "children": [
+                            {
+                              "name": "A-Wing",
+                              "key": "A-Wing",
+                              "children": []
+                            },
+                            {
+                              "name": "B-Wing",
+                              "key": "B-Wing",
+                              "children": []
+                            },
+                            {
+                              "name": "C-Wing",
+                              "key": "C-Wing",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "name": "Houseblock 4",
+                          "key": "Houseblock 4",
+                          "children": [
+                            {
+                              "name": "A-Wing",
+                              "key": "A-Wing",
+                              "children": []
+                            },
+                            {
+                              "name": "B-Wing",
+                              "key": "B-Wing",
+                              "children": []
+                            },
+                            {
+                              "name": "C-Wing",
+                              "key": "C-Wing",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "name": "Houseblock 5",
+                          "key": "Houseblock 5",
+                          "children": [
+                            {
+                              "name": "A-Wing",
+                              "key": "A-Wing",
+                              "children": []
+                            },
+                            {
+                              "name": "B-Wing",
+                              "key": "B-Wing",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "name": "Houseblock 6",
+                          "key": "Houseblock 6",
+                          "children": [
+                            {
+                              "name": "A-Wing",
+                              "key": "A-Wing",
+                              "children": []
+                            },
+                            {
+                              "name": "B-Wing",
+                              "key": "B-Wing",
+                              "children": []
+                            }
+                          ]
+                        },
+                        {
+                          "name": "Houseblock 7",
+                          "key": "Houseblock 7",
+                          "children": []
+                        },
+                        {
+                          "name": "Houseblock 8",
+                          "key": "Houseblock 8",
+                          "children": []
+                        },
+                        {
+                          "name": "Segregation Unit",
+                          "key": "Segregation Unit",
+                          "children": []
+                        }
+                      ]
+                                              """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve cells for a group`() {
+        webTestClient.get().uri("/locations/groups/MDI/Houseblock 1")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                       [ ]
+                                              """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve residential groups for a prison NOT included in the properties file`() {
+        webTestClient.get().uri("/locations/prison/NMI/groups")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+               [
+                {
+                  "name": "Wing A",
+                  "key": "A",
+                  "children": [
+                    {
+                      "name": "Landing A",
+                      "key": "A-1",
+                      "children": []
+                    }
+                  ]
+                }
+              ]
+                        """,
+            false,
+          )
+      }
+    }
+  }
+
   @Nested
   inner class ViewArchivedLocationByPrisonTest {
     @Nested
