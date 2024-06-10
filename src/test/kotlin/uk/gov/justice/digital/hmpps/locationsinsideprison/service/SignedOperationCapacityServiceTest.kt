@@ -1,7 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import com.microsoft.applicationinsights.TelemetryClient
-import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.anyMap
 import org.mockito.kotlin.any
