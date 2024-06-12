@@ -28,6 +28,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NaturalOrderComparator
 import java.io.Serializable
 import java.time.Clock
 import java.time.LocalDate
@@ -360,11 +361,12 @@ abstract class Location(
 
   fun toLocationGroupDto(): LocationGroupDto {
     return LocationGroupDto(
-      key = pathHierarchy,
+      key = code,
       name = getDerivedLocalName(),
       children = getActiveResidentialLocationsBelowThisLevel()
         .filter { it.isWingLandingSpur() }
-        .map { it.toLocationGroupDto() },
+        .map { it.toLocationGroupDto() }
+        .sortedWith(NaturalOrderComparator()),
     )
   }
 

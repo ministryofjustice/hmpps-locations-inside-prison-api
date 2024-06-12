@@ -1562,7 +1562,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "children": [
                     {
                       "name": "Landing A",
-                      "key": "A-1",
+                      "key": "1",
                       "children": []
                     }
                   ]
