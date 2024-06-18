@@ -73,8 +73,8 @@ fun buildCell(
     },
   )
   cell.addAttributes(residentialAttributeValues)
-  specialistCellType?.let { cell.addSpecialistCellType(it, EXPECTED_USERNAME, clock) }
-  cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, EXPECTED_USERNAME, clock)
+  specialistCellType?.let { cell.updateCellSpecialistCellTypes(setOf(it), EXPECTED_USERNAME, clock) }
+  cell.updateCellUsedFor(setOf(UsedForType.STANDARD_ACCOMMODATION), EXPECTED_USERNAME, clock)
   if (archived) {
     cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), EXPECTED_USERNAME, clock)
   }
