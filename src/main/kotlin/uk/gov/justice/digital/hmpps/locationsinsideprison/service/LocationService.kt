@@ -606,7 +606,7 @@ class LocationService(
       }
       )
       .filter { !it.isPermanentlyDeactivated() }
-      .filter { (it.isCell() && it.getAccommodationTypes().isNotEmpty()) || it.isResidentialType() }
+      .filter { it.isCell() || it.isLocationShownOnResidentialSummary() }
       .map { it.toDto(countInactiveCells = true) }
       .sortedWith(NaturalOrderComparator())
 

@@ -3,19 +3,20 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 enum class ResidentialLocationType(
   val description: String,
   val baseType: LocationType,
+  val display: Boolean = true,
 ) {
   WING("Wing", LocationType.WING),
   SPUR("Spur", LocationType.SPUR),
   LANDING("Landing", LocationType.LANDING),
   CELL("Cell", LocationType.CELL),
   ROOM("Room", LocationType.ROOM),
-  AREA("Area", LocationType.LOCATION),
-  HOLDING_AREA("Holding Area", LocationType.HOLDING_AREA),
-  MOVEMENT_AREA("Movement Area", LocationType.MOVEMENT_AREA),
-  RESIDENTIAL_UNIT("Residential Unit", LocationType.RESIDENTIAL_UNIT),
-  EXTERNAL_GROUNDS("External Grounds", LocationType.EXTERNAL_GROUNDS),
-  HOLDING_CELL("Holding Cell", LocationType.HOLDING_CELL),
-  MEDICAL("Medical", LocationType.MEDICAL),
+  AREA("Area", LocationType.AREA, false),
+  HOLDING_AREA("Holding Area", LocationType.HOLDING_AREA, false),
+  MOVEMENT_AREA("Movement Area", LocationType.MOVEMENT_AREA, false),
+  RESIDENTIAL_UNIT("Residential Unit", LocationType.RESIDENTIAL_UNIT, false),
+  EXTERNAL_GROUNDS("External Grounds", LocationType.EXTERNAL_GROUNDS, false),
+  HOLDING_CELL("Holding Cell", LocationType.HOLDING_CELL, false),
+  MEDICAL("Medical", LocationType.MEDICAL, false),
 }
 
 enum class NonResidentialLocationType(
