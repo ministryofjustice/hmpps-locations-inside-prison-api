@@ -335,16 +335,40 @@ class Cell(
     this.accommodationType = upsert.accommodationType ?: this.accommodationType
 
     if (upsert.specialistCellTypes != null) {
-      recordRemovedSpecialistCellTypes(upsert.specialistCellTypes, userOrSystemInContext, clock)
-      specialistCellTypes.retainAll(upsert.specialistCellTypes.map { addSpecialistCellType(it, userOrSystemInContext, clock) }.toSet())
+      updateSpecialistCellTypes(upsert.specialistCellTypes, userOrSystemInContext, clock)
     }
 
     if (upsert.usedFor != null) {
-      recordRemovedUsedForTypes(upsert.usedFor, userOrSystemInContext, clock)
-      usedFor.retainAll(upsert.usedFor.map { addUsedFor(it, userOrSystemInContext, clock) }.toSet())
+      updateUsedFor(upsert.usedFor, userOrSystemInContext, clock)
     }
 
     return this
+  }
+
+  fun updateSpecialistCellTypes(
+    specialistCellTypes: Set<SpecialistCellType>,
+    userOrSystemInContext: String,
+    clock: Clock,
+  ) {
+    recordRemovedSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock)
+    this.specialistCellTypes.retainAll(
+      specialistCellTypes.map {
+        addSpecialistCellType(
+          it,
+          userOrSystemInContext,
+          clock,
+        )
+      }.toSet(),
+    )
+  }
+
+  fun updateUsedFor(
+    usedFor: Set<UsedForType>,
+    userOrSystemInContext: String,
+    clock: Clock,
+  ) {
+    recordRemovedUsedForTypes(usedFor, userOrSystemInContext, clock)
+    this.usedFor.retainAll(usedFor.map { addUsedFor(it, userOrSystemInContext, clock) }.toSet())
   }
 
   override fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {

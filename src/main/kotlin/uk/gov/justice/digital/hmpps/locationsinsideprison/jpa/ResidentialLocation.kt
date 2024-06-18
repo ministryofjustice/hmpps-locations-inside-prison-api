@@ -112,6 +112,14 @@ open class ResidentialLocation(
     return this
   }
 
+  fun updateCellUsedFor(setOfUsedFor: Set<UsedForType>, userOrSystemInContext: String, clock: Clock) {
+    cellLocations().forEach { it.updateUsedFor(setOfUsedFor, userOrSystemInContext, clock) }
+  }
+
+  fun updateCellSpecialistCellTypes(specialistCellTypes: Set<SpecialistCellType>, userOrSystemInContext: String, clock: Clock) {
+    cellLocations().forEach { it.updateSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock) }
+  }
+
   override fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
     super.sync(upsert, updatedBy, clock)
 
