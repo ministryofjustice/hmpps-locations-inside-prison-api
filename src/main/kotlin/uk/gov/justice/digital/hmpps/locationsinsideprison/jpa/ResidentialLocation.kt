@@ -34,6 +34,7 @@ open class ResidentialLocation(
   childLocations: MutableList<Location>,
   whenCreated: LocalDateTime,
   createdBy: String,
+  usedFor: MutableSet<CellUsedFor>? = null,
 
   @Enumerated(EnumType.STRING)
   open var residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
