@@ -362,7 +362,7 @@ abstract class Location(
   fun toLocationGroupDto(): LocationGroupDto {
     return LocationGroupDto(
       key = code,
-      name = getDerivedLocalName(),
+      name = getDerivedLocalName() ?: code,
       children = getActiveResidentialLocationsBelowThisLevel()
         .filter { it.isWingLandingSpur() }
         .map { it.toLocationGroupDto() }
