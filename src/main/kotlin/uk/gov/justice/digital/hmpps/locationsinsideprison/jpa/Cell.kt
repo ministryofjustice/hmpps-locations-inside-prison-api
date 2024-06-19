@@ -374,6 +374,17 @@ class Cell(
   override fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
     super.sync(upsert, userOrSystemInContext, clock)
 
+    if (this.accommodationType != residentialHousingType.mapToAccommodationType()) {
+      addHistory(
+        LocationAttribute.ACCOMMODATION_TYPE,
+        this.accommodationType.description,
+        residentialHousingType.mapToAccommodationType().description,
+        userOrSystemInContext,
+        LocalDateTime.now(clock),
+      )
+      this.accommodationType = residentialHousingType.mapToAccommodationType()
+    }
+
     handleNomisCapacitySync(upsert, userOrSystemInContext, clock)
 
     if (upsert.attributes != null) {
