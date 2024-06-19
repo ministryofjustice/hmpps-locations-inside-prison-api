@@ -25,7 +25,33 @@ class LocationTest {
     assertThat(history1).isEqualTo(history2)
     assertThat(location.getHistoryAsList()).hasSize(1)
   }
+
+  @Test
+  fun `toLocationGroupDto sets name to code`() {
+    val location = generateWingLocation(null)
+    val dto = location.toLocationGroupDto()
+    assertThat(dto.name).isEqualTo("A")
+  }
+
+  @Test
+  fun `toLocationGroupDto sets name to local name`() {
+    val location = generateWingLocation("Wing A")
+    val dto = location.toLocationGroupDto()
+    assertThat(dto.name).isEqualTo("Wing A")
+  }
 }
+
+fun generateWingLocation(localName: String?) = ResidentialLocation(
+  code = "A",
+  prisonId = "MDI",
+  locationType = LocationType.WING,
+  localName = localName,
+  pathHierarchy = "MDI-A",
+  createdBy = "user",
+  whenCreated = LocalDateTime.now(),
+  childLocations = mutableListOf(),
+)
+
 
 fun generateCellLocation() = Cell(
   code = "001",
