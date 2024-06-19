@@ -52,7 +52,6 @@ fun generateWingLocation(localName: String?) = ResidentialLocation(
   childLocations = mutableListOf(),
 )
 
-
 fun generateCellLocation() = Cell(
   code = "001",
   prisonId = "MDI",
