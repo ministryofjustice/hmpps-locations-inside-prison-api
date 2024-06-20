@@ -51,6 +51,10 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
               {
                 "locationTypes": [
                   {
+                    "key": "BLOCK",
+                    "description": "Block"
+                  },
+                  {
                     "key": "WING",
                     "description": "Wing"
                   },
