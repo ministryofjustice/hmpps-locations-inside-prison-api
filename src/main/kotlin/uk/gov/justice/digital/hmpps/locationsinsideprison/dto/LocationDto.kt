@@ -338,13 +338,15 @@ data class CreateResidentialLocationRequest(
           capacityOfCertifiedCell = 0,
         ),
       )
+      if (location.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+        location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock)
+      }
       usedFor?.forEach {
         location.addUsedFor(it, createdBy, clock)
-      } ?: location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock)
-
-      specialistCellTypes?.forEach {
-        location.addSpecialistCellType(it, createdBy, clock)
       }
+        ?: specialistCellTypes?.forEach {
+          location.addSpecialistCellType(it, createdBy, clock)
+        }
       return location
     } else {
       ResidentialLocationJPA(

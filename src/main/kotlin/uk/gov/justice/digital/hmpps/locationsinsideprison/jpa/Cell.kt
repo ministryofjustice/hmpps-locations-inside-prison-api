@@ -126,7 +126,7 @@ class Cell(
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
-    this.accommodationType = AccommodationType.OTHER_NON_RESIDENTIAL
+    setAccommodationTypeForCell(AccommodationType.OTHER_NON_RESIDENTIAL, userOrSystemInContext, clock)
 
     if (convertedCellType == ConvertedCellType.OTHER) {
       addHistory(
@@ -183,7 +183,7 @@ class Cell(
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
-    this.accommodationType = accommodationType
+    setAccommodationTypeForCell(accommodationType, userOrSystemInContext, clock)
 
     usedForTypes?.forEach {
       addUsedFor(it, userOrSystemInContext, clock)
@@ -320,19 +320,18 @@ class Cell(
     return cellUsedFor
   }
 
+  fun removeUsedFor(typeToRemove: UsedForType, userOrSystemInContext: String, clock: Clock) {
+    val usedForToRemove = usedFor.find { it.usedFor == typeToRemove }
+    if (usedForToRemove != null) {
+      addHistory(LocationAttribute.USED_FOR, typeToRemove.description, null, userOrSystemInContext, LocalDateTime.now(clock))
+      usedFor.remove(usedForToRemove)
+    }
+  }
+
   override fun update(upsert: PatchResidentialLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
     super.update(upsert, userOrSystemInContext, clock)
 
-    if (upsert.accommodationType != null && this.accommodationType != upsert.accommodationType) {
-      addHistory(
-        LocationAttribute.ACCOMMODATION_TYPE,
-        this.accommodationType.description,
-        upsert.accommodationType.description,
-        userOrSystemInContext,
-        LocalDateTime.now(clock),
-      )
-    }
-    this.accommodationType = upsert.accommodationType ?: this.accommodationType
+    setAccommodationTypeForCell(upsert.accommodationType ?: this.accommodationType, userOrSystemInContext, clock)
 
     if (upsert.specialistCellTypes != null) {
       updateSpecialistCellTypes(upsert.specialistCellTypes, userOrSystemInContext, clock)
@@ -374,6 +373,7 @@ class Cell(
   override fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
     super.sync(upsert, userOrSystemInContext, clock)
 
+    setAccommodationTypeForCell(residentialHousingType.mapToAccommodationType(), userOrSystemInContext, clock)
     handleNomisCapacitySync(upsert, userOrSystemInContext, clock)
 
     if (upsert.attributes != null) {
@@ -382,6 +382,23 @@ class Cell(
     }
 
     return this
+  }
+
+  private fun setAccommodationTypeForCell(accommodationType: AccommodationType, userOrSystemInContext: String, clock: Clock) {
+    addHistory(
+      LocationAttribute.ACCOMMODATION_TYPE,
+      this.accommodationType.description,
+      accommodationType.description,
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
+    this.accommodationType = accommodationType
+
+    if (this.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+      addUsedFor(UsedForType.STANDARD_ACCOMMODATION, userOrSystemInContext, clock)
+    } else {
+      removeUsedFor(UsedForType.STANDARD_ACCOMMODATION, userOrSystemInContext, clock)
+    }
   }
 
   private fun handleNomisCapacitySync(

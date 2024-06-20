@@ -63,7 +63,7 @@ interface NomisMigrationRequest {
           deactivatedReason = null,
           proposedReactivationDate = null,
           childLocations = mutableListOf(),
-          accommodationType = mapAccommodationType(residentialHousingType!!),
+          accommodationType = residentialHousingType!!.mapToAccommodationType(),
           parent = null,
           capacity = capacity?.let {
             CapacityJPA(
@@ -82,7 +82,9 @@ interface NomisMigrationRequest {
           location.addAttribute(attribute)
           attribute.mapTo?.let { location.addSpecialistCellType(it) }
         }
-        location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, lastUpdatedBy, clock)
+        if (location.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+          location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, lastUpdatedBy, clock)
+        }
         if (residentialHousingType == HOLDING_CELL) {
           location.convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = lastUpdatedBy, clock = clock)
         }
@@ -133,20 +135,6 @@ interface NomisMigrationRequest {
   }
 
   fun isDeactivated() = deactivationReason != null
-
-  fun mapAccommodationType(residentialHousingType: ResidentialHousingType): AccommodationType {
-    return when (residentialHousingType) {
-      ResidentialHousingType.NORMAL_ACCOMMODATION -> AccommodationType.NORMAL_ACCOMMODATION
-      ResidentialHousingType.HEALTHCARE -> AccommodationType.HEALTHCARE_INPATIENTS
-      ResidentialHousingType.SEGREGATION -> AccommodationType.CARE_AND_SEPARATION
-
-      ResidentialHousingType.SPECIALIST_CELL,
-      HOLDING_CELL,
-      ResidentialHousingType.OTHER_USE,
-      ResidentialHousingType.RECEPTION,
-      -> AccommodationType.OTHER_NON_RESIDENTIAL
-    }
-  }
 }
 
 enum class NomisDeactivatedReason {

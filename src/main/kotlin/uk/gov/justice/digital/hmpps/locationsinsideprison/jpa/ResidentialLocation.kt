@@ -191,4 +191,19 @@ enum class ResidentialHousingType(
   RECEPTION("Reception"),
   SEGREGATION("Segregation"),
   SPECIALIST_CELL("Specialist Cell"),
+  ;
+
+  fun mapToAccommodationType(): AccommodationType {
+    return when (this) {
+      NORMAL_ACCOMMODATION -> AccommodationType.NORMAL_ACCOMMODATION
+      HEALTHCARE -> AccommodationType.HEALTHCARE_INPATIENTS
+      SEGREGATION -> AccommodationType.CARE_AND_SEPARATION
+
+      SPECIALIST_CELL,
+      HOLDING_CELL,
+      OTHER_USE,
+      RECEPTION,
+      -> AccommodationType.OTHER_NON_RESIDENTIAL
+    }
+  }
 }

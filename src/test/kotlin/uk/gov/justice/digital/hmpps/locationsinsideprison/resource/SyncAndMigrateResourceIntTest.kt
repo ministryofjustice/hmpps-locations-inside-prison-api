@@ -430,6 +430,40 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           """,
             false,
           )
+
+        webTestClient.get().uri("/locations/${room.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "012",
+              "pathHierarchy": "B-1-012",
+              "locationType": "CELL",
+              "accommodationTypes": [ 
+                "NORMAL_ACCOMMODATION"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ],
+              "active": true,
+              "key": "ZZGHI-B-1-012",
+              "capacity": {
+                "maxCapacity": 1,
+                "workingCapacity": 1
+              },
+              "certification": {
+                "certified": true,
+                "capacityOfCertifiedCell": 1
+              }
+            }
+          """,
+            false,
+          )
       }
 
       @Test
@@ -830,11 +864,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Converted Cell Type",
                   "newValue": "Holding room",
-                  "amendedBy": "user"
-                },
-                {
-                  "attribute": "Used For",
-                  "newValue": "Standard accommodation",
                   "amendedBy": "user"
                 }
               ]
