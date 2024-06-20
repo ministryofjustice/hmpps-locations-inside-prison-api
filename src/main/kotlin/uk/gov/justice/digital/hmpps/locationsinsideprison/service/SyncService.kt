@@ -131,7 +131,7 @@ class SyncService(
         locationRepository.updateResidentialHousingType(
           id,
           location.residentialHousingType.name,
-          location.residentialHousingType.mapToAccommodationType().name
+          location.residentialHousingType.mapToAccommodationType().name,
         )
       }
       clearSessionRequired = true
