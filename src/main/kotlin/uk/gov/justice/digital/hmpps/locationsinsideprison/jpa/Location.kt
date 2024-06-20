@@ -715,6 +715,7 @@ abstract class Location(
       deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate?.toLocalDate(),
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
+      permanentlyDeactivated = isPermanentlyDeactivated(),
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
     )
   }
