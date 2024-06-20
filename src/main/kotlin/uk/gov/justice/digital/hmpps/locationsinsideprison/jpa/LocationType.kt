@@ -5,6 +5,7 @@ enum class ResidentialLocationType(
   val baseType: LocationType,
   val display: Boolean = true,
 ) {
+  BLOCK("Block", LocationType.BLOCK),
   WING("Wing", LocationType.WING),
   SPUR("Spur", LocationType.SPUR),
   LANDING("Landing", LocationType.LANDING),
@@ -60,6 +61,7 @@ enum class NonResidentialLocationType(
 enum class LocationType(
   val description: String,
 ) {
+  BLOCK("Block"),
   WING("Wing"),
   SPUR("Spur"),
   LANDING("Landing"),
