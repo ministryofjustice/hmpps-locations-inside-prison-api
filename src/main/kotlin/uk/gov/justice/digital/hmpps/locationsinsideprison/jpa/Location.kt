@@ -364,7 +364,7 @@ abstract class Location(
       key = code,
       name = getDerivedLocalName() ?: code,
       children = getActiveResidentialLocationsBelowThisLevel()
-        .filter { it.isWingLandingSpur() }
+        .filter { it.isBlockWingLandingSpur() }
         .map { it.toLocationGroupDto() }
         .sortedWith(NaturalOrderComparator()),
     )
@@ -694,7 +694,7 @@ abstract class Location(
   }
 
   fun isCell() = locationType == LocationType.CELL
-  fun isWingLandingSpur() = locationType in listOf(LocationType.WING, LocationType.LANDING, LocationType.SPUR)
+  fun isBlockWingLandingSpur() = locationType in listOf(LocationType.WING, LocationType.LANDING, LocationType.SPUR, LocationType.BLOCK)
   fun isLocationShownOnResidentialSummary() = locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
   fun isResidentialType() = locationType in ResidentialLocationType.entries.map { it.baseType }
 

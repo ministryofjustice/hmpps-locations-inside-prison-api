@@ -88,7 +88,7 @@ class LocationService(
     val groups = locationGroupFromPropertiesService.getLocationGroups(prisonId)
     return groups.ifEmpty {
       residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
-        .filter { it.isActiveAndAllParentsActive() && it.isWingLandingSpur() }
+        .filter { it.isActiveAndAllParentsActive() && it.isBlockWingLandingSpur() }
         .map {
           it.toLocationGroupDto()
         }
