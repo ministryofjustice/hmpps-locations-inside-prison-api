@@ -212,9 +212,9 @@ class LocationService(
 
     residentialLocation.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
 
-    //if request has usedFor then we need to cascade usedfor
-    if(patchLocationRequest.usedFor?.isNotEmpty() == true)
+    if (patchLocationRequest.usedFor?.isNotEmpty() == true) {
       residentialLocation.updateCellUsedFor(patchLocationRequest.usedFor, authenticationFacade.getUserOrSystemInContext(), clock)
+    }
 
     log.info("Updated Residential Location [$residentialLocation]")
     telemetryClient.trackEvent(
@@ -233,6 +233,35 @@ class LocationService(
       residentialLocation.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged),
       if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
     )
+  }
+
+  @Transactional
+  fun updateResidentialLocationUsedForTypes(id: UUID, usedFor: Set<UsedForType>): Boolean {
+    val residentialLocation = residentialLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (usedFor.isNotEmpty()) {
+      residentialLocation.updateCellUsedFor(
+        usedFor,
+        authenticationFacade.getUserOrSystemInContext(),
+        clock,
+      )
+    } else {
+      return false
+    }
+
+    log.info("Updated Used for type for Residential Location Children [$residentialLocation]")
+    telemetryClient.trackEvent(
+      "Updated Used For Type Residential Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to residentialLocation.prisonId,
+        "path" to residentialLocation.getPathHierarchy(),
+      ),
+      null,
+    )
+
+    return true
   }
 
   @Transactional
