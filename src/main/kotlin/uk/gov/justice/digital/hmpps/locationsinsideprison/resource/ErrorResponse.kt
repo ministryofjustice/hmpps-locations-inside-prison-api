@@ -1,9 +1,11 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import org.springframework.http.HttpStatus
 
 @Schema(description = "Error response")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class ErrorResponse(
   @Schema(description = "HTTP status code", example = "500", required = true)
   val status: Int,

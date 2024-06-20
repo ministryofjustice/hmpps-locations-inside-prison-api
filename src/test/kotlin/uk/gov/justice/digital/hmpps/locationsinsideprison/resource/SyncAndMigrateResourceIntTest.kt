@@ -57,6 +57,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var wingB: ResidentialLocation
   lateinit var landing1: ResidentialLocation
   lateinit var cell: Cell
+  lateinit var permDeactivated: Cell
   lateinit var room: ResidentialLocation
   lateinit var nonRes: NonResidentialLocation
   lateinit var locationHistory: LocationHistory
@@ -105,6 +106,15 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         locationType = LocationType.ROOM,
       ),
     )
+
+    permDeactivated = repository.save(
+      buildCell(
+        prisonId = "ZZGHI",
+        pathHierarchy = "B-1-013",
+        archived = true,
+        active = false,
+      ),
+    )
     locationHistory = cell.addHistory(
       attributeName = LocationAttribute.DESCRIPTION,
       oldValue = "2",
@@ -116,6 +126,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
     wingB.addChildLocation(landing1)
     landing1.addChildLocation(cell)
+    landing1.addChildLocation(permDeactivated)
     landing1.addChildLocation(room)
     landing1.addChildLocation(nonRes)
     repository.save(wingB)
@@ -299,6 +310,55 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "certified": false,
                 "capacityOfCertifiedCell": 0
               }
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `cannot sync an existing permanently deactivated location`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncResRequest.copy(
+                id = permDeactivated.id,
+                code = "013",
+                capacity = CapacityDTO(3, 3),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isEqualTo(409)
+          .expectBody().json(
+            // language=json
+            """ 
+                {
+                  "status": 409,
+                  "userMessage": "Deactivated Location Exception: Location Location ZZGHI-B-1-013 cannot be updated as permanently deactivated cannot be updated as permanently deactivated",
+                  "developerMessage": "Location Location ZZGHI-B-1-013 cannot be updated as permanently deactivated cannot be updated as permanently deactivated",
+                  "errorCode": 107
+                }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/sync/id/${permDeactivated.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "013",
+              "pathHierarchy": "B-1-013",
+              "active": false,
+              "permanentlyDeactivated": true
             }
           """,
             false,
