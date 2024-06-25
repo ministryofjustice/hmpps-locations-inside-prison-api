@@ -12,6 +12,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequ
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -116,7 +117,7 @@ class SyncService(
     } else {
       if (location is NonResidentialLocation) {
         location.updateUsage(emptySet(), upsert.lastUpdatedBy, clock)
-        locationRepository.updateResidentialHousingType(id, upsert.residentialHousingType.name)
+        locationRepository.updateResidentialHousingType(id, upsert.residentialHousingType.name, upsert.residentialHousingType.mapToAccommodationType().name)
         clearSessionRequired = true
       }
     }
@@ -126,6 +127,13 @@ class SyncService(
         location.convertToNonCell()
       }
       locationRepository.updateLocationType(id, upsert.locationType.name)
+      if (location is ResidentialLocation && upsert.locationType == LocationType.CELL) {
+        locationRepository.updateResidentialHousingType(
+          id,
+          location.residentialHousingType.name,
+          location.residentialHousingType.mapToAccommodationType().name,
+        )
+      }
       clearSessionRequired = true
     }
 

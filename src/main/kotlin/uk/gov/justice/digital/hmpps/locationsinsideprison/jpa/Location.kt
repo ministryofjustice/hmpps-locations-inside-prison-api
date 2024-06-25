@@ -362,7 +362,7 @@ abstract class Location(
   fun toLocationGroupDto(): LocationGroupDto {
     return LocationGroupDto(
       key = code,
-      name = getDerivedLocalName(),
+      name = getDerivedLocalName() ?: code,
       children = getActiveResidentialLocationsBelowThisLevel()
         .filter { it.isWingLandingSpur() }
         .map { it.toLocationGroupDto() }
@@ -715,6 +715,7 @@ abstract class Location(
       deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate?.toLocalDate(),
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
+      permanentlyDeactivated = isPermanentlyDeactivated(),
       changeHistory = if (includeHistory) history.map { it.toDto() } else null,
     )
   }

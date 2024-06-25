@@ -24,11 +24,11 @@ interface LocationRepository : JpaRepository<Location, UUID> {
   @Query("select l from Location l where concat(l.prisonId,'-',l.pathHierarchy) IN (:keys)")
   fun findAllByKeys(keys: List<String>): List<Location>
 
-  @Query("update location set residential_housing_type = :residentialHousingType where id = :id", nativeQuery = true)
+  @Query("update location set residential_housing_type = :residentialHousingType, accommodation_type = :accommodationType where id = :id", nativeQuery = true)
   @Modifying
-  fun updateResidentialHousingType(id: UUID, residentialHousingType: String)
+  fun updateResidentialHousingType(id: UUID, residentialHousingType: String, accommodationType: String)
 
-  @Query("update location set residential_housing_type = null where id = :id", nativeQuery = true)
+  @Query("update location set residential_housing_type = null, accommodation_type = null where id = :id", nativeQuery = true)
   @Modifying
   fun updateResidentialHousingTypeToNull(id: UUID)
 

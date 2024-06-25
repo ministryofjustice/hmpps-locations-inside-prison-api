@@ -57,7 +57,8 @@ spring:
     password: ${DATABASE_PASSWORD}
     hikari:
       pool-name: LIP-DB-CP
-      maximum-pool-size: 10
+      maximum-pool-size: 20
+      max-lifetime: 600000
       connection-timeout: 1000
       validation-timeout: 500
 
