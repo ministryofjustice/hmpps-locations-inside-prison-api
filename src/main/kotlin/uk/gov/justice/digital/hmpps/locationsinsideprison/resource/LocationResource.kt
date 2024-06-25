@@ -1141,7 +1141,7 @@ class LocationResource(
   @PutMapping("{id}/used-for-type", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
-    summary = "Makes a non-res cell location a cell",
+    summary = "Update the used for type for a location",
     description = "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
