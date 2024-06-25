@@ -1138,7 +1138,7 @@ class LocationResource(
     }
   }
 
-  @PutMapping("{id}/used_for_type", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PutMapping("{id}/used-for-type", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
     summary = "Makes a non-res cell location a cell",
