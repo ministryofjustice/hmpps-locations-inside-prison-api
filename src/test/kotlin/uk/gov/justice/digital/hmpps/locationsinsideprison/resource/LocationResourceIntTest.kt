@@ -1637,6 +1637,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+
+
   @DisplayName("GET /locations/prison/{prisonId}/inactive-cells")
   @Nested
   inner class ViewInactiveCellsTest {
@@ -1820,6 +1822,53 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           )
       }
     }
+  }
+
+  @DisplayName("PUT /locations/{id}/used-for-type")
+  @Nested
+  inner class UsedForTypeTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(CapacityDTO()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
   }
 
   @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
@@ -2670,6 +2719,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             false,
           )
       }
+
+
 
       @Test
       fun `can update details of a locations non-res usage`() {
