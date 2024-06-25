@@ -800,7 +800,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "key": "ZZGHI-B-1-002",
               "capacity": {
                 "maxCapacity": 1,
-                "workingCapacity": 1
+                "workingCapacity": 0
               },
               "deactivatedReason": "${migrateRequest.deactivationReason}",
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",

@@ -1689,7 +1689,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "permanentlyInactive": false,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 2
+                    "workingCapacity": 0
                   },
                   "certification": {
                     "certified": true,
@@ -1749,7 +1749,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "permanentlyInactive": false,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 2
+                    "workingCapacity": 0
                   },
                   "certification": {
                     "certified": true,
@@ -1794,7 +1794,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   "permanentlyInactive": false,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 2
+                    "workingCapacity": 0
                   },
                   "certification": {
                     "certified": true,
@@ -2604,7 +2604,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                       "permanentlyInactive": false,
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 2
+                        "workingCapacity": 0
                       },
                       "certification": {
                         "certified": true,
