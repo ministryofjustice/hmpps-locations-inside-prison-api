@@ -59,7 +59,7 @@ open class ResidentialLocation(
 ) {
 
   private fun getWorkingCapacity(): Int {
-    return cellLocations().filter { it.isActiveAndAllParentsActive() || it == this }
+    return cellLocations().filter { it.isActiveAndAllParentsActive() }
       .sumOf { it.getWorkingCapacity() ?: 0 }
   }
 
