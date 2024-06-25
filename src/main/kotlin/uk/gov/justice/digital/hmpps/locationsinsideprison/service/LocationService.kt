@@ -212,10 +212,6 @@ class LocationService(
 
     residentialLocation.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
 
-    if (patchLocationRequest.usedFor?.isNotEmpty() == true) {
-      residentialLocation.updateCellUsedFor(patchLocationRequest.usedFor, authenticationFacade.getUserOrSystemInContext(), clock)
-    }
-
     log.info("Updated Residential Location [$residentialLocation]")
     telemetryClient.trackEvent(
       "Updated Residential Location",
