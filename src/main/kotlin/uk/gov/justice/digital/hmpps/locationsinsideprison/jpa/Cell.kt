@@ -484,8 +484,6 @@ class Cell(
 
   override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean, countInactiveCells: Boolean): LocationDto {
     return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory, countInactiveCells = countInactiveCells).copy(
-      capacity = capacity?.toDto(),
-      certification = certification?.toDto(),
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
     )
