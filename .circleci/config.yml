@@ -6,7 +6,7 @@ orbs:
 parameters:
   alerts-slack-channel:
     type: string
-    default: locations-inside-prison-dev
+    default: move-a-prisoner-alerts
   releases-slack-channel:
     type: string
     default: dps-releases
