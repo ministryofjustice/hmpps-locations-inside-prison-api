@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
-import org.springframework.security.test.context.support.WithMockUser
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
@@ -34,6 +33,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
+import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -43,7 +43,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 
 const val EXPECTED_USERNAME = "A_TEST_USER"
 
-@WithMockUser(username = EXPECTED_USERNAME)
+@WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResourceIntTest : SqsIntegrationTestBase() {
 
   @TestConfiguration
