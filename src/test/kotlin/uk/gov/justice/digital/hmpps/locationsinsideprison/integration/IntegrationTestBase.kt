@@ -11,9 +11,9 @@ import org.springframework.boot.test.mock.mockito.SpyBean
 import org.springframework.http.HttpHeaders
 import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
-import uk.gov.justice.digital.hmpps.locationsinsideprison.config.JwtAuthHelper
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.HmppsAuthMockServer
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.PrisonerSearchMockServer
+import uk.gov.justice.hmpps.test.kotlin.auth.JwtAuthorisationHelper
 
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 abstract class IntegrationTestBase : TestBase() {
@@ -23,7 +23,7 @@ abstract class IntegrationTestBase : TestBase() {
   lateinit var webTestClient: WebTestClient
 
   @Autowired
-  protected lateinit var jwtAuthHelper: JwtAuthHelper
+  protected lateinit var jwtAuthHelper: JwtAuthorisationHelper
 
   @SpyBean
   protected lateinit var telemetryClient: TelemetryClient
@@ -64,7 +64,7 @@ abstract class IntegrationTestBase : TestBase() {
     user: String = SYSTEM_USERNAME,
     roles: List<String> = listOf(),
     scopes: List<String> = listOf(),
-  ): (HttpHeaders) -> Unit = jwtAuthHelper.setAuthorisation(user, roles, scopes)
+  ): (HttpHeaders) -> Unit = jwtAuthHelper.setAuthorisationHeader(username = user, roles = roles, scope = scopes)
 
   protected fun jsonString(any: Any) = objectMapper.writeValueAsString(any) as String
 }
