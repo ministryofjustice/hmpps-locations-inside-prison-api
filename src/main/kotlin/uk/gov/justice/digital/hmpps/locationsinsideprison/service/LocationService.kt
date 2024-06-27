@@ -246,7 +246,7 @@ class LocationService(
       return false
     }
 
-    log.info("Updated Used for type for Residential Location Children [$residentialLocation.getKey()]")
+    log.info("Updated used for types for cell locations under [$residentialLocation.getKey()]")
     telemetryClient.trackEvent(
       "Updated Used For Type Residential Location",
       mapOf(
