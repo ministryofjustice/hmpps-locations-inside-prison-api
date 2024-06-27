@@ -1138,7 +1138,7 @@ class LocationResource(
     }
   }
 
-  @PutMapping("{id}/used-for-type", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PutMapping("/{id}/used-for-type", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
     summary = "Update the used for type for a location",
@@ -1176,7 +1176,7 @@ class LocationResource(
     id: UUID,
     @RequestBody
     @Validated
-    usedForTypes: Set<UsedForType> = mutableSetOf(),
+    usedForTypes: Set<UsedForType>,
   ) {
     if (usedForTypes.isNotEmpty()) {
       locationService.updateResidentialLocationUsedForTypes(id, usedForTypes)

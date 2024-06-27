@@ -1637,8 +1637,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
-
-
   @DisplayName("GET /locations/prison/{prisonId}/inactive-cells")
   @Nested
   inner class ViewInactiveCellsTest {
@@ -1837,7 +1835,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectStatus().isUnauthorized
       }
 
-
       @Test
       fun `access forbidden when no role`() {
         webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
@@ -1866,7 +1863,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
     }
 
-
     @Nested
     inner class Validation {
       @Test
@@ -1888,7 +1884,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().isEqualTo(400)
       }
-
     }
 
     @Nested
@@ -1903,7 +1898,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        //TODO MAP1121 getDomainEvents  used-for-type
+        // TODO MAP1121 getDomainEvents  used-for-type
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
@@ -1913,8 +1908,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         }
       }
     }
-
-}
+  }
 
   @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
   @Nested
@@ -2764,8 +2758,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             false,
           )
       }
-
-
 
       @Test
       fun `can update details of a locations non-res usage`() {
