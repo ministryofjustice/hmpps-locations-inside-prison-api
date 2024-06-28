@@ -1146,7 +1146,7 @@ class LocationResource(
     responses = [
       ApiResponse(
         responseCode = "200",
-        description = "Returns updated used for type for a residential location",
+        description = "Returns details of the updated locations",
       ),
       ApiResponse(
         responseCode = "400",
@@ -1178,7 +1178,6 @@ class LocationResource(
     @Validated
     usedForTypes: Set<UsedForType>,
   ) {
-    if (usedForTypes.isNotEmpty()) {
       locationService.updateResidentialLocationUsedForTypes(id, usedForTypes)
     }
   }
