@@ -1179,7 +1179,6 @@ class LocationResource(
     usedForTypes: Set<UsedForType>,
   ) {
       locationService.updateResidentialLocationUsedForTypes(id, usedForTypes)
-    }
   }
 
   @GetMapping("/prison/{prisonId}/location-type/{locationType}")
