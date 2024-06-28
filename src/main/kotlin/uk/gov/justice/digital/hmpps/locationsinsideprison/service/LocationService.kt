@@ -22,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationReque
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UsedForTypeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
@@ -232,7 +233,7 @@ class LocationService(
   }
 
   @Transactional
-  fun updateResidentialLocationUsedForTypes(id: UUID, usedFor: Set<UsedForType>): LocationDTO {
+  fun updateResidentialLocationUsedForTypes(id: UUID, usedFor: Set<UsedForType>): UsedForTypeRequest {
     val residentialLocation = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -254,7 +255,7 @@ class LocationService(
       null,
     )
 
-    return residentialLocation.toDto()
+    return residentialLocation.toLocationUsed(id,usedFor)
   }
 
   @Transactional

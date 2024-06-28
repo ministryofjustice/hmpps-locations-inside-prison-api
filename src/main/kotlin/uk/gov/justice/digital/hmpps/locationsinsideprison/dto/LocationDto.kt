@@ -168,6 +168,16 @@ data class Location(
   }
 }
 
+
+@Schema(description = "Used For Type")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class UsedForTypeRequest(
+  @Schema(description = "Location Id", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+  val id: UUID,
+  @Schema(description = "Usage For", required = false)
+  val usedFor: Set<UsedForType>? = null,
+)
+
 @Schema(description = "Non Residential Usage")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class NonResidentialUsageDto(

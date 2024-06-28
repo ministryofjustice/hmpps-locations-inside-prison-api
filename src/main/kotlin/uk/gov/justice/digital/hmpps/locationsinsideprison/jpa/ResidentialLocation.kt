@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UsedForTypeRequest
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -159,6 +160,13 @@ open class ResidentialLocation(
       } else {
         null
       },
+    )
+  }
+
+  fun toLocationUsed(id: UUID?,usedFor: Set<UsedForType>,): UsedForTypeRequest {
+    return UsedForTypeRequest(
+      id = UUID.randomUUID(),
+      usedFor = usedFor,
     )
   }
 

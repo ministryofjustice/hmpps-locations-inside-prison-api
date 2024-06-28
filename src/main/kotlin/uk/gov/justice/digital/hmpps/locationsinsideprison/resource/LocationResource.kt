@@ -39,6 +39,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UsedForTypeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -1177,13 +1178,9 @@ class LocationResource(
     @RequestBody
     @Validated
     usedForTypes: Set<UsedForType>,
-  ) : LocationDTO
+  ) : UsedForTypeRequest
   {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_AMENDED,
-    ) {
-      locationService.updateResidentialLocationUsedForTypes(id, usedForTypes)
-    }
+    return locationService.updateResidentialLocationUsedForTypes(id, usedForTypes)
   }
 
   @GetMapping("/prison/{prisonId}/location-type/{locationType}")
