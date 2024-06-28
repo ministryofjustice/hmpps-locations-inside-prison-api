@@ -232,19 +232,16 @@ class LocationService(
   }
 
   @Transactional
-  fun updateResidentialLocationUsedForTypes(id: UUID, usedFor: Set<UsedForType>): Boolean {
+  fun updateResidentialLocationUsedForTypes(id: UUID, usedFor: Set<UsedForType>): LocationDTO {
     val residentialLocation = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    if (usedFor.isNotEmpty()) {
       residentialLocation.updateCellUsedFor(
         usedFor,
         authenticationFacade.getUserOrSystemInContext(),
         clock,
       )
-    } else {
-      return false
-    }
+
 
     log.info("Updated Used for types for below Location [$residentialLocation.getKey()]")
     telemetryClient.trackEvent(
@@ -257,7 +254,7 @@ class LocationService(
       null,
     )
 
-    return true
+    return residentialLocation.toDto()
   }
 
   @Transactional

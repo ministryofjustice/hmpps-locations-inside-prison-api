@@ -1177,8 +1177,13 @@ class LocationResource(
     @RequestBody
     @Validated
     usedForTypes: Set<UsedForType>,
-  ) {
+  ) : LocationDTO
+  {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_AMENDED,
+    ) {
       locationService.updateResidentialLocationUsedForTypes(id, usedForTypes)
+    }
   }
 
   @GetMapping("/prison/{prisonId}/location-type/{locationType}")
