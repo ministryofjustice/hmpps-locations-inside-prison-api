@@ -8,6 +8,7 @@ generic-service:
   env:
     API_BASE_URL_OAUTH: https://sign-in.hmpps.service.justice.gov.uk/auth
     API_BASE_URL_PRISONER_SEARCH: https://prisoner-search.prison.service.justice.gov.uk
+    SERVICE_ACTIVE_PRISONS: ""
 
   postgresDatabaseRestore:
     enabled: true
@@ -26,7 +27,7 @@ generic-service:
 # CloudPlatform AlertManager receiver to route prometheus alerts to slack
 # See https://user-guide.cloud-platform.service.justice.gov.uk/documentation/monitoring-an-app/how-to-create-alarms.html#creating-your-own-custom-alerts
 generic-prometheus-alerts:
-  alertSeverity: digital-prison-service
+  alertSeverity: hmpps-prisoner-cell-allocation-prod
   rdsAlertsDatabases:
     cloud-platform-a2d6489b50a08faa: locations-inside-prison-api
   sqsAlertsQueueNames:
