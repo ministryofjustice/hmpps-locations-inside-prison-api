@@ -24,18 +24,18 @@ components:
       inside:
         prison:
           created:
-            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-created.yml
+            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-created.yaml
           amended:
-            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-amended.yml
+            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-amended.yaml
           deactivated:
-            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deactivated.yml
+            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deactivated.yaml
           reactivated:
-            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-reactivated.yml
+            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-reactivated.yaml
           deleted:
-            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deleted.yml
+            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deleted.yaml
           signed-op-cap:
             amended:
-              $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-signed-op-cap-amended.yml
+              $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-signed-op-cap-amended.yaml
 
 channels:
   hmpps-domain-events:
