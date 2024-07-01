@@ -28,4 +28,15 @@ class InfoTest : SqsIntegrationTestBase() {
         assertThat(it).startsWith(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE))
       }
   }
+
+  @Test
+  fun `Info page reports active agencies`() {
+    webTestClient.get().uri("/info")
+      .exchange()
+      .expectStatus().isOk
+      .expectBody().jsonPath("activeAgencies").value<List<String>> {
+        assertThat(it).hasSize(1)
+        assertThat(it[0]).isEqualTo("***")
+      }
+  }
 }
