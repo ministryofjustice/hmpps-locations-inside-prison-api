@@ -20,22 +20,18 @@ servers:
 
 components:
   messages:
-    location:
-      inside:
-        prison:
-          created:
-            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-created.yaml
-          amended:
-            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-amended.yaml
-          deactivated:
-            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deactivated.yaml
-          reactivated:
-            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-reactivated.yaml
-          deleted:
-            $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deleted.yaml
-          signed-op-cap:
-            amended:
-              $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-signed-op-cap-amended.yaml
+    location.inside.prison.created:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-created.yaml
+    location.inside.prison.amended:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-amended.yaml
+    location.inside.prison.deactivated:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deactivated.yaml
+    location.inside.prison.reactivated:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-reactivated.yaml
+    location.inside.prison.deleted:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deleted.yaml
+    location.inside.prison.signed-op-cap.amended:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-signed-op-cap-amended.yaml
 
 channels:
   hmpps-domain-events:
@@ -44,22 +40,18 @@ channels:
       sns:
         name: domainevents
     messages:
-      location:
-        inside:
-          prison:
-            created:
-              $ref: '#/components/messages/location.inside.prison.created'
-            amended:
-              $ref: '#/components/messages/location.inside.prison.amended'
-            deactivated:
-              $ref: '#/components/messages/location.inside.prison.deactivated'
-            reactivated:
-              $ref: '#/components/messages/location.inside.prison.reactivated'
-            deleted:
-              $ref: '#/components/messages/location.inside.prison.deleted'
-            signed-op-cap:
-              amended:
-                $ref: '#/components/messages/location.inside.prison.signed-op-cap.amended'
+      location.inside.prison.created:
+        $ref: '#/components/messages/location.inside.prison.created'
+      location.inside.prison.amended:
+        $ref: '#/components/messages/location.inside.prison.amended'
+      location.inside.prison.deactivated:
+        $ref: '#/components/messages/location.inside.prison.deactivated'
+      location.inside.prison.reactivated:
+        $ref: '#/components/messages/location.inside.prison.reactivated'
+      location.inside.prison.deleted:
+        $ref: '#/components/messages/location.inside.prison.deleted'
+      location.inside.prison.signed-op-cap.amended:
+        $ref: '#/components/messages/location.inside.prison.signed-op-cap.amended'
 
 operations:
   publish-event:
