@@ -22,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationReque
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UsedForTypeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
@@ -229,6 +230,32 @@ class LocationService(
       residentialLocation.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged),
       if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
     )
+  }
+
+  @Transactional
+  fun updateResidentialLocationUsedForTypes(id: UUID, usedFor: Set<UsedForType>): UsedForTypeRequest {
+    val residentialLocation = residentialLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+      residentialLocation.updateCellUsedFor(
+        usedFor,
+        authenticationFacade.getUserOrSystemInContext(),
+        clock,
+      )
+
+
+    log.info("Updated Used for types for below Location [$residentialLocation.getKey()]")
+    telemetryClient.trackEvent(
+      "Updated Used For Type Residential Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to residentialLocation.prisonId,
+        "path" to residentialLocation.getPathHierarchy(),
+      ),
+      null,
+    )
+
+    return residentialLocation.toLocationUsed(id,usedFor)
   }
 
   @Transactional
