@@ -1235,8 +1235,6 @@ data class ConvertCellToNonResidentialLocationRequest(
 
 @Schema(description = "Request to update User-for-type in a residential location")
 data class UpdateUserForTypeRequest(
-  @Schema(description = "Location Id", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
-  val id: UUID,
   @Schema(description = "Used for type of a location", example = "STANDARD ACCOMMODATION", required = false)
   val usedFor: Set<UsedForType>,
 )
