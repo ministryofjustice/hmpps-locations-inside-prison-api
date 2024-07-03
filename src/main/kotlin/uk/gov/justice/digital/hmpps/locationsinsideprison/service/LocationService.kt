@@ -40,6 +40,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
@@ -97,11 +98,22 @@ class LocationService(
   }
 
   fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> =
-    cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true)
-      .filter(locationGroupFromPropertiesService.locationGroupFilter(prisonId, groupName)::test)
+    cellsInGroup(prisonId, groupName, cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true))
       .toMutableList()
       .map { it.toDto() }
       .sortedWith(NaturalOrderComparator())
+
+  private fun cellsInGroup(
+    prisonId: String,
+    groupName: String?,
+    cellsToFilter: List<Cell>,
+  ): List<Cell> {
+    return if (groupName != null) {
+      cellsToFilter.filter(locationGroupFromPropertiesService.locationGroupFilter(prisonId, groupName)::test)
+    } else {
+      cellsToFilter
+    }
+  }
 
   fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =
     nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
@@ -671,6 +683,53 @@ class LocationService(
     if (locationsWithPrisoners.isNotEmpty()) {
       throw LocationContainsPrisonersException(locationsWithPrisoners)
     }
+  }
+
+  fun getCellsWithCapacity(
+    prisonId: String,
+    locationId: UUID? = null,
+    groupName: String? = null,
+    specialistCellType: SpecialistCellType? = null,
+    includePrisonerInformation: Boolean = false,
+  ): List<CellWithSpecialistCellTypes> {
+    val cellsToFilter = if (locationId != null) {
+      residentialLocationRepository.findOneByPrisonIdAndId(prisonId, locationId)?.cellLocations()
+        ?: throw LocationNotFoundException(locationId.toString())
+    } else {
+      cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true)
+    }
+
+    val cellsWithCapacity = cellsInGroup(
+      prisonId = prisonId,
+      groupName = groupName,
+      cellsToFilter = cellsToFilter,
+    )
+      .filter { cell -> cell.isActiveAndAllParentsActive() && cell.isCertified() }
+      .filter { cell ->
+        specialistCellType == null || specialistCellType in cell.specialistCellTypes.map { it.specialistCellType }
+      }
+    val mapOfOccupancy = prisonerLocationService.prisonersInLocations(prisonId, cellsWithCapacity)
+      .groupBy { it.cellLocation }
+
+    return cellsWithCapacity.map { cell ->
+      CellWithSpecialistCellTypes(
+        id = cell.id!!,
+        prisonId = cell.prisonId,
+        pathHierarchy = cell.getPathHierarchy(),
+        maxCapacity = cell.getMaxCapacity() ?: 0,
+        workingCapacity = cell.getWorkingCapacity() ?: 0,
+        localName = cell.localName,
+        specialistCellTypes = cell.specialistCellTypes.map { it.specialistCellType },
+        noOfOccupants = mapOfOccupancy[cell.getPathHierarchy()]?.size ?: 0,
+        prisonersInCell = if (includePrisonerInformation) {
+          mapOfOccupancy[cell.getPathHierarchy()]
+        } else {
+          null
+        },
+      )
+    }.filter {
+      it.hasSpace()
+    }.sortedBy { it.pathHierarchy }
   }
 }
 
