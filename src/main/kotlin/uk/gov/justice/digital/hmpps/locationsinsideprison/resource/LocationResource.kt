@@ -1141,7 +1141,7 @@ class LocationResource(
   @PutMapping("/{id}/used-for-type", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
-    summary = "Update the list ofUsed For types at cell location below the specified location",
+    summary = "Update Used For types at cell location below the specified location",
     description = "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
@@ -1176,12 +1176,18 @@ class LocationResource(
     id: UUID,
     @RequestBody
     @Validated
-    usedForTypes: Set<UsedForType>,
-  ) {
-      locationService.updateResidentialLocationUsedForTypes(id, usedForTypes)
+    updateUserForTypeRequest : UpdateUserForTypeRequest
+  ): LocationDTO {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_AMENDED,
+    ) {
+      with(updateUserForTypeRequest) { //usedFor: Set<UsedForType>
+        locationService.updateResidentialLocationUsedForTypes(id = id, usedFor = usedFor)
+      }
+    }
   }
 
-  @GetMapping("/prison/{prisonId}/location-type/{locationType}")
+@GetMapping("/prison/{prisonId}/location-type/{locationType}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @Operation(
@@ -1226,6 +1232,15 @@ data class ConvertCellToNonResidentialLocationRequest(
   @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false)
   val otherConvertedCellType: String? = null,
 )
+
+@Schema(description = "Request to update User-for-type in a residential location")
+data class UpdateUserForTypeRequest(
+  @Schema(description = "Location Id", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+  val id: UUID,
+  @Schema(description = "Used for type of a location", example = "STANDARD ACCOMMODATION", required = false)
+  val usedFor: Set<UsedForType>,
+)
+
 
 @Schema(description = "Request to convert a non-res location to a cell")
 data class ConvertToCellRequest(
