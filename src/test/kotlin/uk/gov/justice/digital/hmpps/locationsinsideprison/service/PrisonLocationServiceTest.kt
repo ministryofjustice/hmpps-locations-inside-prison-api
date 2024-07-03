@@ -20,12 +20,14 @@ class PrisonLocationServiceTest {
 
   @Test
   fun `Get prisoners by prison id when cell location exist and location is active`() {
-    val cell: Cell = mock()
-    val prisoner1 = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1")
-    val prisoner2 = Prisoner("P2", "First Name", "Last Name", "MDI", "Prison Name", "C2")
-    val prisoner3 = Prisoner("P3", "First Name", "Last Name", "MDI", "Prison Name", "C2")
-    whenever(cell.getPathHierarchy()).thenReturn("path")
-    whenever(cellLocationRepository.findAllByPrisonIdAndActive(any(), any())).thenReturn(listOf(cell))
+    val cell1: Cell = mock()
+    val cell2: Cell = mock()
+    val prisoner1 = Prisoner("P1", "First Name", "Last Name", "A", "Prison Name", "C1", gender = "MALE")
+    val prisoner2 = Prisoner("P2", "First Name", "Last Name", "B", "Prison Name", "C2", gender = "MALE")
+    val prisoner3 = Prisoner("P3", "First Name", "Last Name", "B", "Prison Name", "C2", gender = "MALE")
+    whenever(cell1.getPathHierarchy()).thenReturn("A")
+    whenever(cell2.getPathHierarchy()).thenReturn("B")
+    whenever(cellLocationRepository.findAllByPrisonIdAndActive(any(), any())).thenReturn(listOf(cell1, cell2))
     whenever(prisonerSearchService.findPrisonersInLocations(any(), any())).thenReturn(
       listOf(
         prisoner1,
@@ -55,7 +57,7 @@ class PrisonLocationServiceTest {
     whenever(cell.getPathHierarchy()).thenReturn("path")
     whenever(cell.cellLocations()).thenReturn(listOf(cell))
     whenever(cell.prisonId).thenReturn("MDI")
-    val prisoner = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1")
+    val prisoner = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1", gender = "MALE")
 
     whenever(locationRepository.findOneByKey(any())).thenReturn(cell)
 
@@ -80,7 +82,7 @@ class PrisonLocationServiceTest {
     whenever(cell.getPathHierarchy()).thenReturn("path")
     whenever(cell.cellLocations()).thenReturn(listOf(cell))
     whenever(cell.prisonId).thenReturn("MDI")
-    val prisoner = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1")
+    val prisoner = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1", gender = "MALE")
 
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(cell))
 

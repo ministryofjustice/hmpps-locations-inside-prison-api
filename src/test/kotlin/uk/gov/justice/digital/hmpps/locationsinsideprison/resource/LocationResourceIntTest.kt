@@ -2857,8 +2857,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `cannot reduce max capacity of a cell below prisoners in cell`() {
-        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), true)
+      fun `cannot reduce max capacity of a cell below number of prisoners in cell`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy(), cell1.getPathHierarchy()), true)
 
         webTestClient.put().uri("/locations/${cell1.id}/capacity")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))

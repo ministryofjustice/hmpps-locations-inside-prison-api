@@ -63,16 +63,35 @@ data class SearchResult(
 data class Prisoner(
   @Schema(description = "Prisoner Information", example = "A1234AA", required = true)
   val prisonerNumber: String,
-  @Schema(description = "Prisoner first name", example = "Dave", required = true)
-  val firstName: String,
-  @Schema(description = "Prisoner last name", example = "Jones", required = true)
-  val lastName: String,
   @Schema(description = "Prison ID", example = "LEI", required = false)
   val prisonId: String?,
   @Schema(description = "Prison Name", example = "HMP Leeds", required = false)
   val prisonName: String?,
   @Schema(description = "Cell location of the prisoner", example = "1-1-001", required = true)
   val cellLocation: String,
+  @Schema(description = "Prisoner first name", example = "Dave", required = true)
+  val firstName: String,
+  @Schema(description = "Prisoner last name", example = "Jones", required = true)
+  val lastName: String,
+  @Schema(description = "Prisoner gender", example = "Male", required = true)
+  val gender: String,
+  @Schema(description = "Prisoner CSRA", example = "High", required = false)
+  val csra: String? = null,
+  @Schema(description = "Prisoner category", example = "C", required = false)
+  val category: String? = null,
+  @Schema(description = "Prisoner alerts", required = false)
+  val alerts: List<Alert>? = null,
+)
+
+data class Alert(
+  @Schema(description = "Alert type", example = "X", required = true)
+  val alertType: String,
+  @Schema(description = "Alert code", example = "XA", required = true)
+  val alertCode: String,
+  @Schema(description = "Active alert", example = "true", required = true)
+  val active: Boolean,
+  @Schema(description = "Expired", example = "false", required = true)
+  val expired: Boolean,
 )
 
 data class AttributeSearch(
