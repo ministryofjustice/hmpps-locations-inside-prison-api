@@ -25,6 +25,7 @@ class PrisonerSearchService(
   fun findPrisonersInLocations(
     prisonId: String,
     locations: List<String>,
+    pageSize: Int? = 3000,
   ): List<Prisoner> {
     val searchTerm = locations.sorted().joinToString(",")
     val requestBody = AttributeSearch(
@@ -42,7 +43,7 @@ class PrisonerSearchService(
 
     val prisonersInLocations = prisonerSearchWebClient
       .post()
-      .uri("/attribute-search?size=${locations.size}")
+      .uri("/attribute-search?size=${pageSize}")
       .header("Content-Type", "application/json")
       .bodyValue(requestBody)
       .retrieve()
