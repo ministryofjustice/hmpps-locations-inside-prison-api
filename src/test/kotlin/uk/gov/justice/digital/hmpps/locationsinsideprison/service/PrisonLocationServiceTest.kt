@@ -28,7 +28,7 @@ class PrisonLocationServiceTest {
     whenever(cell1.getPathHierarchy()).thenReturn("A")
     whenever(cell2.getPathHierarchy()).thenReturn("B")
     whenever(cellLocationRepository.findAllByPrisonIdAndActive(any(), any())).thenReturn(listOf(cell1, cell2))
-    whenever(prisonerSearchService.findPrisonersInLocations(any(), any())).thenReturn(
+    whenever(prisonerSearchService.findPrisonersInLocations(any(), any(), any())).thenReturn(
       listOf(
         prisoner1,
         prisoner2,
@@ -44,7 +44,7 @@ class PrisonLocationServiceTest {
   @Test
   fun `Get prisoners by prison id when cell location exist and location is active and the location is empty`() {
     whenever(cellLocationRepository.findAllByPrisonIdAndActive(any(), any())).thenReturn(listOf())
-    whenever(prisonerSearchService.findPrisonersInLocations(any(), any())).thenReturn(
+    whenever(prisonerSearchService.findPrisonersInLocations(any(), any(), any())).thenReturn(
       listOf(),
     )
     val result = service.prisonersInPrison("MDI")
@@ -61,7 +61,7 @@ class PrisonLocationServiceTest {
 
     whenever(locationRepository.findOneByKey(any())).thenReturn(cell)
 
-    whenever(prisonerSearchService.findPrisonersInLocations(any(), any())).thenReturn(
+    whenever(prisonerSearchService.findPrisonersInLocations(any(), any(), any())).thenReturn(
       listOf(prisoner),
     )
     val result = service.prisonersInLocations("C1")
@@ -86,7 +86,7 @@ class PrisonLocationServiceTest {
 
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(cell))
 
-    whenever(prisonerSearchService.findPrisonersInLocations(any(), any())).thenReturn(
+    whenever(prisonerSearchService.findPrisonersInLocations(any(), any(), any())).thenReturn(
       listOf(prisoner),
     )
     val result = service.prisonersInLocations(UUID.randomUUID())
