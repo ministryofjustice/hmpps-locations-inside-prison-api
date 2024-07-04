@@ -661,7 +661,7 @@ class LocationService(
     return list.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
   }
 
-  fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }
+  fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }.sortedWith(NaturalOrderComparator())
 
   fun getResidentialInactiveLocations(prisonId: String, parentLocationId: UUID?): List<LocationDTO> {
     val startLocation = parentLocationId?.let {
