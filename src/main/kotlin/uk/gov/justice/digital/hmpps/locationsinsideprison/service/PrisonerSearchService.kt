@@ -43,7 +43,7 @@ class PrisonerSearchService(
 
     val prisonersInLocations = prisonerSearchWebClient
       .post()
-      .uri("/attribute-search?size=${pageSize}")
+      .uri("/attribute-search?size=$pageSize")
       .header("Content-Type", "application/json")
       .bodyValue(requestBody)
       .retrieve()
