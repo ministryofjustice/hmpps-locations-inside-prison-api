@@ -1176,18 +1176,18 @@ class LocationResource(
     id: UUID,
     @RequestBody
     @Validated
-    updateUserForTypeRequest : UpdateUserForTypeRequest
+    updateUserForTypeRequest: UpdateUserForTypeRequest,
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
     ) {
-      with(updateUserForTypeRequest) { //usedFor: Set<UsedForType>
+      with(updateUserForTypeRequest) {
         locationService.updateResidentialLocationUsedForTypes(id = id, usedFor = usedFor)
       }
     }
   }
 
-@GetMapping("/prison/{prisonId}/location-type/{locationType}")
+  @GetMapping("/prison/{prisonId}/location-type/{locationType}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @Operation(
@@ -1238,7 +1238,6 @@ data class UpdateUserForTypeRequest(
   @Schema(description = "Used for type of a location", example = "STANDARD ACCOMMODATION", required = false)
   val usedFor: Set<UsedForType>,
 )
-
 
 @Schema(description = "Request to convert a non-res location to a cell")
 data class ConvertToCellRequest(

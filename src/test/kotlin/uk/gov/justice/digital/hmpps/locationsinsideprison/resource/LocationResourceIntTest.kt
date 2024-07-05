@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.stub
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
@@ -12,6 +13,7 @@ import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -29,6 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
@@ -1825,39 +1828,42 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   @DisplayName("PUT /locations/{id}/used-for-type")
   @Nested
   inner class UsedForTypeTest {
+
     @Nested
     inner class Security {
-
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
           .exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
           .exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with right role, wrong scope`() {
-        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -1867,20 +1873,21 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class Validation {
       @Test
       fun `access client error bad data`() {
-        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
           .exchange()
           .expectStatus().is4xxClientError
       }
 
       @Test
       fun `cannot update used-for-type as location is not found`() {
-        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), true)
 
-        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+        webTestClient.put().uri("/locations/XXXXX/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
           .exchange()
           .expectStatus().isEqualTo(400)
       }
@@ -1890,22 +1897,47 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can update Use for type successfully`() {
-        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), true)
 
-        webTestClient.put().uri("/locations/${wingZ.prisonId}/used-for-type/")
+       val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.PERSONALITY_DISORDER))))
           .exchange()
           .expectStatus().isOk
+          .expectBody(Location::class.java)
+          .returnResult().responseBody!!
 
-        // TODO MAP1121 getDomainEvents  used-for-type
-        getDomainEvents(3).let {
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z",
-          )
-        }
+        //Assert Wingz, landing MDI-Z
+        assertThat(result.usedFor!!.size == 1)
+        assertThat(result.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+
+        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1")}.get(0)
+        assertThat(landingZ1.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+
+        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001")}.get(0)
+        assertThat(cellZ1001.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+
+        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002")}.get(0)
+        assertThat(cellZ1002.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+
+        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2")}.get(0)
+        assertThat(landingZ2.usedFor!!.isEmpty())
+
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT")}.get(0)
+        assertThat(cellVisit.usedFor == null)
+
+        getDomainEvents(6).let {
+           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+             "location.inside.prison.amended" to "MDI-Z-1-001",
+             "location.inside.prison.amended" to "MDI-Z-1-002",
+             "location.inside.prison.amended" to "MDI-Z-VISIT",
+             "location.inside.prison.amended" to "MDI-Z-1",
+             "location.inside.prison.amended" to "MDI-Z-2",
+             "location.inside.prison.amended" to "MDI-Z",
+           )
+
+
+         }
       }
     }
   }

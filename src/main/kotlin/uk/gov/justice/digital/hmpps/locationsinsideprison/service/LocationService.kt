@@ -236,11 +236,11 @@ class LocationService(
     val residentialLocation = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-      residentialLocation.updateCellUsedFor(
-        usedFor,
-        authenticationFacade.getUserOrSystemInContext(),
-        clock,
-      )
+    residentialLocation.updateCellUsedFor(
+      usedFor,
+      authenticationFacade.getUserOrSystemInContext(),
+      clock,
+    )
 
     log.info("Updated Used for types for below Location [$residentialLocation.getKey()]")
     telemetryClient.trackEvent(
@@ -252,7 +252,7 @@ class LocationService(
       ),
       null,
     )
-    return residentialLocation.toDto()
+    return residentialLocation.toDto(includeChildren = true)
   }
 
   @Transactional
