@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import org.springframework.stereotype.Service
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -39,10 +40,11 @@ class PrisonerLocationService(
     return prisonersInLocations(location.prisonId, location.cellLocations())
   }
 
-  fun prisonersInLocations(prisonId: String, locations: List<Location>): List<Prisoner> {
+  fun prisonersInLocations(prisonId: String, locations: List<Cell>): List<Prisoner> {
     val locationsToCheck = locations.map { it.getPathHierarchy() }.sorted()
+    val maxResults = locations.sumOf { it.getMaxCapacity() ?: 0 }
     return if (locationsToCheck.isNotEmpty()) {
-      prisonerSearchService.findPrisonersInLocations(prisonId, locationsToCheck)
+      prisonerSearchService.findPrisonersInLocations(prisonId, locationsToCheck, maxResults)
     } else {
       listOf()
     }

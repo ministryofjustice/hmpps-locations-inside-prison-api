@@ -1,0 +1,67 @@
+asyncapi: 3.0.0
+info:
+  title: Locations Inside Prison service
+  description: Publishes events relating to locations inside a prison
+  version: 1.0.0
+
+servers:
+  development:
+    host: hmpps-domain-events-dev.live-1.cloud-platform.service.justice.gov.uk
+    protocol: sqs
+    description: Development environment
+  preproduction:
+    host: hmpps-domain-events-preprod.live-1.cloud-platform.service.justice.gov.uk
+    protocol: sqs
+    description: Pre-production environment
+  production:
+    host: hmpps-domain-events-prod.live-1.cloud-platform.service.justice.gov.uk
+    protocol: sqs
+    description: Production environment
+
+components:
+  messages:
+    location.inside.prison.created:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-created.yaml
+    location.inside.prison.amended:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-amended.yaml
+    location.inside.prison.deactivated:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deactivated.yaml
+    location.inside.prison.reactivated:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-reactivated.yaml
+    location.inside.prison.deleted:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deleted.yaml
+    location.inside.prison.signed-op-cap.amended:
+      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-signed-op-cap-amended.yaml
+
+channels:
+  hmpps-domain-events:
+    description: HMPPS domain events SNS topic
+    bindings:
+      sns:
+        name: domainevents
+    messages:
+      location.inside.prison.created:
+        $ref: '#/components/messages/location.inside.prison.created'
+      location.inside.prison.amended:
+        $ref: '#/components/messages/location.inside.prison.amended'
+      location.inside.prison.deactivated:
+        $ref: '#/components/messages/location.inside.prison.deactivated'
+      location.inside.prison.reactivated:
+        $ref: '#/components/messages/location.inside.prison.reactivated'
+      location.inside.prison.deleted:
+        $ref: '#/components/messages/location.inside.prison.deleted'
+      location.inside.prison.signed-op-cap.amended:
+        $ref: '#/components/messages/location.inside.prison.signed-op-cap.amended'
+
+operations:
+  publish-event:
+    action: send
+    channel:
+      $ref: '#/channels/hmpps-domain-events'
+    messages:
+      - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.created'
+      - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.amended'
+      - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.deactivated'
+      - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.reactivated'
+      - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.deleted'
+      - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.signed-op-cap.amended'
