@@ -2031,7 +2031,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           )
         }
       }
-
     }
   }
 
