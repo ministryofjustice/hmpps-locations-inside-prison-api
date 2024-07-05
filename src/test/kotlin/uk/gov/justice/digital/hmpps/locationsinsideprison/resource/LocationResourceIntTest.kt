@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -29,6 +30,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
@@ -1822,6 +1824,216 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("PUT /locations/{id}/used-for-type")
+  @Nested
+  inner class UsedForTypeTest {
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"prisonId": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot update used-for-type as location is not found`() {
+        webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
+
+      @Test
+      fun `cannot update used-for-type as usedFor is not found in set`() {
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"usedFor": ["TANNING_SALON"]}""")
+          .exchange()
+          .expectStatus().isEqualTo(400)
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can update Use for type to a value successfully`() {
+        val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.PERSONALITY_DISORDER))))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(Location::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.usedFor!!.size == 1)
+        assertThat(result.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+
+        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
+        assertThat(landingZ1.usedFor!!.size == 1)
+        assertThat(landingZ1.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+
+        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
+        assertThat(cellZ1001.usedFor!!.size == 1)
+        assertThat(cellZ1001.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+
+        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
+        assertThat(cellZ1002.usedFor!!.size == 1)
+        assertThat(cellZ1002.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+
+        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
+        assertThat(landingZ2.usedFor!!.isEmpty())
+
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.get(0)
+        assertThat(cellVisit.usedFor == null)
+
+        getDomainEvents(6).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1-002",
+            "location.inside.prison.amended" to "MDI-Z-VISIT",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z-2",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
+      @Test
+      fun `can update Use for type to no value successfully`() {
+        val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf())))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(Location::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.usedFor!!.isEmpty())
+
+        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
+        assertThat(landingZ1.usedFor!!.isEmpty())
+
+        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
+        assertThat(cellZ1001.usedFor!!.isEmpty())
+
+        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
+        assertThat(cellZ1002.usedFor!!.isEmpty())
+
+        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
+        assertThat(landingZ2.usedFor!!.isEmpty())
+
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.get(0)
+        assertThat(cellVisit.usedFor == null)
+
+        getDomainEvents(6).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1-002",
+            "location.inside.prison.amended" to "MDI-Z-VISIT",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z-2",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
+      @Test
+      fun `can update Use for type to two values successfully`() {
+        val expectedTypes = setOf(UsedForType.PERSONALITY_DISORDER, UsedForType.FIRST_NIGHT_CENTRE)
+
+        val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = expectedTypes)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(Location::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.usedFor!!.size == 2)
+        assertThat(result.usedFor!!.containsAll(expectedTypes))
+
+        assertThat(result.usedFor!!.size == 2)
+        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
+        assertThat(landingZ1.usedFor!!.containsAll(expectedTypes))
+
+        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
+        assertThat(cellZ1001.usedFor!!.containsAll(expectedTypes))
+
+        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
+        assertThat(cellZ1002.usedFor!!.containsAll(expectedTypes))
+
+        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
+        assertThat(landingZ2.usedFor!!.isEmpty())
+
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.get(0)
+        assertThat(cellVisit.usedFor == null)
+
+        getDomainEvents(6).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1-002",
+            "location.inside.prison.amended" to "MDI-Z-VISIT",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z-2",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+    }
+  }
+
   @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
   @Nested
   inner class ViewLocationsByLocationTypeTest {
@@ -1862,7 +2074,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
-            // language=json
             """
              [{
               "prisonId": "MDI",

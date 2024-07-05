@@ -244,6 +244,30 @@ class LocationService(
   }
 
   @Transactional
+  fun updateResidentialLocationUsedForTypes(id: UUID, usedFor: Set<UsedForType>): LocationDTO {
+    val residentialLocation = residentialLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    residentialLocation.updateCellUsedFor(
+      usedFor,
+      authenticationFacade.getUserOrSystemInContext(),
+      clock,
+    )
+
+    log.info("Updated Used for types for below Location [$residentialLocation.getKey()]")
+    telemetryClient.trackEvent(
+      "Updated Used For Type below Residential Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to residentialLocation.prisonId,
+        "path" to residentialLocation.getPathHierarchy(),
+      ),
+      null,
+    )
+    return residentialLocation.toDto(includeChildren = true)
+  }
+
+  @Transactional
   fun updateNonResidentialLocation(id: UUID, patchLocationRequest: PatchNonResidentialLocationRequest): UpdateLocationResult {
     val nonResLocation = nonResidentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }

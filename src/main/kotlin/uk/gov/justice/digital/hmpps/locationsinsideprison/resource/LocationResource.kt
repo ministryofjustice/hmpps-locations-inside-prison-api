@@ -1138,6 +1138,55 @@ class LocationResource(
     }
   }
 
+  @PutMapping("/{id}/used-for-type", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Update Used For types at cell location below the specified location",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns details of the updated locations",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun updateUsedForType(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    updateUserForTypeRequest: UpdateUserForTypeRequest,
+  ): LocationDTO {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_AMENDED,
+    ) {
+      with(updateUserForTypeRequest) {
+        locationService.updateResidentialLocationUsedForTypes(id = id, usedFor = usedFor)
+      }
+    }
+  }
+
   @GetMapping("/prison/{prisonId}/location-type/{locationType}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
@@ -1182,6 +1231,12 @@ data class ConvertCellToNonResidentialLocationRequest(
   val convertedCellType: ConvertedCellType,
   @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false)
   val otherConvertedCellType: String? = null,
+)
+
+@Schema(description = "Request to update User-for-type in a residential location")
+data class UpdateUserForTypeRequest(
+  @Schema(description = "Used for type of a location", example = "STANDARD ACCOMMODATION", required = false)
+  val usedFor: Set<UsedForType>,
 )
 
 @Schema(description = "Request to convert a non-res location to a cell")
