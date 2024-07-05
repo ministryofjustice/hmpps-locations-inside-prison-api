@@ -1891,12 +1891,24 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().isEqualTo(400)
       }
+
+      @Test
+      fun `cannot update used-for-type as usedFor is not found in set`() {
+
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf())))
+          .exchange()
+          .expectStatus().isEqualTo(400)
+      }
     }
 
     @Nested
     inner class HappyPath {
+
       @Test
-      fun `can update Use for type successfully`() {
+      fun `can update Use for type to a value successfully`() {
 
        val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1907,7 +1919,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody(Location::class.java)
           .returnResult().responseBody!!
 
-        //Assert Wingz, landing MDI-Z
         assertThat(result.usedFor!!.size == 1)
         assertThat(result.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
 
@@ -1935,9 +1946,48 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
              "location.inside.prison.amended" to "MDI-Z-2",
              "location.inside.prison.amended" to "MDI-Z",
            )
-
-
          }
+      }
+
+      @Test
+      fun `can update Use for type to no value successfully`() {
+
+        val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf())))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(Location::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.usedFor!!.isEmpty())
+
+        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1")}.get(0)
+        assertThat(landingZ1.usedFor!!.isEmpty())
+
+        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001")}.get(0)
+        assertThat(cellZ1001.usedFor!!.isEmpty())
+
+        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002")}.get(0)
+        assertThat(cellZ1002.usedFor!!.isEmpty())
+
+        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2")}.get(0)
+        assertThat(landingZ2.usedFor!!.isEmpty())
+
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT")}.get(0)
+        assertThat(cellVisit.usedFor == null)
+
+        getDomainEvents(6).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1-002",
+            "location.inside.prison.amended" to "MDI-Z-VISIT",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z-2",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
       }
     }
   }
@@ -1982,7 +2032,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
-            // language=json
             """
              [{
               "prisonId": "MDI",
