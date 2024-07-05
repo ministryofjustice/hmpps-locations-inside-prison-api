@@ -1875,7 +1875,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
+          .bodyValue("""{"prisonId": ""}""")
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -1895,7 +1895,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf())))
+          .bodyValue("""{"usedFor": ["TANNING_SALON"]}""")
           .exchange()
           .expectStatus().isEqualTo(400)
       }
@@ -1919,12 +1919,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         assertThat(result.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
 
         val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
+        assertThat(landingZ1.usedFor!!.size == 1)
         assertThat(landingZ1.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
 
         val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
+        assertThat(cellZ1001.usedFor!!.size == 1)
         assertThat(cellZ1001.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
 
         val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
+        assertThat(cellZ1002.usedFor!!.size == 1)
         assertThat(cellZ1002.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
 
         val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
@@ -1984,6 +1987,51 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           )
         }
       }
+
+      @Test
+      fun `can update Use for type to two values successfully`() {
+        val expectedTypes = setOf(UsedForType.PERSONALITY_DISORDER, UsedForType.FIRST_NIGHT_CENTRE)
+
+        val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = expectedTypes)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(Location::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.usedFor!!.size == 2)
+        assertThat(result.usedFor!!.containsAll(expectedTypes))
+
+        assertThat(result.usedFor!!.size == 2)
+        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
+        assertThat(landingZ1.usedFor!!.containsAll(expectedTypes))
+
+        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
+        assertThat(cellZ1001.usedFor!!.containsAll(expectedTypes))
+
+        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
+        assertThat(cellZ1002.usedFor!!.containsAll(expectedTypes))
+
+        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
+        assertThat(landingZ2.usedFor!!.isEmpty())
+
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.get(0)
+        assertThat(cellVisit.usedFor == null)
+
+        getDomainEvents(6).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1-002",
+            "location.inside.prison.amended" to "MDI-Z-VISIT",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z-2",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
     }
   }
 
