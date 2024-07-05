@@ -5,7 +5,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.stub
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
@@ -1883,7 +1882,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `cannot update used-for-type as location is not found`() {
-
         webTestClient.put().uri("/locations/XXXXX/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -1894,7 +1892,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `cannot update used-for-type as usedFor is not found in set`() {
-
         webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -1909,8 +1906,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update Use for type to a value successfully`() {
-
-       val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+        val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.PERSONALITY_DISORDER))))
@@ -1922,36 +1918,35 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         assertThat(result.usedFor!!.size == 1)
         assertThat(result.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
 
-        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1")}.get(0)
+        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
         assertThat(landingZ1.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
 
-        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001")}.get(0)
+        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
         assertThat(cellZ1001.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
 
-        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002")}.get(0)
+        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
         assertThat(cellZ1002.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
 
-        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2")}.get(0)
+        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT")}.get(0)
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.get(0)
         assertThat(cellVisit.usedFor == null)
 
         getDomainEvents(6).let {
-           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-             "location.inside.prison.amended" to "MDI-Z-1-001",
-             "location.inside.prison.amended" to "MDI-Z-1-002",
-             "location.inside.prison.amended" to "MDI-Z-VISIT",
-             "location.inside.prison.amended" to "MDI-Z-1",
-             "location.inside.prison.amended" to "MDI-Z-2",
-             "location.inside.prison.amended" to "MDI-Z",
-           )
-         }
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1-002",
+            "location.inside.prison.amended" to "MDI-Z-VISIT",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z-2",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
       }
 
       @Test
       fun `can update Use for type to no value successfully`() {
-
         val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -1963,19 +1958,19 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
         assertThat(result.usedFor!!.isEmpty())
 
-        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1")}.get(0)
+        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
         assertThat(landingZ1.usedFor!!.isEmpty())
 
-        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001")}.get(0)
+        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
         assertThat(cellZ1001.usedFor!!.isEmpty())
 
-        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002")}.get(0)
+        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
         assertThat(cellZ1002.usedFor!!.isEmpty())
 
-        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2")}.get(0)
+        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT")}.get(0)
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.get(0)
         assertThat(cellVisit.usedFor == null)
 
         getDomainEvents(6).let {
