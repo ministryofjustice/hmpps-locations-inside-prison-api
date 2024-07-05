@@ -256,7 +256,7 @@ class LocationService(
 
     log.info("Updated Used for types for below Location [$residentialLocation.getKey()]")
     telemetryClient.trackEvent(
-      "Updated Used For Type Residential Location",
+      "Updated Used For Type below Residential Location",
       mapOf(
         "id" to id.toString(),
         "prisonId" to residentialLocation.prisonId,

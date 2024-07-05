@@ -1882,12 +1882,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `cannot update used-for-type as location is not found`() {
-        webTestClient.put().uri("/locations/XXXXX/used-for-type")
+        webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
           .exchange()
-          .expectStatus().isEqualTo(400)
+          .expectStatus().isEqualTo(404)
       }
 
       @Test
