@@ -104,8 +104,8 @@ data class CellWithSpecialistCellTypes(
   val workingCapacity: Int,
   @Schema(title = "Local Name of the location.", example = "RES-HB1-ALE")
   val localName: String? = null,
-  @Schema(title = "List of specialist types for the cell.", example = "LISTENER_CRISIS")
-  val specialistCellTypes: List<SpecialistCellType> = listOf(),
+  @Schema(title = "List of specialist types for the cell.", example = """{ "typeCode": "LISTENER_CRISIS", "typeDescription": "Listener / crisis cell" }""")
+  val specialistCellTypes: List<CellType> = listOf(),
   @Schema(title = "List prisoners in this cell", required = true)
   val prisonersInCell: List<Prisoner>? = null,
 ) {
@@ -118,4 +118,11 @@ data class CellWithSpecialistCellTypes(
   fun hasSpace() = noOfOccupants < getActualCapacity()
 
   private fun getActualCapacity() = if (workingCapacity != 0) workingCapacity else maxCapacity
+
+  data class CellType(
+    @Schema(title = "Specialist Cell Type Code", required = true)
+    val typeCode: SpecialistCellType,
+    @Schema(title = "Specialist Cell Type Description", required = true)
+    val typeDescription: String,
+  )
 }
