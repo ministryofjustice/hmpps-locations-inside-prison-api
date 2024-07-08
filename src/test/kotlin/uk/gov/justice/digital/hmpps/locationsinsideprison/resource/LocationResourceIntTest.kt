@@ -1125,7 +1125,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/locations/keys")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
-          .bodyValue(listOf("Z"))
+//          .bodyValue(listOf("Z"))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -1842,7 +1842,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
+          .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -1852,7 +1852,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
+          .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -1862,7 +1862,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
+          .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -1875,7 +1875,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue("""{"prisonId": ""}""")
+          .bodyValue("""[""]""")
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -1885,7 +1885,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.STANDARD_ACCOMMODATION))))
+          .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
           .exchange()
           .expectStatus().isEqualTo(404)
       }
@@ -1895,7 +1895,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue("""{"usedFor": ["TANNING_SALON"]}""")
+          .bodyValue("""["TANNING_SALON"]""")
           .exchange()
           .expectStatus().isEqualTo(400)
       }
@@ -1909,7 +1909,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.PERSONALITY_DISORDER))))
+          .bodyValue(jsonString(setOf(UsedForType.PERSONALITY_DISORDER)))
           .exchange()
           .expectStatus().isOk
           .expectBody(Location::class.java)
@@ -1953,7 +1953,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf())))
+          .bodyValue("[]")
           .exchange()
           .expectStatus().isOk
           .expectBody(Location::class.java)
@@ -1991,11 +1991,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       @Test
       fun `can update Use for type to two values successfully`() {
         val expectedTypes = setOf(UsedForType.PERSONALITY_DISORDER, UsedForType.FIRST_NIGHT_CENTRE)
-
         val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = expectedTypes)))
+          .bodyValue(jsonString(expectedTypes))
           .exchange()
           .expectStatus().isOk
           .expectBody(Location::class.java)
