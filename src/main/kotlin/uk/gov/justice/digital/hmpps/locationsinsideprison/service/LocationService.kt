@@ -743,7 +743,7 @@ class LocationService(
         maxCapacity = cell.getMaxCapacity() ?: 0,
         workingCapacity = cell.getWorkingCapacity() ?: 0,
         localName = cell.localName,
-        specialistCellTypes = cell.specialistCellTypes.map { it.specialistCellType },
+        specialistCellTypes = cell.specialistCellTypes.map { CellWithSpecialistCellTypes.CellType(it.specialistCellType, it.specialistCellType.description) },
         noOfOccupants = mapOfOccupancy[cell.getPathHierarchy()]?.size ?: 0,
         prisonersInCell = if (includePrisonerInformation) {
           mapOfOccupancy[cell.getPathHierarchy()]
