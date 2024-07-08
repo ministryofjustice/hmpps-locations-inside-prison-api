@@ -1906,35 +1906,45 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update Use for type to a value successfully`() {
-        val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(UpdateUserForTypeRequest(usedFor = setOf(UsedForType.PERSONALITY_DISORDER))))
           .exchange()
           .expectStatus().isOk
-          .expectBody(Location::class.java)
-          .returnResult().responseBody!!
-
-        assertThat(result.usedFor!!.size == 1)
-        assertThat(result.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
-
-        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
-        assertThat(landingZ1.usedFor!!.size == 1)
-        assertThat(landingZ1.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
-
-        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
-        assertThat(cellZ1001.usedFor!!.size == 1)
-        assertThat(cellZ1001.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
-
-        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
-        assertThat(cellZ1002.usedFor!!.size == 1)
-        assertThat(cellZ1002.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
-
-        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
-        assertThat(landingZ2.usedFor!!.isEmpty())
-
-        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.get(0)
-        assertThat(cellVisit.usedFor == null)
+          .expectBody()
+          .json(
+            """
+              {
+                "pathHierarchy" : "Z",
+                "usedFor": ["PERSONALITY_DISORDER"],
+                "childLocations": [
+                  {
+                    "pathHierarchy" : "Z-1",
+                    "usedFor": ["PERSONALITY_DISORDER"],
+                    "childLocations": [
+                      {
+                        "pathHierarchy" : "Z-1-001",
+                        "usedFor": ["PERSONALITY_DISORDER"]
+                      },
+                      {
+                        "pathHierarchy" : "Z-1-002",
+                        "usedFor": ["PERSONALITY_DISORDER"]
+                      }                  
+                    ]
+                  },
+                  {
+                    "pathHierarchy" : "Z-2",
+                    "usedFor": []
+                  },
+                  {
+                    "pathHierarchy" : "Z-VISIT"
+                  }                   
+                ]
+              }
+            """.trimIndent(),
+            false,
+          )
 
         getDomainEvents(6).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
