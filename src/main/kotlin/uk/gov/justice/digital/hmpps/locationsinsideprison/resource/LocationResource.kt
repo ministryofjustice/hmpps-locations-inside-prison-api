@@ -1176,14 +1176,12 @@ class LocationResource(
     id: UUID,
     @RequestBody
     @Validated
-    updateUserForTypeRequest: UpdateUserForTypeRequest,
+    usedFor: Set<UsedForType>,
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
     ) {
-      with(updateUserForTypeRequest) {
         locationService.updateResidentialLocationUsedForTypes(id = id, usedFor = usedFor)
-      }
     }
   }
 
