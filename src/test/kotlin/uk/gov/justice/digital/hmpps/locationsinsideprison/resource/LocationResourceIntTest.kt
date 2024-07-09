@@ -1931,8 +1931,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         val landingZ2 = result.findByPathHierarchy("Z-2")!!
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.findByPathHierarchy("Z-VISIT")!!
-        assertThat(cellVisit.usedFor!!.isEmpty())
+        val cellVisit = result.findByPathHierarchy("Z-VISIT")
+        assertThat(cellVisit == null)
 
         getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -1970,8 +1970,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         val landingZ2 = result.findByPathHierarchy("Z-2")!!
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.findByPathHierarchy("Z-VISIT")!!
-        assertThat(cellVisit.usedFor!!.isEmpty())
+        val cellVisit = result.findByPathHierarchy("Z-VISIT")
+        assertThat(cellVisit == null)
 
         getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2011,8 +2011,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         val landingZ2 = result.findByPathHierarchy("Z-2")!!
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.findByPathHierarchy("Z-VISIT")!!
-        assertThat(cellVisit.usedFor!!.isEmpty())
+        val cellVisit = result.findByPathHierarchy("Z-VISIT")
+        assertThat(cellVisit == null)
 
         getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
