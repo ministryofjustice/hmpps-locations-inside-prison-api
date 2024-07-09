@@ -1176,14 +1176,12 @@ class LocationResource(
     id: UUID,
     @RequestBody
     @Validated
-    updateUserForTypeRequest: UpdateUserForTypeRequest,
+    usedFor: Set<UsedForType>,
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
     ) {
-      with(updateUserForTypeRequest) {
-        locationService.updateResidentialLocationUsedForTypes(id = id, usedFor = usedFor)
-      }
+      locationService.updateResidentialLocationUsedForTypes(id = id, usedFor = usedFor)
     }
   }
 
@@ -1231,12 +1229,6 @@ data class ConvertCellToNonResidentialLocationRequest(
   val convertedCellType: ConvertedCellType,
   @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false)
   val otherConvertedCellType: String? = null,
-)
-
-@Schema(description = "Request to update User-for-type in a residential location")
-data class UpdateUserForTypeRequest(
-  @Schema(description = "Used for type of a location", example = "STANDARD ACCOMMODATION", required = true)
-  val usedFor: Set<UsedForType>,
 )
 
 @Schema(description = "Request to convert a non-res location to a cell")
