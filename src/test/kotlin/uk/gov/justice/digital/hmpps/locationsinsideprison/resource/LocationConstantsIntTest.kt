@@ -994,7 +994,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 "specialistCellTypes": [
                   {
                     "key": "BIOHAZARD_DIRTY_PROTEST",
-                    "description": "Biohazard / dirty protest cell"
+                    "description": "Biohazard / dirty protest cell",
+                    "additionalInformation": "Previously known as a dirty protest cell"
                   },
                   {
                     "key": "CAT_A",
@@ -1046,7 +1047,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "ACCESSIBLE_CELL",
-                    "description": "Accessible cell"
+                    "description": "Accessible cell",
+                    "additionalInformation": "Also known as wheelchair accessible or Disability and Discrimination Act (DDA) compliant"
                   }
                 ]
               }

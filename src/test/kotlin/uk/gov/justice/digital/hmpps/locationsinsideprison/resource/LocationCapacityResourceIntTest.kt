@@ -193,7 +193,10 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                 "maxCapacity": ${cell3.getMaxCapacity()},
                 "workingCapacity": ${cell3.getWorkingCapacity()},
                 "specialistCellTypes": [
-                  "SAFE_CELL"
+                   {
+                     "typeCode": "SAFE_CELL",
+                     "typeDescription": "Safe cell"
+                  }
                 ]
               }
             ]
@@ -230,7 +233,10 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                 "maxCapacity": ${cell3.getMaxCapacity()},
                 "workingCapacity": ${cell3.getWorkingCapacity()},
                 "specialistCellTypes": [
-                  "SAFE_CELL"
+                  {
+                     "typeCode": "SAFE_CELL",
+                     "typeDescription": "Safe cell"
+                  }
                 ]
               }
             ]
@@ -267,7 +273,10 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                 "maxCapacity": ${cell3.getMaxCapacity()},
                 "workingCapacity": ${cell3.getWorkingCapacity()},
                 "specialistCellTypes": [
-                  "SAFE_CELL"
+                  {
+                     "typeCode": "SAFE_CELL",
+                     "typeDescription": "Safe cell"
+                  }
                 ]
               }
             ]
@@ -307,7 +316,10 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                 "maxCapacity": ${cell3.getMaxCapacity()},
                 "workingCapacity": ${cell3.getWorkingCapacity()},
                 "specialistCellTypes": [
-                  "SAFE_CELL"
+                  {
+                     "typeCode": "SAFE_CELL",
+                     "typeDescription": "Safe cell"
+                  }
                 ],
                 "prisonersInCell": [
                   {

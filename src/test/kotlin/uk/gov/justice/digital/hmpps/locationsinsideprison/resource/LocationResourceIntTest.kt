@@ -1933,14 +1933,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.get(0)
-        assertThat(cellVisit.usedFor == null)
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.isEmpty()
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1-002",
-            "location.inside.prison.amended" to "MDI-Z-VISIT",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z-2",
             "location.inside.prison.amended" to "MDI-Z",
@@ -1973,14 +1971,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.get(0)
-        assertThat(cellVisit.usedFor == null)
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.isEmpty()
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1-002",
-            "location.inside.prison.amended" to "MDI-Z-VISIT",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z-2",
             "location.inside.prison.amended" to "MDI-Z",
@@ -2016,14 +2012,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.get(0)
-        assertThat(cellVisit.usedFor == null)
+        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.isEmpty()
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1-002",
-            "location.inside.prison.amended" to "MDI-Z-VISIT",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z-2",
             "location.inside.prison.amended" to "MDI-Z",

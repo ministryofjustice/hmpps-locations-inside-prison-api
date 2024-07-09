@@ -42,9 +42,8 @@ class PrisonerLocationService(
 
   fun prisonersInLocations(prisonId: String, locations: List<Cell>): List<Prisoner> {
     val locationsToCheck = locations.map { it.getPathHierarchy() }.sorted()
-    val maxResults = locations.sumOf { it.getMaxCapacity() ?: 0 }
     return if (locationsToCheck.isNotEmpty()) {
-      prisonerSearchService.findPrisonersInLocations(prisonId, locationsToCheck, maxResults)
+      prisonerSearchService.findPrisonersInLocations(prisonId, locationsToCheck)
     } else {
       listOf()
     }

@@ -315,6 +315,7 @@ abstract class Location(
     includeParent: Boolean = false,
     includeHistory: Boolean = false,
     countInactiveCells: Boolean = false,
+    includeNonResidential: Boolean = true,
   ): LocationDto {
     return LocationDto(
       id = id!!,
@@ -341,7 +342,8 @@ abstract class Location(
       proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
       childLocations = if (includeChildren) {
         childLocations.filter { !it.isPermanentlyDeactivated() }
-          .map { it.toDto(includeChildren = true, includeHistory = includeHistory) }
+          .filter { includeNonResidential || it is ResidentialLocation }
+          .map { it.toDto(includeChildren = true, includeHistory = includeHistory, includeNonResidential = includeNonResidential) }
       } else {
         null
       },
