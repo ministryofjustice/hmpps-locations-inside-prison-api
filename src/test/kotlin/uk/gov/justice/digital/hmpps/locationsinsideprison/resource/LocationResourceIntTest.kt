@@ -12,7 +12,7 @@ import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -1906,34 +1906,33 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update Use for type to a value successfully`() {
+        val expectedUsedFor = setOf(UsedForType.PERSONALITY_DISORDER)
+
         val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(setOf(UsedForType.PERSONALITY_DISORDER)))
           .exchange()
           .expectStatus().isOk
-          .expectBody(Location::class.java)
+          .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        assertThat(result.usedFor!!.size == 1)
-        assertThat(result.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+        assertThat(result.usedFor == expectedUsedFor)
 
-        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
-        assertThat(landingZ1.usedFor!!.size == 1)
-        assertThat(landingZ1.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+        val landingZ1 = result.findByPathHierarchy("Z-1")!!
+        assertThat(landingZ1.usedFor == expectedUsedFor)
 
-        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
-        assertThat(cellZ1001.usedFor!!.size == 1)
-        assertThat(cellZ1001.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
+        assertThat(cellZ1001.usedFor == expectedUsedFor)
 
-        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
-        assertThat(cellZ1002.usedFor!!.size == 1)
-        assertThat(cellZ1002.usedFor!!.contains(UsedForType.PERSONALITY_DISORDER))
+        val cellZ1002 = result.findByPathHierarchy("Z-1-002")!!
+        assertThat(cellZ1002.usedFor == expectedUsedFor)
 
-        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
+        val landingZ2 = result.findByPathHierarchy("Z-2")!!
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.isEmpty()
+        val cellVisit = result.findByPathHierarchy("Z-VISIT")
+        assertThat(cellVisit == null)
 
         getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -1954,24 +1953,25 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue("[]")
           .exchange()
           .expectStatus().isOk
-          .expectBody(Location::class.java)
+          .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
         assertThat(result.usedFor!!.isEmpty())
 
-        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
+        val landingZ1 = result.findByPathHierarchy("Z-1")!!
         assertThat(landingZ1.usedFor!!.isEmpty())
 
-        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
         assertThat(cellZ1001.usedFor!!.isEmpty())
 
-        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
+        val cellZ1002 = result.findByPathHierarchy("Z-1-002")!!
         assertThat(cellZ1002.usedFor!!.isEmpty())
 
-        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
+        val landingZ2 = result.findByPathHierarchy("Z-2")!!
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.isEmpty()
+        val cellVisit = result.findByPathHierarchy("Z-VISIT")
+        assertThat(cellVisit == null)
 
         getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -1986,33 +1986,33 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update Use for type to two values successfully`() {
-        val expectedTypes = setOf(UsedForType.PERSONALITY_DISORDER, UsedForType.FIRST_NIGHT_CENTRE)
+        val expectedTypes = listOf(UsedForType.FIRST_NIGHT_CENTRE, UsedForType.PERSONALITY_DISORDER)
+
         val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(expectedTypes))
           .exchange()
           .expectStatus().isOk
-          .expectBody(Location::class.java)
+          .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        assertThat(result.usedFor!!.size == 2)
-        assertThat(result.usedFor!!.containsAll(expectedTypes))
+        assertThat(result.usedFor == expectedTypes)
 
-        assertThat(result.usedFor!!.size == 2)
-        val landingZ1 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-1") }.get(0)
-        assertThat(landingZ1.usedFor!!.containsAll(expectedTypes))
+        val landingZ1 = result.findByPathHierarchy("Z-1")!!
+        assertThat(landingZ1.usedFor == expectedTypes)
 
-        val cellZ1001 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-001") }.get(0)
-        assertThat(cellZ1001.usedFor!!.containsAll(expectedTypes))
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
+        assertThat(cellZ1001.usedFor == expectedTypes)
 
-        val cellZ1002 = landingZ1.childLocations!!.filter { it.pathHierarchy.equals("Z-1-002") }.get(0)
-        assertThat(cellZ1002.usedFor!!.containsAll(expectedTypes))
+        val cellZ1002 = result.findByPathHierarchy("Z-1-002")!!
+        assertThat(cellZ1002.usedFor == expectedTypes)
 
-        val landingZ2 = result.childLocations!!.filter { it.pathHierarchy.equals("Z-2") }.get(0)
+        val landingZ2 = result.findByPathHierarchy("Z-2")!!
         assertThat(landingZ2.usedFor!!.isEmpty())
 
-        val cellVisit = result.childLocations!!.filter { it.pathHierarchy.equals("Z-VISIT") }.isEmpty()
+        val cellVisit = result.findByPathHierarchy("Z-VISIT")
+        assertThat(cellVisit == null)
 
         getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
