@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -249,7 +250,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun getSpecialistCellTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "specialistCellTypes" to SpecialistCellType.entries.map { Constant(it.name, it.description) },
+      "specialistCellTypes" to SpecialistCellType.entries.map { Constant(it.name, it.description, it.additionalInformation) },
     )
   }
 
@@ -313,6 +314,25 @@ class LocationConstants() : EventBaseResource() {
     )
   }
 
-  data class Constant(val key: String, val description: String)
-  data class CompoundConstant(val key: String, val description: String, val values: List<Constant>)
+  @Schema(description = "Reference data information")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  data class Constant(
+    @Schema(description = "Code of reference information", example = "ACCESSIBLE_CELL", required = true)
+    val key: String,
+    @Schema(description = "Description of reference code", example = "Accessible cell", required = true)
+    val description: String,
+    @Schema(description = "Additional information about this reference code", example = "Some useful extra info", required = false)
+    val additionalInformation: String? = null,
+  )
+
+  @Schema(description = "Reference data information")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  data class CompoundConstant(
+    @Schema(description = "Code of reference information", example = "ACCESSIBLE_CELL", required = true)
+    val key: String,
+    @Schema(description = "Description of reference code", example = "Accessible cell", required = true)
+    val description: String,
+    @Schema(description = "Sub list of reference data values", required = true)
+    val values: List<Constant>,
+  )
 }
