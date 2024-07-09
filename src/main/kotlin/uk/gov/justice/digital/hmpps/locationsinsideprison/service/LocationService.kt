@@ -330,6 +330,7 @@ class LocationService(
     return UpdatedSummary(codeChanged = codeChanged, oldParent = oldParent, parentChanged = parentChanged)
   }
 
+  @Transactional
   fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int): LocationDTO {
     val locCapChange = cellLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
