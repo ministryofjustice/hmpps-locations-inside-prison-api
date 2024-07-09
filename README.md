@@ -34,3 +34,15 @@ Then run the API.
 ## Architecture
 
 Architecture decision records start [here](docs/0001-use-adr.md)
+
+## Testing coverage report
+
+Run:
+
+```
+./gradlew koverHtmlReport
+```
+
+Then view output file for coverage report.
+
+
