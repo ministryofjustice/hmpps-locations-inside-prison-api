@@ -1932,13 +1932,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         assertThat(landingZ2.usedFor!!.isEmpty())
 
         val cellVisit = result.findByPathHierarchy("Z-VISIT")!!
-        assertThat(cellVisit.usedFor == null)
+        assertThat(cellVisit.usedFor!!.isEmpty())
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1-002",
-            "location.inside.prison.amended" to "MDI-Z-VISIT",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z-2",
             "location.inside.prison.amended" to "MDI-Z",
@@ -1972,13 +1971,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         assertThat(landingZ2.usedFor!!.isEmpty())
 
         val cellVisit = result.findByPathHierarchy("Z-VISIT")!!
-        assertThat(cellVisit.usedFor == null)
+        assertThat(cellVisit.usedFor!!.isEmpty())
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1-002",
-            "location.inside.prison.amended" to "MDI-Z-VISIT",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z-2",
             "location.inside.prison.amended" to "MDI-Z",
@@ -2014,13 +2012,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         assertThat(landingZ2.usedFor!!.isEmpty())
 
         val cellVisit = result.findByPathHierarchy("Z-VISIT")!!
-        assertThat(cellVisit.usedFor == null)
+        assertThat(cellVisit.usedFor!!.isEmpty())
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1-002",
-            "location.inside.prison.amended" to "MDI-Z-VISIT",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z-2",
             "location.inside.prison.amended" to "MDI-Z",

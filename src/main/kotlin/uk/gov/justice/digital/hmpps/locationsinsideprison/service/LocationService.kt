@@ -212,7 +212,7 @@ class LocationService(
       ?.let { throw LocationAlreadyExistsException("${createWingRequest.prisonId}-${createWingRequest.wingCode}") }
 
     val wing = createWingRequest.toEntity(authenticationFacade.getUserOrSystemInContext(), clock)
-    return locationRepository.save(wing).toDto(includeChildren = true)
+    return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false)
   }
 
   @Transactional
@@ -238,7 +238,7 @@ class LocationService(
     )
 
     return UpdateLocationResult(
-      residentialLocation.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged),
+      residentialLocation.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged, includeNonResidential = false),
       if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
     )
   }
@@ -264,7 +264,7 @@ class LocationService(
       ),
       null,
     )
-    return residentialLocation.toDto(includeChildren = true)
+    return residentialLocation.toDto(includeChildren = true, includeNonResidential = false)
   }
 
   @Transactional
@@ -361,7 +361,7 @@ class LocationService(
       ),
       null,
     )
-    return locCapChange.toDto(includeParent = true)
+    return locCapChange.toDto(includeParent = true, includeNonResidential = false)
   }
 
   @Transactional
@@ -743,7 +743,7 @@ class LocationService(
         maxCapacity = cell.getMaxCapacity() ?: 0,
         workingCapacity = cell.getWorkingCapacity() ?: 0,
         localName = cell.localName,
-        specialistCellTypes = cell.specialistCellTypes.map { it.specialistCellType },
+        specialistCellTypes = cell.specialistCellTypes.map { CellWithSpecialistCellTypes.CellType(it.specialistCellType, it.specialistCellType.description) },
         noOfOccupants = mapOfOccupancy[cell.getPathHierarchy()]?.size ?: 0,
         prisonersInCell = if (includePrisonerInformation) {
           mapOfOccupancy[cell.getPathHierarchy()]
