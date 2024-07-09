@@ -2,9 +2,10 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
 enum class SpecialistCellType(
   val description: String,
+  val additionalInformation: String? = null,
 ) {
-  ACCESSIBLE_CELL("Accessible cell"),
-  BIOHAZARD_DIRTY_PROTEST("Biohazard / dirty protest cell"),
+  ACCESSIBLE_CELL("Accessible cell", "Also known as wheelchair accessible or Disability and Discrimination Act (DDA) compliant"),
+  BIOHAZARD_DIRTY_PROTEST("Biohazard / dirty protest cell", "Previously known as a dirty protest cell"),
   CONSTANT_SUPERVISION("Constant Supervision Cell"),
   CAT_A("Cat A cell"),
   CSU("Case and separation unit cell"),
