@@ -1,13 +1,13 @@
 {
   "request": {
-    "method": "GET",
-    "urlPath": "/health/ping"
+    "method": "POST",
+    "urlPath": "/attribute-search"
   },
   "response": {
     "status": 200,
-    "bodyFileName": "ping.json",
     "headers": {
       "Content-Type": "application/json"
-    }
+    },
+    "bodyFileName": "attribute-search.json"
   }
 }
