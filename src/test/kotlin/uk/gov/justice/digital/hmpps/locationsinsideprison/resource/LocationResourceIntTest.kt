@@ -1125,7 +1125,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.post().uri("/locations/keys")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
-//          .bodyValue(listOf("Z"))
+          .bodyValue(listOf("Z"))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -1875,7 +1875,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue("""[""]""")
+          .bodyValue("""{"prisonId": ""}""")
           .exchange()
           .expectStatus().is4xxClientError
       }
