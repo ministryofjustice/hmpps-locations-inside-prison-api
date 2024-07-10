@@ -366,6 +366,40 @@ class LocationService(
   }
 
   @Transactional
+  fun updateSpecialistCellTypes(id: UUID, specialistCellTypes: Set<SpecialistCellType>): LocationDTO {
+    val cell = cellLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (cell.isPermanentlyDeactivated()) {
+      throw ValidationException("Cannot change the specialist cell types of a permanently deactivated location")
+    }
+
+    // TODO check for empty sets when 0 working cap etc (e.g. validation rules)
+//    val prisoners = prisonerLocationService.prisonersInLocations(cell)
+//    if (maxCapacity < prisoners.size) {
+//      throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})")
+//    }
+
+    cell.updateSpecialistCellTypes(
+      specialistCellTypes,
+      authenticationFacade.getUserOrSystemInContext(),
+      clock,
+    )
+    log.info("Updated specialist cell types = $specialistCellTypes")
+
+    telemetryClient.trackEvent(
+      "Specialist cell types updated",
+      mapOf(
+        "id" to id.toString(),
+        "key" to cell.getKey(),
+        "specialistCellTypes" to specialistCellTypes.toString(),
+      ),
+      null,
+    )
+    return cell.toDto(includeParent = false, includeNonResidential = false)
+  }
+
+  @Transactional
   fun updateLocation(id: UUID, updateLocationRequest: UpdateLocationRequest): LocationDTO {
     val location = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }

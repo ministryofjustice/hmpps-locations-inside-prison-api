@@ -5,7 +5,6 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.util.*
 
@@ -34,9 +33,6 @@ data class PatchResidentialLocationRequest(
 
   @Schema(description = "used For types", required = false)
   val usedFor: Set<UsedForType>? = null,
-
-  @Schema(description = "Specialist cell types", required = false)
-  val specialistCellTypes: Set<SpecialistCellType>? = null,
 ) : PatchLocationRequest
 
 @Schema(description = "Request to update a non-res location")

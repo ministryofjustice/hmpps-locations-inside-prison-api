@@ -2027,6 +2027,134 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("PUT /locations/{id}/specialist-cell-types")
+  @Nested
+  inner class SetSpecialistCellTypesTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("MAINTAIN_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"prisonId": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot update specialists cell types as location is not found`() {
+        webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
+
+      @Test
+      fun `cannot update specialists cell types as location is not a cell`() {
+        webTestClient.put().uri("/locations/${wingZ.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can update specialist cell types successfully`() {
+        val expectedUsedFor = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)
+
+        val result = webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.usedFor == expectedUsedFor)
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+          )
+        }
+      }
+
+      @Test
+      fun `can remove specialist cell types successfully`() {
+        val expectedUsedFor = null
+
+        val result = webTestClient.put().uri("/locations/${cell2.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(emptySet<SpecialistCellType>()))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.usedFor == expectedUsedFor)
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-002",
+          )
+        }
+      }
+    }
+  }
+
   @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
   @Nested
   inner class ViewLocationsByLocationTypeTest {

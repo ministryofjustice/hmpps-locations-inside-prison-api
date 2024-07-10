@@ -333,10 +333,6 @@ class Cell(
 
     setAccommodationTypeForCell(upsert.accommodationType ?: this.accommodationType, userOrSystemInContext, clock)
 
-    if (upsert.specialistCellTypes != null) {
-      updateSpecialistCellTypes(upsert.specialistCellTypes, userOrSystemInContext, clock)
-    }
-
     if (upsert.usedFor != null) {
       updateUsedFor(upsert.usedFor, userOrSystemInContext, clock)
     }
