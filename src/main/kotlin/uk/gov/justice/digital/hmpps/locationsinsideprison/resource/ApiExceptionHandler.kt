@@ -186,6 +186,7 @@ class ApiExceptionHandler {
         ),
       )
   }
+
   @ExceptionHandler(LocationPrefixNotFoundException::class)
   fun handleLocationPrefixNotFound(e: LocationPrefixNotFoundException): ResponseEntity<ErrorResponse?>? {
     log.debug("Location prefix not found exception caught: {}", e.message)
@@ -200,6 +201,7 @@ class ApiExceptionHandler {
         ),
       )
   }
+
   @ExceptionHandler(SignedOperationCapacityNotFoundException::class)
   fun handleOperationalCapacityNotFoundException(e: SignedOperationCapacityNotFoundException): ResponseEntity<ErrorResponse?>? {
     log.debug("Signed Operation Capacity not found exception caught: {}", e.message)

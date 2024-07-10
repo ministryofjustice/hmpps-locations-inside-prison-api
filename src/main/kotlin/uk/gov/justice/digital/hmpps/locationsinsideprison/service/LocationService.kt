@@ -72,7 +72,7 @@ class LocationService(
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
-  @Qualifier("residentialGroups") private val groupsProperties: Properties
+  @Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)

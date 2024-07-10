@@ -271,10 +271,10 @@ class LocationResource(
         responseCode = "500",
         description = "Unrecoverable error occurred whilst processing request.",
         content =
-        [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]
+        [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
-      ],
-    )
+    ],
+  )
   fun getLocationPrefixFromGroup(
     @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @PathVariable("prisonId")

@@ -1646,6 +1646,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
     }
   }
+
   @Nested
   inner class ViewArchivedLocationByPrisonTest {
     @Nested

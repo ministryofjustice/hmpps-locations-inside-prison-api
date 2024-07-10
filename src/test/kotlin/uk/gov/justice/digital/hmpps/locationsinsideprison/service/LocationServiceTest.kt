@@ -54,7 +54,7 @@ class LocationServiceTest {
     telemetryClient,
     authenticationFacade,
     locationGroupFromPropertiesService,
-    groupsProperties
+    groupsProperties,
   )
 
   @Test
