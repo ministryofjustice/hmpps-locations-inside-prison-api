@@ -197,6 +197,12 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                      "typeCode": "SAFE_CELL",
                      "typeDescription": "Safe cell"
                   }
+                ],
+                "legacyAttributes": [
+                  {
+                    "typeCode": "DOUBLE_OCCUPANCY",
+                    "typeDescription": "Double Occupancy"
+                  }
                 ]
               }
             ]
@@ -237,6 +243,12 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                      "typeCode": "SAFE_CELL",
                      "typeDescription": "Safe cell"
                   }
+                ],
+                "legacyAttributes": [
+                  {
+                    "typeCode": "DOUBLE_OCCUPANCY",
+                    "typeDescription": "Double Occupancy"
+                  }                          
                 ]
               }
             ]
@@ -276,6 +288,12 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                   {
                      "typeCode": "SAFE_CELL",
                      "typeDescription": "Safe cell"
+                  }
+                ],
+                "legacyAttributes": [
+                  {
+                    "typeCode": "DOUBLE_OCCUPANCY",
+                    "typeDescription": "Double Occupancy"
                   }
                 ]
               }
@@ -319,6 +337,12 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                   {
                      "typeCode": "SAFE_CELL",
                      "typeDescription": "Safe cell"
+                  }
+                ],
+                "legacyAttributes": [
+                  {
+                    "typeCode": "DOUBLE_OCCUPANCY",
+                    "typeDescription": "Double Occupancy"
                   }
                 ],
                 "prisonersInCell": [
