@@ -116,7 +116,7 @@ class LocationServiceTest {
   }
 
   @Test
-  fun `should throw correct error when location prefix not found`() {
+  fun `should throw correct exception when location prefix not found`() {
     whenever(groupsProperties.getProperty(ArgumentMatchers.anyString())).thenReturn(null)
 
     Assertions.assertThatExceptionOfType(LocationPrefixNotFoundException::class.java).isThrownBy {
