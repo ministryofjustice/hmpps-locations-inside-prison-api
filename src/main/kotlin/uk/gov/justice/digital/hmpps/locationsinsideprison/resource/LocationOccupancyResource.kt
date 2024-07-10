@@ -105,9 +105,9 @@ data class CellWithSpecialistCellTypes(
   val workingCapacity: Int,
   @Schema(title = "Local Name of the location.", example = "RES-HB1-ALE")
   val localName: String? = null,
-  @Schema(title = "List of specialist types for the cell.", example = """{ "typeCode": "LISTENER_CRISIS", "typeDescription": "Listener / crisis cell" }""")
+  @Schema(title = "List of specialist types for the cell.", example = """[{ "typeCode": "LISTENER_CRISIS", "typeDescription": "Listener / crisis cell" }]""")
   val specialistCellTypes: List<CellType> = listOf(),
-  @Schema(title = "List of the old location attributes.", example = """{ "typeCode": "LISTENER_CRISIS", "typeDescription": "Listener / crisis cell" }""")
+  @Schema(title = "List of the old location attributes.", example = """[{ "typeCode": "DOUBLE_OCCUPANCY", "typeDescription": "Double Occupancy" }]""")
   val legacyAttributes: List<ResidentialLocationAttribute> = listOf(),
   @Schema(title = "List prisoners in this cell", required = true)
   val prisonersInCell: List<Prisoner>? = null,
