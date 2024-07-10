@@ -329,7 +329,7 @@ class ApiExceptionHandler {
 
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
 
-class LocationPrefixNotFoundException(id: String) : Exception("No mappings found for $id")
+class LocationPrefixNotFoundException(id: String) : Exception("Location prefix not found for $id")
 
 class SignedOperationCapacityNotFoundException(prisonId: String) :
   Exception("There is no signed operation capacity found for prison ID = $prisonId")

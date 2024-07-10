@@ -1637,8 +1637,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             """
                         {"status":404,
-                        "userMessage":"No mappings found for XYZ_Houseblock 1",
-                        "developerMessage":"No mappings found for XYZ_Houseblock 1",
+                        "userMessage":"Location prefix not found for XYZ_Houseblock 1",
+                        "developerMessage":"Location prefix not found for XYZ_Houseblock 1",
                         "errorCode":111}
                         """,
             false,
