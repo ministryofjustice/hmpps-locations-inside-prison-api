@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.microsoft.applicationinsights.TelemetryClient
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.persistence.EntityNotFoundException
 import jakarta.validation.ValidationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -55,6 +56,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.Properties
 import java.util.UUID
+import java.util.function.Predicate
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
@@ -127,10 +129,23 @@ class LocationService(
     cellsToFilter: List<Cell>,
   ): List<Cell> {
     return if (groupName != null) {
-      cellsToFilter.filter(locationGroupFromPropertiesService.locationGroupFilter(prisonId, groupName)::test)
+      cellsToFilter.filter(locationGroupFilter(prisonId, groupName)::test)
     } else {
       cellsToFilter
     }
+  }
+
+  private fun locationGroupFilter(prisonId: String, groupName: String): Predicate<Location> {
+    return try {
+      locationGroupFromPropertiesService.locationGroupFilter(prisonId, groupName)
+    } catch (e: EntityNotFoundException) {
+      fallBackLocationGroupFilter(groupName)
+    }
+  }
+
+  private fun fallBackLocationGroupFilter(groupName: String): Predicate<Location> {
+    val prefixToMatch = "${groupName.replace('_', '-')}-"
+    return Predicate { it.getPathHierarchy().startsWith(prefixToMatch) }
   }
 
   fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =

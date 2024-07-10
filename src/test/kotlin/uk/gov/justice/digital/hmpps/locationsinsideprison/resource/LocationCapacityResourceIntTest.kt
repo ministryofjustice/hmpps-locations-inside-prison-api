@@ -304,6 +304,98 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
+      fun `can view cells with capacity using group name from config files`() {
+        prisonerSearchMockServer.stubSearchByLocations(
+          cell3.prisonId,
+          listOf(
+            cell3.getPathHierarchy(),
+          ),
+          true,
+        )
+
+        webTestClient.get().uri("/location-occupancy/cells-with-capacity/${wingZ.prisonId}?groupName=Z-Wing_Landing 2")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            [
+              {
+                "id": "${cell3.id}",
+                "key": "${cell3.getKey()}",
+                "prisonId": "${cell3.prisonId}",
+                "pathHierarchy": "${cell3.getPathHierarchy()}",
+                "noOfOccupants": 1,
+                "maxCapacity": ${cell3.getMaxCapacity()},
+                "workingCapacity": ${cell3.getWorkingCapacity()},
+                "specialistCellTypes": [
+                  {
+                     "typeCode": "SAFE_CELL",
+                     "typeDescription": "Safe cell"
+                  }
+                ],
+                "legacyAttributes": [
+                  {
+                    "typeCode": "DOUBLE_OCCUPANCY",
+                    "typeDescription": "Double Occupancy"
+                  }
+                ]
+              }
+            ]
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can view cells with capacity using group name`() {
+        prisonerSearchMockServer.stubSearchByLocations(
+          cell3.prisonId,
+          listOf(
+            cell3.getPathHierarchy(),
+          ),
+          true,
+        )
+
+        webTestClient.get().uri("/location-occupancy/cells-with-capacity/${wingZ.prisonId}?groupName=${landingZ2.getPathHierarchy()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            [
+              {
+                "id": "${cell3.id}",
+                "key": "${cell3.getKey()}",
+                "prisonId": "${cell3.prisonId}",
+                "pathHierarchy": "${cell3.getPathHierarchy()}",
+                "noOfOccupants": 1,
+                "maxCapacity": ${cell3.getMaxCapacity()},
+                "workingCapacity": ${cell3.getWorkingCapacity()},
+                "specialistCellTypes": [
+                  {
+                     "typeCode": "SAFE_CELL",
+                     "typeDescription": "Safe cell"
+                  }
+                ],
+                "legacyAttributes": [
+                  {
+                    "typeCode": "DOUBLE_OCCUPANCY",
+                    "typeDescription": "Double Occupancy"
+                  }
+                ]
+              }
+            ]
+          """,
+            false,
+          )
+      }
+
+      @Test
       fun `can view cells with capacity and prisoner information`() {
         prisonerSearchMockServer.stubSearchByLocations(
           cell1.prisonId,
