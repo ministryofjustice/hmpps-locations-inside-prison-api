@@ -7,6 +7,7 @@ import jakarta.persistence.EntityNotFoundException
 import jakarta.validation.ValidationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -19,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialL
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationPrefixDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -46,11 +48,13 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpeci
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocationResult
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.Properties
 import java.util.UUID
 import java.util.function.Predicate
 import kotlin.jvm.optionals.getOrNull
@@ -70,6 +74,7 @@ class LocationService(
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
+  @Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -100,6 +105,18 @@ class LocationService(
     }
   }
 
+  fun getLocationPrefixFromGroup(prisonId: String, group: String): LocationPrefixDto {
+    val agencyGroupKey = "${prisonId}_$group"
+
+    val pattern = groupsProperties.getProperty(agencyGroupKey)
+      ?: throw LocationPrefixNotFoundException(agencyGroupKey)
+
+    val locationPrefix = pattern
+      .replace(".", "")
+      .replace("+", "")
+
+    return LocationPrefixDto(locationPrefix)
+  }
   fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> =
     cellsInGroup(prisonId, groupName, cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true))
       .toMutableList()
