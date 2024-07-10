@@ -392,11 +392,10 @@ class LocationService(
       throw ValidationException("Cannot change the specialist cell types of a permanently deactivated location")
     }
 
-    // TODO check for empty sets when 0 working cap etc (e.g. validation rules)
-//    val prisoners = prisonerLocationService.prisonersInLocations(cell)
-//    if (maxCapacity < prisoners.size) {
-//      throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})")
-//    }
+    // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialists cell types
+    if (specialistCellTypes.isEmpty() && cell.accommodationType.equals(AccommodationType.NORMAL_ACCOMMODATION) && cell.getWorkingCapacity() == 0) {
+      throw ValidationException("Cannot removes specialist cell types for a normal accommodation with a working capacity of 0")
+    }
 
     cell.updateSpecialistCellTypes(
       specialistCellTypes,

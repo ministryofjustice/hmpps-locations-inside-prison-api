@@ -2174,6 +2174,25 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().isEqualTo(404)
       }
+
+      @Test
+      fun `cannot remove specialists cell types if capacity is 0 for normal accommodations`() {
+        val testCell = repository.save(
+          buildCell(
+            pathHierarchy = "Z-1-005",
+            capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
+            certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+            specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+          ),
+        )
+
+        webTestClient.put().uri("/locations/${testCell.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(emptySet<SpecialistCellType>()))
+          .exchange()
+          .expectStatus().isEqualTo(400)
+      }
     }
 
     @Nested
