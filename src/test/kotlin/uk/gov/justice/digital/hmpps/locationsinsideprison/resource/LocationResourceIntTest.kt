@@ -1577,6 +1577,75 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("GET /locations/prison/{prisonId}/group/{group}/location-prefix")
+  @Nested
+  inner class ViewLocationPrefixInPropertiesByPrisonAndGroupTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/MDI/group/Houseblock 1/location-prefix")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/MDI/group/Houseblock 1/location-prefix")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/MDI/group/Houseblock 1/location-prefix")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve location prefix for a prison included in the properties file`() {
+        webTestClient.get().uri("/locations/prison/MDI/group/Houseblock 1/location-prefix")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+                          {
+                          "locationPrefix": "MDI-1-"
+                          }
+                        """,
+            false,
+          )
+      }
+    }
+
+    @Nested
+    inner class FailurePath {
+      @Test
+      fun `resource not found`() {
+        webTestClient.get().uri("/locations/prison/XYZ/group/Houseblock 1/location-prefix")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().is4xxClientError
+          .expectBody().json(
+            """
+                        {"status":404,
+                        "userMessage":"No mappings found for XYZ_Houseblock 1",
+                        "developerMessage":"No mappings found for XYZ_Houseblock 1",
+                        "errorCode":111}
+                        """,
+            false,
+          )
+      }
+    }
+  }
   @Nested
   inner class ViewArchivedLocationByPrisonTest {
     @Nested

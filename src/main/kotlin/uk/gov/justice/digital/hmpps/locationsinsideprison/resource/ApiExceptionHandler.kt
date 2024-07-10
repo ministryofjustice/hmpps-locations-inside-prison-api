@@ -186,7 +186,20 @@ class ApiExceptionHandler {
         ),
       )
   }
-
+  @ExceptionHandler(LocationPrefixNotFoundException::class)
+  fun handleLocationPrefixNotFound(e: LocationPrefixNotFoundException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Location prefix not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.LocationPrefixNotFound,
+          userMessage = "${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
   @ExceptionHandler(SignedOperationCapacityNotFoundException::class)
   fun handleOperationalCapacityNotFoundException(e: SignedOperationCapacityNotFoundException): ResponseEntity<ErrorResponse?>? {
     log.debug("Signed Operation Capacity not found exception caught: {}", e.message)
@@ -313,6 +326,9 @@ class ApiExceptionHandler {
 }
 
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
+
+class LocationPrefixNotFoundException(id: String) : Exception("No mappings found for $id")
+
 class SignedOperationCapacityNotFoundException(prisonId: String) :
   Exception("There is no signed operation capacity found for prison ID = $prisonId")
 
