@@ -31,6 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
@@ -745,6 +746,7 @@ class LocationService(
         workingCapacity = cell.getWorkingCapacity() ?: 0,
         localName = cell.localName,
         specialistCellTypes = cell.specialistCellTypes.map { CellWithSpecialistCellTypes.CellType(it.specialistCellType, it.specialistCellType.description) },
+        legacyAttributes = cell.attributes.filter { it.attributeType == ResidentialAttributeType.LOCATION_ATTRIBUTE }.map { CellWithSpecialistCellTypes.ResidentialLocationAttribute(it.attributeValue, it.attributeValue.description) },
         noOfOccupants = mapOfOccupancy[cell.getPathHierarchy()]?.size ?: 0,
         prisonersInCell = if (includePrisonerInformation) {
           mapOfOccupancy[cell.getPathHierarchy()]

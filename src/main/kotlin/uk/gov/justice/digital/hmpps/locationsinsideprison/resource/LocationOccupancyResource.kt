@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
@@ -106,6 +107,8 @@ data class CellWithSpecialistCellTypes(
   val localName: String? = null,
   @Schema(title = "List of specialist types for the cell.", example = """{ "typeCode": "LISTENER_CRISIS", "typeDescription": "Listener / crisis cell" }""")
   val specialistCellTypes: List<CellType> = listOf(),
+  @Schema(title = "List of the old location attributes.", example = """{ "typeCode": "LISTENER_CRISIS", "typeDescription": "Listener / crisis cell" }""")
+  val legacyAttributes: List<ResidentialLocationAttribute> = listOf(),
   @Schema(title = "List prisoners in this cell", required = true)
   val prisonersInCell: List<Prisoner>? = null,
 ) {
@@ -119,10 +122,21 @@ data class CellWithSpecialistCellTypes(
 
   private fun getActualCapacity() = if (workingCapacity != 0) workingCapacity else maxCapacity
 
+  @Schema(description = "Cell with specialist cell attribute")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
   data class CellType(
     @Schema(title = "Specialist Cell Type Code", required = true)
     val typeCode: SpecialistCellType,
     @Schema(title = "Specialist Cell Type Description", required = true)
+    val typeDescription: String,
+  )
+
+  @Schema(description = "Cell with old location attribute")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  data class ResidentialLocationAttribute(
+    @Schema(title = "Attribute Type Code", required = true)
+    val typeCode: ResidentialAttributeValue,
+    @Schema(title = "Attribute Type Description", required = true)
     val typeDescription: String,
   )
 }
