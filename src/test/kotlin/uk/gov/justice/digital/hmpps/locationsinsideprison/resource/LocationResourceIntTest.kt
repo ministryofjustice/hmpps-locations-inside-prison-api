@@ -1506,7 +1506,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
-  """
+            """
                 {
                 "locationPrefix": "MDI-Z-"
                 }
