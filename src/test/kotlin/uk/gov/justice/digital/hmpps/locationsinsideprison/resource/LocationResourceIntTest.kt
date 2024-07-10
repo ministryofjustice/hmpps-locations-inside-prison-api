@@ -1501,16 +1501,16 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can retrieve location prefix for a prison included in the properties file`() {
-        webTestClient.get().uri("/locations/prison/MDI/group/Houseblock 1/location-prefix")
+        webTestClient.get().uri("/locations/prison/CDI/group/A-Wing/location-prefix")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
-            """
-                          {
-                          "locationPrefix": "MDI-1-"
-                          }
-                        """,
+  """
+                {
+                "locationPrefix": "CDI-A-"
+                }
+              """,
             false,
           )
       }

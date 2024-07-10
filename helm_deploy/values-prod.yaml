@@ -6,6 +6,7 @@ generic-service:
     host: locations-inside-prison-api.hmpps.service.justice.gov.uk
 
   env:
+    JAVA_OPTS: "-Xmx1539m"
     API_BASE_URL_OAUTH: https://sign-in.hmpps.service.justice.gov.uk/auth
     API_BASE_URL_PRISONER_SEARCH: https://prisoner-search.prison.service.justice.gov.uk
     SERVICE_ACTIVE_PRISONS: ""
