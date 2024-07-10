@@ -1395,140 +1395,30 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             // language=json
             """
-                       [
-                        {
-                          "name": "Houseblock 1",
-                          "key": "Houseblock 1",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "C-Wing",
-                              "key": "C-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 2",
-                          "key": "Houseblock 2",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "C-Wing",
-                              "key": "C-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 3",
-                          "key": "Houseblock 3",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "C-Wing",
-                              "key": "C-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 4",
-                          "key": "Houseblock 4",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "C-Wing",
-                              "key": "C-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 5",
-                          "key": "Houseblock 5",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 6",
-                          "key": "Houseblock 6",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 7",
-                          "key": "Houseblock 7",
-                          "children": []
-                        },
-                        {
-                          "name": "Houseblock 8",
-                          "key": "Houseblock 8",
-                          "children": []
-                        },
-                        {
-                          "name": "Segregation Unit",
-                          "key": "Segregation Unit",
-                          "children": []
-                        }
-                      ]
-                                              """,
+                [
+                  {
+                    "name": "All Wings",
+                    "key": "All Wings",
+                    "children": []
+                  },
+                  {
+                    "name": "Z-Wing",
+                    "key": "Z-Wing",
+                    "children": [
+                      {
+                        "name": "Landing 1",
+                        "key": "Landing 1",
+                        "children": []
+                      },
+                      {
+                        "name": "Landing 2",
+                        "key": "Landing 2",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              """,
             false,
           )
       }
