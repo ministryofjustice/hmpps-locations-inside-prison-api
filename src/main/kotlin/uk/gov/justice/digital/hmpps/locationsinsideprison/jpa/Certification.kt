@@ -35,6 +35,11 @@ class Certification(
     return true
   }
 
+  fun setCertification(certified: Boolean, capacityOfCertifiedCell: Int) {
+    this.certified = certified
+    this.capacityOfCertifiedCell = capacityOfCertifiedCell
+  }
+
   override fun hashCode(): Int {
     var result = certified.hashCode()
     result = 31 * result + capacityOfCertifiedCell
