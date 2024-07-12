@@ -252,7 +252,12 @@ class Cell(
       LocalDateTime.now(clock),
     )
 
-    capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+    if (capacity != null) {
+      capacity?.setCapacity(maxCapacity, workingCapacity)
+    } else {
+      capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+    }
+
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
   }
@@ -265,7 +270,11 @@ class Cell(
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
-    certification = Certification(certified = true, capacityOfCertifiedCell = certification?.capacityOfCertifiedCell ?: 0)
+    if (certification != null) {
+      certification?.setCertification(true, certification?.capacityOfCertifiedCell ?: 0)
+    } else {
+      certification = Certification(certified = true, capacityOfCertifiedCell = 0)
+    }
 
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
@@ -286,7 +295,12 @@ class Cell(
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
-    certification = Certification(certified = false, capacityOfCertifiedCell = certification?.capacityOfCertifiedCell ?: 0)
+
+    if (certification != null) {
+      certification?.setCertification(false, certification?.capacityOfCertifiedCell ?: 0)
+    } else {
+      certification = Certification(certified = false, capacityOfCertifiedCell = 0)
+    }
 
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
@@ -423,7 +437,11 @@ class Cell(
           LocalDateTime.now(clock),
         )
 
-        capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+        if (capacity != null) {
+          capacity?.setCapacity(maxCapacity, workingCapacity)
+        } else {
+          capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+        }
       }
     }
 
@@ -443,8 +461,11 @@ class Cell(
           userOrSystemInContext,
           LocalDateTime.now(clock),
         )
-        certification =
-          Certification(certified = certified, capacityOfCertifiedCell = capacityOfCertifiedCell)
+        if (certification != null) {
+          certification?.setCertification(certified, capacityOfCertifiedCell)
+        } else {
+          certification = Certification(certified = certified, capacityOfCertifiedCell = capacityOfCertifiedCell)
+        }
       }
     }
   }
