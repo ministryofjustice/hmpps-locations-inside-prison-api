@@ -4,6 +4,7 @@ import com.microsoft.applicationinsights.TelemetryClient
 import jakarta.validation.ValidationException
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
@@ -19,10 +20,13 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
 import java.time.LocalDateTime
-import java.util.*
+import java.util.Optional
+import java.util.Properties
+import java.util.UUID
 
 class LocationServiceTest {
   private val locationRepository: LocationRepository = mock()
@@ -36,6 +40,7 @@ class LocationServiceTest {
   private val telemetryClient: TelemetryClient = mock()
   private val authenticationFacade: AuthenticationFacade = mock()
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService = mock()
+  private val groupsProperties: Properties = mock()
 
   private val service = LocationService(
     locationRepository,
@@ -49,6 +54,7 @@ class LocationServiceTest {
     telemetryClient,
     authenticationFacade,
     locationGroupFromPropertiesService,
+    groupsProperties,
   )
 
   @Test
@@ -98,5 +104,23 @@ class LocationServiceTest {
     val cellDto = service.updateLocation(UUID.randomUUID(), updateLocationRequest)
     Assertions.assertThat(cellDto.comments).isEqualTo("additional comment")
     Assertions.assertThat(cellDto.localName).isEqualTo("L23")
+  }
+
+  @Test
+  fun `should return location prefix for group`() {
+    whenever(groupsProperties.getProperty(any())).thenReturn("MDI-2-")
+
+    val locationPrefixDto = service.getLocationPrefixFromGroup("MDI", "Houseblock 7")
+
+    Assertions.assertThat(locationPrefixDto.locationPrefix).isEqualTo("MDI-2-")
+  }
+
+  @Test
+  fun `should throw correct exception when location prefix not found`() {
+    whenever(groupsProperties.getProperty(ArgumentMatchers.anyString())).thenReturn(null)
+
+    Assertions.assertThatExceptionOfType(LocationPrefixNotFoundException::class.java).isThrownBy {
+      service.getLocationPrefixFromGroup("XXX", "1")
+    }
   }
 }

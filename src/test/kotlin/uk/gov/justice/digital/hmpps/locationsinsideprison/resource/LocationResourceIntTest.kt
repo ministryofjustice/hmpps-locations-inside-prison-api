@@ -1395,140 +1395,30 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             // language=json
             """
-                       [
-                        {
-                          "name": "Houseblock 1",
-                          "key": "Houseblock 1",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "C-Wing",
-                              "key": "C-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 2",
-                          "key": "Houseblock 2",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "C-Wing",
-                              "key": "C-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 3",
-                          "key": "Houseblock 3",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "C-Wing",
-                              "key": "C-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 4",
-                          "key": "Houseblock 4",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "C-Wing",
-                              "key": "C-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 5",
-                          "key": "Houseblock 5",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 6",
-                          "key": "Houseblock 6",
-                          "children": [
-                            {
-                              "name": "A-Wing",
-                              "key": "A-Wing",
-                              "children": []
-                            },
-                            {
-                              "name": "B-Wing",
-                              "key": "B-Wing",
-                              "children": []
-                            }
-                          ]
-                        },
-                        {
-                          "name": "Houseblock 7",
-                          "key": "Houseblock 7",
-                          "children": []
-                        },
-                        {
-                          "name": "Houseblock 8",
-                          "key": "Houseblock 8",
-                          "children": []
-                        },
-                        {
-                          "name": "Segregation Unit",
-                          "key": "Segregation Unit",
-                          "children": []
-                        }
-                      ]
-                                              """,
+                [
+                  {
+                    "name": "All Wings",
+                    "key": "All Wings",
+                    "children": []
+                  },
+                  {
+                    "name": "Z-Wing",
+                    "key": "Z-Wing",
+                    "children": [
+                      {
+                        "name": "Landing 1",
+                        "key": "Landing 1",
+                        "children": []
+                      },
+                      {
+                        "name": "Landing 2",
+                        "key": "Landing 2",
+                        "children": []
+                      }
+                    ]
+                  }
+                ]
+              """,
             false,
           )
       }
@@ -1570,6 +1460,76 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   ]
                 }
               ]
+                        """,
+            false,
+          )
+      }
+    }
+  }
+
+  @DisplayName("GET /locations/prison/{prisonId}/group/{group}/location-prefix")
+  @Nested
+  inner class ViewLocationPrefixInPropertiesByPrisonAndGroupTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/MDI/group/Houseblock 1/location-prefix")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/MDI/group/Houseblock 1/location-prefix")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/MDI/group/Houseblock 1/location-prefix")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve location prefix for a prison included in the properties file`() {
+        webTestClient.get().uri("/locations/prison/MDI/group/Z-Wing/location-prefix")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+                {
+                "locationPrefix": "MDI-Z-"
+                }
+              """,
+            false,
+          )
+      }
+    }
+
+    @Nested
+    inner class FailurePath {
+      @Test
+      fun `resource not found`() {
+        webTestClient.get().uri("/locations/prison/XYZ/group/Houseblock 1/location-prefix")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().is4xxClientError
+          .expectBody().json(
+            """
+                        {"status":404,
+                        "userMessage":"Location prefix not found for XYZ_Houseblock 1",
+                        "developerMessage":"Location prefix not found for XYZ_Houseblock 1",
+                        "errorCode":111}
                         """,
             false,
           )
