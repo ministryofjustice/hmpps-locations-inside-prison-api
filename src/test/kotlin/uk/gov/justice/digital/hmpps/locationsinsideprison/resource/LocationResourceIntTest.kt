@@ -2090,7 +2090,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update specialist cell types successfully`() {
-        val expectedUsedFor = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)
+        val expectedSpecialistCell = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)
 
         val result = webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -2101,7 +2101,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        assertThat(result.usedFor == expectedUsedFor)
+        assertThat(result.specialistCellTypes!! == expectedSpecialistCell)
 
         getDomainEvents(1).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2112,7 +2112,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can remove specialist cell types successfully`() {
-        val expectedUsedFor = null
+        val specialistCellTypes = null
 
         val result = webTestClient.put().uri("/locations/${cell2.id}/specialist-cell-types")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -2123,7 +2123,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        assertThat(result.usedFor == expectedUsedFor)
+        assertThat(result.specialistCellTypes == specialistCellTypes)
 
         getDomainEvents(1).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
