@@ -44,4 +44,9 @@ class Capacity(
   override fun toString(): String {
     return "Capacity(max capacity=$maxCapacity, working capacity=$workingCapacity)"
   }
+
+  fun setCapacity(maxCapacity: Int, workingCapacity: Int) {
+    this.maxCapacity = maxCapacity
+    this.workingCapacity = workingCapacity
+  }
 }
