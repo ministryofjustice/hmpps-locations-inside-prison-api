@@ -1794,138 +1794,46 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       otherConvertedCellType = "Taning room",
     )
 
-    @Nested
-    inner class Security {
-      @Test
-      fun `access forbidden when no authority`() {
-        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
-          .exchange()
-          .expectStatus().isUnauthorized
-      }
-
-      @Test
-      fun `access forbidden when no role`() {
-        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
-          .headers(setAuthorisation(roles = listOf()))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      fun `access forbidden with wrong role`() {
-        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      fun `access forbidden with right role, wrong scope`() {
-        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-    }
-  }
-
-  @DisplayName("PUT /locations/{id}/convert-to-cell")
-  @Nested
-  inner class ConvertToCellTest {
-    var convertToCellRequest = ConvertToCellRequest(
-      accommodationType = AccommodationType.CARE_AND_SEPARATION,
-      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
-      maxCapacity = 2,
-      workingCapacity = 2,
-      usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
+    var convertCellToNonResidentialLocationRequestNotValidOther = ConvertCellToNonResidentialLocationRequest(
+      convertedCellType = ConvertedCellType.TREATMENT_ROOM,
+      otherConvertedCellType = "Taning room",
     )
 
     @Nested
     inner class Security {
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(convertToCellRequest))
+          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
           .exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(convertToCellRequest))
+          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
           .exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with right role, wrong scope`() {
-        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(convertToCellRequest))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-    }
-  }
-
-  @DisplayName("PUT /locations/{id}/used-for-type")
-  @Nested
-  inner class UsedForTypeTest {
-
-    @Nested
-    inner class Security {
-      @Test
-      fun `access forbidden when no authority`() {
-        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
-          .exchange()
-          .expectStatus().isUnauthorized
-      }
-
-      @Test
-      fun `access forbidden when no role`() {
-        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
-          .headers(setAuthorisation(roles = listOf()))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      fun `access forbidden with wrong role`() {
-        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      fun `access forbidden with right role, wrong scope`() {
-        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
+          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -1935,7 +1843,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class Validation {
       @Test
       fun `access client error bad data`() {
-        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"prisonId": ""}""")
@@ -1944,69 +1852,140 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `cannot update used-for-type as location is not found`() {
-        webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/used-for-type")
+      fun `cannot update convert to non residential cell as ID is not found`() {
+        webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
+          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
           .exchange()
           .expectStatus().isEqualTo(404)
       }
 
       @Test
-      fun `cannot update used-for-type as usedFor is not found in set`() {
-        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+      fun `cannot update convert to non residential cell as REQUEST has not valid Other value `() { // request has not valid data
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue("""["TANNING_SALON"]""")
+          .bodyValue(convertCellToNonResidentialLocationRequestNotValidOther)
           .exchange()
           .expectStatus().isEqualTo(400)
+
       }
     }
 
+    }
+
+    @DisplayName("PUT /locations/{id}/convert-to-cell")
     @Nested
-    inner class HappyPath {
+    inner class ConvertToCellTest {
+      var convertToCellRequest = ConvertToCellRequest(
+        accommodationType = AccommodationType.CARE_AND_SEPARATION,
+        specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+        maxCapacity = 2,
+        workingCapacity = 2,
+        usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
+      )
 
-      @Test
-      fun `can update Use for type to a value successfully`() {
-        val expectedUsedFor = setOf(UsedForType.PERSONALITY_DISORDER)
+      var convertToCellRequestNotValidMaxCapacity = ConvertToCellRequest(
+        accommodationType = AccommodationType.CARE_AND_SEPARATION,
+        specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+        maxCapacity = -1,
+        workingCapacity = 2,
+        usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
+      )
 
-        val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(setOf(UsedForType.PERSONALITY_DISORDER)))
-          .exchange()
-          .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
-          .returnResult().responseBody!!
+      var convertToCellRequestNotValidWorkingCapacity = ConvertToCellRequest(
+        accommodationType = AccommodationType.CARE_AND_SEPARATION,
+        specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+        maxCapacity = 1,
+        workingCapacity = -1,
+        usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
+      )
 
-        assertThat(result.usedFor == expectedUsedFor)
 
-        val landingZ1 = result.findByPathHierarchy("Z-1")!!
-        assertThat(landingZ1.usedFor == expectedUsedFor)
+      @Nested
+      inner class Security {
+        @Test
+        fun `access forbidden when no authority`() {
+          webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+            .exchange()
+            .expectStatus().isUnauthorized
+        }
 
-        val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
-        assertThat(cellZ1001.usedFor == expectedUsedFor)
+        @Test
+        fun `access forbidden when no role`() {
+          webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+            .headers(setAuthorisation(roles = listOf()))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(convertToCellRequest))
+            .exchange()
+            .expectStatus().isForbidden
+        }
 
-        val cellZ1002 = result.findByPathHierarchy("Z-1-002")!!
-        assertThat(cellZ1002.usedFor == expectedUsedFor)
+        @Test
+        fun `access forbidden with wrong role`() {
+          webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(convertToCellRequest))
+            .exchange()
+            .expectStatus().isForbidden
+        }
 
-        val landingZ2 = result.findByPathHierarchy("Z-2")!!
-        assertThat(landingZ2.usedFor!!.isEmpty())
-
-        val cellVisit = result.findByPathHierarchy("Z-VISIT")
-        assertThat(cellVisit == null)
-
-        getDomainEvents(5).let {
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1-002",
-            "location.inside.prison.amended" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z-2",
-            "location.inside.prison.amended" to "MDI-Z",
-          )
+        @Test
+        fun `access forbidden with right role, wrong scope`() {
+          webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(convertToCellRequest))
+            .exchange()
+            .expectStatus().isForbidden
         }
       }
+
+      @Nested
+      inner class Validation {
+        @Test
+        fun `access client error bad data`() {
+          webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue("""{"prisonId": ""}""")
+            .exchange()
+            .expectStatus().is4xxClientError
+        }
+
+        @Test
+        fun `cannot update convert to cell as ID is not found`() {
+          webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/convert-to-cell")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(convertToCellRequest))
+            .exchange()
+            .expectStatus().isEqualTo(404)
+        }
+
+        @Test
+        fun `cannot update convert to cell as REQUEST has invalid Max Capacity `() { // request has not valid data
+          webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(convertToCellRequestNotValidMaxCapacity)
+            .exchange()
+            .expectStatus().isEqualTo(400)
+        }
+
+        @Test
+        fun `cannot update convert to cell as REQUEST has invalid Working Capacity `() { // request has not valid data
+          webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(convertToCellRequestNotValidWorkingCapacity)
+            .exchange()
+            .expectStatus().isEqualTo(400)
+        }
+      }
+
     }
 
     @DisplayName("PUT /locations/{id}/used-for-type")
@@ -2129,130 +2108,252 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             )
           }
         }
+      }
 
-        @Test
-        fun `can update Use for type to no value successfully`() {
-          val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue("[]")
-            .exchange()
-            .expectStatus().isOk
-            .expectBody(LocationTest::class.java)
-            .returnResult().responseBody!!
+      @DisplayName("PUT /locations/{id}/used-for-type")
+      @Nested
+      inner class UsedForTypeTest {
 
-          assertThat(result.usedFor!!.isEmpty())
+        @Nested
+        inner class Security {
+          @Test
+          fun `access forbidden when no authority`() {
+            webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+              .exchange()
+              .expectStatus().isUnauthorized
+          }
 
-          val landingZ1 = result.findByPathHierarchy("Z-1")!!
-          assertThat(landingZ1.usedFor!!.isEmpty())
+          @Test
+          fun `access forbidden when no role`() {
+            webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+              .headers(setAuthorisation(roles = listOf()))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
+              .exchange()
+              .expectStatus().isForbidden
+          }
 
-          val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
-          assertThat(cellZ1001.usedFor!!.isEmpty())
+          @Test
+          fun `access forbidden with wrong role`() {
+            webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
+              .exchange()
+              .expectStatus().isForbidden
+          }
 
-          val cellZ1002 = result.findByPathHierarchy("Z-1-002")!!
-          assertThat(cellZ1002.usedFor!!.isEmpty())
-
-          val landingZ2 = result.findByPathHierarchy("Z-2")!!
-          assertThat(landingZ2.usedFor!!.isEmpty())
-
-          val cellVisit = result.findByPathHierarchy("Z-VISIT")
-          assertThat(cellVisit == null)
-
-          getDomainEvents(5).let {
-            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.amended" to "MDI-Z-1-001",
-              "location.inside.prison.amended" to "MDI-Z-1-002",
-              "location.inside.prison.amended" to "MDI-Z-1",
-              "location.inside.prison.amended" to "MDI-Z-2",
-              "location.inside.prison.amended" to "MDI-Z",
-            )
+          @Test
+          fun `access forbidden with right role, wrong scope`() {
+            webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
+              .exchange()
+              .expectStatus().isForbidden
           }
         }
 
-        @Test
-        fun `can update Use for type to two values successfully`() {
-          val expectedTypes = listOf(UsedForType.FIRST_NIGHT_CENTRE, UsedForType.PERSONALITY_DISORDER)
+        @Nested
+        inner class Validation {
+          @Test
+          fun `access client error bad data`() {
+            webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue("""{"prisonId": ""}""")
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
 
-          val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(expectedTypes))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody(LocationTest::class.java)
-            .returnResult().responseBody!!
+          @Test
+          fun `cannot update used-for-type as location is not found`() {
+            webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/used-for-type")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(setOf(UsedForType.STANDARD_ACCOMMODATION)))
+              .exchange()
+              .expectStatus().isEqualTo(404)
+          }
 
-          assertThat(result.usedFor == expectedTypes)
+          @Test
+          fun `cannot update used-for-type as usedFor is not found in set`() {
+            webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue("""["TANNING_SALON"]""")
+              .exchange()
+              .expectStatus().isEqualTo(400)
+          }
+        }
 
-          val landingZ1 = result.findByPathHierarchy("Z-1")!!
-          assertThat(landingZ1.usedFor == expectedTypes)
+        @Nested
+        inner class HappyPath {
 
-          val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
-          assertThat(cellZ1001.usedFor == expectedTypes)
+          @Test
+          fun `can update Use for type to a value successfully`() {
+            val expectedUsedFor = setOf(UsedForType.PERSONALITY_DISORDER)
 
-          val cellZ1002 = result.findByPathHierarchy("Z-1-002")!!
-          assertThat(cellZ1002.usedFor == expectedTypes)
+            val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(setOf(UsedForType.PERSONALITY_DISORDER)))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody(LocationTest::class.java)
+              .returnResult().responseBody!!
 
-          val landingZ2 = result.findByPathHierarchy("Z-2")!!
-          assertThat(landingZ2.usedFor!!.isEmpty())
+            assertThat(result.usedFor == expectedUsedFor)
 
-          val cellVisit = result.findByPathHierarchy("Z-VISIT")
-          assertThat(cellVisit == null)
+            val landingZ1 = result.findByPathHierarchy("Z-1")!!
+            assertThat(landingZ1.usedFor == expectedUsedFor)
 
-          getDomainEvents(5).let {
-            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.amended" to "MDI-Z-1-001",
-              "location.inside.prison.amended" to "MDI-Z-1-002",
-              "location.inside.prison.amended" to "MDI-Z-1",
-              "location.inside.prison.amended" to "MDI-Z-2",
-              "location.inside.prison.amended" to "MDI-Z",
-            )
+            val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
+            assertThat(cellZ1001.usedFor == expectedUsedFor)
+
+            val cellZ1002 = result.findByPathHierarchy("Z-1-002")!!
+            assertThat(cellZ1002.usedFor == expectedUsedFor)
+
+            val landingZ2 = result.findByPathHierarchy("Z-2")!!
+            assertThat(landingZ2.usedFor!!.isEmpty())
+
+            val cellVisit = result.findByPathHierarchy("Z-VISIT")
+            assertThat(cellVisit == null)
+
+            getDomainEvents(5).let {
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.amended" to "MDI-Z-1-001",
+                "location.inside.prison.amended" to "MDI-Z-1-002",
+                "location.inside.prison.amended" to "MDI-Z-1",
+                "location.inside.prison.amended" to "MDI-Z-2",
+                "location.inside.prison.amended" to "MDI-Z",
+              )
+            }
+          }
+
+          @Test
+          fun `can update Use for type to no value successfully`() {
+            val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue("[]")
+              .exchange()
+              .expectStatus().isOk
+              .expectBody(LocationTest::class.java)
+              .returnResult().responseBody!!
+
+            assertThat(result.usedFor!!.isEmpty())
+
+            val landingZ1 = result.findByPathHierarchy("Z-1")!!
+            assertThat(landingZ1.usedFor!!.isEmpty())
+
+            val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
+            assertThat(cellZ1001.usedFor!!.isEmpty())
+
+            val cellZ1002 = result.findByPathHierarchy("Z-1-002")!!
+            assertThat(cellZ1002.usedFor!!.isEmpty())
+
+            val landingZ2 = result.findByPathHierarchy("Z-2")!!
+            assertThat(landingZ2.usedFor!!.isEmpty())
+
+            val cellVisit = result.findByPathHierarchy("Z-VISIT")
+            assertThat(cellVisit == null)
+
+            getDomainEvents(5).let {
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.amended" to "MDI-Z-1-001",
+                "location.inside.prison.amended" to "MDI-Z-1-002",
+                "location.inside.prison.amended" to "MDI-Z-1",
+                "location.inside.prison.amended" to "MDI-Z-2",
+                "location.inside.prison.amended" to "MDI-Z",
+              )
+            }
+          }
+
+          @Test
+          fun `can update Use for type to two values successfully`() {
+            val expectedTypes = listOf(UsedForType.FIRST_NIGHT_CENTRE, UsedForType.PERSONALITY_DISORDER)
+
+            val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(expectedTypes))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody(LocationTest::class.java)
+              .returnResult().responseBody!!
+
+            assertThat(result.usedFor == expectedTypes)
+
+            val landingZ1 = result.findByPathHierarchy("Z-1")!!
+            assertThat(landingZ1.usedFor == expectedTypes)
+
+            val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
+            assertThat(cellZ1001.usedFor == expectedTypes)
+
+            val cellZ1002 = result.findByPathHierarchy("Z-1-002")!!
+            assertThat(cellZ1002.usedFor == expectedTypes)
+
+            val landingZ2 = result.findByPathHierarchy("Z-2")!!
+            assertThat(landingZ2.usedFor!!.isEmpty())
+
+            val cellVisit = result.findByPathHierarchy("Z-VISIT")
+            assertThat(cellVisit == null)
+
+            getDomainEvents(5).let {
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.amended" to "MDI-Z-1-001",
+                "location.inside.prison.amended" to "MDI-Z-1-002",
+                "location.inside.prison.amended" to "MDI-Z-1",
+                "location.inside.prison.amended" to "MDI-Z-2",
+                "location.inside.prison.amended" to "MDI-Z",
+              )
+            }
           }
         }
       }
-    }
 
-    @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
-    @Nested
-    inner class ViewLocationsByLocationTypeTest {
+      @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
       @Nested
-      inner class Security {
+      inner class ViewLocationsByLocationTypeTest {
+        @Nested
+        inner class Security {
 
-        @Test
-        fun `access forbidden when no authority`() {
-          webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
-            .exchange()
-            .expectStatus().isUnauthorized
+          @Test
+          fun `access forbidden when no authority`() {
+            webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
+              .exchange()
+              .expectStatus().isUnauthorized
+          }
+
+          @Test
+          fun `access forbidden when no role`() {
+            webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
+              .headers(setAuthorisation(roles = listOf()))
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with wrong role`() {
+            webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+              .exchange()
+              .expectStatus().isForbidden
+          }
         }
 
-        @Test
-        fun `access forbidden when no role`() {
-          webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
-            .headers(setAuthorisation(roles = listOf()))
-            .exchange()
-            .expectStatus().isForbidden
-        }
+        @Nested
+        inner class HappyPath {
 
-        @Test
-        fun `access forbidden with wrong role`() {
-          webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-            .exchange()
-            .expectStatus().isForbidden
-        }
-      }
-
-      @Nested
-      inner class HappyPath {
-
-        @Test
-        fun `can retrieve locations by their type`() {
-          webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              """
+          @Test
+          fun `can retrieve locations by their type`() {
+            webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/location-type/${cell1.locationType}")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                """
              [{
               "prisonId": "MDI",
               "code": "001",
@@ -2269,61 +2370,61 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "key": "MDI-Z-1-002"
             }]
                       """,
-              false,
-            )
-        }
-      }
-    }
-
-    @DisplayName("POST /locations/create-wing")
-    @Nested
-    inner class CreateWingTest {
-      var createWingRequest = CreateWingRequest(
-        prisonId = "MDI",
-        wingCode = "Y",
-        wingDescription = "Y Wing",
-        numberOfLandings = 3,
-        numberOfSpursPerLanding = 2,
-        numberOfCellsPerSection = 2,
-        defaultCellCapacity = 1,
-      )
-
-      @Nested
-      inner class Validation {
-        @Test
-        fun `access client error bad data`() {
-          webTestClient.post().uri("/locations/create-wing")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue("""{"prisonId": ""}""")
-            .exchange()
-            .expectStatus().is4xxClientError
-        }
-
-        @Test
-        fun `duplicate location is rejected`() {
-          webTestClient.post().uri("/locations/create-wing")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createWingRequest.copy(wingCode = "Z")))
-            .exchange()
-            .expectStatus().is4xxClientError
+                false,
+              )
+          }
         }
       }
 
+      @DisplayName("POST /locations/create-wing")
       @Nested
-      inner class HappyPath {
-        @Test
-        fun `can create an entire wing with 3 landings, 2 spurs and 2 cells per spur`() {
-          webTestClient.post().uri("/locations/create-wing")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(createWingRequest)
-            .exchange()
-            .expectStatus().isCreated
-            .expectBody().json(
-              // language=json
-              """ 
+      inner class CreateWingTest {
+        var createWingRequest = CreateWingRequest(
+          prisonId = "MDI",
+          wingCode = "Y",
+          wingDescription = "Y Wing",
+          numberOfLandings = 3,
+          numberOfSpursPerLanding = 2,
+          numberOfCellsPerSection = 2,
+          defaultCellCapacity = 1,
+        )
+
+        @Nested
+        inner class Validation {
+          @Test
+          fun `access client error bad data`() {
+            webTestClient.post().uri("/locations/create-wing")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue("""{"prisonId": ""}""")
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
+
+          @Test
+          fun `duplicate location is rejected`() {
+            webTestClient.post().uri("/locations/create-wing")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createWingRequest.copy(wingCode = "Z")))
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
+        }
+
+        @Nested
+        inner class HappyPath {
+          @Test
+          fun `can create an entire wing with 3 landings, 2 spurs and 2 cells per spur`() {
+            webTestClient.post().uri("/locations/create-wing")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(createWingRequest)
+              .exchange()
+              .expectStatus().isCreated
+              .expectBody().json(
+                // language=json
+                """ 
              {
               "prisonId": "MDI",
               "code": "Y",
@@ -2343,25 +2444,34 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               }
             }
           """,
-              false,
-            )
+                false,
+              )
 
-          getDomainEvents(12).let {
-            assertThat(it).hasSize(12)
+            getDomainEvents(12).let {
+              assertThat(it).hasSize(12)
+            }
           }
-        }
 
-        @Test
-        fun `can create an entire wing with 4 landings, 2 cells per landing`() {
-          webTestClient.post().uri("/locations/create-wing")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(createWingRequest.copy(wingCode = "X", wingDescription = "X Wing", numberOfLandings = 4, numberOfSpursPerLanding = 0, numberOfCellsPerSection = 2, defaultCellCapacity = 2))
-            .exchange()
-            .expectStatus().isCreated
-            .expectBody().json(
-              // language=json
-              """ 
+          @Test
+          fun `can create an entire wing with 4 landings, 2 cells per landing`() {
+            webTestClient.post().uri("/locations/create-wing")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(
+                createWingRequest.copy(
+                  wingCode = "X",
+                  wingDescription = "X Wing",
+                  numberOfLandings = 4,
+                  numberOfSpursPerLanding = 0,
+                  numberOfCellsPerSection = 2,
+                  defaultCellCapacity = 2
+                )
+              )
+              .exchange()
+              .expectStatus().isCreated
+              .expectBody().json(
+                // language=json
+                """ 
              {
               "prisonId": "MDI",
               "code": "X",
@@ -2381,115 +2491,115 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               }
             }
           """,
-              false,
-            )
+                false,
+              )
 
-          getDomainEvents(8).let {
-            assertThat(it).hasSize(8)
+            getDomainEvents(8).let {
+              assertThat(it).hasSize(8)
+            }
           }
         }
       }
-    }
 
-    @DisplayName("POST /locations/residential")
-    @Nested
-    inner class CreateResidentialLocationTest {
-      var createResidentialLocationRequest = CreateResidentialLocationRequest(
-        prisonId = "MDI",
-        code = "004",
-        locationType = ResidentialLocationType.CELL,
-        localName = "A New Cell (004)",
-        accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
-        capacity = CapacityDTO(maxCapacity = 2, workingCapacity = 2),
-        certified = true,
-      )
-
+      @DisplayName("POST /locations/residential")
       @Nested
-      inner class Security {
-        @Test
-        fun `access forbidden when no authority`() {
-          webTestClient.post().uri("/locations/residential")
-            .exchange()
-            .expectStatus().isUnauthorized
+      inner class CreateResidentialLocationTest {
+        var createResidentialLocationRequest = CreateResidentialLocationRequest(
+          prisonId = "MDI",
+          code = "004",
+          locationType = ResidentialLocationType.CELL,
+          localName = "A New Cell (004)",
+          accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+          capacity = CapacityDTO(maxCapacity = 2, workingCapacity = 2),
+          certified = true,
+        )
+
+        @Nested
+        inner class Security {
+          @Test
+          fun `access forbidden when no authority`() {
+            webTestClient.post().uri("/locations/residential")
+              .exchange()
+              .expectStatus().isUnauthorized
+          }
+
+          @Test
+          fun `access forbidden when no role`() {
+            webTestClient.post().uri("/locations/residential")
+              .headers(setAuthorisation(roles = listOf()))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createResidentialLocationRequest))
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with wrong role`() {
+            webTestClient.post().uri("/locations/residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createResidentialLocationRequest))
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with right role, wrong scope`() {
+            webTestClient.post().uri("/locations/residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createResidentialLocationRequest))
+              .exchange()
+              .expectStatus().isForbidden
+          }
         }
 
-        @Test
-        fun `access forbidden when no role`() {
-          webTestClient.post().uri("/locations/residential")
-            .headers(setAuthorisation(roles = listOf()))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createResidentialLocationRequest))
-            .exchange()
-            .expectStatus().isForbidden
+        @Nested
+        inner class Validation {
+          @Test
+          fun `access client error bad data`() {
+            webTestClient.post().uri("/locations/residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue("""{"code": ""}""")
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
+
+          @Test
+          fun `duplicate location is rejected`() {
+            webTestClient.post().uri("/locations/residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createResidentialLocationRequest.copy(code = "001", parentId = landingZ1.id)))
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
+
+          @Test
+          fun `invalid prison ID is rejected`() {
+            webTestClient.post().uri("/locations/residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createResidentialLocationRequest.copy(prisonId = "FFO")))
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
         }
 
-        @Test
-        fun `access forbidden with wrong role`() {
-          webTestClient.post().uri("/locations/residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createResidentialLocationRequest))
-            .exchange()
-            .expectStatus().isForbidden
-        }
-
-        @Test
-        fun `access forbidden with right role, wrong scope`() {
-          webTestClient.post().uri("/locations/residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createResidentialLocationRequest))
-            .exchange()
-            .expectStatus().isForbidden
-        }
-      }
-
-      @Nested
-      inner class Validation {
-        @Test
-        fun `access client error bad data`() {
-          webTestClient.post().uri("/locations/residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue("""{"code": ""}""")
-            .exchange()
-            .expectStatus().is4xxClientError
-        }
-
-        @Test
-        fun `duplicate location is rejected`() {
-          webTestClient.post().uri("/locations/residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createResidentialLocationRequest.copy(code = "001", parentId = landingZ1.id)))
-            .exchange()
-            .expectStatus().is4xxClientError
-        }
-
-        @Test
-        fun `invalid prison ID is rejected`() {
-          webTestClient.post().uri("/locations/residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createResidentialLocationRequest.copy(prisonId = "FFO")))
-            .exchange()
-            .expectStatus().is4xxClientError
-        }
-      }
-
-      @Nested
-      inner class HappyPath {
-        @Test
-        fun `can create details of a location`() {
-          webTestClient.post().uri("/locations/residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createResidentialLocationRequest.copy(parentId = landingZ1.id)))
-            .exchange()
-            .expectStatus().isCreated
-            .expectBody().json(
-              // language=json
-              """ 
+        @Nested
+        inner class HappyPath {
+          @Test
+          fun `can create details of a location`() {
+            webTestClient.post().uri("/locations/residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createResidentialLocationRequest.copy(parentId = landingZ1.id)))
+              .exchange()
+              .expectStatus().isCreated
+              .expectBody().json(
+                // language=json
+                """ 
              {
               "prisonId": "MDI",
               "code": "004",
@@ -2511,110 +2621,114 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-              false,
-            )
+                false,
+              )
 
-          getDomainEvents(3).let {
-            assertThat(it).hasSize(3)
-            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.created" to "MDI-Z-1-004",
-              "location.inside.prison.amended" to "MDI-Z-1",
-              "location.inside.prison.amended" to "MDI-Z",
-            )
+            getDomainEvents(3).let {
+              assertThat(it).hasSize(3)
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.created" to "MDI-Z-1-004",
+                "location.inside.prison.amended" to "MDI-Z-1",
+                "location.inside.prison.amended" to "MDI-Z",
+              )
+            }
           }
         }
       }
-    }
 
-    @DisplayName("POST /locations/non-residential")
-    @Nested
-    inner class CreateNonResidentialLocationTest {
-      var createNonResidentialLocationRequest = CreateNonResidentialLocationRequest(
-        prisonId = "MDI",
-        code = "ADJ",
-        locationType = NonResidentialLocationType.ADJUDICATION_ROOM,
-        localName = "Adjudication Room",
-        usage = setOf(
-          NonResidentialUsageDto(usageType = NonResidentialUsageType.ADJUDICATION_HEARING, capacity = 15, sequence = 1),
-        ),
-      )
-
+      @DisplayName("POST /locations/non-residential")
       @Nested
-      inner class Security {
-        @Test
-        fun `access forbidden when no authority`() {
-          webTestClient.post().uri("/locations/non-residential")
-            .exchange()
-            .expectStatus().isUnauthorized
+      inner class CreateNonResidentialLocationTest {
+        var createNonResidentialLocationRequest = CreateNonResidentialLocationRequest(
+          prisonId = "MDI",
+          code = "ADJ",
+          locationType = NonResidentialLocationType.ADJUDICATION_ROOM,
+          localName = "Adjudication Room",
+          usage = setOf(
+            NonResidentialUsageDto(
+              usageType = NonResidentialUsageType.ADJUDICATION_HEARING,
+              capacity = 15,
+              sequence = 1
+            ),
+          ),
+        )
+
+        @Nested
+        inner class Security {
+          @Test
+          fun `access forbidden when no authority`() {
+            webTestClient.post().uri("/locations/non-residential")
+              .exchange()
+              .expectStatus().isUnauthorized
+          }
+
+          @Test
+          fun `access forbidden when no role`() {
+            webTestClient.post().uri("/locations/non-residential")
+              .headers(setAuthorisation(roles = listOf()))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createNonResidentialLocationRequest))
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with wrong role`() {
+            webTestClient.post().uri("/locations/non-residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createNonResidentialLocationRequest))
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with right role, wrong scope`() {
+            webTestClient.post().uri("/locations/non-residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createNonResidentialLocationRequest))
+              .exchange()
+              .expectStatus().isForbidden
+          }
         }
 
-        @Test
-        fun `access forbidden when no role`() {
-          webTestClient.post().uri("/locations/non-residential")
-            .headers(setAuthorisation(roles = listOf()))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createNonResidentialLocationRequest))
-            .exchange()
-            .expectStatus().isForbidden
+        @Nested
+        inner class Validation {
+          @Test
+          fun `access client error bad data`() {
+            webTestClient.post().uri("/locations/non-residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue("""{"code": ""}""")
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
+
+          @Test
+          fun `duplicate location is rejected`() {
+            webTestClient.post().uri("/locations/non-residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createNonResidentialLocationRequest.copy(code = "VISIT", parentId = wingZ.id)))
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
         }
 
-        @Test
-        fun `access forbidden with wrong role`() {
-          webTestClient.post().uri("/locations/non-residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createNonResidentialLocationRequest))
-            .exchange()
-            .expectStatus().isForbidden
-        }
-
-        @Test
-        fun `access forbidden with right role, wrong scope`() {
-          webTestClient.post().uri("/locations/non-residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createNonResidentialLocationRequest))
-            .exchange()
-            .expectStatus().isForbidden
-        }
-      }
-
-      @Nested
-      inner class Validation {
-        @Test
-        fun `access client error bad data`() {
-          webTestClient.post().uri("/locations/non-residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue("""{"code": ""}""")
-            .exchange()
-            .expectStatus().is4xxClientError
-        }
-
-        @Test
-        fun `duplicate location is rejected`() {
-          webTestClient.post().uri("/locations/non-residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createNonResidentialLocationRequest.copy(code = "VISIT", parentId = wingZ.id)))
-            .exchange()
-            .expectStatus().is4xxClientError
-        }
-      }
-
-      @Nested
-      inner class HappyPath {
-        @Test
-        fun `can create details of a location`() {
-          webTestClient.post().uri("/locations/non-residential")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(createNonResidentialLocationRequest.copy(parentId = wingZ.id)))
-            .exchange()
-            .expectStatus().isCreated
-            .expectBody().json(
-              // language=json
-              """ 
+        @Nested
+        inner class HappyPath {
+          @Test
+          fun `can create details of a location`() {
+            webTestClient.post().uri("/locations/non-residential")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(createNonResidentialLocationRequest.copy(parentId = wingZ.id)))
+              .exchange()
+              .expectStatus().isCreated
+              .expectBody().json(
+                // language=json
+                """ 
              {
               "prisonId": "MDI",
               "code": "ADJ",
@@ -2632,66 +2746,66 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-              false,
-            )
+                false,
+              )
 
-          getDomainEvents(2).let {
-            assertThat(it).hasSize(2)
-            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.created" to "MDI-Z-ADJ",
-              "location.inside.prison.amended" to "MDI-Z",
-            )
+            getDomainEvents(2).let {
+              assertThat(it).hasSize(2)
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.created" to "MDI-Z-ADJ",
+                "location.inside.prison.amended" to "MDI-Z",
+              )
+            }
           }
         }
       }
-    }
 
-    @DisplayName("GET /locations/prison/{prisonId}/usage-type/{usageType}")
-    @Nested
-    inner class ViewNonResidentialLocationsByUsageTest {
-
+      @DisplayName("GET /locations/prison/{prisonId}/usage-type/{usageType}")
       @Nested
-      inner class Security {
+      inner class ViewNonResidentialLocationsByUsageTest {
 
-        @Test
-        fun `access forbidden when no authority`() {
-          webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/VISIT")
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isUnauthorized
+        @Nested
+        inner class Security {
+
+          @Test
+          fun `access forbidden when no authority`() {
+            webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/VISIT")
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isUnauthorized
+          }
+
+          @Test
+          fun `access forbidden when no role`() {
+            webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/VISIT")
+              .headers(setAuthorisation(roles = listOf()))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with wrong role`() {
+            webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/VISIT")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isForbidden
+          }
         }
 
-        @Test
-        fun `access forbidden when no role`() {
-          webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/VISIT")
-            .headers(setAuthorisation(roles = listOf()))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isForbidden
-        }
-
-        @Test
-        fun `access forbidden with wrong role`() {
-          webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/VISIT")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isForbidden
-        }
-      }
-
-      @Nested
-      inner class HappyPath {
-        @Test
-        fun `can retrieve locations from usage type`() {
-          webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/VISIT")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+        @Nested
+        inner class HappyPath {
+          @Test
+          fun `can retrieve locations from usage type`() {
+            webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/VISIT")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
                           [{
                             "prisonId": "MDI",
                             "code": "VISIT",
@@ -2703,119 +2817,119 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                             "key": "MDI-Z-VISIT"
                           }]
                          """,
-              false,
-            )
+                false,
+              )
+          }
+        }
+
+        @Nested
+        inner class Validation {
+          @Test
+          fun `should return client error for invalid usage type`() {
+            webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/UNKNOWN")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
         }
       }
 
+      @DisplayName("PATCH /locations/residential/{id}")
       @Nested
-      inner class Validation {
-        @Test
-        fun `should return client error for invalid usage type`() {
-          webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/UNKNOWN")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().is4xxClientError
-        }
-      }
-    }
+      inner class PatchLocationTest {
+        val changeCode = PatchResidentialLocationRequest(
+          code = "3",
+        )
 
-    @DisplayName("PATCH /locations/residential/{id}")
-    @Nested
-    inner class PatchLocationTest {
-      val changeCode = PatchResidentialLocationRequest(
-        code = "3",
-      )
+        val changeUsage = PatchNonResidentialLocationRequest(
+          code = "MEDICAL",
+          locationType = NonResidentialLocationType.APPOINTMENTS,
+          usage = setOf(
+            NonResidentialUsageDto(usageType = NonResidentialUsageType.APPOINTMENT, capacity = 20, sequence = 1),
+          ),
+        )
 
-      val changeUsage = PatchNonResidentialLocationRequest(
-        code = "MEDICAL",
-        locationType = NonResidentialLocationType.APPOINTMENTS,
-        usage = setOf(
-          NonResidentialUsageDto(usageType = NonResidentialUsageType.APPOINTMENT, capacity = 20, sequence = 1),
-        ),
-      )
+        val removeUsage = PatchNonResidentialLocationRequest(
+          usage = emptySet(),
+        )
 
-      val removeUsage = PatchNonResidentialLocationRequest(
-        usage = emptySet(),
-      )
+        @Nested
+        inner class Security {
+          @Test
+          fun `access forbidden when no authority`() {
+            webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
+              .exchange()
+              .expectStatus().isUnauthorized
+          }
 
-      @Nested
-      inner class Security {
-        @Test
-        fun `access forbidden when no authority`() {
-          webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
-            .exchange()
-            .expectStatus().isUnauthorized
-        }
+          @Test
+          fun `access forbidden when no role`() {
+            webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
+              .headers(setAuthorisation(roles = listOf()))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(changeCode))
+              .exchange()
+              .expectStatus().isForbidden
+          }
 
-        @Test
-        fun `access forbidden when no role`() {
-          webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
-            .headers(setAuthorisation(roles = listOf()))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(changeCode))
-            .exchange()
-            .expectStatus().isForbidden
-        }
+          @Test
+          fun `access forbidden with wrong role`() {
+            webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(changeCode))
+              .exchange()
+              .expectStatus().isForbidden
+          }
 
-        @Test
-        fun `access forbidden with wrong role`() {
-          webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(changeCode))
-            .exchange()
-            .expectStatus().isForbidden
+          @Test
+          fun `access forbidden with right role, wrong scope`() {
+            webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(changeCode))
+              .exchange()
+              .expectStatus().isForbidden
+          }
         }
 
-        @Test
-        fun `access forbidden with right role, wrong scope`() {
-          webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(changeCode))
-            .exchange()
-            .expectStatus().isForbidden
-        }
-      }
+        @Nested
+        inner class Validation {
+          @Test
+          fun `access client error bad data`() {
+            webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue("""{"code": ""}""")
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
 
-      @Nested
-      inner class Validation {
-        @Test
-        fun `access client error bad data`() {
-          webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue("""{"code": ""}""")
-            .exchange()
-            .expectStatus().is4xxClientError
+          @Test
+          fun `cannot update to existing location`() {
+            webTestClient.patch().uri("/locations/non-residential/${adjRoom.id}")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(changeCode.copy(code = "VISIT", parentId = wingZ.id))
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
         }
 
-        @Test
-        fun `cannot update to existing location`() {
-          webTestClient.patch().uri("/locations/non-residential/${adjRoom.id}")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(changeCode.copy(code = "VISIT", parentId = wingZ.id))
-            .exchange()
-            .expectStatus().is4xxClientError
-        }
-      }
-
-      @Nested
-      inner class HappyPath {
-        @Test
-        fun `can update details of a locations code`() {
-          webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(changeCode))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+        @Nested
+        inner class HappyPath {
+          @Test
+          fun `can update details of a locations code`() {
+            webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(changeCode))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
              {
               "prisonId": "MDI",
               "code": "3",
@@ -2843,30 +2957,30 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-              false,
-            )
+                false,
+              )
 
-          getDomainEvents(3).let {
-            assertThat(it).hasSize(3)
-            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.amended" to "MDI-Z-3",
-              "location.inside.prison.amended" to "MDI-Z-3-001",
-              "location.inside.prison.amended" to "MDI-Z-3-002",
-            )
+            getDomainEvents(3).let {
+              assertThat(it).hasSize(3)
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.amended" to "MDI-Z-3",
+                "location.inside.prison.amended" to "MDI-Z-3-001",
+                "location.inside.prison.amended" to "MDI-Z-3-002",
+              )
+            }
           }
-        }
 
-        @Test
-        fun `can update parent of a location`() {
-          webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(PatchResidentialLocationRequest(parentId = wingB.id)))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+          @Test
+          fun `can update parent of a location`() {
+            webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(PatchResidentialLocationRequest(parentId = wingB.id)))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
                {
                 "prisonId": "MDI",
                 "code": "1",
@@ -2885,16 +2999,16 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "key": "MDI-B-1"
               }
           """,
-              false,
-            )
+                false,
+              )
 
-          webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+            webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
              {
               "pathHierarchy": "Z",
               "locationType": "WING",
@@ -2943,16 +3057,16 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-              false,
-            )
+                false,
+              )
 
-          webTestClient.get().uri("/locations/${wingB.id}?includeChildren=true")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+            webTestClient.get().uri("/locations/${wingB.id}?includeChildren=true")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
              {
               "pathHierarchy": "B",
               "locationType": "WING",
@@ -3056,21 +3170,21 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-              false,
-            )
-        }
+                false,
+              )
+          }
 
-        @Test
-        fun `can update details of a locations non-res usage`() {
-          webTestClient.patch().uri("/locations/non-residential/${visitRoom.id}")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(changeUsage))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+          @Test
+          fun `can update details of a locations non-res usage`() {
+            webTestClient.patch().uri("/locations/non-residential/${visitRoom.id}")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(changeUsage))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
              {
               "prisonId": "MDI",
               "code": "MEDICAL",
@@ -3087,15 +3201,15 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-              false,
-            )
+                false,
+              )
 
-          webTestClient.get().uri("/locations/${visitRoom.id}?includeHistory=true")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              """
+            webTestClient.get().uri("/locations/${visitRoom.id}?includeHistory=true")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                """
                {
                  "key": "MDI-Z-MEDICAL",
                  "usage": [
@@ -3131,21 +3245,21 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                   ]
                }
               """.trimIndent(),
-              false,
-            )
-        }
+                false,
+              )
+          }
 
-        @Test
-        fun `can remove details of a locations non-res usage`() {
-          webTestClient.patch().uri("/locations/non-residential/${visitRoom.id}")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(removeUsage))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+          @Test
+          fun `can remove details of a locations non-res usage`() {
+            webTestClient.patch().uri("/locations/non-residential/${visitRoom.id}")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(removeUsage))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
              {
               "prisonId": "MDI",
               "code": "VISIT",
@@ -3156,17 +3270,17 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               "usage": []
             }
           """,
-              false,
-            )
+                false,
+              )
 
-          webTestClient.get().uri("/locations/key/MDI-Z-VISIT?includeHistory=true")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+            webTestClient.get().uri("/locations/key/MDI-Z-VISIT?includeHistory=true")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
              {
               "prisonId": "MDI",
               "code": "VISIT",
@@ -3183,132 +3297,136 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-              false,
+                false,
+              )
+          }
+        }
+      }
+
+      @DisplayName("PUT /locations/{id}/capacity")
+      @Nested
+      inner class CapacityChangeTest {
+
+        @Nested
+        inner class Security {
+          @Test
+          fun `access forbidden when no authority`() {
+            webTestClient.put().uri("/locations/${cell1.id}/capacity")
+              .exchange()
+              .expectStatus().isUnauthorized
+          }
+
+          @Test
+          fun `access forbidden when no role`() {
+            webTestClient.put().uri("/locations/${cell1.id}/capacity")
+              .headers(setAuthorisation(roles = listOf()))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(CapacityDTO()))
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with wrong role`() {
+            webTestClient.put().uri("/locations/${cell1.id}/capacity")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(CapacityDTO()))
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with right role, wrong scope`() {
+            webTestClient.put().uri("/locations/${cell1.id}/capacity")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(CapacityDTO()))
+              .exchange()
+              .expectStatus().isForbidden
+          }
+        }
+
+        @Nested
+        inner class Validation {
+          @Test
+          fun `access client error bad data`() {
+            webTestClient.put().uri("/locations/${cell1.id}/capacity")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(CapacityDTO(workingCapacity = -1, maxCapacity = 999)))
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
+
+          @Test
+          fun `cannot reduce max capacity of a cell below number of prisoners in cell`() {
+            prisonerSearchMockServer.stubSearchByLocations(
+              cell1.prisonId,
+              listOf(cell1.getPathHierarchy(), cell1.getPathHierarchy()),
+              true
             )
-        }
-      }
-    }
 
-    @DisplayName("PUT /locations/{id}/capacity")
-    @Nested
-    inner class CapacityChangeTest {
+            webTestClient.put().uri("/locations/${cell1.id}/capacity")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(CapacityDTO(workingCapacity = 1, maxCapacity = 1)))
+              .exchange()
+              .expectStatus().isEqualTo(400)
+          }
 
-      @Nested
-      inner class Security {
-        @Test
-        fun `access forbidden when no authority`() {
-          webTestClient.put().uri("/locations/${cell1.id}/capacity")
-            .exchange()
-            .expectStatus().isUnauthorized
-        }
+          @Test
+          fun `cannot have a max cap below a working cap`() {
+            prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        @Test
-        fun `access forbidden when no role`() {
-          webTestClient.put().uri("/locations/${cell1.id}/capacity")
-            .headers(setAuthorisation(roles = listOf()))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(CapacityDTO()))
-            .exchange()
-            .expectStatus().isForbidden
-        }
+            webTestClient.put().uri("/locations/${cell1.id}/capacity")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(CapacityDTO(workingCapacity = 3, maxCapacity = 2)))
+              .exchange()
+              .expectStatus().isEqualTo(400)
+          }
 
-        @Test
-        fun `access forbidden with wrong role`() {
-          webTestClient.put().uri("/locations/${cell1.id}/capacity")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(CapacityDTO()))
-            .exchange()
-            .expectStatus().isForbidden
-        }
+          @Test
+          fun `cannot have a max cap of 0`() {
+            prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        @Test
-        fun `access forbidden with right role, wrong scope`() {
-          webTestClient.put().uri("/locations/${cell1.id}/capacity")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(CapacityDTO()))
-            .exchange()
-            .expectStatus().isForbidden
-        }
-      }
+            webTestClient.put().uri("/locations/${cell1.id}/capacity")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(CapacityDTO(workingCapacity = 0, maxCapacity = 0)))
+              .exchange()
+              .expectStatus().isEqualTo(400)
+          }
 
-      @Nested
-      inner class Validation {
-        @Test
-        fun `access client error bad data`() {
-          webTestClient.put().uri("/locations/${cell1.id}/capacity")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(CapacityDTO(workingCapacity = -1, maxCapacity = 999)))
-            .exchange()
-            .expectStatus().is4xxClientError
+          @Test
+          fun `cannot have a working cap = 0 when accommodation type = normal accommodation and not a specialist cell`() {
+            prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+            webTestClient.put().uri("/locations/${cell1.id}/capacity")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(CapacityDTO(workingCapacity = 0, maxCapacity = 2)))
+              .exchange()
+              .expectStatus().isEqualTo(400)
+          }
         }
 
-        @Test
-        fun `cannot reduce max capacity of a cell below number of prisoners in cell`() {
-          prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy(), cell1.getPathHierarchy()), true)
+        @Nested
+        inner class HappyPath {
+          @Test
+          fun `can change the capacity of a cell`() {
+            prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-          webTestClient.put().uri("/locations/${cell1.id}/capacity")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(CapacityDTO(workingCapacity = 1, maxCapacity = 1)))
-            .exchange()
-            .expectStatus().isEqualTo(400)
-        }
-
-        @Test
-        fun `cannot have a max cap below a working cap`() {
-          prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
-
-          webTestClient.put().uri("/locations/${cell1.id}/capacity")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(CapacityDTO(workingCapacity = 3, maxCapacity = 2)))
-            .exchange()
-            .expectStatus().isEqualTo(400)
-        }
-
-        @Test
-        fun `cannot have a max cap of 0`() {
-          prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
-
-          webTestClient.put().uri("/locations/${cell1.id}/capacity")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(CapacityDTO(workingCapacity = 0, maxCapacity = 0)))
-            .exchange()
-            .expectStatus().isEqualTo(400)
-        }
-
-        @Test
-        fun `cannot have a working cap = 0 when accommodation type = normal accommodation and not a specialist cell`() {
-          prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
-
-          webTestClient.put().uri("/locations/${cell1.id}/capacity")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(CapacityDTO(workingCapacity = 0, maxCapacity = 2)))
-            .exchange()
-            .expectStatus().isEqualTo(400)
-        }
-      }
-
-      @Nested
-      inner class HappyPath {
-        @Test
-        fun `can change the capacity of a cell`() {
-          prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
-
-          webTestClient.put().uri("/locations/${cell1.id}/capacity")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(CapacityDTO(workingCapacity = 1, maxCapacity = 2)))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+            webTestClient.put().uri("/locations/${cell1.id}/capacity")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(CapacityDTO(workingCapacity = 1, maxCapacity = 2)))
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
               {
                 "id": "${cell1.id}",
                 "prisonId": "MDI",
@@ -3330,128 +3448,143 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "key": "MDI-Z-1-001"
               }
           """,
-              false,
-            )
+                false,
+              )
 
-          getDomainEvents(3).let {
-            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.amended" to "MDI-Z-1-001",
-              "location.inside.prison.amended" to "MDI-Z-1",
-              "location.inside.prison.amended" to "MDI-Z",
-            )
+            getDomainEvents(3).let {
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.amended" to "MDI-Z-1-001",
+                "location.inside.prison.amended" to "MDI-Z-1",
+                "location.inside.prison.amended" to "MDI-Z",
+              )
+            }
           }
         }
       }
-    }
 
-    @DisplayName("PUT /locations/{id}/deactivate")
-    @Nested
-    inner class TemporarilyDeactivateLocationTest {
-
+      @DisplayName("PUT /locations/{id}/deactivate")
       @Nested
-      inner class Security {
-        @Test
-        fun `access forbidden when no authority`() {
-          webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
-            .exchange()
-            .expectStatus().isUnauthorized
+      inner class TemporarilyDeactivateLocationTest {
+
+        @Nested
+        inner class Security {
+          @Test
+          fun `access forbidden when no authority`() {
+            webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+              .exchange()
+              .expectStatus().isUnauthorized
+          }
+
+          @Test
+          fun `access forbidden when no role`() {
+            webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+              .headers(setAuthorisation(roles = listOf()))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with wrong role`() {
+            webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with right role, wrong scope`() {
+            webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+              .exchange()
+              .expectStatus().isForbidden
+          }
         }
 
-        @Test
-        fun `access forbidden when no role`() {
-          webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
-            .headers(setAuthorisation(roles = listOf()))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
-            .exchange()
-            .expectStatus().isForbidden
+        @Nested
+        inner class Validation {
+          @Test
+          fun `access client error bad data`() {
+            webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue("""{"deactivationReason": ""}""")
+              .exchange()
+              .expectStatus().is4xxClientError
+          }
+
+          @Test
+          fun `cannot deactivate a location when prisoner is inside the cell`() {
+            prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), true)
+
+            webTestClient.put().uri("/locations/${cell1.id}/deactivate/permanent")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
+              .exchange()
+              .expectStatus().isEqualTo(409)
+          }
+
+          @Test
+          fun `cannot deactivate a wing when prisoners are in cells below`() {
+            prisonerSearchMockServer.stubSearchByLocations(
+              wingZ.prisonId,
+              listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()),
+              true
+            )
+
+            webTestClient.put().uri("/locations/${wingZ.id}/deactivate/permanent")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
+              .exchange()
+              .expectStatus().isEqualTo(409)
+          }
         }
 
-        @Test
-        fun `access forbidden with wrong role`() {
-          webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
-            .exchange()
-            .expectStatus().isForbidden
-        }
+        @Nested
+        inner class HappyPath {
+          @Test
+          fun `can deactivate a location`() {
+            prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        @Test
-        fun `access forbidden with right role, wrong scope`() {
-          webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
-            .exchange()
-            .expectStatus().isForbidden
-        }
-      }
+            val now = LocalDateTime.now(clock)
+            val proposedReactivationDate = now.plusMonths(1).toLocalDate()
+            webTestClient.put().uri("/locations/${cell1.id}/deactivate/permanent")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Cell destroyed")))
+              .exchange()
+              .expectStatus().isOk
 
-      @Nested
-      inner class Validation {
-        @Test
-        fun `access client error bad data`() {
-          webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue("""{"deactivationReason": ""}""")
-            .exchange()
-            .expectStatus().is4xxClientError
-        }
+            prisonerSearchMockServer.resetAll()
+            prisonerSearchMockServer.stubSearchByLocations(
+              wingZ.prisonId,
+              listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()),
+              false
+            )
 
-        @Test
-        fun `cannot deactivate a location when prisoner is inside the cell`() {
-          prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), true)
-
-          webTestClient.put().uri("/locations/${cell1.id}/deactivate/permanent")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
-            .exchange()
-            .expectStatus().isEqualTo(409)
-        }
-
-        @Test
-        fun `cannot deactivate a wing when prisoners are in cells below`() {
-          prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), true)
-
-          webTestClient.put().uri("/locations/${wingZ.id}/deactivate/permanent")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
-            .exchange()
-            .expectStatus().isEqualTo(409)
-        }
-      }
-
-      @Nested
-      inner class HappyPath {
-        @Test
-        fun `can deactivate a location`() {
-          prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
-
-          val now = LocalDateTime.now(clock)
-          val proposedReactivationDate = now.plusMonths(1).toLocalDate()
-          webTestClient.put().uri("/locations/${cell1.id}/deactivate/permanent")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Cell destroyed")))
-            .exchange()
-            .expectStatus().isOk
-
-          prisonerSearchMockServer.resetAll()
-          prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
-
-          webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+            webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(
+                jsonString(
+                  TemporaryDeactivationLocationRequest(
+                    deactivationReason = DeactivatedReason.DAMAGED,
+                    proposedReactivationDate = proposedReactivationDate
+                  )
+                )
+              )
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
               {
                 "id": "${wingZ.id}",
                 "prisonId": "MDI",
@@ -3478,30 +3611,30 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "deactivatedBy": "LOCATIONS_INSIDE_PRISON_API"
               }
           """,
-              false,
-            )
+                false,
+              )
 
-          getDomainEvents(8).let {
-            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.deactivated" to "MDI-Z",
-              "location.inside.prison.deactivated" to "MDI-Z-1",
-              "location.inside.prison.deactivated" to "MDI-Z-2",
-              "location.inside.prison.deactivated" to "MDI-Z-1-001",
-              "location.inside.prison.deactivated" to "MDI-Z-1-002",
-              "location.inside.prison.deactivated" to "MDI-Z-VISIT",
-              "location.inside.prison.amended" to "MDI-Z-1",
-              "location.inside.prison.amended" to "MDI-Z",
-            )
-          }
+            getDomainEvents(8).let {
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.deactivated" to "MDI-Z",
+                "location.inside.prison.deactivated" to "MDI-Z-1",
+                "location.inside.prison.deactivated" to "MDI-Z-2",
+                "location.inside.prison.deactivated" to "MDI-Z-1-001",
+                "location.inside.prison.deactivated" to "MDI-Z-1-002",
+                "location.inside.prison.deactivated" to "MDI-Z-VISIT",
+                "location.inside.prison.amended" to "MDI-Z-1",
+                "location.inside.prison.amended" to "MDI-Z",
+              )
+            }
 
-          webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+            webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
              {
               "prisonId": "MDI",
               "code": "Z",
@@ -3586,47 +3719,55 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-              false,
-            )
-        }
-
-        @Test
-        fun `can update a deactivated location`() {
-          prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
-
-          val now = LocalDateTime.now(clock)
-          webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
-            .exchange()
-            .expectStatus().isOk
-
-          val proposedReactivationDate = now.plusMonths(1).toLocalDate()
-          webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, planetFmReference = "334423", proposedReactivationDate = proposedReactivationDate)))
-            .exchange()
-            .expectStatus().isOk
-
-          getDomainEvents(4).let {
-            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.amended" to "MDI-Z-1",
-              "location.inside.prison.amended" to "MDI-Z",
-              "location.inside.prison.deactivated" to "MDI-Z-1-001",
-              "location.inside.prison.amended" to "MDI-Z-1-001",
-            )
+                false,
+              )
           }
 
-          webTestClient.get().uri("/locations/${cell1.id}?includeChildren=true")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+          @Test
+          fun `can update a deactivated location`() {
+            prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+            val now = LocalDateTime.now(clock)
+            webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+              .exchange()
+              .expectStatus().isOk
+
+            val proposedReactivationDate = now.plusMonths(1).toLocalDate()
+            webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(
+                jsonString(
+                  TemporaryDeactivationLocationRequest(
+                    deactivationReason = DeactivatedReason.MOTHBALLED,
+                    planetFmReference = "334423",
+                    proposedReactivationDate = proposedReactivationDate
+                  )
+                )
+              )
+              .exchange()
+              .expectStatus().isOk
+
+            getDomainEvents(4).let {
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.amended" to "MDI-Z-1",
+                "location.inside.prison.amended" to "MDI-Z",
+                "location.inside.prison.deactivated" to "MDI-Z-1-001",
+                "location.inside.prison.amended" to "MDI-Z-1-001",
+              )
+            }
+
+            webTestClient.get().uri("/locations/${cell1.id}?includeChildren=true")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
              {
                 "prisonId": "MDI",
                 "code": "001",
@@ -3643,97 +3784,101 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "key": "MDI-Z-1-001"
             }
           """,
-              false,
-            )
-        }
-      }
-    }
-
-    @DisplayName("PUT /locations/{id}/reactivate")
-    @Nested
-    inner class ReactivateLocationTest {
-
-      @Nested
-      inner class Security {
-        @Test
-        fun `access forbidden when no authority`() {
-          webTestClient.put().uri("/locations/${cell1.id}/reactivate")
-            .exchange()
-            .expectStatus().isUnauthorized
-        }
-
-        @Test
-        fun `access forbidden when no role`() {
-          webTestClient.put().uri("/locations/${cell1.id}/reactivate")
-            .headers(setAuthorisation(roles = listOf()))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isForbidden
-        }
-
-        @Test
-        fun `access forbidden with wrong role`() {
-          webTestClient.put().uri("/locations/${cell1.id}/reactivate")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isForbidden
-        }
-
-        @Test
-        fun `access forbidden with right role, wrong scope`() {
-          webTestClient.put().uri("/locations/${cell1.id}/reactivate")
-            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isForbidden
+                false,
+              )
+          }
         }
       }
 
+      @DisplayName("PUT /locations/{id}/reactivate")
       @Nested
-      inner class HappyPath {
-        @Test
-        fun `can cascade reactivated locations`() {
-          prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
+      inner class ReactivateLocationTest {
 
-          webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
-            .exchange()
-            .expectStatus().isOk
-
-          webTestClient.put().uri("/locations/${wingZ.id}/reactivate?cascade-reactivation=true")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isOk
-
-          getDomainEvents(12).let {
-            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.deactivated" to "MDI-Z",
-              "location.inside.prison.deactivated" to "MDI-Z-1",
-              "location.inside.prison.deactivated" to "MDI-Z-2",
-              "location.inside.prison.deactivated" to "MDI-Z-1-001",
-              "location.inside.prison.deactivated" to "MDI-Z-1-002",
-              "location.inside.prison.deactivated" to "MDI-Z-VISIT",
-              "location.inside.prison.reactivated" to "MDI-Z",
-              "location.inside.prison.reactivated" to "MDI-Z-1",
-              "location.inside.prison.reactivated" to "MDI-Z-2",
-              "location.inside.prison.reactivated" to "MDI-Z-1-001",
-              "location.inside.prison.reactivated" to "MDI-Z-1-002",
-              "location.inside.prison.reactivated" to "MDI-Z-VISIT",
-            )
+        @Nested
+        inner class Security {
+          @Test
+          fun `access forbidden when no authority`() {
+            webTestClient.put().uri("/locations/${cell1.id}/reactivate")
+              .exchange()
+              .expectStatus().isUnauthorized
           }
 
-          webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+          @Test
+          fun `access forbidden when no role`() {
+            webTestClient.put().uri("/locations/${cell1.id}/reactivate")
+              .headers(setAuthorisation(roles = listOf()))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with wrong role`() {
+            webTestClient.put().uri("/locations/${cell1.id}/reactivate")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isForbidden
+          }
+
+          @Test
+          fun `access forbidden with right role, wrong scope`() {
+            webTestClient.put().uri("/locations/${cell1.id}/reactivate")
+              .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isForbidden
+          }
+        }
+
+        @Nested
+        inner class HappyPath {
+          @Test
+          fun `can cascade reactivated locations`() {
+            prisonerSearchMockServer.stubSearchByLocations(
+              cell1.prisonId,
+              listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()),
+              false
+            )
+
+            webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
+              .exchange()
+              .expectStatus().isOk
+
+            webTestClient.put().uri("/locations/${wingZ.id}/reactivate?cascade-reactivation=true")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isOk
+
+            getDomainEvents(12).let {
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.deactivated" to "MDI-Z",
+                "location.inside.prison.deactivated" to "MDI-Z-1",
+                "location.inside.prison.deactivated" to "MDI-Z-2",
+                "location.inside.prison.deactivated" to "MDI-Z-1-001",
+                "location.inside.prison.deactivated" to "MDI-Z-1-002",
+                "location.inside.prison.deactivated" to "MDI-Z-VISIT",
+                "location.inside.prison.reactivated" to "MDI-Z",
+                "location.inside.prison.reactivated" to "MDI-Z-1",
+                "location.inside.prison.reactivated" to "MDI-Z-2",
+                "location.inside.prison.reactivated" to "MDI-Z-1-001",
+                "location.inside.prison.reactivated" to "MDI-Z-1-002",
+                "location.inside.prison.reactivated" to "MDI-Z-VISIT",
+              )
+            }
+
+            webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
              {
               "prisonId": "MDI",
               "code": "Z",
@@ -3803,63 +3948,74 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-              false,
-            )
-        }
-
-        @Test
-        fun `can reactivate a location`() {
-          prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
-
-          val proposedReactivationDate = LocalDate.now(clock).plusMonths(1)
-          webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
-            .exchange()
-            .expectStatus().isOk
-
-          prisonerSearchMockServer.resetAll()
-          prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy(), cell1.getPathHierarchy()), false)
-
-          webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
-            .exchange()
-            .expectStatus().isOk
-
-          webTestClient.put().uri("/locations/${cell1.id}/reactivate")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isOk
-
-          getDomainEvents(12).let {
-            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.deactivated" to "MDI-Z-1-001",
-              "location.inside.prison.amended" to "MDI-Z-1",
-              "location.inside.prison.amended" to "MDI-Z",
-              "location.inside.prison.deactivated" to "MDI-Z",
-              "location.inside.prison.deactivated" to "MDI-Z-1",
-              "location.inside.prison.deactivated" to "MDI-Z-2",
-              "location.inside.prison.deactivated" to "MDI-Z-1-001",
-              "location.inside.prison.deactivated" to "MDI-Z-1-002",
-              "location.inside.prison.deactivated" to "MDI-Z-VISIT",
-              "location.inside.prison.reactivated" to "MDI-Z-1-001",
-              "location.inside.prison.amended" to "MDI-Z-1",
-              "location.inside.prison.amended" to "MDI-Z",
-            )
+                false,
+              )
           }
 
-          webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
-            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-            .header("Content-Type", "application/json")
-            .exchange()
-            .expectStatus().isOk
-            .expectBody().json(
-              // language=json
-              """
+          @Test
+          fun `can reactivate a location`() {
+            prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+            val proposedReactivationDate = LocalDate.now(clock).plusMonths(1)
+            webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(
+                jsonString(
+                  TemporaryDeactivationLocationRequest(
+                    deactivationReason = DeactivatedReason.DAMAGED,
+                    proposedReactivationDate = proposedReactivationDate
+                  )
+                )
+              )
+              .exchange()
+              .expectStatus().isOk
+
+            prisonerSearchMockServer.resetAll()
+            prisonerSearchMockServer.stubSearchByLocations(
+              wingZ.prisonId,
+              listOf(cell2.getPathHierarchy(), cell1.getPathHierarchy()),
+              false
+            )
+
+            webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
+              .exchange()
+              .expectStatus().isOk
+
+            webTestClient.put().uri("/locations/${cell1.id}/reactivate")
+              .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isOk
+
+            getDomainEvents(12).let {
+              assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+                "location.inside.prison.deactivated" to "MDI-Z-1-001",
+                "location.inside.prison.amended" to "MDI-Z-1",
+                "location.inside.prison.amended" to "MDI-Z",
+                "location.inside.prison.deactivated" to "MDI-Z",
+                "location.inside.prison.deactivated" to "MDI-Z-1",
+                "location.inside.prison.deactivated" to "MDI-Z-2",
+                "location.inside.prison.deactivated" to "MDI-Z-1-001",
+                "location.inside.prison.deactivated" to "MDI-Z-1-002",
+                "location.inside.prison.deactivated" to "MDI-Z-VISIT",
+                "location.inside.prison.reactivated" to "MDI-Z-1-001",
+                "location.inside.prison.amended" to "MDI-Z-1",
+                "location.inside.prison.amended" to "MDI-Z",
+              )
+            }
+
+            webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+              .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+              .header("Content-Type", "application/json")
+              .exchange()
+              .expectStatus().isOk
+              .expectBody().json(
+                // language=json
+                """
              {
               "prisonId": "MDI",
               "code": "Z",
@@ -3931,10 +4087,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-              false,
-            )
+                false,
+              )
+          }
         }
       }
     }
-  }
 }
