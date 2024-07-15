@@ -399,6 +399,39 @@ class LocationService(
   }
 
   @Transactional
+  fun updateSpecialistCellTypes(id: UUID, specialistCellTypes: Set<SpecialistCellType>): LocationDTO {
+    val cell = cellLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (cell.isPermanentlyDeactivated()) {
+      throw ValidationException("Cannot change the specialist cell types of a permanently deactivated location")
+    }
+
+    // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialists cell types
+    if (specialistCellTypes.isEmpty() && cell.accommodationType.equals(AccommodationType.NORMAL_ACCOMMODATION) && cell.getWorkingCapacity() == 0) {
+      throw ValidationException("Cannot removes specialist cell types for a normal accommodation with a working capacity of 0")
+    }
+
+    cell.updateSpecialistCellTypes(
+      specialistCellTypes,
+      authenticationFacade.getUserOrSystemInContext(),
+      clock,
+    )
+    log.info("Updated specialist cell types = $specialistCellTypes")
+
+    telemetryClient.trackEvent(
+      "Specialist cell types updated",
+      mapOf(
+        "id" to id.toString(),
+        "key" to cell.getKey(),
+        "specialistCellTypes" to specialistCellTypes.toString(),
+      ),
+      null,
+    )
+    return cell.toDto(includeParent = false, includeNonResidential = false)
+  }
+
+  @Transactional
   fun updateLocation(id: UUID, updateLocationRequest: UpdateLocationRequest): LocationDTO {
     val location = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
