@@ -1789,14 +1789,14 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   @Nested
   inner class convertCellToNonResCell {
 
+
     var convertCellToNonResidentialLocationRequest = ConvertCellToNonResidentialLocationRequest(
       convertedCellType = ConvertedCellType.OTHER,
       otherConvertedCellType = "Taning room",
     )
 
-    var convertCellToNonResidentialLocationRequestNotValidOther = ConvertCellToNonResidentialLocationRequest(
+    var convertCellToNonResidentialLocationRequestNotOther = ConvertCellToNonResidentialLocationRequest(
       convertedCellType = ConvertedCellType.TREATMENT_ROOM,
-      otherConvertedCellType = "Taning room",
     )
 
     @Nested
@@ -1861,18 +1861,35 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectStatus().isEqualTo(404)
       }
 
+    }
+    @Nested
+    inner class HappyPath {
+
       @Test
-      fun `cannot update convert to non residential cell as REQUEST has not valid Other value `() { // request has not valid data
-        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
+      fun `can update convert cell to non res cell successfully and response`() {
+
+        val result = webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
+
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(convertCellToNonResidentialLocationRequestNotValidOther)
+          .bodyValue(convertCellToNonResidentialLocationRequest)
           .exchange()
-          .expectStatus().isEqualTo(400)
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
 
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
+        assertThat(cellZ1001.convertedCellType == ConvertedCellType.OTHER)
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
       }
     }
-
     }
 
     @DisplayName("PUT /locations/{id}/convert-to-cell")
@@ -1956,7 +1973,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         }
 
         @Test
-        fun `cannot update convert to cell as ID is not found`() {
+        fun `cannot update convert to cell as Location ID is not found`() {
           webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/convert-to-cell")
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
@@ -1966,7 +1983,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         }
 
         @Test
-        fun `cannot update convert to cell as REQUEST has invalid Max Capacity `() { // request has not valid data
+        fun `cannot update convert to cell as request has invalid Max Capacity `() { // request has not valid data
           webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
@@ -1976,13 +1993,50 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         }
 
         @Test
-        fun `cannot update convert to cell as REQUEST has invalid Working Capacity `() { // request has not valid data
+        fun `cannot update convert to cell as request has invalid Working Capacity `() { // request has not valid data
           webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
             .bodyValue(convertToCellRequestNotValidWorkingCapacity)
             .exchange()
             .expectStatus().isEqualTo(400)
+        }
+      }
+
+      @Nested
+      inner class HappyPath {
+
+        @Test
+        fun `can update update convert to cell successfully`() {
+          webTestClient.put().uri("/locations/${visitRoom.id}/convert-to-cell")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(convertToCellRequest)
+            .exchange()
+            .expectStatus().isOk
+        }
+
+        @Test
+        fun `can update convert cell to non res cell successfully and responsess`() {
+
+          val result = webTestClient.put().uri("/locations/${visitRoom.id}/convert-to-cell")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(convertToCellRequest)
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(LocationTest::class.java)
+            .returnResult().responseBody!!
+
+          val visitRoom = result.findByPathHierarchy("VISIT")!!
+
+          getDomainEvents(3).let {
+            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+              "location.inside.prison.amended" to "VISIT",
+              "location.inside.prison.amended" to "MDI-Z-1",
+              "location.inside.prison.amended" to "MDI-Z",
+            )
+          }
         }
       }
 
