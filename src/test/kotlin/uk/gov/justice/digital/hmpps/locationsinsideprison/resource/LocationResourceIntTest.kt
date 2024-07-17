@@ -2016,7 +2016,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Nested
-      inner class HappyPath {
+      inner class Hap1pyPath {
 
         @Test
         fun `can update update convert to cell successfully`() {
@@ -2040,11 +2040,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             .expectBody(LocationTest::class.java)
             .returnResult().responseBody!!
 
-          val visitRoom = result.findByPathHierarchy("VISIT")!!
+          val convertedRoom = result.findByPathHierarchy("MDI-Z-1-005")!!
 
           getDomainEvents(3).let {
             assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-              "location.inside.prison.amended" to "VISIT",
+              "location.inside.prison.amended" to "MDI-Z-1-005",
               "location.inside.prison.amended" to "MDI-Z-1",
               "location.inside.prison.amended" to "MDI-Z",
             )
