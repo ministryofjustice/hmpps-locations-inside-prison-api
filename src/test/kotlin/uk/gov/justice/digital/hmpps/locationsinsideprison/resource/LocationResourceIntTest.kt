@@ -1797,6 +1797,243 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("PUT /locations/{id}/convert-cell-to-non-res-cell")
+  @Nested
+  inner class convertCellToNonResCell {
+
+    var convertCellToNonResidentialLocationRequest = ConvertCellToNonResidentialLocationRequest(
+      convertedCellType = ConvertedCellType.OTHER,
+      otherConvertedCellType = "Taning room",
+    )
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"prisonId": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot update convert to non residential cell as ID is not found`() {
+        webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/convert-cell-to-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
+
+    }
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can update convert cell to non res cell successfully and response`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy(), cell1.getPathHierarchy()), false)
+        val result = webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
+
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(convertCellToNonResidentialLocationRequest)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
+        assertThat(cellZ1001.convertedCellType == ConvertedCellType.OTHER)
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+    }
+  }
+
+  @DisplayName("PUT /locations/{id}/convert-to-cell")
+  @Nested
+  inner class ConvertToCellTest {
+    var convertToCellRequest = ConvertToCellRequest(
+      accommodationType = AccommodationType.CARE_AND_SEPARATION,
+      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      maxCapacity = 2,
+      workingCapacity = 2,
+    )
+
+    var convertToCellRequestNotValidMaxCapacity = ConvertToCellRequest(
+      accommodationType = AccommodationType.CARE_AND_SEPARATION,
+      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      maxCapacity = -1,
+      workingCapacity = 2,
+      usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
+    )
+
+    var convertToCellRequestNotValidWorkingCapacity = ConvertToCellRequest(
+      accommodationType = AccommodationType.CARE_AND_SEPARATION,
+      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      maxCapacity = 1,
+      workingCapacity = -1,
+      usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
+    )
+
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(convertToCellRequest))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(convertToCellRequest))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(convertToCellRequest))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"prisonId": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot update convert to cell as Location ID is not found`() {
+        webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(convertToCellRequest))
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
+
+      @Test
+      fun `cannot update convert to cell as request has invalid Max Capacity `() { // request has not valid data
+        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(convertToCellRequestNotValidMaxCapacity)
+          .exchange()
+          .expectStatus().isEqualTo(400)
+      }
+
+      @Test
+      fun `cannot update convert to cell as request has invalid Working Capacity `() { // request has not valid data
+        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(convertToCellRequestNotValidWorkingCapacity)
+          .exchange()
+          .expectStatus().isEqualTo(400)
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can update convert cell to non res cell successfully and responsess`() {
+
+        webTestClient.put().uri("/locations/${cell5converted.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(convertToCellRequest)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-005",
+          )
+        }
+      }
+    }
+
+  }
+
   @DisplayName("PUT /locations/{id}/used-for-type")
   @Nested
   inner class UsedForTypeTest {
