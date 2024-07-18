@@ -2005,6 +2005,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       fun `can update convert cell to non res cell successfully and responsess`() {
 
         cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER,userOrSystemInContext = "Aleman", clock = clock)
+        repository.save(cell1)
+
         webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
