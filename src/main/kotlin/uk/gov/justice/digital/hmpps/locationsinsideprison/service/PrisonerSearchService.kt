@@ -22,8 +22,7 @@ class PrisonerSearchService(
    *
    * Requires ROLE_GLOBAL_SEARCH or ROLE_PRISONER_SEARCH role.
    */
-  fun 
-    findPrisonersInLocations(
+  fun findPrisonersInLocations(
     prisonId: String,
     locations: List<String>,
     pageSize: Int? = 3000,

@@ -137,7 +137,7 @@ fun buildConvertedCell(
     } else {
       null
     },
-    convertedCellType = ConvertedCellType.SHOWER
+    convertedCellType = ConvertedCellType.SHOWER,
   )
   cell.addAttributes(residentialAttributeValues)
   specialistCellType?.let { cell.updateCellSpecialistCellTypes(setOf(it), EXPECTED_USERNAME, clock) }
