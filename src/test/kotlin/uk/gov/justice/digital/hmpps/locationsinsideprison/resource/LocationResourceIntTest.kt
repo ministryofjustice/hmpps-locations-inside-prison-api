@@ -2012,10 +2012,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        getDomainEvents(1).let {
+        getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
-          )
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",          )
         }
       }
     }
