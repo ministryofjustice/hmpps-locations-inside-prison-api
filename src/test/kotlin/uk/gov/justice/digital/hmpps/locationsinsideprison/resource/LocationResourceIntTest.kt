@@ -61,7 +61,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   lateinit var repository: LocationRepository
   lateinit var cell1: Cell
   lateinit var cell2: Cell
-  lateinit var cell5converted: Cell
   lateinit var inactiveCellB3001: Cell
   lateinit var archivedCell: Cell
   lateinit var landingZ1: ResidentialLocationJPA
@@ -145,16 +144,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A, ResidentialAttributeValue.SAFE_CELL, ResidentialAttributeValue.DOUBLE_OCCUPANCY),
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       ),
-    )
-      cell5converted = repository.save(
-        buildConvertedCell(
-          pathHierarchy = "Z-1-005",
-          capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-          certification = Certification(certified = true, capacityOfCertifiedCell = 2),
-          residentialAttributeValues = setOf(),
-          specialistCellType = SpecialistCellType.LISTENER_CRISIS,
-          convertedCellType = ConvertedCellType.SHOWER,
-        ),
     )
     inactiveCellB3001 = repository.save(
       buildCell(
@@ -2015,7 +2004,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       @Test
       fun `can update convert cell to non res cell successfully and responsess`() {
 
-        webTestClient.put().uri("/locations/${cell5converted.id}/convert-to-cell")
+        cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER,userOrSystemInContext = "Aleman", clock = clock)
+        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(convertToCellRequest)
@@ -2026,7 +2016,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
         getDomainEvents(1).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to "MDI-Z-1-005",
+            "location.inside.prison.amended" to "MDI-Z-1-001",
           )
         }
       }
