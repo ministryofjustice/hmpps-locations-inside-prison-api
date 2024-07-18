@@ -1799,7 +1799,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
   @DisplayName("PUT /locations/{id}/convert-cell-to-non-res-cell")
   @Nested
-  inner class ConvertCellToNonResCell {
+  inner class convertCellToNonResCell {
 
     var convertCellToNonResidentialLocationRequest = ConvertCellToNonResidentialLocationRequest(
       convertedCellType = ConvertedCellType.OTHER,
