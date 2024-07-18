@@ -23,6 +23,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
@@ -35,6 +36,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildConvertedCell
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.Clock
 import java.time.LocalDate
@@ -59,6 +61,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   lateinit var repository: LocationRepository
   lateinit var cell1: Cell
   lateinit var cell2: Cell
+  lateinit var cell5converted: Cell
   lateinit var inactiveCellB3001: Cell
   lateinit var archivedCell: Cell
   lateinit var landingZ1: ResidentialLocationJPA
@@ -142,6 +145,16 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A, ResidentialAttributeValue.SAFE_CELL, ResidentialAttributeValue.DOUBLE_OCCUPANCY),
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       ),
+    )
+      cell5converted = repository.save(
+        buildConvertedCell(
+          pathHierarchy = "Z-1-005",
+          capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
+          certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+          residentialAttributeValues = setOf(),
+          specialistCellType = SpecialistCellType.LISTENER_CRISIS,
+          convertedCellType = ConvertedCellType.SHOWER,
+        ),
     )
     inactiveCellB3001 = repository.save(
       buildCell(
