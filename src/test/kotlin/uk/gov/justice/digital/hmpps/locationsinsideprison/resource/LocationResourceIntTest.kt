@@ -2040,6 +2040,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
             .expectBody(LocationTest::class.java)
             .returnResult().responseBody!!
 
+          val expectedResult = result.status
           val convertedRoom = result.findByPathHierarchy("MDI-Z-1-005")!!
 
           getDomainEvents(3).let {
