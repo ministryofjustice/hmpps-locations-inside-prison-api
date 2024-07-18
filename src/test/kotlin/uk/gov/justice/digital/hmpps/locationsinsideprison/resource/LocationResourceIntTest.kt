@@ -36,7 +36,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildConvertedCell
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.Clock
 import java.time.LocalDate
@@ -1856,8 +1855,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().isEqualTo(404)
       }
-
     }
+
     @Nested
     inner class HappyPath {
 
@@ -1865,7 +1864,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       fun `can update convert cell to non res cell successfully and response`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy(), cell1.getPathHierarchy()), false)
         val result = webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
-
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(convertCellToNonResidentialLocationRequest)
@@ -1913,7 +1911,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       workingCapacity = -1,
       usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
     )
-
 
     @Nested
     inner class Security {
@@ -2003,8 +2000,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can update convert cell to non res cell successfully and responsess`() {
-
-        cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER,userOrSystemInContext = "Aleman", clock = clock)
+        cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER, userOrSystemInContext = "Aleman", clock = clock)
         repository.save(cell1)
 
         webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
@@ -2023,7 +2019,6 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         }
       }
     }
-
   }
 
   @DisplayName("PUT /locations/{id}/used-for-type")
