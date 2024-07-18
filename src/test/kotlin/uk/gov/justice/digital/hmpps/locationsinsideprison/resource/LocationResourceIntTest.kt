@@ -2380,7 +2380,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         }
       }
 
-  @DisplayName("PUT /locations/{id}/specialist-cell-types")
+      @DisplayName("PUT /locations/{id}/specialist-cell-types")
   @Nested
   inner class SetSpecialistCellTypesTest {
     @Nested
@@ -2528,10 +2528,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   }
 
   @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
-  @Nested
-  inner class ViewLocationsByLocationTypeTest {
-    @Nested
-    inner class Security {
+      @Nested
+      inner class ViewLocationsByLocationTypeTest {
+        @Nested
+        inner class Security {
 
           @Test
           fun `access forbidden when no authority`() {
