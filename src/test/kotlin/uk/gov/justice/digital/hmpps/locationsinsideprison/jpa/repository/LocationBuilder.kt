@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository
 
-import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.Companion.clock
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
@@ -29,7 +28,7 @@ fun buildResidentialLocation(
     pathHierarchy = pathHierarchy,
     locationType = locationType,
     createdBy = EXPECTED_USERNAME,
-    whenCreated = LocalDateTime.now(TestBase.clock),
+    whenCreated = LocalDateTime.now(clock),
     childLocations = mutableListOf(),
     orderWithinParentLocation = 99,
     localName = localName,
@@ -91,8 +90,8 @@ fun buildNonResidentialLocation(
     code = pathHierarchy.split("-").last(),
     pathHierarchy = pathHierarchy,
     locationType = locationType,
-    createdBy = EXPECTED_USERNAME,
-    whenCreated = LocalDateTime.now(TestBase.clock),
+    createdBy = "DIFFERENT_USER",
+    whenCreated = LocalDateTime.now(clock).minusDays(1),
     childLocations = mutableListOf(),
     orderWithinParentLocation = 99,
   )
