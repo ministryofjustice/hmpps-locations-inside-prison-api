@@ -2082,6 +2082,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(emptySet<SpecialistCellType>()))
           .exchange()
           .expectStatus().isEqualTo(400)
+          .expectBody().json(
+            """
+              { "errorCode": 106 }
+            """.trimIndent(),
+            false,
+          )
       }
     }
 
@@ -3165,6 +3171,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(CapacityDTO(workingCapacity = -1, maxCapacity = 999)))
           .exchange()
           .expectStatus().is4xxClientError
+          .expectBody().json(
+            """
+              { "errorCode": 102 }
+            """.trimIndent(),
+            false,
+          )
       }
 
       @Test
@@ -3177,6 +3189,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(CapacityDTO(workingCapacity = 1, maxCapacity = 1)))
           .exchange()
           .expectStatus().isEqualTo(400)
+          .expectBody().json(
+            """
+              { "errorCode": 117 }
+            """.trimIndent(),
+            false,
+          )
       }
 
       @Test
@@ -3189,6 +3207,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(CapacityDTO(workingCapacity = 3, maxCapacity = 2)))
           .exchange()
           .expectStatus().isEqualTo(400)
+          .expectBody().json(
+            """
+              { "errorCode": 114 }
+            """.trimIndent(),
+            false,
+          )
       }
 
       @Test
@@ -3201,6 +3225,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(CapacityDTO(workingCapacity = 0, maxCapacity = 0)))
           .exchange()
           .expectStatus().isEqualTo(400)
+          .expectBody().json(
+            """
+              { "errorCode": 115 }
+            """.trimIndent(),
+            false,
+          )
       }
 
       @Test
@@ -3213,6 +3243,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(CapacityDTO(workingCapacity = 0, maxCapacity = 2)))
           .exchange()
           .expectStatus().isEqualTo(400)
+          .expectBody().json(
+            """
+              { "errorCode": 106 }
+            """.trimIndent(),
+            false,
+          )
       }
     }
 

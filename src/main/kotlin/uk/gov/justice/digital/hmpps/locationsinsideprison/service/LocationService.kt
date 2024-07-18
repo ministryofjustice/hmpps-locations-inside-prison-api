@@ -46,6 +46,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Residen
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
@@ -152,7 +153,6 @@ class LocationService(
 
   fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =
     nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
-      .filter{ l -> l.locationType == LocationType.VIDEO_LINK}
       .map {
         it.toDto()
       }
@@ -377,7 +377,7 @@ class LocationService(
 
     val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
     if (maxCapacity < prisoners.size) {
-      throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})")
+      throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})", ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel)
     }
 
     locCapChange.setCapacity(
@@ -412,7 +412,7 @@ class LocationService(
 
     // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialists cell types
     if (specialistCellTypes.isEmpty() && cell.accommodationType == AccommodationType.NORMAL_ACCOMMODATION && cell.getWorkingCapacity() == 0) {
-      throw CapacityException(cell.getKey(), "Cannot removes specialist cell types for a normal accommodation with a working capacity of 0")
+      throw CapacityException(cell.getKey(), "Cannot removes specialist cell types for a normal accommodation with a working capacity of 0", ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed)
     }
 
     cell.updateSpecialistCellTypes(

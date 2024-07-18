@@ -264,15 +264,15 @@ class ApiExceptionHandler {
 
   @ExceptionHandler(CapacityException::class)
   fun handleCapacityException(e: CapacityException): ResponseEntity<ErrorResponse?>? {
-    log.debug("Capacity Validation Error: {}", e.message)
+    log.warn("Capacity Validation: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
       .body(
         ErrorResponse(
           status = BAD_REQUEST,
-          errorCode = ErrorCode.CapacityValidationFailure,
-          userMessage = "Capacity Validation Error: ${e.message}",
-          developerMessage = e.message,
+          errorCode = e.errorCode,
+          userMessage = e.message,
+          developerMessage = "Capacity Validation Error: ${e.message}",
         ),
       )
   }
@@ -336,9 +336,9 @@ class SignedOperationCapacityNotFoundException(prisonId: String) :
 
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
-class LocationAlreadyDeactivatedException(key: String) : Exception("$key is already deactivated")
-class CapacityException(locationKey: String, message: String) : ValidationException("Capacity for $locationKey cannot be changed: $message")
-class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as permanently deactivated")
+class LocationAlreadyDeactivatedException(key: String) : ValidationException("$key is already deactivated")
+class CapacityException(val key: String, override val message: String, val errorCode: ErrorCode) : ValidationException("$key: [Error Code: $errorCode] - Capacity Exception: $message")
+class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationException("Location $key cannot be updated as permanently deactivated")
 class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as converted cell")
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
-class AlreadyDeactivatedLocationException(key: String): Exception("$key: Cannot deactivate an already deactivated location")
+class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")
