@@ -43,12 +43,15 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocationResult
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
@@ -333,7 +336,7 @@ class LocationService(
     patchLocationRequest: PatchLocationRequest,
   ): UpdatedSummary {
     if (locationToUpdate.isPermanentlyDeactivated()) {
-      throw ValidationException("Cannot update a permanently inactive location")
+      throw PermanentlyDeactivatedUpdateNotAllowedException(locationToUpdate.getKey())
     }
 
     val codeChanged = patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode()
@@ -369,12 +372,12 @@ class LocationService(
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     if (locCapChange.isPermanentlyDeactivated()) {
-      throw ValidationException("Cannot change the capacity a permanently deactivated location")
+      throw PermanentlyDeactivatedUpdateNotAllowedException(locCapChange.getKey())
     }
 
     val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
     if (maxCapacity < prisoners.size) {
-      throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})")
+      throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})", ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel)
     }
 
     locCapChange.setCapacity(
@@ -404,12 +407,12 @@ class LocationService(
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     if (cell.isPermanentlyDeactivated()) {
-      throw ValidationException("Cannot change the specialist cell types of a permanently deactivated location")
+      throw PermanentlyDeactivatedUpdateNotAllowedException(cell.getKey())
     }
 
     // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialists cell types
-    if (specialistCellTypes.isEmpty() && cell.accommodationType.equals(AccommodationType.NORMAL_ACCOMMODATION) && cell.getWorkingCapacity() == 0) {
-      throw ValidationException("Cannot removes specialist cell types for a normal accommodation with a working capacity of 0")
+    if (specialistCellTypes.isEmpty() && cell.accommodationType == AccommodationType.NORMAL_ACCOMMODATION && cell.getWorkingCapacity() == 0) {
+      throw CapacityException(cell.getKey(), "Cannot removes specialist cell types for a normal accommodation with a working capacity of 0", ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed)
     }
 
     cell.updateSpecialistCellTypes(
@@ -437,7 +440,7 @@ class LocationService(
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     if (location.isPermanentlyDeactivated()) {
-      throw ValidationException("Cannot change the local name of a permanently deactivated location")
+      throw PermanentlyDeactivatedUpdateNotAllowedException(location.getKey())
     }
 
     location.updateLocalName(
@@ -476,7 +479,7 @@ class LocationService(
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     if (locationToDeactivate.isTemporarilyDeactivated()) {
-      throw ValidationException("Cannot deactivate already deactivated location")
+      throw AlreadyDeactivatedLocationException(locationToDeactivate.getKey())
     }
 
     checkForPrisonersInLocation(locationToDeactivate)
@@ -544,7 +547,7 @@ class LocationService(
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     if (locationToArchive.isPermanentlyDeactivated()) {
-      throw ValidationException("Cannot deactivate already permanently deactivated location")
+      throw PermanentlyDeactivatedUpdateNotAllowedException(locationToArchive.getKey())
     }
 
     checkForPrisonersInLocation(locationToArchive)
