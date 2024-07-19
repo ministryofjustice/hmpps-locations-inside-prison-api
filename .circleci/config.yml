@@ -40,10 +40,7 @@ jobs:
       - hmpps/wait_till_ready_postgres
       - run:
           name: Run check
-          command: ./gradlew check
-      - run:
-          name: Run Kover
-          command: ./gradlew koverHtmlReport
+          command: ./gradlew check koverHtmlReport
       - save_cache:
           paths:
             - ~/.gradle
