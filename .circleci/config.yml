@@ -46,7 +46,7 @@ jobs:
             - ~/.gradle
           key: gradle-{{ checksum "build.gradle.kts" }}
       - store_test_results:
-          path: build/test-results
+          path: build/test-results/test
       - store_artifacts:
           path: build/reports/kover/html
 
