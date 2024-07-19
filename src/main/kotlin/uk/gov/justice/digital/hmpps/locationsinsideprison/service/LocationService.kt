@@ -84,7 +84,10 @@ class LocationService(
   }
 
   fun getLocationById(id: UUID, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
-    val toDto = locationRepository.findById(id).getOrNull()?.toDto(includeChildren = includeChildren, includeHistory = includeHistory)
+    val toDto = locationRepository.findById(id).getOrNull()?.toDto(
+      includeChildren = includeChildren,
+      includeHistory = includeHistory,
+    )
     return toDto
   }
 
@@ -161,7 +164,10 @@ class LocationService(
     if (!key.contains("-")) throw LocationNotFoundException(key)
 
     val (prisonId, code) = key.split("-", limit = 2)
-    return locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code)?.toDto(includeChildren = includeChildren, includeHistory = includeHistory)
+    return locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code)?.toDto(
+      includeChildren = includeChildren,
+      includeHistory = includeHistory,
+    )
   }
 
   fun getLocationsByKeys(keys: List<String>): List<LocationDTO> =
@@ -274,7 +280,11 @@ class LocationService(
     )
 
     return UpdateLocationResult(
-      residentialLocation.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged, includeNonResidential = false),
+      residentialLocation.toDto(
+        includeChildren = codeChanged || parentChanged,
+        includeParent = parentChanged,
+        includeNonResidential = false,
+      ),
       if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
     )
   }
@@ -503,7 +513,7 @@ class LocationService(
       null,
     )
 
-    return locationToDeactivate.toDto(includeParent = true, includeChildren = true)
+    return locationToDeactivate.toDto(includeChildren = true, includeParent = true)
   }
 
   @Transactional
@@ -569,7 +579,7 @@ class LocationService(
       null,
     )
 
-    return locationToArchive.toDto(includeParent = true, includeChildren = true)
+    return locationToArchive.toDto(includeChildren = true, includeParent = true)
   }
 
   @Transactional
@@ -598,7 +608,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto(includeParent = true, includeChildren = reactivateSubLocations)
+    return locationToUpdate.toDto(includeChildren = reactivateSubLocations, includeParent = true)
   }
 
   @Transactional
@@ -738,7 +748,7 @@ class LocationService(
         null
       },
       locationHierarchy = currentLocation?.getHierarchy(),
-      parentLocation = currentLocation?.toDto(countInactiveCells = true),
+      parentLocation = currentLocation?.toDto(countInactiveCells = true, useHistoryForUpdate = true),
       latestHistory = latestHistory,
       subLocations = locations,
       subLocationName = subLocationTypes,

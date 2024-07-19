@@ -185,7 +185,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       )
       .addChildLocation(landingZ2)
 
-    wingZ.updateComments("A New Comment", "Older user", clock)
+    wingZ.updateComments("A New Comment", EXPECTED_USERNAME, clock)
 
     wingB.addChildLocation(landingB3.addChildLocation(inactiveCellB3001))
     repository.save(wingZ)
@@ -623,6 +623,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a locations on a wing`() {
+        val now = LocalDateTime.now(clock)
         webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${wingZ.id}&latestHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
@@ -654,7 +655,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
                 ],
-                
+                "lastModifiedBy": "$EXPECTED_USERNAME",
+                "lastModifiedDate": "$now",
                 "status": "ACTIVE",
                 "active": true,
                 "deactivatedByParent": false,
@@ -666,7 +668,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Comments",
                   "newValue": "A New Comment",
-                  "amendedBy": "A_TEST_USER"
+                  "amendedBy": "$EXPECTED_USERNAME",
+                  "amendedDate": "$now"
                 }
               ],
               "topLevelLocationType": "Wings",
