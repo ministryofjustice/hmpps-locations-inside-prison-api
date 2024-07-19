@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.assertj.core.api.Assertions.assertThat
-import org.hibernate.validator.constraints.UUID
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -1966,7 +1965,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `cannot update convert to cell as Location ID is not found`() {
-        webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/convert-to-cell")
+        webTestClient.put().uri("/locations/${java.util.UUID.randomUUID()}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(convertToCellRequest))
@@ -2003,7 +2002,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
         cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER, userOrSystemInContext = "Aleman", clock = clock)
         repository.save(cell1)
 
-        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+        val result = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(convertToCellRequest)
@@ -2011,6 +2010,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectStatus().isOk
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
+
+        assertThat(result.findByPathHierarchy("Z-1-001")!!.convertedCellType == null)
+        assertThat(result.findByPathHierarchy("Z-1-001")!!.capacity?.maxCapacity ?: 2)
+        assertThat(result.findByPathHierarchy("Z-1-001")!!.capacity?.workingCapacity ?: 2)
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
