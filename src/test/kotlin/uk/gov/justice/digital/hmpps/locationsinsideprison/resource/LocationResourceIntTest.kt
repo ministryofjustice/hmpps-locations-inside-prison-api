@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.assertj.core.api.Assertions.assertThat
+import org.hibernate.validator.constraints.UUID
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -1848,7 +1849,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `cannot update convert to non residential cell as ID is not found`() {
-        webTestClient.put().uri("/locations/01908318-a677-7f6d-abe8-9c6daf5c3689/convert-cell-to-non-res-cell")
+        webTestClient.put().uri("/locations/${java.util.UUID.randomUUID()}/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
