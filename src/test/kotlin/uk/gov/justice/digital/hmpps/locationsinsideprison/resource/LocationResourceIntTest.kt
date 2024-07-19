@@ -1861,7 +1861,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
 
       @Test
-      fun `can update convert cell to non res cell successfully and response`() {
+      fun `can update convert cell to non res cell`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy(), cell1.getPathHierarchy()), false)
         val result = webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1872,8 +1872,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        val cellZ1001 = result.findByPathHierarchy("Z-1-001")!!
-        assertThat(cellZ1001.convertedCellType == ConvertedCellType.OTHER)
+        assertThat(result.findByPathHierarchy("Z-1-001")!!.convertedCellType == ConvertedCellType.OTHER)
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -1999,7 +1998,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
 
       @Test
-      fun `can update convert cell to non res cell successfully and responsess`() {
+      fun `can update convert cell to non res cell`() {
         cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER, userOrSystemInContext = "Aleman", clock = clock)
         repository.save(cell1)
 
