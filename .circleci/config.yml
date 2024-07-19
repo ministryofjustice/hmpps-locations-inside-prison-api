@@ -40,15 +40,19 @@ jobs:
       - hmpps/wait_till_ready_postgres
       - run:
           name: Run check
-          command: ./gradlew check
+          command: ./gradlew check koverHtmlReport
       - save_cache:
           paths:
             - ~/.gradle
           key: gradle-{{ checksum "build.gradle.kts" }}
       - store_test_results:
-          path: build/test-results
+          path: ~/test-results
       - store_artifacts:
           path: build/reports/tests
+          destination: test-report
+      - store_artifacts:
+          path: build/reports/kover/html
+          destination: test-coverage-report
 
 workflows:
   version: 2
