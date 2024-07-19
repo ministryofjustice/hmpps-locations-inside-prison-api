@@ -41,6 +41,9 @@ jobs:
       - run:
           name: Run check
           command: ./gradlew check
+      - run:
+          name: Run Kover
+          command: ./gradlew koverHtmlReport
       - save_cache:
           paths:
             - ~/.gradle
