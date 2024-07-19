@@ -1787,7 +1787,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
   @DisplayName("PUT /locations/{id}/convert-cell-to-non-res-cell")
   @Nested
-  inner class convertCellToNonResCell {
+  inner class ConvertCellToNonResCell {
 
     var convertCellToNonResidentialLocationRequest = ConvertCellToNonResidentialLocationRequest(
       convertedCellType = ConvertedCellType.OTHER,
@@ -2016,7 +2016,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z",          )
+            "location.inside.prison.amended" to "MDI-Z",
+          )
         }
       }
     }
