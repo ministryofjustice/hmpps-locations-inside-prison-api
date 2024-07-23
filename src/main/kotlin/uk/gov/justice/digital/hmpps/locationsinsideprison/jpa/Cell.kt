@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -222,19 +223,31 @@ class Cell(
 
   fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
     if (workingCapacity > 99) {
-      throw CapacityException(getKey(), "Working capacity must be less than 100")
+      throw CapacityException(
+        getKey(),
+        "Working capacity must be less than 100",
+        ErrorCode.WorkingCapacityLimitExceeded,
+      )
     }
     if (maxCapacity > 99) {
-      throw CapacityException(getKey(), "Max capacity must be less than 100")
+      throw CapacityException(getKey(), "Max capacity must be less than 100", ErrorCode.MaxCapacityLimitExceeded)
     }
     if (workingCapacity > maxCapacity) {
-      throw CapacityException(getKey(), "Working capacity ($workingCapacity) cannot be more than max capacity ($maxCapacity)")
+      throw CapacityException(
+        getKey(),
+        "Working capacity ($workingCapacity) cannot be more than max capacity ($maxCapacity)",
+        ErrorCode.WorkingCapacityExceedsMaxCapacity,
+      )
     }
     if (maxCapacity == 0 && !isPermanentlyDeactivated()) {
-      throw CapacityException(getKey(), "Max capacity cannot be zero")
+      throw CapacityException(getKey(), "Max capacity cannot be zero", ErrorCode.MaxCapacityCannotBeZero)
     }
     if (!(isPermanentlyDeactivated() || isTemporarilyDeactivated()) && workingCapacity == 0 && accommodationType == AccommodationType.NORMAL_ACCOMMODATION && specialistCellTypes.isEmpty()) {
-      throw CapacityException(getKey(), "Cannot have a 0 working capacity with normal accommodation and not specialist cell")
+      throw CapacityException(
+        getKey(),
+        "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
+        ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
+      )
     }
 
     addHistory(
@@ -499,8 +512,22 @@ class Cell(
     }
   }
 
-  override fun toDto(includeChildren: Boolean, includeParent: Boolean, includeHistory: Boolean, countInactiveCells: Boolean, includeNonResidential: Boolean): LocationDto {
-    return super.toDto(includeChildren = includeChildren, includeParent = includeParent, includeHistory = includeHistory, countInactiveCells = countInactiveCells, includeNonResidential = includeNonResidential).copy(
+  override fun toDto(
+    includeChildren: Boolean,
+    includeParent: Boolean,
+    includeHistory: Boolean,
+    countInactiveCells: Boolean,
+    includeNonResidential: Boolean,
+    useHistoryForUpdate: Boolean,
+  ): LocationDto {
+    return super.toDto(
+      includeChildren = includeChildren,
+      includeParent = includeParent,
+      includeHistory = includeHistory,
+      countInactiveCells = countInactiveCells,
+      includeNonResidential = includeNonResidential,
+      useHistoryForUpdate = useHistoryForUpdate,
+    ).copy(
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
     )

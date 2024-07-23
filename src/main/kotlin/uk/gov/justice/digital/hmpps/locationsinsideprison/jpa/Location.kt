@@ -316,7 +316,13 @@ abstract class Location(
     includeHistory: Boolean = false,
     countInactiveCells: Boolean = false,
     includeNonResidential: Boolean = true,
+    useHistoryForUpdate: Boolean = false,
   ): LocationDto {
+    val topHistoryEntry = if (useHistoryForUpdate) {
+      history.maxByOrNull { it.amendedDate }
+    } else {
+      null
+    }
     return LocationDto(
       id = id!!,
       code = getCode(),
@@ -328,8 +334,16 @@ abstract class Location(
       topLevelId = findTopLevelLocation().id!!,
       level = getLevel(),
       leafLevel = findSubLocations().isEmpty(),
-      lastModifiedDate = whenUpdated,
-      lastModifiedBy = updatedBy,
+      lastModifiedDate = if (useHistoryForUpdate) {
+        topHistoryEntry?.amendedDate ?: whenUpdated
+      } else {
+        whenUpdated
+      },
+      lastModifiedBy = if (useHistoryForUpdate) {
+        topHistoryEntry?.amendedBy ?: updatedBy
+      } else {
+        updatedBy
+      },
       localName = getDerivedLocalName(),
       comments = comments,
       active = isActiveAndAllParentsActive(),
@@ -343,7 +357,13 @@ abstract class Location(
       childLocations = if (includeChildren) {
         childLocations.filter { !it.isPermanentlyDeactivated() }
           .filter { includeNonResidential || it is ResidentialLocation }
-          .map { it.toDto(includeChildren = true, includeHistory = includeHistory, includeNonResidential = includeNonResidential) }
+          .map {
+            it.toDto(
+              includeChildren = true,
+              includeHistory = includeHistory,
+              includeNonResidential = includeNonResidential,
+            )
+          }
       } else {
         null
       },

@@ -70,6 +70,7 @@ class LocationServiceTest {
   fun `when update location and location is permanently deactivated throw ValidationException`() {
     val updateLocationRequest = UpdateLocationRequest("L23", "comment", "User 1")
     val location: Location = mock()
+    whenever(location.getKey()).thenReturn("L23-A-1-001")
     whenever(location.isPermanentlyDeactivated()).thenReturn(true)
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(location))
     Assertions.assertThatExceptionOfType(ValidationException::class.java).isThrownBy {

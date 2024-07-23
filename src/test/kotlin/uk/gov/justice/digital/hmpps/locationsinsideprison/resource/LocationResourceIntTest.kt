@@ -186,7 +186,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       )
       .addChildLocation(landingZ2)
 
-    wingZ.updateComments("A New Comment", "Older user", clock)
+    wingZ.updateComments("A New Comment", EXPECTED_USERNAME, clock)
 
     wingB.addChildLocation(landingB3.addChildLocation(inactiveCellB3001))
     repository.save(wingZ)
@@ -624,6 +624,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a locations on a wing`() {
+        val now = LocalDateTime.now(clock)
         webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${wingZ.id}&latestHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
@@ -655,7 +656,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
                 ],
-                
+                "lastModifiedBy": "$EXPECTED_USERNAME",
+                "lastModifiedDate": "$now",
                 "status": "ACTIVE",
                 "active": true,
                 "deactivatedByParent": false,
@@ -667,7 +669,8 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Comments",
                   "newValue": "A New Comment",
-                  "amendedBy": "A_TEST_USER"
+                  "amendedBy": "$EXPECTED_USERNAME",
+                  "amendedDate": "$now"
                 }
               ],
               "topLevelLocationType": "Wings",
@@ -2332,6 +2335,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(emptySet<SpecialistCellType>()))
           .exchange()
           .expectStatus().isEqualTo(400)
+          .expectBody().json(
+            """
+              { "errorCode": 106 }
+            """.trimIndent(),
+            false,
+          )
       }
     }
 
@@ -3415,6 +3424,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(CapacityDTO(workingCapacity = -1, maxCapacity = 999)))
           .exchange()
           .expectStatus().is4xxClientError
+          .expectBody().json(
+            """
+              { "errorCode": 102 }
+            """.trimIndent(),
+            false,
+          )
       }
 
       @Test
@@ -3427,6 +3442,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(CapacityDTO(workingCapacity = 1, maxCapacity = 1)))
           .exchange()
           .expectStatus().isEqualTo(400)
+          .expectBody().json(
+            """
+              { "errorCode": 117 }
+            """.trimIndent(),
+            false,
+          )
       }
 
       @Test
@@ -3439,6 +3460,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(CapacityDTO(workingCapacity = 3, maxCapacity = 2)))
           .exchange()
           .expectStatus().isEqualTo(400)
+          .expectBody().json(
+            """
+              { "errorCode": 114 }
+            """.trimIndent(),
+            false,
+          )
       }
 
       @Test
@@ -3451,6 +3478,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(CapacityDTO(workingCapacity = 0, maxCapacity = 0)))
           .exchange()
           .expectStatus().isEqualTo(400)
+          .expectBody().json(
+            """
+              { "errorCode": 115 }
+            """.trimIndent(),
+            false,
+          )
       }
 
       @Test
@@ -3463,6 +3496,12 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .bodyValue(jsonString(CapacityDTO(workingCapacity = 0, maxCapacity = 2)))
           .exchange()
           .expectStatus().isEqualTo(400)
+          .expectBody().json(
+            """
+              { "errorCode": 106 }
+            """.trimIndent(),
+            false,
+          )
       }
     }
 
