@@ -1889,7 +1889,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
   @Nested
   inner class ConvertToCellTest {
     var convertToCellRequest = ConvertToCellRequest(
-      accommodationType = AccommodationType.CARE_AND_SEPARATION,
+      accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = 2,
       workingCapacity = 2,
@@ -1974,7 +1974,10 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `cannot update convert to cell as request has invalid Max Capacity `() { // request has not valid data
+      fun `cannot update convert to cell as request has invalid Max Capacity `() {
+        cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER, userOrSystemInContext = "Aleman", clock = clock)
+        repository.save(cell1)
+        // request has not valid data
         webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -1985,6 +1988,9 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `cannot update convert to cell as request has invalid Working Capacity `() { // request has not valid data
+        cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER, userOrSystemInContext = "Aleman", clock = clock)
+        repository.save(cell1)
+
         webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -1998,7 +2004,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
 
       @Test
-      fun `can update convert cell to non res cell`() {
+      fun `can convert non-res cell to res cell`() {
         cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER, userOrSystemInContext = "Aleman", clock = clock)
         repository.save(cell1)
 
@@ -2011,9 +2017,11 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        assertThat(result.findByPathHierarchy("Z-1-001")!!.convertedCellType == null)
-        assertThat(result.findByPathHierarchy("Z-1-001")!!.capacity?.maxCapacity ?: 2)
-        assertThat(result.findByPathHierarchy("Z-1-001")!!.capacity?.workingCapacity ?: 2)
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001")
+        assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
+        assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
+        assertThat(cellZ1001?.specialistCellTypes?.get(0)).isEqualTo(SpecialistCellType.ACCESSIBLE_CELL)
+        assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
