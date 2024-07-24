@@ -1,11 +1,10 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.common
+package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
-import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
@@ -25,7 +24,7 @@ import java.time.Clock
 const val EXPECTED_USERNAME = "A_TEST_USER"
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
-class CommonTestUtils  : SqsIntegrationTestBase() {
+class CommonDataIntegrationTest : SqsIntegrationTestBase() {
 
   @TestConfiguration
   class FixedClockConfig {
@@ -121,7 +120,7 @@ class CommonTestUtils  : SqsIntegrationTestBase() {
         residentialAttributeValues = setOf(
           ResidentialAttributeValue.CAT_A,
           ResidentialAttributeValue.SAFE_CELL,
-          ResidentialAttributeValue.DOUBLE_OCCUPANCY
+          ResidentialAttributeValue.DOUBLE_OCCUPANCY,
         ),
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       ),
@@ -170,7 +169,8 @@ class CommonTestUtils  : SqsIntegrationTestBase() {
 
     wingZ.updateComments(
       "A New Comment",
-      uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME, clock
+      uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME,
+      clock,
     )
 
     wingB.addChildLocation(landingB3.addChildLocation(inactiveCellB3001))
@@ -178,5 +178,3 @@ class CommonTestUtils  : SqsIntegrationTestBase() {
     repository.save(wingB)
   }
 }
-
-
