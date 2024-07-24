@@ -2006,6 +2006,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
 
+      // TODO MAP-1438 extra couple of tests need to be added for "Healthcare inpatients" & "Care and separation"
       @Test
       fun `can convert non-res cell to res cell`() {
         cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER, userOrSystemInContext = "Aleman", clock = clock)
