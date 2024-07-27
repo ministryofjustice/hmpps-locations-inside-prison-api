@@ -11,11 +11,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
-const val EXPECTED_USERNAME_TRANSFORM = "A_TEST_USER"
-
-@WithMockAuthUser(username = EXPECTED_USERNAME_TRANSFORM)
+@WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResourceTransformTest : CommonDataTestBase() {
 
   @DisplayName("PUT /locations/{id}/used-for-type")

@@ -4,11 +4,10 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
-const val EXPECTED_USERNAME_PRISON = "A_TEST_USER"
-
-@WithMockAuthUser(username = EXPECTED_USERNAME_PRISON)
+@WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResourceKeyTest : CommonDataTestBase() {
 
   @DisplayName("GET /locations/key/{key}")

@@ -22,10 +22,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ConvertCellToNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ConvertToCellRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 
-@WithMockAuthUser(username = uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME)
+@WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResourceResidentialTest : CommonDataTestBase() {
 
   @DisplayName("GET /locations/residential-summary/{prisonId}")
@@ -164,7 +165,7 @@ class LocationResourceResidentialTest : CommonDataTestBase() {
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
                 ],
-                "lastModifiedBy": "${uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME}",
+                "lastModifiedBy": "$EXPECTED_USERNAME",
                 "lastModifiedDate": "$now",
                 "status": "ACTIVE",
                 "active": true,
@@ -177,7 +178,7 @@ class LocationResourceResidentialTest : CommonDataTestBase() {
                 {
                   "attribute": "Comments",
                   "newValue": "A New Comment",
-                  "amendedBy": "${uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME}",
+                  "amendedBy": "$EXPECTED_USERNAME",
                   "amendedDate": "$now"
                 }
               ],
