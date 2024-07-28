@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
+package uk.gov.justice.digital.hmpps.locationsinsideprison.resource.locationresource
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -216,7 +216,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve details of a page of locations`() {
-        webTestClient.get().uri("/locations")
+        webTestClient.get().uri("/locations?size=13&sort=pathHierarchy,asc")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk

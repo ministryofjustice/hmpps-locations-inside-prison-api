@@ -13,7 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.locationresource.EXPECTED_USERNAME
 import java.time.LocalDateTime
 
 fun buildResidentialLocation(

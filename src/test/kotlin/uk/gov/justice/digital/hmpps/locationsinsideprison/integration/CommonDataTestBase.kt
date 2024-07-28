@@ -158,7 +158,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
 
     wingZ.updateComments(
       "A New Comment",
-      uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME,
+      uk.gov.justice.digital.hmpps.locationsinsideprison.resource.locationresource.EXPECTED_USERNAME,
       clock,
     )
 
