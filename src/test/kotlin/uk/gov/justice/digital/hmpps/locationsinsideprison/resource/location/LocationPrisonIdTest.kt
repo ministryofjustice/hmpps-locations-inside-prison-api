@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.resource.locationresource
+package uk.gov.justice.digital.hmpps.locationsinsideprison.resource.location
 
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -7,7 +7,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonData
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
-class LocationResourcePrisonIdTest : CommonDataTestBase() {
+class LocationPrisonIdTest : CommonDataTestBase() {
 
   @DisplayName("GET /locations/prison/{prisonId}")
   @Nested

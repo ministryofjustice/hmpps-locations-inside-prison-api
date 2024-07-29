@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.resource.locationresource
+package uk.gov.justice.digital.hmpps.locationsinsideprison.resource.location
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
@@ -26,7 +26,7 @@ import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
-class LocationResourceResidentialTest : CommonDataTestBase() {
+class LocationResidentialTest : CommonDataTestBase() {
 
   @DisplayName("GET /locations/residential-summary/{prisonId}")
   @Nested
