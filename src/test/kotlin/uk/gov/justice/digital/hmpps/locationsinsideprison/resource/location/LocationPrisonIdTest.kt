@@ -665,6 +665,18 @@ class LocationPrisonIdTest : CommonDataTestBase() {
           )
       }
     }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `should return client error for invalid usage type`() {
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/UNKNOWN")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
   }
 
   @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
