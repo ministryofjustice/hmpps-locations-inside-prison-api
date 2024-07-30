@@ -1914,6 +1914,22 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
     )
 
+    var convertToCellRequestValidCareAndSeparation = ConvertToCellRequest(
+      accommodationType = AccommodationType.CARE_AND_SEPARATION,
+      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      maxCapacity = 2,
+      workingCapacity = 2,
+      usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
+    )
+
+    var convertToCellRequestValidHealthCareInpatients = ConvertToCellRequest(
+      accommodationType = AccommodationType.HEALTHCARE_INPATIENTS,
+      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      maxCapacity = 2,
+      workingCapacity = 2,
+      usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
+    )
+
     @Nested
     inner class Security {
       @Test
@@ -2006,16 +2022,85 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
 
-      // TODO MAP-1438 extra couple of tests need to be added for "Healthcare inpatients" & "Care and separation"
       @Test
       fun `can convert non-res cell to res cell`() {
-        cell1.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OTHER, userOrSystemInContext = "Aleman", clock = clock)
+        cell1.convertToNonResidentialCell(
+          convertedCellType = ConvertedCellType.OTHER,
+          userOrSystemInContext = "Aleman",
+          clock = clock,
+        )
         repository.save(cell1)
 
         val result = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(convertToCellRequest)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001")
+        assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
+        assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
+        assertThat(cellZ1001?.specialistCellTypes?.get(0)).isEqualTo(SpecialistCellType.ACCESSIBLE_CELL)
+        assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
+      @Test
+      fun `can convert non-res cell to res cell for Care and Separation`() {
+        cell1.convertToNonResidentialCell(
+          convertedCellType = ConvertedCellType.OTHER,
+          userOrSystemInContext = "Aleman",
+          clock = clock,
+        )
+        repository.save(cell1)
+
+        val result = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(convertToCellRequestValidCareAndSeparation)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001")
+        assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
+        assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
+        assertThat(cellZ1001?.specialistCellTypes?.get(0)).isEqualTo(SpecialistCellType.ACCESSIBLE_CELL)
+        assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
+      @Test
+      fun `can convert non-res cell to res cell for Health inpatients`() {
+        cell1.convertToNonResidentialCell(
+          convertedCellType = ConvertedCellType.OTHER,
+          userOrSystemInContext = "Aleman",
+          clock = clock,
+        )
+        repository.save(cell1)
+
+        val result = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(convertToCellRequestValidHealthCareInpatients)
           .exchange()
           .expectStatus().isOk
           .expectBody(LocationTest::class.java)
