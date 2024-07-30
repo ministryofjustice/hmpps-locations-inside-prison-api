@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.resource.location
+package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
