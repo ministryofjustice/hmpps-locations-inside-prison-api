@@ -2130,7 +2130,7 @@ class LocationResourceIntTest : SqsIntegrationTestBase() {
       }
     }
 
-    //TODO MAP-1445 This AccommodationType is converted to Cell and capacity is set to 0. need to refine
+    // TODO MAP-1445 This AccommodationType is converted to Cell and capacity is set to 0. need to refine
     @Test
     fun `can convert non-res cell to res cell for Other Non Residential`() {
       cell1.convertToNonResidentialCell(
