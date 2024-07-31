@@ -342,3 +342,4 @@ class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationE
 class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as converted cell")
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
 class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")
+class LocationCannotBeResidentialException(key: String) : Exception("Location cannot be converted to residential = $key")

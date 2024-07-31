@@ -1628,7 +1628,6 @@ class LocationResidentialTest : CommonDataTestBase() {
       }
     }
 
-    // TODO MAP-1445 This AccommodationType is converted to Cell and capacity is set to 0. need to refine
     @Test
     fun `can convert non-res cell to res cell for Other Non Residential`() {
       cell1.convertToNonResidentialCell(
@@ -1638,20 +1637,12 @@ class LocationResidentialTest : CommonDataTestBase() {
       )
       repository.save(cell1)
 
-      val result = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+      webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
         .header("Content-Type", "application/json")
         .bodyValue(convertToCellRequestNonResidentialLocation)
         .exchange()
-        .expectStatus().isOk
-        .expectBody(LocationTest::class.java)
-        .returnResult().responseBody!!
-
-      val cellZ1001 = result.findByPathHierarchy("Z-1-001")
-      assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(0)
-      assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(0)
-      assertThat(cellZ1001?.specialistCellTypes?.get(0)).isEqualTo(SpecialistCellType.ACCESSIBLE_CELL)
-      assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
+        .expectStatus().isEqualTo(409)
 
       getDomainEvents(3).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
