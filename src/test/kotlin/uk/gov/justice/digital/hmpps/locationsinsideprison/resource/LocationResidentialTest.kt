@@ -1508,6 +1508,23 @@ class LocationResidentialTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `cannot convert non-res cell with accommodation type other non residential to residential cell`() {
+        cell1.convertToNonResidentialCell(
+          convertedCellType = ConvertedCellType.OTHER,
+          userOrSystemInContext = "Aleman",
+          clock = clock,
+        )
+        repository.save(cell1)
+
+        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(convertToCellRequestNonResidentialLocation)
+          .exchange()
+          .expectStatus().isEqualTo(409)
+      }
+
+      @Test
       fun `cannot update convert to cell as request has invalid Working Capacity `() { // request has not valid data
         cell1.convertToNonResidentialCell(
           convertedCellType = ConvertedCellType.OTHER,
@@ -1618,31 +1635,6 @@ class LocationResidentialTest : CommonDataTestBase() {
       assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
       assertThat(cellZ1001?.specialistCellTypes?.get(0)).isEqualTo(SpecialistCellType.ACCESSIBLE_CELL)
       assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
-
-      getDomainEvents(3).let {
-        assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-          "location.inside.prison.amended" to "MDI-Z-1-001",
-          "location.inside.prison.amended" to "MDI-Z-1",
-          "location.inside.prison.amended" to "MDI-Z",
-        )
-      }
-    }
-
-    @Test
-    fun `can convert non-res cell to res cell for Other Non Residential`() {
-      cell1.convertToNonResidentialCell(
-        convertedCellType = ConvertedCellType.OTHER,
-        userOrSystemInContext = "Aleman",
-        clock = clock,
-      )
-      repository.save(cell1)
-
-      webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
-        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-        .header("Content-Type", "application/json")
-        .bodyValue(convertToCellRequestNonResidentialLocation)
-        .exchange()
-        .expectStatus().isEqualTo(409)
 
       getDomainEvents(3).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(

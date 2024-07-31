@@ -22,6 +22,22 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+
+  @ExceptionHandler(LocationCannotBeResidentialException::class)
+  fun handleLocationAccomodationTypeOtherNonResidential(e: LocationCannotBeResidentialException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Location acommodation type other non residential exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.CONFLICT)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.CONFLICT,
+          errorCode = ErrorCode.LocationAlreadyExists,
+          userMessage = "Location acommodation type other non residential : ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(ValidationException::class)
   fun handleValidationException(e: ValidationException): ResponseEntity<ErrorResponse> {
     log.info("Validation exception: {}", e.message)
@@ -342,4 +358,4 @@ class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationE
 class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as converted cell")
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
 class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")
-class LocationCannotBeResidentialException(key: String) : Exception("Location cannot be converted to residential = $key")
+class LocationCannotBeResidentialException(key: String) : Exception("Location AccommodationType $key cannot be converted to residential")

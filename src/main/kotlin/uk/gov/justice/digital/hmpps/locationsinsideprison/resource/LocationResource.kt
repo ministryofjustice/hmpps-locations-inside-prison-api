@@ -1154,9 +1154,14 @@ class LocationResource(
         description = "Location not found",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location Accommodation Type Other Non Residential cannot be accepted",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
     ],
   )
-  fun convertCellToNonResidentialLocation(
+  fun convertToCellLocation(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
@@ -1167,6 +1172,9 @@ class LocationResource(
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
     ) {
+      if (convertToCellRequest.accommodationType == AccommodationType.OTHER_NON_RESIDENTIAL) {
+        throw LocationCannotBeResidentialException(convertToCellRequest.accommodationType.toString())
+      }
       with(convertToCellRequest) {
         locationService.convertToCell(
           id = id,
