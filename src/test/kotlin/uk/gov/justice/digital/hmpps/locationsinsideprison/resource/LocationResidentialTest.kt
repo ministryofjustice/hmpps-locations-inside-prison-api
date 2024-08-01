@@ -1512,7 +1512,7 @@ class LocationResidentialTest : CommonDataTestBase() {
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(
-              """
+            """
             {
                   "accommodationType": "OTHER_NON_RESIDENTIAL",
                   "specialistCellType": "ACCESSIBLE_CELL",
@@ -1520,15 +1520,14 @@ class LocationResidentialTest : CommonDataTestBase() {
                   "workingCapacity": 2,
                   "usedForTypes": ["STANDARD_ACCOMMODATION", "PERSONALITY_DISORDER"]
             }
-              """.trimIndent(),
+            """.trimIndent(),
           )
           .exchange()
           .expectStatus().isEqualTo(400)
           .expectBody(ErrorResponse::class.java)
           .returnResult().responseBody!!
 
-          assertThat(response.userMessage).contains("not one of the values accepted for Enum class: [NORMAL_ACCOMMODATION, CARE_AND_SEPARATION, HEALTHCARE_INPATIENTS]")
-
+        assertThat(response.userMessage).contains("not one of the values accepted for Enum class: [NORMAL_ACCOMMODATION, CARE_AND_SEPARATION, HEALTHCARE_INPATIENTS]")
       }
 
       @Test
