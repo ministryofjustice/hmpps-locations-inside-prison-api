@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.media.Content
@@ -1172,9 +1173,6 @@ class LocationResource(
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
     ) {
-      if (convertToCellRequest.accommodationType == AccommodationType.OTHER_NON_RESIDENTIAL) {
-        throw LocationCannotBeResidentialException(convertToCellRequest.accommodationType.toString())
-      }
       with(convertToCellRequest) {
         locationService.convertToCell(
           id = id,
@@ -1331,7 +1329,7 @@ data class ConvertCellToNonResidentialLocationRequest(
 @Schema(description = "Request to convert a non-res location to a cell")
 data class ConvertToCellRequest(
   @Schema(description = "Accommodation type of the location", example = "NORMAL_ACCOMMODATION", required = true)
-  val accommodationType: AccommodationType,
+  val accommodationType: AllowedAccommodationTypeForConversion,
   @Schema(description = "Specialist cell type", example = "BIOHAZARD_DIRTY_PROTEST", required = false)
   val specialistCellType: SpecialistCellType?,
   @Schema(description = "Max capacity", example = "2", required = true)
@@ -1345,6 +1343,16 @@ data class ConvertToCellRequest(
   @Schema(description = "Used For list", example = "STANDARD_ACCOMMODATION, PERSONALITY_DISORDER", required = false)
   val usedForTypes: List<UsedForType>? = null,
 )
+
+@Schema(description = "Allowable Accommodation Types")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+enum class AllowedAccommodationTypeForConversion(
+  val mapsTo: AccommodationType,
+) {
+  NORMAL_ACCOMMODATION(AccommodationType.NORMAL_ACCOMMODATION),
+  HEALTHCARE_INPATIENTS(AccommodationType.HEALTHCARE_INPATIENTS),
+  CARE_AND_SEPARATION(AccommodationType.CARE_AND_SEPARATION),
+}
 
 data class UpdateLocationResult(
   val location: LocationDTO,

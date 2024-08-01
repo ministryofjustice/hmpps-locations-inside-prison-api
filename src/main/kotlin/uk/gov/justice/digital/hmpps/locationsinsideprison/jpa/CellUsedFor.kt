@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -43,6 +45,8 @@ class CellUsedFor(
   }
 }
 
+@Schema(description = "Used For Types")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 enum class UsedForType(
   val description: String,
 ) {
