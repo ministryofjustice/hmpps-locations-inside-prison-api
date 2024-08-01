@@ -1382,46 +1382,38 @@ class LocationResidentialTest : CommonDataTestBase() {
   @Nested
   inner class ConvertToCellTest {
     var convertToCellRequest = ConvertToCellRequest(
-      accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+      accommodationType = AllowedAccommodationTypeForConversion.NORMAL_ACCOMMODATION,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = 2,
       workingCapacity = 2,
     )
 
     var convertToCellRequestNotValidMaxCapacity = ConvertToCellRequest(
-      accommodationType = AccommodationType.CARE_AND_SEPARATION,
+      accommodationType = AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = -1,
       workingCapacity = 2,
       usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
     )
 
-    var convertToCellRequestNotValidWorkingCapacity = ConvertToCellRequest(
-      accommodationType = AccommodationType.CARE_AND_SEPARATION,
+    private var convertToCellRequestNotValidWorkingCapacity = ConvertToCellRequest(
+      accommodationType = AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = 1,
       workingCapacity = -1,
       usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
     )
 
-    var convertToCellRequestValidCareAndSeparation = ConvertToCellRequest(
-      accommodationType = AccommodationType.CARE_AND_SEPARATION,
+    private var convertToCellRequestValidCareAndSeparation = ConvertToCellRequest(
+      accommodationType = AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = 2,
       workingCapacity = 2,
       usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
     )
 
-    var convertToCellRequestValidHealthCareInpatients = ConvertToCellRequest(
-      accommodationType = AccommodationType.HEALTHCARE_INPATIENTS,
-      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
-      maxCapacity = 2,
-      workingCapacity = 2,
-      usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
-    )
-
-    var convertToCellRequestNonResidentialLocation = ConvertToCellRequest(
-      accommodationType = AccommodationType.OTHER_NON_RESIDENTIAL,
+    private var convertToCellRequestValidHealthCareInpatients = ConvertToCellRequest(
+      accommodationType = AllowedAccommodationTypeForConversion.HEALTHCARE_INPATIENTS,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = 2,
       workingCapacity = 2,
@@ -1516,12 +1508,26 @@ class LocationResidentialTest : CommonDataTestBase() {
         )
         repository.save(cell1)
 
-        webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+        val response = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(convertToCellRequestNonResidentialLocation)
+          .bodyValue(
+            """
+            {
+                  "accommodationType": "OTHER_NON_RESIDENTIAL",
+                  "specialistCellType": "ACCESSIBLE_CELL",
+                  "maxCapacity": 2,
+                  "workingCapacity": 2,
+                  "usedForTypes": ["STANDARD_ACCOMMODATION", "PERSONALITY_DISORDER"]
+            }
+            """.trimIndent(),
+          )
           .exchange()
-          .expectStatus().isEqualTo(409)
+          .expectStatus().isEqualTo(400)
+          .expectBody(ErrorResponse::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(response.userMessage).contains("not one of the values accepted for Enum class: [NORMAL_ACCOMMODATION, CARE_AND_SEPARATION, HEALTHCARE_INPATIENTS]")
       }
 
       @Test

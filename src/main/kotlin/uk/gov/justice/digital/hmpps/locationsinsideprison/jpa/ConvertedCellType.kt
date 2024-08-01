@@ -1,5 +1,10 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import io.swagger.v3.oas.annotations.media.Schema
+
+@Schema(description = "Converted Cell Types")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 enum class ConvertedCellType(
   val description: String,
 ) {
