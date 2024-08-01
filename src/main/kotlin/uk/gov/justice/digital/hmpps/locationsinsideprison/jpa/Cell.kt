@@ -12,6 +12,7 @@ import org.hibernate.annotations.BatchSize
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import java.time.Clock
@@ -176,15 +177,15 @@ class Cell(
     certification = null
   }
 
-  fun convertToCell(accommodationType: AccommodationType, usedForTypes: List<UsedForType>? = null, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
+  fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
     addHistory(
       LocationAttribute.ACCOMMODATION_TYPE,
       this.accommodationType.description,
-      accommodationType.description,
+      accommodationType.mapsTo.description,
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
-    setAccommodationTypeForCell(accommodationType, userOrSystemInContext, clock)
+    setAccommodationTypeForCell(accommodationType.mapsTo, userOrSystemInContext, clock)
 
     usedForTypes?.forEach {
       addUsedFor(it, userOrSystemInContext, clock)
@@ -194,11 +195,8 @@ class Cell(
       addSpecialistCellType(it, userOrSystemInContext, clock)
     }
 
-    if (accommodationType in setOf(AccommodationType.NORMAL_ACCOMMODATION, AccommodationType.HEALTHCARE_INPATIENTS, AccommodationType.CARE_AND_SEPARATION)
-    ) {
-      setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock)
-      certifyCell(userOrSystemInContext, clock)
-    }
+    setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock)
+    certifyCell(userOrSystemInContext, clock)
 
     addHistory(
       LocationAttribute.CONVERTED_CELL_TYPE,
