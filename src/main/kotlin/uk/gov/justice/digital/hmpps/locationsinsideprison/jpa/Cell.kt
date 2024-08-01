@@ -194,7 +194,8 @@ class Cell(
       addSpecialistCellType(it, userOrSystemInContext, clock)
     }
 
-    if (accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+    if (accommodationType in setOf(AccommodationType.NORMAL_ACCOMMODATION, AccommodationType.HEALTHCARE_INPATIENTS, AccommodationType.CARE_AND_SEPARATION)
+    ) {
       setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock)
       certifyCell(userOrSystemInContext, clock)
     }
