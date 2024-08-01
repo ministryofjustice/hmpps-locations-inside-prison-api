@@ -1,5 +1,8 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import com.fasterxml.jackson.annotation.JsonInclude
+import io.swagger.v3.oas.annotations.media.Schema
+
 enum class ResidentialLocationType(
   val description: String,
   val baseType: LocationType,
@@ -57,6 +60,8 @@ enum class NonResidentialLocationType(
   TABLE("Table", LocationType.TABLE),
 }
 
+@Schema(description = "Location Type")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 enum class LocationType(
   val description: String,
 ) {
