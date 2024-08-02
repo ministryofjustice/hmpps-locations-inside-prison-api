@@ -28,7 +28,7 @@ import java.util.*
   name = "Locations",
   description = "Returns location information",
 )
-class LocationTransform(
+class LocationTransformResource(
   private val locationService: LocationService,
 ) : EventBaseResource() {
 

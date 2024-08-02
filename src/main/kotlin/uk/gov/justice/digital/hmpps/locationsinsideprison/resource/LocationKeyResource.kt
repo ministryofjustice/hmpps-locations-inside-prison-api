@@ -27,7 +27,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationServic
   name = "Locations",
   description = "Returns location information",
 )
-class LocationKey(
+class LocationKeyResource(
   private val locationService: LocationService,
 ) : EventBaseResource() {
   @GetMapping("/key/{key}")

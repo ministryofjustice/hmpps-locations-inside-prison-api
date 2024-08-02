@@ -14,7 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCe
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
-class LocationTransformTest : CommonDataTestBase() {
+class LocationTransformResourceTest : CommonDataTestBase() {
 
   @DisplayName("PUT /locations/{id}/used-for-type")
   @Nested

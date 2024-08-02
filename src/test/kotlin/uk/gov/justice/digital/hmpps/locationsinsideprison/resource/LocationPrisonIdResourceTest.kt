@@ -7,7 +7,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonData
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
-class LocationPrisonIdTest : CommonDataTestBase() {
+class LocationPrisonIdResourceTest : CommonDataTestBase() {
 
   @DisplayName("GET /locations/prison/{prisonId}")
   @Nested

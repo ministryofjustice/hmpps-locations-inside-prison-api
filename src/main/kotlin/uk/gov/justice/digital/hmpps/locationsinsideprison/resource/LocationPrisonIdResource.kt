@@ -31,7 +31,7 @@ import java.util.*
   name = "Locations",
   description = "Returns location information",
 )
-class LocationPrisonId(
+class LocationPrisonIdResource(
   private val locationService: LocationService,
 ) : EventBaseResource() {
 
