@@ -361,11 +361,7 @@ class LocationResource(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
-    @RequestParam(
-      name = "cascade-reactivation",
-      required = false,
-      defaultValue = "false",
-    ) reactivateSubLocations: Boolean = false,
+    @RequestParam(name = "cascade-reactivation", required = false, defaultValue = "false") reactivateSubLocations: Boolean = false,
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_REACTIVATED,

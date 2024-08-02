@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -43,7 +44,7 @@ import java.util.*
   name = "Locations",
   description = "Returns location information",
 )
-class LocationResidential(
+class LocationResidentialResource(
   private val locationService: LocationService,
 ) : EventBaseResource() {
   @GetMapping("/residential-summary/{prisonId}")
@@ -75,13 +76,24 @@ class LocationResidential(
     ],
   )
   fun getLocationForPrisonBelowParent(
-    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Schema(
+      description = "Prison Id",
+      example = "MDI",
+      required = true,
+      minLength = 3,
+      maxLength = 5,
+      pattern = "^[A-Z]{2}I|ZZGHI$",
+    )
     @PathVariable
     prisonId: String,
     @Schema(description = "Parent location ID", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = false)
     @RequestParam(name = "parentLocationId", required = false)
     parentLocationId: UUID? = null,
-    @Schema(description = "Parent location path hierarchy, can be a Wing code, or landing code", example = "A-1", required = false)
+    @Schema(
+      description = "Parent location path hierarchy, can be a Wing code, or landing code",
+      example = "A-1",
+      required = false,
+    )
     @RequestParam(name = "parentPathHierarchy", required = false)
     parentPathHierarchy: String? = null,
     @Schema(description = "Include latest history", required = false, defaultValue = "false")
@@ -452,9 +464,6 @@ class LocationResidential(
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
     ) {
-      if (convertToCellRequest.accommodationType == AccommodationType.OTHER_NON_RESIDENTIAL) {
-        throw LocationCannotBeResidentialException(convertToCellRequest.accommodationType.toString())
-      }
       with(convertToCellRequest) {
         locationService.convertToCell(
           id = id,
@@ -467,30 +476,40 @@ class LocationResidential(
       }
     }
   }
+
+  @Schema(description = "Request to convert a cell to a non-res location")
+  data class ConvertCellToNonResidentialLocationRequest(
+    @Schema(description = "Cell type to convert to", example = "SHOWER", required = true)
+    val convertedCellType: ConvertedCellType,
+    @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false)
+    val otherConvertedCellType: String? = null,
+  )
+
+  @Schema(description = "Request to convert a non-res location to a cell")
+  data class ConvertToCellRequest(
+    @Schema(description = "Accommodation type of the location", example = "NORMAL_ACCOMMODATION", required = true)
+    val accommodationType: AllowedAccommodationTypeForConversion,
+    @Schema(description = "Specialist cell type", example = "BIOHAZARD_DIRTY_PROTEST", required = false)
+    val specialistCellType: SpecialistCellType?,
+    @Schema(description = "Max capacity", example = "2", required = true)
+    @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
+    @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
+    val maxCapacity: Int = 0,
+    @Schema(description = "Working capacity", example = "1", required = true)
+    @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
+    @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
+    val workingCapacity: Int = 0,
+    @Schema(description = "Used For list", example = "STANDARD_ACCOMMODATION, PERSONALITY_DISORDER", required = false)
+    val usedForTypes: List<UsedForType>? = null,
+  )
+
+  @Schema(description = "Allowable Accommodation Types")
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  enum class AllowedAccommodationTypeForConversion(
+    val mapsTo: AccommodationType,
+  ) {
+    NORMAL_ACCOMMODATION(AccommodationType.NORMAL_ACCOMMODATION),
+    HEALTHCARE_INPATIENTS(AccommodationType.HEALTHCARE_INPATIENTS),
+    CARE_AND_SEPARATION(AccommodationType.CARE_AND_SEPARATION),
+  }
 }
-
-@Schema(description = "Request to convert a cell to a non-res location")
-data class ConvertCellToNonResidentialLocationRequest(
-  @Schema(description = "Cell type to convert to", example = "SHOWER", required = true)
-  val convertedCellType: ConvertedCellType,
-  @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false)
-  val otherConvertedCellType: String? = null,
-)
-
-@Schema(description = "Request to convert a non-res location to a cell")
-data class ConvertToCellRequest(
-  @Schema(description = "Accommodation type of the location", example = "NORMAL_ACCOMMODATION", required = true)
-  val accommodationType: AccommodationType,
-  @Schema(description = "Specialist cell type", example = "BIOHAZARD_DIRTY_PROTEST", required = false)
-  val specialistCellType: SpecialistCellType?,
-  @Schema(description = "Max capacity", example = "2", required = true)
-  @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
-  @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
-  val maxCapacity: Int = 0,
-  @Schema(description = "Working capacity", example = "1", required = true)
-  @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
-  @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
-  val workingCapacity: Int = 0,
-  @Schema(description = "Used For list", example = "STANDARD_ACCOMMODATION, PERSONALITY_DISORDER", required = false)
-  val usedForTypes: List<UsedForType>? = null,
-)
