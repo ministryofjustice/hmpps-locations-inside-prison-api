@@ -103,6 +103,23 @@ workflows:
           requires:
             - request-preprod-approval
           helm_timeout: 5m
+      - hmpps/deploy_env:
+          name: deploy_train
+          env: "train"
+          jira_update: true
+          jira_env_type: development
+          pipeline_id: <<pipeline.id>>
+          pipeline_number: <<pipeline.number>>
+          slack_notification: true
+          slack_channel_name: << pipeline.parameters.releases-slack-channel >>
+          context:
+            - hmpps-common-vars
+            - hmpps-locations-inside-prison-api-train
+          requires:
+            - validate
+            - build_docker
+            - helm_lint
+          helm_timeout: 5m
       - request-prod-approval:
           type: approval
           requires:
@@ -121,21 +138,6 @@ workflows:
             - hmpps-locations-inside-prison-api-prod
           requires:
             - request-prod-approval
-          helm_timeout: 5m
-      - hmpps/deploy_env:
-          name: deploy_train
-          env: "train"
-          jira_update: true
-          jira_env_type: development
-          pipeline_id: <<pipeline.id>>
-          pipeline_number: <<pipeline.number>>
-          slack_notification: true
-          slack_channel_name: << pipeline.parameters.releases-slack-channel >>
-          context:
-            - hmpps-common-vars
-            - hmpps-locations-inside-prison-api-train
-          requires:
-            - request-preprod-approval
           helm_timeout: 5m
 
   security:
