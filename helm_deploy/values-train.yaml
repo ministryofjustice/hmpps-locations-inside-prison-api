@@ -1,0 +1,23 @@
+---
+# Per environment values which override defaults in hmpps-locations-inside-prison-api/values.yaml
+
+generic-service:
+  replicaCount: 2
+
+  ingress:
+    host: locations-inside-prison-api-train.hmpps.service.justice.gov.uk
+
+  env:
+    APPLICATIONINSIGHTS_CONFIGURATION_FILE: applicationinsights.dev.json
+    API_BASE_URL_OAUTH: https://sign-in-preprod.hmpps.service.justice.gov.uk/auth
+    API_BASE_URL_PRISONER_SEARCH: http://localhost:8090
+    SERVICE_ACTIVE_PRISONS: "BCI"
+
+  scheduledDowntime:
+    enabled: false
+
+# CloudPlatform AlertManager receiver to route prometheus alerts to slack
+# See https://user-guide.cloud-platform.service.justice.gov.uk/documentation/monitoring-an-app/how-to-create-alarms.html#creating-your-own-custom-alerts
+generic-prometheus-alerts:
+  businessHoursOnly: true
+  alertSeverity: digital-prison-service-dev
