@@ -116,9 +116,7 @@ workflows:
             - hmpps-common-vars
             - hmpps-locations-inside-prison-api-train
           requires:
-            - validate
-            - build_docker
-            - helm_lint
+            - deploy_dev
           helm_timeout: 5m
       - request-prod-approval:
           type: approval
