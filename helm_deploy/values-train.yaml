@@ -3,7 +3,7 @@
 
 generic-service:
   replicaCount: 2
-
+  serviceAccountName: null
   ingress:
     host: locations-inside-prison-api-train.hmpps.service.justice.gov.uk
 
