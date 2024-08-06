@@ -17,14 +17,14 @@ generic-service:
 
   extraContainers:
     - name: wiremock
-      image: "quay.io/hmpps/cp-wiremock"
+      image: "quay.io/hmpps/cp-wiremock:latest"
       imagePullPolicy: IfNotPresent
       ports:
         - name: http
           containerPort: 8090
           protocol: TCP
     - name: localstack
-      image: "quay.io/hmpps/cp-localstack"
+      image: "quay.io/hmpps/cp-localstack:latest"
       imagePullPolicy: IfNotPresent
       ports:
         - name: http
