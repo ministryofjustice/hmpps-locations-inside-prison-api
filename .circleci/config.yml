@@ -99,7 +99,7 @@ workflows:
           pipeline_number: <<pipeline.number>>
           context:
             - hmpps-common-vars
-            - hmpps-locations-inside-prison-api-preprod
+            - hmpps-locations-inside-prison-preprod
           requires:
             - request-preprod-approval
           helm_timeout: 5m
@@ -111,9 +111,9 @@ workflows:
           pipeline_number: <<pipeline.number>>
           context:
             - hmpps-common-vars
-            - hmpps-locations-inside-prison-api-train
+            - hmpps-locations-inside-prison-train
           requires:
-            - deploy_dev
+            - request-preprod-approval
           helm_timeout: 5m
       - request-prod-approval:
           type: approval
@@ -130,7 +130,7 @@ workflows:
           slack_channel_name: << pipeline.parameters.releases-slack-channel >>
           context:
             - hmpps-common-vars
-            - hmpps-locations-inside-prison-api-prod
+            - hmpps-locations-inside-prison-prod
           requires:
             - request-prod-approval
           helm_timeout: 5m
