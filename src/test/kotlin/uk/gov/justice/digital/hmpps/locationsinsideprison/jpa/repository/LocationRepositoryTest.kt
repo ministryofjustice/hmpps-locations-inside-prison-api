@@ -25,7 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousing
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import java.time.LocalDate
 import java.time.LocalDateTime
 
@@ -137,7 +137,7 @@ class LocationRepositoryTest : TestBase() {
     assertThat(cell3Converted.isCertified()).isFalse()
 
     cell3Converted.convertToCell(
-      accommodationType = LocationResidentialResource.AllowedAccommodationTypeForConversion.NORMAL_ACCOMMODATION,
+      accommodationType = AllowedAccommodationTypeForConversion.NORMAL_ACCOMMODATION,
       usedForTypes = listOf(UsedForType.FIRST_NIGHT_CENTRE, UsedForType.MOTHER_AND_BABY),
       specialistCellType = SpecialistCellType.SAFE_CELL,
       maxCapacity = 1,

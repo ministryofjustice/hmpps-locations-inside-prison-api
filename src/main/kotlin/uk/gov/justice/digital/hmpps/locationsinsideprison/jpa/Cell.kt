@@ -14,7 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -177,7 +177,7 @@ class Cell(
     certification = null
   }
 
-  fun convertToCell(accommodationType: LocationResidentialResource.AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
+  fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
     addHistory(
       LocationAttribute.ACCOMMODATION_TYPE,
       this.accommodationType.description,

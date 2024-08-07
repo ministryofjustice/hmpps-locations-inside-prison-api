@@ -51,7 +51,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlrea
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocationResult
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
@@ -643,7 +643,7 @@ class LocationService(
   }
 
   @Transactional
-  fun convertToCell(id: UUID, accommodationType: LocationResidentialResource.AllowedAccommodationTypeForConversion, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, usedForTypes: List<UsedForType>? = null): LocationDTO {
+  fun convertToCell(id: UUID, accommodationType: AllowedAccommodationTypeForConversion, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, usedForTypes: List<UsedForType>? = null): LocationDTO {
     val locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 

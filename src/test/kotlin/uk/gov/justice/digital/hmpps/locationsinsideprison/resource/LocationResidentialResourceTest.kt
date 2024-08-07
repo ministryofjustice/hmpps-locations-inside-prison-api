@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 
@@ -1383,14 +1384,14 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
   @Nested
   inner class ConvertToCellTest {
     var convertToCellRequest = LocationResidentialResource.ConvertToCellRequest(
-      accommodationType = LocationResidentialResource.AllowedAccommodationTypeForConversion.NORMAL_ACCOMMODATION,
+      accommodationType = AllowedAccommodationTypeForConversion.NORMAL_ACCOMMODATION,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = 2,
       workingCapacity = 2,
     )
 
     var convertToCellRequestNotValidMaxCapacity = LocationResidentialResource.ConvertToCellRequest(
-      accommodationType = LocationResidentialResource.AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
+      accommodationType = AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = -1,
       workingCapacity = 2,
@@ -1398,7 +1399,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     )
 
     private var convertToCellRequestNotValidWorkingCapacity = LocationResidentialResource.ConvertToCellRequest(
-      accommodationType = LocationResidentialResource.AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
+      accommodationType = AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = 1,
       workingCapacity = -1,
@@ -1406,7 +1407,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     )
 
     private var convertToCellRequestValidCareAndSeparation = LocationResidentialResource.ConvertToCellRequest(
-      accommodationType = LocationResidentialResource.AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
+      accommodationType = AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = 2,
       workingCapacity = 2,
@@ -1414,7 +1415,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     )
 
     private var convertToCellRequestValidHealthCareInpatients = LocationResidentialResource.ConvertToCellRequest(
-      accommodationType = LocationResidentialResource.AllowedAccommodationTypeForConversion.HEALTHCARE_INPATIENTS,
+      accommodationType = AllowedAccommodationTypeForConversion.HEALTHCARE_INPATIENTS,
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       maxCapacity = 2,
       workingCapacity = 2,
