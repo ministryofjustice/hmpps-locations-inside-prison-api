@@ -1,15 +1,19 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisDeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -32,6 +36,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SyncService
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.UUID
@@ -130,6 +135,47 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     landing1.addChildLocation(room)
     landing1.addChildLocation(nonRes)
     repository.save(wingB)
+  }
+
+  @Nested
+  inner class Service {
+    private val syncService: SyncService = Mockito.mock()
+
+    val toLegacyDto = LegacyLocation(
+      id = UUID.randomUUID(),
+      prisonId = "ZZGHI",
+      code = "001",
+      pathHierarchy = "B-1-001",
+      locationType = LocationType.CELL,
+      residentialHousingType = null,
+      localName = null,
+      comments = null,
+      capacity = null,
+      certification = null,
+      attributes = null,
+      usage = null,
+      active = true,
+      permanentlyDeactivated = false,
+      parentId = UUID.randomUUID(),
+      lastModifiedBy = "user",
+      lastModifiedDate = LocalDateTime.now(),
+    )
+
+    @Test
+    fun `when sync service getLegacyLocation return data includeHistory false`() {
+      whenever(cell.id?.let { syncService.getLegacyLocation(it, false) }).thenReturn(toLegacyDto)
+      Assertions.assertEquals(cell.prisonId, toLegacyDto.prisonId)
+      Assertions.assertEquals(cell.getPathHierarchy(), toLegacyDto.pathHierarchy)
+      Assertions.assertEquals(cell.id?.let { repository.findById(it).get().getPathHierarchy() }, toLegacyDto.pathHierarchy)
+    }
+
+    @Test
+    fun `when sync service getLegacyLocation return data includeHistory true`() {
+      whenever(cell.id?.let { syncService.getLegacyLocation(it, true) }).thenReturn(toLegacyDto)
+      Assertions.assertEquals(cell.prisonId, toLegacyDto.prisonId)
+      Assertions.assertEquals(cell.getPathHierarchy(), toLegacyDto.pathHierarchy)
+      Assertions.assertEquals(cell.id?.let { repository.findById(it).get().getPathHierarchy() }, toLegacyDto.pathHierarchy)
+    }
   }
 
   @DisplayName("POST /sync/upsert")
