@@ -41,6 +41,8 @@ spring:
       seed:
         - "dev"
         - "seed"
+      train:
+        - "train"
   jpa:
     open-in-view: false
     show-sql: false
