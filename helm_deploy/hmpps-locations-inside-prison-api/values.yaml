@@ -37,14 +37,6 @@ generic-service:
       DATABASE_PASSWORD: "database_password"
       SPRING_FLYWAY_USER: "database_username"
       SPRING_FLYWAY_PASSWORD: "database_password"
-    hmpps-domain-events-topic:
-      HMPPS_SQS_TOPICS_DOMAINEVENTS_ARN: "topic_arn"
-    sqs-hmpps-audit-secret:
-      HMPPS_SQS_QUEUES_AUDIT_QUEUE_NAME: "sqs_queue_name"
-    sqs-prisoner-event-queue-secret:
-      HMPPS_SQS_QUEUES_LOCATIONSINSIDEPRISON_QUEUE_NAME: "sqs_queue_name"
-    sqs-prisoner-event-queue-dlq-secret:
-      HMPPS_SQS_QUEUES_LOCATIONSINSIDEPRISON_DLQ_NAME: "sqs_queue_name"
 
   allowlist:
     groups:

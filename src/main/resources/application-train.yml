@@ -1,0 +1,12 @@
+hmpps.sqs:
+  provider: localstack
+  queues:
+    audit:
+      queueName: ${random.uuid}
+  topics:
+    domainevents:
+      arn: arn:aws:sns:eu-west-2:000000000000:${random.uuid}
+
+spring:
+  flyway:
+    locations: classpath:db/migration,classpath:db/training
