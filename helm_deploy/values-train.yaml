@@ -10,21 +10,21 @@ generic-service:
   env:
     APPLICATIONINSIGHTS_CONFIGURATION_FILE: applicationinsights.dev.json
     API_BASE_URL_OAUTH: https://sign-in-preprod.hmpps.service.justice.gov.uk/auth
-    API_BASE_URL_PRISONER_SEARCH: http://wiremock:8090
-    HMPPS_SQS_LOCALSTACK_URL: http://localstack:4566
+    API_BASE_URL_PRISONER_SEARCH: http://localhost:8090
+    HMPPS_SQS_LOCALSTACK_URL: http://localhost:4566
     SERVICE_ACTIVE_PRISONS: "BCI"
     SPRING_PROFILES_ACTIVE: train
 
   extraContainers:
     - name: wiremock
-      image: "quay.io/hmpps/cp-wiremock:latest"
+      image: "ghcr.io/ministryofjustice/hmpps-wiremock:latest"
       imagePullPolicy: IfNotPresent
       ports:
         - name: http
           containerPort: 8090
           protocol: TCP
     - name: localstack
-      image: "quay.io/hmpps/cp-localstack:latest"
+      image: "ghcr.io/ministryofjustice/hmpps-localstack:latest"
       imagePullPolicy: IfNotPresent
       ports:
         - name: http
