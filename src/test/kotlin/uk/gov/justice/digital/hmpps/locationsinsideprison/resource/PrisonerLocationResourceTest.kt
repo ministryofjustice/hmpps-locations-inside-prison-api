@@ -49,5 +49,48 @@ class PrisonerLocationResourceTest : CommonDataTestBase() {
           .expectStatus().isForbidden
       }
     }
+
+    //TODO wing or cell don't return data
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve details of a location by key`() {
+        val result = webTestClient.get().uri("/locations/key/${cell1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """   {
+    "cellLocation": "1-1-001",
+    "prisoners": [
+      {
+        "prisonerNumber": "A1234AA",
+        "prisonId": "LEI",
+        "prisonName": "HMP Leeds",
+        "cellLocation": "1-1-001",
+        "firstName": "Dave",
+        "lastName": "Jones",
+        "gender": "Male",
+        "csra": "High",
+        "category": "C",
+        "alerts": [
+          {
+            "alertType": "X",
+            "alertCode": "XA",
+            "active": true,
+            "expired": false
+          }
+        ]
+      }
+    ]
+  }
+          """,
+            false,
+          )
+      }
+    }
   }
 }
