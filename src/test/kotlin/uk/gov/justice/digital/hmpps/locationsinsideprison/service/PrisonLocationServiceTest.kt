@@ -84,7 +84,7 @@ class PrisonLocationServiceTest {
     whenever(cell.getPathHierarchy()).thenReturn("path")
     whenever(cell.cellLocations()).thenReturn(listOf(cell))
     whenever(cell.prisonId).thenReturn("MDI")
-    val prisoner = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1", gender = "MALE", null, null, alerts)
+    val prisoner = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1", gender = "MALE", alerts = alerts)
 
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(cell))
 
