@@ -77,12 +77,14 @@ class PrisonLocationServiceTest {
   }
 
   @Test
-  fun `Get prisoners in location id`() {
+  fun `Get prisoners in location id with alert`() {
     val cell: Cell = mock()
+    val alerts = listOf(Alert("X", "XA", true, false), Alert("X", "XA", true, false))
+
     whenever(cell.getPathHierarchy()).thenReturn("path")
     whenever(cell.cellLocations()).thenReturn(listOf(cell))
     whenever(cell.prisonId).thenReturn("MDI")
-    val prisoner = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1", gender = "MALE")
+    val prisoner = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1", gender = "MALE", alerts = alerts)
 
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(cell))
 
