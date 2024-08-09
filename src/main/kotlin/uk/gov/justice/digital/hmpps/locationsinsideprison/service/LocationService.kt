@@ -53,7 +53,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocationResult
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
 import java.time.LocalDate
@@ -839,6 +838,20 @@ class LocationService(
   }
 }
 
+fun buildEventsToPublishOnUpdate(results: UpdateLocationResult): () -> Map<InternalLocationDomainEventType, List<LocationDTO>> {
+  val locationsChanged = if (results.otherParentLocationChanged != null) {
+    listOf(results.location, results.otherParentLocationChanged)
+  } else {
+    listOf(results.location)
+  }
+
+  return {
+    mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to locationsChanged,
+    )
+  }
+}
+
 @Schema(description = "Residential Summary")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ResidentialSummary(
@@ -873,4 +886,9 @@ data class UpdatedSummary(
   val codeChanged: Boolean = false,
   val oldParent: Location? = null,
   val parentChanged: Boolean = false,
+)
+
+data class UpdateLocationResult(
+  val location: LocationDTO,
+  val otherParentLocationChanged: LocationDTO? = null,
 )

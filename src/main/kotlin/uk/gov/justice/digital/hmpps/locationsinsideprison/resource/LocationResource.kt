@@ -370,8 +370,3 @@ class LocationResource(
     }
   }
 }
-
-data class UpdateLocationResult(
-  val location: LocationDTO,
-  val otherParentLocationChanged: LocationDTO? = null,
-)
