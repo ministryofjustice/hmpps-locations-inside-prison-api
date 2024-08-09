@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.PositiveOrZero
+import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
@@ -22,11 +23,9 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
@@ -35,6 +34,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialSummary
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.buildEventsToPublishOnUpdate
 import java.util.*
 
 @RestController
@@ -201,56 +201,6 @@ class LocationResidentialResource(
     }
   }
 
-  @PostMapping("/non-residential", produces = [MediaType.APPLICATION_JSON_VALUE])
-  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
-  @ResponseStatus(HttpStatus.CREATED)
-  @Operation(
-    summary = "Creates a non-residential location",
-    description = "Requires role MAINTAIN_LOCATIONS and write scope",
-    responses = [
-      ApiResponse(
-        responseCode = "201",
-        description = "Returns created location",
-      ),
-      ApiResponse(
-        responseCode = "400",
-        description = "Invalid Request",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "401",
-        description = "Unauthorized to access this endpoint",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "403",
-        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Data not found",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "409",
-        description = "Location already exists",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-    ],
-  )
-  fun createNonResidentialLocation(
-    @RequestBody
-    @Validated
-    createNonResidentialLocationRequest: CreateNonResidentialLocationRequest,
-  ): Location {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_CREATED,
-    ) {
-      locationService.createNonResidentialLocation(createNonResidentialLocationRequest)
-    }
-  }
-
   @PatchMapping("/residential/{id}")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
@@ -297,74 +247,9 @@ class LocationResidentialResource(
     patchLocationRequest: PatchResidentialLocationRequest,
   ): Location {
     val results = locationService.updateResidentialLocation(id, patchLocationRequest)
-    eventPublish(buildEvents(results))
+    eventPublish(buildEventsToPublishOnUpdate(results))
     audit(id.toString()) { results.location.copy(childLocations = null, parentLocation = null) }
     return results.location
-  }
-
-  @PatchMapping("/non-residential/{id}")
-  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
-  @Operation(
-    summary = "Partial update of a non-residential location",
-    description = "Requires role MAINTAIN_LOCATIONS and write scope",
-    responses = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Returns updated location",
-      ),
-      ApiResponse(
-        responseCode = "400",
-        description = "Invalid Request",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "401",
-        description = "Unauthorized to access this endpoint",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "403",
-        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "404",
-        description = "Data not found",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "409",
-        description = "Location already exists",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-    ],
-  )
-  fun patchNonResidentialLocation(
-    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
-    @PathVariable
-    id: UUID,
-    @RequestBody
-    @Validated
-    patchLocationRequest: PatchNonResidentialLocationRequest,
-  ): Location {
-    val results = locationService.updateNonResidentialLocation(id, patchLocationRequest)
-    eventPublish(buildEvents(results))
-    audit(id.toString()) { results.location.copy(childLocations = null, parentLocation = null) }
-    return results.location
-  }
-
-  fun buildEvents(results: UpdateLocationResult): () -> Map<InternalLocationDomainEventType, List<Location>> {
-    val locationsChanged = if (results.otherParentLocationChanged != null) {
-      listOf(results.location, results.otherParentLocationChanged)
-    } else {
-      listOf(results.location)
-    }
-
-    return {
-      mapOf(
-        InternalLocationDomainEventType.LOCATION_AMENDED to locationsChanged,
-      )
-    }
   }
 
   @PutMapping("/{id}/convert-cell-to-non-res-cell")
@@ -481,7 +366,8 @@ class LocationResidentialResource(
   data class ConvertCellToNonResidentialLocationRequest(
     @Schema(description = "Cell type to convert to", example = "SHOWER", required = true)
     val convertedCellType: ConvertedCellType,
-    @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false)
+    @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false, maxLength = 255)
+    @field:Size(max = 255, message = "Description of other cell type must be no more than 255 characters")
     val otherConvertedCellType: String? = null,
   )
 
