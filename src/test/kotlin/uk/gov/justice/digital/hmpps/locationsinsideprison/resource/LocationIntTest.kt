@@ -412,6 +412,49 @@ class LocationResourceIntTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `cannot deactivated location with other reason without a free text value`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))
+          .exchange()
+          .expectStatus().isBadRequest
+          .expectBody().json(
+            """
+              { "errorCode": 118 }
+            """.trimIndent(),
+            false,
+          )
+      }
+
+      @Test
+      fun `cannot update a deactivated location with other reason without a free text value`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))
+          .exchange()
+          .expectStatus().isBadRequest
+          .expectBody().json(
+            """
+              { "errorCode": 118 }
+            """.trimIndent(),
+            false,
+          )
+      }
+
+      @Test
       fun `cannot deactivate a location when prisoner is inside the cell`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), true)
 
@@ -457,7 +500,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Window smashed", proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -481,6 +524,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "active": false,
                 "deactivatedDate": "$now",
                 "deactivatedReason": "DAMAGED",
+                "deactivationReasonDescription": "Window smashed",
                 "permanentlyInactive": false,
                 "proposedReactivationDate": "$proposedReactivationDate",
                 "topLevelId": "${wingZ.id}",
@@ -602,6 +646,61 @@ class LocationResourceIntTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `can deactivate a location with other reason`() {
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        val now = LocalDateTime.now(clock)
+        val proposedReactivationDate = now.plusMonths(1).toLocalDate()
+
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = "Not Needed", proposedReactivationDate = proposedReactivationDate)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "id": "${cell1.id}",
+                "prisonId": "MDI",
+                "code": "001",
+                "pathHierarchy": "Z-1-001",
+                "locationType": "CELL",
+                "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
+                "capacity": {
+                  "maxCapacity": 2,
+                  "workingCapacity": 0
+                },
+                "certification": {
+                  "certified": true,
+                  "capacityOfCertifiedCell": 2
+                },
+                "active": false,
+                "deactivatedDate": "$now",
+                "deactivatedReason": "OTHER",
+                "deactivationReasonDescription": "Not Needed",
+                "permanentlyInactive": false,
+                "proposedReactivationDate": "$proposedReactivationDate",
+                "topLevelId": "${wingZ.id}",
+                "isResidential": true,
+                "key": "MDI-Z-1-001",
+                "deactivatedBy": "LOCATIONS_INSIDE_PRISON_API"
+              }
+          """,
+            false,
+          )
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
+      @Test
       fun `can update a deactivated location`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
@@ -617,7 +716,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, planetFmReference = "334423", proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, deactivationReasonDescription = "Spiders", planetFmReference = "334423", proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
 
@@ -649,6 +748,65 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "proposedReactivationDate": "$proposedReactivationDate",
                 "deactivatedDate": "$now",
                 "deactivatedReason": "MOTHBALLED",
+                "deactivationReasonDescription": "Spiders",
+                "planetFmReference": "334423",
+                "isResidential": true,
+                "key": "MDI-Z-1-001"
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can update a deactivated location with other reason`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        val now = LocalDateTime.now(clock)
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .exchange()
+          .expectStatus().isOk
+
+        val proposedReactivationDate = now.plusMonths(1).toLocalDate()
+        webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = "Poor state", planetFmReference = "334423", proposedReactivationDate = proposedReactivationDate)))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(4).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+          )
+        }
+
+        webTestClient.get().uri("/locations/${cell1.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+                "prisonId": "MDI",
+                "code": "001",
+                "pathHierarchy": "Z-1-001",
+                "locationType": "CELL",
+                "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                "active": false,
+                "deactivatedByParent": false,
+                "proposedReactivationDate": "$proposedReactivationDate",
+                "deactivatedDate": "$now",
+                "deactivatedReason": "OTHER",
+                "deactivationReasonDescription": "Poor state",
                 "planetFmReference": "334423",
                 "isResidential": true,
                 "key": "MDI-Z-1-001"

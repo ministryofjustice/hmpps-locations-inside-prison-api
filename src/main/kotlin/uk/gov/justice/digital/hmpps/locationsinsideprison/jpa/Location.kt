@@ -71,6 +71,7 @@ abstract class Location(
   open var deactivatedDate: LocalDateTime? = null,
   @Enumerated(EnumType.STRING)
   open var deactivatedReason: DeactivatedReason? = null,
+  open var deactivationReasonDescription: String? = null,
   open var proposedReactivationDate: LocalDate? = null,
   open var planetFmReference: String? = null,
 
@@ -323,6 +324,7 @@ abstract class Location(
     } else {
       null
     }
+    val deactivatedLocation = findDeactivatedLocationInHierarchy()
     return LocationDto(
       id = id!!,
       code = getCode(),
@@ -351,9 +353,10 @@ abstract class Location(
       permanentlyInactiveReason = archivedReason,
       planetFmReference = planetFmReference,
       deactivatedByParent = isActive() && !isActiveAndAllParentsActive(),
-      deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
-      deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
-      proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
+      deactivatedDate = deactivatedLocation?.deactivatedDate,
+      deactivatedReason = deactivatedLocation?.deactivatedReason,
+      deactivationReasonDescription = deactivatedLocation?.deactivationReasonDescription,
+      proposedReactivationDate = deactivatedLocation?.proposedReactivationDate,
       childLocations = if (includeChildren) {
         childLocations.filter { !it.isPermanentlyDeactivated() }
           .filter { includeNonResidential || it is ResidentialLocation }
@@ -480,6 +483,7 @@ abstract class Location(
         temporarilyDeactivate(
           deactivatedReason = upsert.deactivationReason!!.mapsTo(),
           deactivatedDate = upsert.deactivatedDate?.atStartOfDay() ?: LocalDateTime.now(clock),
+          deactivationReasonDescription = upsert.comments,
           proposedReactivationDate = upsert.proposedReactivationDate,
           userOrSystemInContext = updatedBy,
           clock = clock,
@@ -493,6 +497,7 @@ abstract class Location(
   open fun temporarilyDeactivate(
     deactivatedReason: DeactivatedReason,
     deactivatedDate: LocalDateTime,
+    deactivationReasonDescription: String? = null,
     planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
@@ -507,6 +512,13 @@ abstract class Location(
         LocationAttribute.DEACTIVATED_REASON,
         this.deactivatedReason?.description,
         deactivatedReason.description,
+        userOrSystemInContext,
+        amendedDate,
+      )
+      addHistory(
+        LocationAttribute.DEACTIVATED_REASON_DESCRIPTION,
+        this.deactivationReasonDescription,
+        deactivationReasonDescription,
         userOrSystemInContext,
         amendedDate,
       )
@@ -534,6 +546,7 @@ abstract class Location(
 
       this.active = false
       this.deactivatedReason = deactivatedReason
+      this.deactivationReasonDescription = deactivationReasonDescription
       this.deactivatedDate = deactivatedDate
       this.proposedReactivationDate = proposedReactivationDate
       this.planetFmReference = planetFmReference
@@ -544,10 +557,11 @@ abstract class Location(
       if (this is ResidentialLocation) {
         findSubLocations().filterIsInstance<ResidentialLocation>().forEach { location ->
           location.temporarilyDeactivate(
-            planetFmReference = planetFmReference,
-            proposedReactivationDate = proposedReactivationDate,
             deactivatedReason = deactivatedReason,
             deactivatedDate = deactivatedDate,
+            deactivationReasonDescription = deactivationReasonDescription,
+            planetFmReference = planetFmReference,
+            proposedReactivationDate = proposedReactivationDate,
             userOrSystemInContext = userOrSystemInContext,
             clock = clock,
           )
@@ -560,6 +574,7 @@ abstract class Location(
 
   open fun updateDeactivatedDetails(
     deactivatedReason: DeactivatedReason,
+    deactivationReasonDescription: String? = null,
     planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
@@ -573,6 +588,13 @@ abstract class Location(
         LocationAttribute.DEACTIVATED_REASON,
         this.deactivatedReason?.description,
         deactivatedReason.description,
+        userOrSystemInContext,
+        amendedDate,
+      )
+      addHistory(
+        LocationAttribute.DEACTIVATED_REASON_DESCRIPTION,
+        this.deactivationReasonDescription,
+        deactivationReasonDescription,
         userOrSystemInContext,
         amendedDate,
       )
@@ -592,6 +614,7 @@ abstract class Location(
       )
 
       this.deactivatedReason = deactivatedReason
+      this.deactivationReasonDescription = deactivationReasonDescription
       this.proposedReactivationDate = proposedReactivationDate
       this.planetFmReference = planetFmReference
       this.updatedBy = userOrSystemInContext
@@ -600,9 +623,10 @@ abstract class Location(
       if (this is ResidentialLocation) {
         findSubLocations().forEach { location ->
           location.updateDeactivatedDetails(
+            deactivatedReason = deactivatedReason,
+            deactivationReasonDescription = deactivationReasonDescription,
             planetFmReference = planetFmReference,
             proposedReactivationDate = proposedReactivationDate,
-            deactivatedReason = deactivatedReason,
             userOrSystemInContext = userOrSystemInContext,
             clock = clock,
           )
@@ -645,6 +669,7 @@ abstract class Location(
       this.deactivatedReason = null
       this.proposedReactivationDate = null
       this.planetFmReference = null
+      this.deactivationReasonDescription = null
       this.deactivatedBy = userOrSystemInContext
       this.archivedReason = reason
       this.updatedBy = userOrSystemInContext
@@ -701,6 +726,7 @@ abstract class Location(
       this.active = true
       this.deactivatedReason = null
       this.deactivatedDate = null
+      this.deactivationReasonDescription = null
       this.planetFmReference = null
       this.proposedReactivationDate = null
       this.updatedBy = userOrSystemInContext

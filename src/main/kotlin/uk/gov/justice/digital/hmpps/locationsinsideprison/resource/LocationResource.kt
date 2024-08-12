@@ -217,6 +217,7 @@ class LocationResource(
       locationService.deactivateLocation(
         id,
         deactivatedReason = temporaryDeactivationLocationRequest.deactivationReason,
+        deactivationReasonDescription = temporaryDeactivationLocationRequest.deactivationReasonDescription,
         proposedReactivationDate = temporaryDeactivationLocationRequest.proposedReactivationDate,
         planetFmReference = temporaryDeactivationLocationRequest.planetFmReference,
       )
@@ -269,6 +270,7 @@ class LocationResource(
       locationService.updateDeactivatedDetails(
         id,
         deactivatedReason = updateDeactivationDetailsRequest.deactivationReason,
+        deactivationReasonDescription = updateDeactivationDetailsRequest.deactivationReasonDescription,
         proposedReactivationDate = updateDeactivationDetailsRequest.proposedReactivationDate,
         planetFmReference = updateDeactivationDetailsRequest.planetFmReference,
       )
@@ -370,8 +372,3 @@ class LocationResource(
     }
   }
 }
-
-data class UpdateLocationResult(
-  val location: LocationDTO,
-  val otherParentLocationChanged: LocationDTO? = null,
-)
