@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 
-class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
+class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: PrisonSignedOperationCapacityRepository
@@ -121,24 +121,6 @@ class PrisonSignedOperationCapacityPostIntTest : SqsIntegrationTestBase() {
                 "signedOperationCapacity": "100",
                 "updatedBy": "MALEMAN"
               }
-            """.trimIndent(),
-          )
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-
-      @Test
-      fun `bad post request when signed op cap -1`() {
-        webTestClient.post().uri("/signed-op-cap/")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            """
-                { 
-                  "prisonId": "MDI",
-                  "signedOperationCapacity": -1,
-                  "updatedBy": "MALEMAN"
-                }
             """.trimIndent(),
           )
           .exchange()

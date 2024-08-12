@@ -203,6 +203,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(PrisonNotFoundException::class)
+  fun handlePrisonNotFound(e: PrisonNotFoundException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Prison not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.LocationNotFound,
+          userMessage = "Prison not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(LocationPrefixNotFoundException::class)
   fun handleLocationPrefixNotFound(e: LocationPrefixNotFoundException): ResponseEntity<ErrorResponse?>? {
     log.debug("Location prefix not found exception caught: {}", e.message)
@@ -342,6 +357,8 @@ class ApiExceptionHandler {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
 }
+
+class PrisonNotFoundException(id: String) : Exception("There is no prison found for ID = $id")
 
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
 
