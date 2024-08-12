@@ -1,0 +1,1 @@
+ALTER TABLE location RENAME COLUMN other_deactivation_reason TO deactivation_reason_description;

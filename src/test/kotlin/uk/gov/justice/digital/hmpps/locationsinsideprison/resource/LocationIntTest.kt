@@ -433,7 +433,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
       fun `cannot update a deactivated location with other reason without a free text value`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        val now = LocalDateTime.now(clock)
         webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -501,7 +500,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Window smashed", proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -525,6 +524,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "active": false,
                 "deactivatedDate": "$now",
                 "deactivatedReason": "DAMAGED",
+                "deactivationReasonDescription": "Window smashed",
                 "permanentlyInactive": false,
                 "proposedReactivationDate": "$proposedReactivationDate",
                 "topLevelId": "${wingZ.id}",
@@ -655,7 +655,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, otherDeactivationReason = "Not Needed", proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = "Not Needed", proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -679,7 +679,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "active": false,
                 "deactivatedDate": "$now",
                 "deactivatedReason": "OTHER",
-                "otherDeactivationReason": "Not Needed",
+                "deactivationReasonDescription": "Not Needed",
                 "permanentlyInactive": false,
                 "proposedReactivationDate": "$proposedReactivationDate",
                 "topLevelId": "${wingZ.id}",
@@ -716,7 +716,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, planetFmReference = "334423", proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, deactivationReasonDescription = "Spiders", planetFmReference = "334423", proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
 
@@ -748,6 +748,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "proposedReactivationDate": "$proposedReactivationDate",
                 "deactivatedDate": "$now",
                 "deactivatedReason": "MOTHBALLED",
+                "deactivationReasonDescription": "Spiders",
                 "planetFmReference": "334423",
                 "isResidential": true,
                 "key": "MDI-Z-1-001"
@@ -773,7 +774,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, otherDeactivationReason = "Poor state", planetFmReference = "334423", proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = "Poor state", planetFmReference = "334423", proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
 
@@ -805,7 +806,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "proposedReactivationDate": "$proposedReactivationDate",
                 "deactivatedDate": "$now",
                 "deactivatedReason": "OTHER",
-                "otherDeactivationReason": "Poor state",
+                "deactivationReasonDescription": "Poor state",
                 "planetFmReference": "334423",
                 "isResidential": true,
                 "key": "MDI-Z-1-001"

@@ -96,6 +96,7 @@ enum class LocationAttribute(
   ACTIVE("Active"),
   DEACTIVATED_DATE("Deactivated Date"),
   DEACTIVATED_REASON("Deactivated Reason"),
+  DEACTIVATED_REASON_DESCRIPTION("Deactivated Reason Description"),
   PROPOSED_REACTIVATION_DATE("Proposed Reactivation Date"),
   ACCOMMODATION_TYPE("Accommodation Type"),
   SPECIALIST_CELL_TYPE("Specialist Cell Type"),
