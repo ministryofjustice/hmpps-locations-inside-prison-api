@@ -149,8 +149,8 @@ INSERT INTO capacity (max_capacity, working_capacity) VALUES (2,1);
 INSERT INTO certification (certified, capacity_of_certified_cell) VALUES (true, 1);
 UPDATE location set capacity_id = currval('capacity_id_seq'), certification_id = currval('certification_id_seq') WHERE prison_id = 'MDI' and path_hierarchy = 'A-2-002';
 
-INSERT INTO location (prison_id, path_hierarchy, code, location_type, parent_id, accommodation_type, residential_housing_type, deactivated_by, planet_fm_reference, proposed_reactivation_date, deactivated_reason, deactivated_date, active, when_created, when_updated, updated_by)
-values ('MDI', 'A-2-003', '003', 'CELL', (select id from location where prison_id = 'MDI' and path_hierarchy = 'A-2'), 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', 'LOCATION_RO', 'FT9232/1', current_date + interval '100 days', 'MAINTENANCE', now(), false,  now(), now(), 'LOCATION_RO');
+INSERT INTO location (prison_id, path_hierarchy, code, location_type, parent_id, accommodation_type, residential_housing_type, deactivated_by, planet_fm_reference, proposed_reactivation_date, deactivated_reason, other_deactivation_reason, deactivated_date, active, when_created, when_updated, updated_by)
+values ('MDI', 'A-2-003', '003', 'CELL', (select id from location where prison_id = 'MDI' and path_hierarchy = 'A-2'), 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', 'LOCATION_RO', 'FT9232/1', current_date + interval '100 days', 'OTHER', 'Does not exist', now(), false,  now(), now(), 'LOCATION_RO');
 INSERT INTO capacity (max_capacity, working_capacity) VALUES (2,1);
 INSERT INTO certification (certified, capacity_of_certified_cell) VALUES (true, 1);
 UPDATE location set capacity_id = currval('capacity_id_seq'), certification_id = currval('certification_id_seq') WHERE prison_id = 'MDI' and path_hierarchy = 'A-2-003';

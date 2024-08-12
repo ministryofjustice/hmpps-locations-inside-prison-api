@@ -217,6 +217,7 @@ class LocationResource(
       locationService.deactivateLocation(
         id,
         deactivatedReason = temporaryDeactivationLocationRequest.deactivationReason,
+        otherDeactivationReason = temporaryDeactivationLocationRequest.otherDeactivationReason,
         proposedReactivationDate = temporaryDeactivationLocationRequest.proposedReactivationDate,
         planetFmReference = temporaryDeactivationLocationRequest.planetFmReference,
       )
@@ -269,6 +270,7 @@ class LocationResource(
       locationService.updateDeactivatedDetails(
         id,
         deactivatedReason = updateDeactivationDetailsRequest.deactivationReason,
+        otherDeactivationReason = updateDeactivationDetailsRequest.otherDeactivationReason,
         proposedReactivationDate = updateDeactivationDetailsRequest.proposedReactivationDate,
         planetFmReference = updateDeactivationDetailsRequest.planetFmReference,
       )

@@ -263,6 +263,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(ReasonForDeactivationMustBeProvidedException::class)
+  fun handleReasonForDeactivationMustBeProvided(e: ReasonForDeactivationMustBeProvidedException): ResponseEntity<ErrorResponse?>? {
+    log.debug("De-activating location requires a reason when using OTHER reason type: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.OtherReasonNotProvidedForDeactivation,
+          userMessage = "De-activating location requires a reason when using OTHER reason type: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(LocationAlreadyDeactivatedException::class)
   fun handleLocationAlreadyDeactivated(e: LocationAlreadyDeactivatedException): ResponseEntity<ErrorResponse?>? {
     log.debug("Location already deactivated: {}", e.message)
@@ -351,6 +366,7 @@ class SignedOperationCapacityNotFoundException(prisonId: String) :
   Exception("There is no signed operation capacity found for prison ID = $prisonId")
 
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
+class ReasonForDeactivationMustBeProvidedException(key: String) : Exception("De-activating location $key requires a reason when using OTHER reason type")
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
 class LocationAlreadyDeactivatedException(key: String) : ValidationException("$key is already deactivated")
 class CapacityException(val key: String, override val message: String, val errorCode: ErrorCode) : ValidationException("$key: [Error Code: $errorCode] - Capacity Exception: $message")
