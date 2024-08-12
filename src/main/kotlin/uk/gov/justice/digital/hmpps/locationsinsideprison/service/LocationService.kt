@@ -483,7 +483,7 @@ class LocationService(
   fun deactivateLocation(
     id: UUID,
     deactivatedReason: DeactivatedReason,
-    otherDeactivationReason: String? = null,
+    deactivationReasonDescription: String? = null,
     proposedReactivationDate: LocalDate? = null,
     planetFmReference: String? = null,
   ): LocationDTO {
@@ -496,14 +496,14 @@ class LocationService(
 
     checkForPrisonersInLocation(locationToDeactivate)
 
-    if (deactivatedReason == DeactivatedReason.OTHER && otherDeactivationReason == null) {
+    if (deactivatedReason == DeactivatedReason.OTHER && deactivationReasonDescription.isNullOrEmpty()) {
       throw ReasonForDeactivationMustBeProvidedException(locationToDeactivate.getKey())
     }
 
     locationToDeactivate.temporarilyDeactivate(
       deactivatedReason = deactivatedReason,
       deactivatedDate = LocalDateTime.now(clock),
-      otherDeactivationReason = otherDeactivationReason,
+      deactivationReasonDescription = deactivationReasonDescription,
       planetFmReference = planetFmReference,
       proposedReactivationDate = proposedReactivationDate,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
@@ -527,20 +527,20 @@ class LocationService(
   fun updateDeactivatedDetails(
     id: UUID,
     deactivatedReason: DeactivatedReason,
-    otherDeactivationReason: String? = null,
+    deactivationReasonDescription: String? = null,
     proposedReactivationDate: LocalDate? = null,
     planetFmReference: String? = null,
   ): LocationDTO {
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    if (deactivatedReason == DeactivatedReason.OTHER && otherDeactivationReason == null) {
+    if (deactivatedReason == DeactivatedReason.OTHER && deactivationReasonDescription.isNullOrEmpty()) {
       throw ReasonForDeactivationMustBeProvidedException(locationToUpdate.getKey())
     }
     if (locationToUpdate.isTemporarilyDeactivated()) {
       locationToUpdate.updateDeactivatedDetails(
         deactivatedReason = deactivatedReason,
-        otherDeactivationReason = otherDeactivationReason,
+        deactivationReasonDescription = deactivationReasonDescription,
         planetFmReference = planetFmReference,
         proposedReactivationDate = proposedReactivationDate,
         userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),

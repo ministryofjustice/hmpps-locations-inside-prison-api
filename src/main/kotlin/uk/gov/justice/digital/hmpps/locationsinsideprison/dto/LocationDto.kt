@@ -98,7 +98,7 @@ data class Location(
   val deactivatedReason: DeactivatedReason? = null,
 
   @Schema(description = "For OTHER deactivation reason, a free text comment is provided", example = "Window damage", required = false)
-  val otherDeactivationReason: String? = null,
+  val deactivationReasonDescription: String? = null,
 
   @Schema(description = "Staff username who deactivated the location", required = false)
   val deactivatedBy: String? = null,
@@ -425,9 +425,9 @@ data class CreateNonResidentialLocationRequest(
 data class TemporaryDeactivationLocationRequest(
   @Schema(description = "Reason for temporary deactivation", example = "MOTHBALLED", required = true)
   val deactivationReason: DeactivatedReason,
-  @Schema(description = "For OTHER deactivation reason, free text is required.", example = "The reason in plain text for the deactivation", required = false)
+  @Schema(description = "Additional information on deactivation, for OTHER DeactivatedReason must be provided", example = "Window broken", required = false)
   @field:Size(max = 255, message = "Other deactivation reason cannot be more than 255 characters")
-  val otherDeactivationReason: String? = null,
+  val deactivationReasonDescription: String? = null,
   @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
   val proposedReactivationDate: LocalDate? = null,
   @Schema(description = "Planet FM reference", example = "23423TH/5", required = false)
