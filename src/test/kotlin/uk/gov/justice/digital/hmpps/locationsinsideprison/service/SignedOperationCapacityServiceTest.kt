@@ -31,10 +31,10 @@ class SignedOperationCapacityServiceTest {
     prisonSummary = PrisonSummary(
       signedOperationalCapacity = 0,
       workingCapacity = 100,
-      maxCapacity = 135
+      maxCapacity = 135,
     ),
     subLocations = emptyList(),
-    topLevelLocationType = "Wing"
+    topLevelLocationType = "Wing",
   )
 
   @Test

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.test.context.jdbc.Sql
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 
@@ -42,7 +43,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
             """
               { 
                 "prisonId": "MDI",
-                "signedOperationCapacity": "100",
+                "signedOperationCapacity": "10",
                 "updatedBy": "MALEMAN"
               }
             """.trimIndent(),
@@ -60,7 +61,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
             """
               { 
                 "prisonId": "MDI",
-                "signedOperationCapacity": "100",
+                "signedOperationCapacity": "10",
                 "updatedBy": "MALEMAN"
               }
             """.trimIndent(),
@@ -82,7 +83,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
             """
               { 
                 "prisonId": "",
-                "signedOperationCapacity": "100",
+                "signedOperationCapacity": "10",
                 "updatedBy": "MALEMAN"
               }
             """.trimIndent(),
@@ -118,7 +119,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
             """
               { 
                 "prisonId": "X6_XXX",
-                "signedOperationCapacity": "100",
+                "signedOperationCapacity": "10",
                 "updatedBy": "MALEMAN"
               }
             """.trimIndent(),
@@ -136,7 +137,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
             """
               { 
                 "prisonId": "MDI",
-                "signedOperationCapacity": "100",
+                "signedOperationCapacity": "10",
                 "updatedBy": ""
               }
             """.trimIndent(),
@@ -144,11 +145,31 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().is4xxClientError
       }
+
+      @Test
+      @Sql("classpath:repository/insert-dummy-locations.sql")
+      fun `cannot update Signed Operation Capacity when more than max capacity`() {
+        webTestClient.post().uri("/signed-op-cap/")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            """
+              { 
+                "prisonId": "MDI",
+                "signedOperationCapacity": 12,
+                "updatedBy": "MALEMAN"
+              }
+            """.trimIndent(),
+          )
+          .exchange()
+          .expectStatus().isBadRequest
+      }
     }
 
     @Nested
     inner class HappyPath {
       @Test
+      @Sql("classpath:repository/insert-dummy-locations.sql")
       fun `can create Signed Operation Capacity`() {
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -157,7 +178,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
             """
               { 
                 "prisonId": "MDI",
-                "signedOperationCapacity": 100,
+                "signedOperationCapacity": 10,
                 "updatedBy": "MALEMAN"
               }
             """.trimIndent(),
@@ -167,7 +188,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             """
               { 
-                "signedOperationCapacity": 100,
+                "signedOperationCapacity": 10,
                 "updatedBy": "MALEMAN"
               }
             """.trimIndent(),
@@ -182,6 +203,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
+      @Sql("classpath:repository/insert-dummy-locations.sql")
       fun `can update Signed Operation Capacity`() {
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -190,7 +212,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
             """
               { 
                 "prisonId": "MDI",
-                "signedOperationCapacity": 100,
+                "signedOperationCapacity": 7,
                 "updatedBy": "MALEMAN"
               }
             """.trimIndent(),
@@ -205,7 +227,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
             """
               { 
                 "prisonId": "MDI",
-                "signedOperationCapacity": 200,
+                "signedOperationCapacity": 11,
                 "updatedBy": "TEST"
               }
             """.trimIndent(),
@@ -216,7 +238,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
             """
               { 
                 "prisonId": "MDI",
-                "signedOperationCapacity": 200,
+                "signedOperationCapacity": 11,
                 "updatedBy": "TEST"
               }
             """.trimIndent(),

@@ -11,7 +11,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperat
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import java.time.Clock
 import java.time.LocalDateTime
@@ -38,7 +37,7 @@ class SignedOperationCapacityService(
 
     val maxCap = locationService.getResidentialLocations(request.prisonId).prisonSummary?.maxCapacity ?: throw PrisonNotFoundException(request.prisonId)
     if (maxCap < request.signedOperationCapacity) {
-      throw CapacityException(request.prisonId, "Signed operational capacity cannot be more than the establishment's maximum capacity", ErrorCode.SignedOpCapCannotBeMoreThanMaXCap)
+      throw CapacityException(request.prisonId, "Signed operational capacity cannot be more than the establishment's maximum capacity of $maxCap", ErrorCode.SignedOpCapCannotBeMoreThanMaXCap)
     }
     val record =
       prisonSignedOperationalCapacityRepository.findOneByPrisonId(request.prisonId)?.also {
