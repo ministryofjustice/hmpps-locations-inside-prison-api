@@ -53,6 +53,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
 import java.time.LocalDate
@@ -482,6 +483,7 @@ class LocationService(
   fun deactivateLocation(
     id: UUID,
     deactivatedReason: DeactivatedReason,
+    otherDeactivationReason: String? = null,
     proposedReactivationDate: LocalDate? = null,
     planetFmReference: String? = null,
   ): LocationDTO {
@@ -494,11 +496,16 @@ class LocationService(
 
     checkForPrisonersInLocation(locationToDeactivate)
 
+    if (deactivatedReason == DeactivatedReason.OTHER && otherDeactivationReason == null) {
+      throw ReasonForDeactivationMustBeProvidedException(locationToDeactivate.getKey())
+    }
+
     locationToDeactivate.temporarilyDeactivate(
       deactivatedReason = deactivatedReason,
       deactivatedDate = LocalDateTime.now(clock),
-      proposedReactivationDate = proposedReactivationDate,
+      otherDeactivationReason = otherDeactivationReason,
       planetFmReference = planetFmReference,
+      proposedReactivationDate = proposedReactivationDate,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
     )
@@ -520,17 +527,22 @@ class LocationService(
   fun updateDeactivatedDetails(
     id: UUID,
     deactivatedReason: DeactivatedReason,
+    otherDeactivationReason: String? = null,
     proposedReactivationDate: LocalDate? = null,
     planetFmReference: String? = null,
   ): LocationDTO {
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
+    if (deactivatedReason == DeactivatedReason.OTHER && otherDeactivationReason == null) {
+      throw ReasonForDeactivationMustBeProvidedException(locationToUpdate.getKey())
+    }
     if (locationToUpdate.isTemporarilyDeactivated()) {
       locationToUpdate.updateDeactivatedDetails(
         deactivatedReason = deactivatedReason,
-        proposedReactivationDate = proposedReactivationDate,
+        otherDeactivationReason = otherDeactivationReason,
         planetFmReference = planetFmReference,
+        proposedReactivationDate = proposedReactivationDate,
         userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
         clock = clock,
       )

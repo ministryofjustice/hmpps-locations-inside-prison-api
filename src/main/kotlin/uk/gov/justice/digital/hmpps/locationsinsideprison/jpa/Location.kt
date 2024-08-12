@@ -71,6 +71,7 @@ abstract class Location(
   open var deactivatedDate: LocalDateTime? = null,
   @Enumerated(EnumType.STRING)
   open var deactivatedReason: DeactivatedReason? = null,
+  open var otherDeactivationReason: String? = null,
   open var proposedReactivationDate: LocalDate? = null,
   open var planetFmReference: String? = null,
 
@@ -323,6 +324,7 @@ abstract class Location(
     } else {
       null
     }
+    val deactivatedLocation = findDeactivatedLocationInHierarchy()
     return LocationDto(
       id = id!!,
       code = getCode(),
@@ -351,9 +353,10 @@ abstract class Location(
       permanentlyInactiveReason = archivedReason,
       planetFmReference = planetFmReference,
       deactivatedByParent = isActive() && !isActiveAndAllParentsActive(),
-      deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate,
-      deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
-      proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
+      deactivatedDate = deactivatedLocation?.deactivatedDate,
+      deactivatedReason = deactivatedLocation?.deactivatedReason,
+      otherDeactivationReason = deactivatedLocation?.otherDeactivationReason,
+      proposedReactivationDate = deactivatedLocation?.proposedReactivationDate,
       childLocations = if (includeChildren) {
         childLocations.filter { !it.isPermanentlyDeactivated() }
           .filter { includeNonResidential || it is ResidentialLocation }
@@ -480,6 +483,7 @@ abstract class Location(
         temporarilyDeactivate(
           deactivatedReason = upsert.deactivationReason!!.mapsTo(),
           deactivatedDate = upsert.deactivatedDate?.atStartOfDay() ?: LocalDateTime.now(clock),
+          otherDeactivationReason = upsert.comments,
           proposedReactivationDate = upsert.proposedReactivationDate,
           userOrSystemInContext = updatedBy,
           clock = clock,
@@ -493,6 +497,7 @@ abstract class Location(
   open fun temporarilyDeactivate(
     deactivatedReason: DeactivatedReason,
     deactivatedDate: LocalDateTime,
+    otherDeactivationReason: String? = null,
     planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
@@ -534,6 +539,7 @@ abstract class Location(
 
       this.active = false
       this.deactivatedReason = deactivatedReason
+      if (deactivatedReason == DeactivatedReason.OTHER) this.otherDeactivationReason = otherDeactivationReason
       this.deactivatedDate = deactivatedDate
       this.proposedReactivationDate = proposedReactivationDate
       this.planetFmReference = planetFmReference
@@ -544,10 +550,11 @@ abstract class Location(
       if (this is ResidentialLocation) {
         findSubLocations().filterIsInstance<ResidentialLocation>().forEach { location ->
           location.temporarilyDeactivate(
-            planetFmReference = planetFmReference,
-            proposedReactivationDate = proposedReactivationDate,
             deactivatedReason = deactivatedReason,
             deactivatedDate = deactivatedDate,
+            otherDeactivationReason = otherDeactivationReason,
+            planetFmReference = planetFmReference,
+            proposedReactivationDate = proposedReactivationDate,
             userOrSystemInContext = userOrSystemInContext,
             clock = clock,
           )
@@ -560,6 +567,7 @@ abstract class Location(
 
   open fun updateDeactivatedDetails(
     deactivatedReason: DeactivatedReason,
+    otherDeactivationReason: String? = null,
     planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
@@ -592,6 +600,7 @@ abstract class Location(
       )
 
       this.deactivatedReason = deactivatedReason
+      if (deactivatedReason == DeactivatedReason.OTHER) this.otherDeactivationReason = otherDeactivationReason
       this.proposedReactivationDate = proposedReactivationDate
       this.planetFmReference = planetFmReference
       this.updatedBy = userOrSystemInContext
@@ -600,9 +609,10 @@ abstract class Location(
       if (this is ResidentialLocation) {
         findSubLocations().forEach { location ->
           location.updateDeactivatedDetails(
+            deactivatedReason = deactivatedReason,
+            otherDeactivationReason = otherDeactivationReason,
             planetFmReference = planetFmReference,
             proposedReactivationDate = proposedReactivationDate,
-            deactivatedReason = deactivatedReason,
             userOrSystemInContext = userOrSystemInContext,
             clock = clock,
           )
@@ -645,6 +655,7 @@ abstract class Location(
       this.deactivatedReason = null
       this.proposedReactivationDate = null
       this.planetFmReference = null
+      this.otherDeactivationReason = null
       this.deactivatedBy = userOrSystemInContext
       this.archivedReason = reason
       this.updatedBy = userOrSystemInContext
@@ -701,6 +712,7 @@ abstract class Location(
       this.active = true
       this.deactivatedReason = null
       this.deactivatedDate = null
+      this.otherDeactivationReason = null
       this.planetFmReference = null
       this.proposedReactivationDate = null
       this.updatedBy = userOrSystemInContext
