@@ -164,10 +164,10 @@ open class ResidentialLocation(
         capacityOfCertifiedCell = getBaselineCapacity(),
       ),
 
-      accommodationTypes = getAccommodationTypes().map { it }.distinct(),
-      usedFor = getUsedFor().map { it.usedFor }.distinct(),
+      accommodationTypes = getAccommodationTypes().map { it }.distinct().sortedBy { it.description },
+      usedFor = getUsedFor().map { it.usedFor }.distinct().sortedBy { it.description },
 
-      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct(),
+      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct().sortedBy { it.description },
       inactiveCells = if (countInactiveCells) {
         getInactiveCellCount()
       } else {
@@ -190,7 +190,7 @@ open class ResidentialLocation(
         capacityOfCertifiedCell = getBaselineCapacity(),
       ),
 
-      attributes = getAttributes().map { it.attributeValue }.distinct(),
+      attributes = getAttributes().map { it.attributeValue }.distinct().sortedBy { it.name },
     )
   }
 }

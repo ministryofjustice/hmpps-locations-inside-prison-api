@@ -61,7 +61,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun locationConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "locationTypes" to LocationType.entries.map { Constant(it.name, it.description) },
+      "locationTypes" to LocationType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
     )
   }
 
@@ -91,7 +91,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun deactivedReasonsConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "deactivatedReasons" to DeactivatedReason.entries.map { Constant(it.name, it.description) },
+      "deactivatedReasons" to DeactivatedReason.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
     )
   }
 
@@ -121,7 +121,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun locationAttributeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "residentialHousingTypes" to ResidentialHousingType.entries.map { Constant(it.name, it.description) },
+      "residentialHousingTypes" to ResidentialHousingType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
     )
   }
 
@@ -151,7 +151,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun nonResidentialUsageTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "nonResidentialUsageTypes" to NonResidentialUsageType.entries.map { Constant(it.name, it.description) },
+      "nonResidentialUsageTypes" to NonResidentialUsageType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
     )
   }
 
@@ -181,16 +181,16 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun residentialAttributeTypeConstants(): Map<String, List<CompoundConstant>> {
     return mapOf(
-      "residentialAttributeTypes" to ResidentialAttributeType.entries.map {
-        val residentialAttributeTypeName = it.name
+      "residentialAttributeTypes" to ResidentialAttributeType.entries.map { attr ->
+        val residentialAttributeTypeName = attr.name
         CompoundConstant(
-          it.name,
-          it.description,
+          attr.name,
+          attr.description,
           ResidentialAttributeValue.entries
             .filter { it.type.toString() == residentialAttributeTypeName }
-            .map { Constant(it.name, it.description) },
+            .map { Constant(it.name, it.description) }.sortedBy { it.description },
         )
-      },
+      }.sortedBy { it.description },
     )
   }
 
@@ -220,7 +220,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun getAccommodationTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "accommodationTypes" to AccommodationType.entries.map { Constant(it.name, it.description) },
+      "accommodationTypes" to AccommodationType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
     )
   }
 
@@ -250,7 +250,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun getSpecialistCellTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "specialistCellTypes" to SpecialistCellType.entries.map { Constant(it.name, it.description, it.additionalInformation) },
+      "specialistCellTypes" to SpecialistCellType.entries.map { Constant(it.name, it.description, it.additionalInformation) }.sortedBy { it.description },
     )
   }
 
@@ -280,7 +280,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun getUsedForTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "usedForTypes" to UsedForType.entries.map { Constant(it.name, it.description) },
+      "usedForTypes" to UsedForType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
     )
   }
 
@@ -310,7 +310,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun getConvertedCellType(): Map<String, List<Constant>> {
     return mapOf(
-      "convertedCellTypes" to ConvertedCellType.entries.map { Constant(it.name, it.description) },
+      "convertedCellTypes" to ConvertedCellType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
     )
   }
 
