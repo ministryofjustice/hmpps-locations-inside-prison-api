@@ -1,15 +1,20 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisDeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -32,9 +37,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SyncService
 import java.time.Clock
 import java.time.LocalDateTime
-import java.util.UUID
+import java.util.*
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
@@ -47,6 +53,9 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     @Bean
     fun fixedClock(): Clock = clock
   }
+
+  val syncService: SyncService = mock()
+  val locationRepository = mock(LocationRepository::class.java)
 
   @Autowired
   lateinit var repository: LocationRepository
@@ -61,6 +70,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var room: ResidentialLocation
   lateinit var nonRes: NonResidentialLocation
   lateinit var locationHistory: LocationHistory
+  lateinit var legacylocation: LegacyLocation
 
   @BeforeEach
   fun setUp() {
@@ -130,6 +140,26 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     landing1.addChildLocation(room)
     landing1.addChildLocation(nonRes)
     repository.save(wingB)
+
+    legacylocation = LegacyLocation(
+      id = UUID.randomUUID(),
+      prisonId = "ZZGHI",
+      code = "001",
+      pathHierarchy = "B-1-001",
+      locationType = LocationType.CELL,
+      residentialHousingType = null,
+      localName = null,
+      comments = null,
+      capacity = null,
+      certification = null,
+      attributes = null,
+      usage = null,
+      active = true,
+      permanentlyDeactivated = false,
+      parentId = UUID.randomUUID(),
+      lastModifiedBy = "user",
+      lastModifiedDate = LocalDateTime.now(),
+    )
   }
 
   @DisplayName("POST /sync/upsert")
@@ -1017,6 +1047,97 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             "location.inside.prison.deleted" to "ZZGHI-B-1-001",
           )
         }
+      }
+    }
+  }
+
+  @DisplayName("GET /sync/id/{id}")
+  @Nested
+  inner class SyncNomisToLocation {
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.get().uri("/sync/id/-23rf-$$££@")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `handles location not found`() {
+        webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot sync an existing location`() {
+        webTestClient.get().uri("/sync/id/${wingB.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve sync Nomis to an existing location`() {
+        whenever(locationRepository.findById(any())).thenReturn(Optional.empty())
+        whenever(syncService.getLegacyLocation(any(), any())).thenReturn(legacylocation)
+        whenever(cell.id?.let { syncService.getLegacyLocation(it, true) }).thenReturn(legacylocation)
+
+        webTestClient.get().uri("/sync/id/${cell.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "ZZGHI",
+              "code": "001",
+              "pathHierarchy": "B-1-001",
+              "active": true,
+              "permanentlyDeactivated": false
+            }
+          """,
+            false,
+          )
+        Assertions.assertEquals(cell.prisonId, legacylocation.prisonId)
+        Assertions.assertEquals(cell.id?.let { repository.findById(it).get().getPathHierarchy() }, legacylocation.pathHierarchy)
+        Assertions.assertEquals(cell.getPathHierarchy(), legacylocation.pathHierarchy)
       }
     }
   }
