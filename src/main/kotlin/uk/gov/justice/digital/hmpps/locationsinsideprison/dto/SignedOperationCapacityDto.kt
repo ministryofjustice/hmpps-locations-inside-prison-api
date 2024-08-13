@@ -2,8 +2,8 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.Pattern
-import jakarta.validation.constraints.Positive
 import jakarta.validation.constraints.Size
 import java.time.LocalDateTime
 
@@ -30,7 +30,7 @@ data class SignedOperationCapacityDto(
 data class SignedOperationCapacityValidRequest(
 
   @Schema(description = "Signed Operation Capacity value", example = "100", required = true)
-  @field:Positive(message = "Signed Operation Capacity must be a positive integer")
+  @field:Min(value = 0, message = "Signed Operation Capacity must be zero or greater")
   val signedOperationCapacity: Int,
 
   @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 3, pattern = "^[A-Z]{2}I|ZZZ$")

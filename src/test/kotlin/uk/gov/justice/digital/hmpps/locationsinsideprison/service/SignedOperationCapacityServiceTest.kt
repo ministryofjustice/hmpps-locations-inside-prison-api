@@ -17,12 +17,24 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonS
 import java.time.LocalDateTime
 
 class SignedOperationCapacityServiceTest {
+  private val locationService: LocationService = mock()
   private val prisonSignedOperationalCapacityRepository: PrisonSignedOperationCapacityRepository = mock()
   private val telemetryClient: TelemetryClient = mock()
   private val service: SignedOperationCapacityService = SignedOperationCapacityService(
+    locationService,
     prisonSignedOperationalCapacityRepository,
     telemetryClient,
     clock,
+  )
+
+  private val residentialSummary = ResidentialSummary(
+    prisonSummary = PrisonSummary(
+      signedOperationalCapacity = 0,
+      workingCapacity = 100,
+      maxCapacity = 135,
+    ),
+    subLocations = emptyList(),
+    topLevelLocationType = "Wing",
   )
 
   @Test
@@ -61,7 +73,7 @@ class SignedOperationCapacityServiceTest {
     whenever(prisonSignedOperationCapacity.toDto()).thenReturn(prisonSignedOperationCap)
     whenever(prisonSignedOperationalCapacityRepository.findOneByPrisonId(any())).thenReturn(null)
     whenever(prisonSignedOperationalCapacityRepository.save(any())).thenReturn(prisonSignedOperationCapacity)
-
+    whenever(locationService.getResidentialLocations(prisonId = prisonId)).thenReturn(residentialSummary)
     val result = service.saveSignedOperationalCapacity(request)
     assertThat(result.newRecord).isTrue()
 
@@ -99,6 +111,7 @@ class SignedOperationCapacityServiceTest {
     whenever(request.updatedBy).thenReturn(updatedBy)
     whenever(prisonSignedOperationalCapacityRepository.findOneByPrisonId(any())).thenReturn(existingRecord)
     whenever(prisonSignedOperationalCapacityRepository.save(any())).thenReturn(prisonSignedOperationCapacity)
+    whenever(locationService.getResidentialLocations(prisonId = prisonId)).thenReturn(residentialSummary)
 
     service.saveSignedOperationalCapacity(request)
 

@@ -9,12 +9,16 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCap
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperationCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import java.time.Clock
 import java.time.LocalDateTime
 
 @Service
 @Transactional(readOnly = true)
 class SignedOperationCapacityService(
+  private val locationService: LocationService,
   private val prisonSignedOperationalCapacityRepository: PrisonSignedOperationCapacityRepository,
   private val telemetryClient: TelemetryClient,
   private val clock: Clock,
@@ -31,6 +35,10 @@ class SignedOperationCapacityService(
   fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignOpCapResult {
     var newRecord = true
 
+    val maxCap = locationService.getResidentialLocations(request.prisonId).prisonSummary?.maxCapacity ?: throw PrisonNotFoundException(request.prisonId)
+    if (maxCap < request.signedOperationCapacity) {
+      throw CapacityException(request.prisonId, "Signed operational capacity cannot be more than the establishment's maximum capacity of $maxCap", ErrorCode.SignedOpCapCannotBeMoreThanMaXCap)
+    }
     val record =
       prisonSignedOperationalCapacityRepository.findOneByPrisonId(request.prisonId)?.also {
         it.signedOperationCapacity = request.signedOperationCapacity
