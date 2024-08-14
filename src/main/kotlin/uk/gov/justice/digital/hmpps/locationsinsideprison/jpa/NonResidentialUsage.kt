@@ -57,13 +57,14 @@ class NonResidentialUsage(
 
 enum class NonResidentialUsageType(
   val description: String,
+  val sequence: Int = 99,
 ) {
-  APPOINTMENT("Appointment"),
-  VISIT("Visit"),
-  MOVEMENT("Movement"),
-  OCCURRENCE("Occurrence"),
-  ADJUDICATION_HEARING("Adjudication hearing"),
-  PROGRAMMES_ACTIVITIES("Programmes/activities"),
-  PROPERTY("Property"),
-  OTHER("Other"),
+  ADJUDICATION_HEARING("Adjudication hearing", 1),
+  APPOINTMENT("Appointment", 2),
+  MOVEMENT("Movement", 3),
+  OCCURRENCE("Occurrence", 4),
+  PROGRAMMES_ACTIVITIES("Programmes/activities", 5),
+  PROPERTY("Property", 6),
+  VISIT("Visit", 7),
+  OTHER("Other", 99),
 }
