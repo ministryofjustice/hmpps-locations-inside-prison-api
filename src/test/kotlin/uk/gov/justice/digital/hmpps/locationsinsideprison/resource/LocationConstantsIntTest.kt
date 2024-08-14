@@ -1003,11 +1003,11 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "CONSTANT_SUPERVISION",
-                    "description": "Constant Supervision Cell"
+                    "description": "Constant supervision cell"
                   },
                   {
                     "key": "CSU",
-                    "description": "Case and separation unit cell"
+                    "description": "Care and separation cell"
                   },
                   {
                     "key": "DRY",
