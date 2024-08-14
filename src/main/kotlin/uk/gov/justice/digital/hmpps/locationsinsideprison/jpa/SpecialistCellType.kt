@@ -11,9 +11,9 @@ enum class SpecialistCellType(
 ) {
   ACCESSIBLE_CELL("Accessible cell", "Also known as wheelchair accessible or Disability and Discrimination Act (DDA) compliant"),
   BIOHAZARD_DIRTY_PROTEST("Biohazard / dirty protest cell", "Previously known as a dirty protest cell"),
-  CONSTANT_SUPERVISION("Constant Supervision Cell"),
+  CONSTANT_SUPERVISION("Constant supervision cell"),
   CAT_A("Cat A cell"),
-  CSU("Case and separation unit cell"),
+  CSU("Care and separation cell"),
   DRY("Dry cell"),
   ESCAPE_LIST("Escape list cell"),
   ISOLATION_DISEASES("Isolation cell for communicable diseases"),
