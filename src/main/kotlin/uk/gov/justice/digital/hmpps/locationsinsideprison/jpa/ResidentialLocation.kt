@@ -164,10 +164,10 @@ open class ResidentialLocation(
         capacityOfCertifiedCell = getBaselineCapacity(),
       ),
 
-      accommodationTypes = getAccommodationTypes().map { it }.distinct().sortedBy { it.description },
-      usedFor = getUsedFor().map { it.usedFor }.distinct().sortedBy { it.description },
+      accommodationTypes = getAccommodationTypes().map { it }.distinct().sortedBy { it.sequence },
+      usedFor = getUsedFor().map { it.usedFor }.distinct().sortedBy { it.sequence },
 
-      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct().sortedBy { it.description },
+      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct().sortedBy { it.sequence },
       inactiveCells = if (countInactiveCells) {
         getInactiveCellCount()
       } else {
@@ -197,14 +197,15 @@ open class ResidentialLocation(
 
 enum class ResidentialHousingType(
   val description: String,
+  val sequence: Int = 99,
 ) {
-  NORMAL_ACCOMMODATION("Normal Accommodation"),
-  HEALTHCARE("Healthcare"),
-  HOLDING_CELL("Holding Cell"),
-  OTHER_USE("Other Use"),
-  RECEPTION("Reception"),
-  SEGREGATION("Segregation"),
-  SPECIALIST_CELL("Specialist Cell"),
+  HEALTHCARE("Healthcare", 1),
+  HOLDING_CELL("Holding Cell", 2),
+  NORMAL_ACCOMMODATION("Normal Accommodation", 3),
+  RECEPTION("Reception", 4),
+  SEGREGATION("Segregation", 5),
+  SPECIALIST_CELL("Specialist Cell", 6),
+  OTHER_USE("Other Use", 99),
   ;
 
   fun mapToAccommodationType(): AccommodationType {
