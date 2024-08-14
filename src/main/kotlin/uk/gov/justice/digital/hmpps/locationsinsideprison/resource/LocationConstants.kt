@@ -91,7 +91,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun deactivedReasonsConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "deactivatedReasons" to DeactivatedReason.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
+      "deactivatedReasons" to DeactivatedReason.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
     )
   }
 
@@ -121,7 +121,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun locationAttributeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "residentialHousingTypes" to ResidentialHousingType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
+      "residentialHousingTypes" to ResidentialHousingType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
     )
   }
 
@@ -151,7 +151,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun nonResidentialUsageTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "nonResidentialUsageTypes" to NonResidentialUsageType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
+      "nonResidentialUsageTypes" to NonResidentialUsageType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
     )
   }
 
@@ -220,7 +220,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun getAccommodationTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "accommodationTypes" to AccommodationType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
+      "accommodationTypes" to AccommodationType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
     )
   }
 
@@ -250,7 +250,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun getSpecialistCellTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "specialistCellTypes" to SpecialistCellType.entries.map { Constant(it.name, it.description, it.additionalInformation) }.sortedBy { it.description },
+      "specialistCellTypes" to SpecialistCellType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description, it.additionalInformation) },
     )
   }
 
@@ -280,7 +280,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun getUsedForTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "usedForTypes" to UsedForType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
+      "usedForTypes" to UsedForType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
     )
   }
 
@@ -310,7 +310,7 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun getConvertedCellType(): Map<String, List<Constant>> {
     return mapOf(
-      "convertedCellTypes" to ConvertedCellType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
+      "convertedCellTypes" to ConvertedCellType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
     )
   }
 

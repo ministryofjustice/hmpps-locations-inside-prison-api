@@ -7,9 +7,10 @@ import io.swagger.v3.oas.annotations.media.Schema
 @JsonInclude(JsonInclude.Include.NON_NULL)
 enum class AccommodationType(
   val description: String,
+  val sequence: Int = 99,
 ) {
-  NORMAL_ACCOMMODATION("Normal accommodation"),
-  HEALTHCARE_INPATIENTS("Healthcare inpatients"),
-  CARE_AND_SEPARATION("Care and separation"),
-  OTHER_NON_RESIDENTIAL("Other"),
+  CARE_AND_SEPARATION("Care and separation", 1),
+  HEALTHCARE_INPATIENTS("Healthcare inpatients", 2),
+  NORMAL_ACCOMMODATION("Normal accommodation", 3),
+  OTHER_NON_RESIDENTIAL("Other", 99),
 }
