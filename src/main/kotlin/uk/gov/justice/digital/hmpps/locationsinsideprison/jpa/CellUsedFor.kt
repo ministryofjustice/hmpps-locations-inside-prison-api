@@ -54,7 +54,7 @@ enum class UsedForType(
   CLOSE_SUPERVISION_CENTRE("Close Supervision Centre (CSC)", 1),
   SUB_MISUSE_DRUG_RECOVERY("Drug recovery / Incentivised substance free living (ISFL)", 2),
   FIRST_NIGHT_CENTRE("First night centre / Induction", 3),
-  HIGH_SECURITY("High security unit",4),
+  HIGH_SECURITY("High security unit", 4),
   IPP_LONG_TERM_SENTENCES("Long-term sentences / Imprisonment for public protection (IPP)", 5),
   MOTHER_AND_BABY("Mother and baby", 6),
   PATHWAY_TO_PROG("Pathway to progression", 7),
