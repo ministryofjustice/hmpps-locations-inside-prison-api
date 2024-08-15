@@ -259,36 +259,36 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
             {
                 "deactivatedReasons": [
                   {
-                    "key": "REFURBISHMENT",
-                    "description": "Refurbishment"
+                    "key": "DAMAGED",
+                    "description": "Damage"
+                  },
+                  {
+                    "key": "DAMP",
+                    "description": "Damp / mould"
                   },
                   {
                     "key": "MAINTENANCE",
                     "description": "Maintenance"
                   },
                   {
-                    "key": "STAFF_SHORTAGE",
-                    "description": "Staff shortage"
-                  },
-                  {
                     "key": "MOTHBALLED",
                     "description": "Mothballed"
-                  },
-                  {
-                    "key": "DAMAGED",
-                    "description": "Damage"
-                  },
-                  {
-                    "key": "DAMP",
-                    "description": "Dump / mould"
                   },
                   {
                     "key": "PEST",
                     "description": "Pest control"
                   },
                   {
+                    "key": "REFURBISHMENT",
+                    "description": "Refurbishment"
+                  },
+                  {
                     "key": "SECURITY_SEALED",
                     "description": "Security sealed"
+                  },
+                  {
+                    "key": "STAFF_SHORTAGE",
+                    "description": "Staff shortage"
                   },
                   {
                     "key": "OTHER",
@@ -297,7 +297,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 ]
               }
             """.trimIndent(),
-            false,
+            true,
           )
       }
     }
@@ -347,10 +347,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
               {
                 "residentialHousingTypes": [
                   {
-                    "key": "NORMAL_ACCOMMODATION",
-                    "description": "Normal Accommodation"
-                  },
-                  {
                     "key": "HEALTHCARE",
                     "description": "Healthcare"
                   },
@@ -359,10 +355,9 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Holding Cell"
                   },
                   {
-                    "key": "OTHER_USE",
-                    "description": "Other Use"
-                  },
-                  {
+                    "key": "NORMAL_ACCOMMODATION",
+                    "description": "Normal Accommodation"
+                  },                  {
                     "key": "RECEPTION",
                     "description": "Reception"
                   },
@@ -373,11 +368,15 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   {
                     "key": "SPECIALIST_CELL",
                     "description": "Specialist Cell"
+                  },
+                  {
+                    "key": "OTHER_USE",
+                    "description": "Other Use"
                   }
                 ]
               }
             """.trimIndent(),
-            false,
+            true,
           )
       }
     }
@@ -427,12 +426,12 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
          {
            "nonResidentialUsageTypes": [
              {
-               "key": "APPOINTMENT",
-               "description": "Appointment"
+               "key": "ADJUDICATION_HEARING",
+               "description": "Adjudication hearing"
              },
              {
-               "key": "VISIT",
-               "description": "Visit"
+               "key": "APPOINTMENT",
+               "description": "Appointment"
              },
              {
                "key": "MOVEMENT",
@@ -443,10 +442,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                "description": "Occurrence"
              },
              {
-               "key": "ADJUDICATION_HEARING",
-               "description": "Adjudication hearing"
-             },
-             {
                "key": "PROGRAMMES_ACTIVITIES",
                "description": "Programmes/activities"
              },
@@ -455,13 +450,16 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                "description": "Property"
              },
              {
+               "key": "VISIT",
+               "description": "Visit"
+             },             {
                "key": "OTHER",
                "description": "Other"
              }
            ]
          }
             """.trimIndent(),
-            false,
+            true,
           )
       }
     }
@@ -925,16 +923,16 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
             {
                 "accommodationTypes": [
                   {
-                    "key": "NORMAL_ACCOMMODATION",
-                    "description": "Normal accommodation"
+                    "key": "CARE_AND_SEPARATION",
+                    "description": "Care and separation"
                   },
                   {
                     "key": "HEALTHCARE_INPATIENTS",
                     "description": "Healthcare inpatients"
                   },
                   {
-                    "key": "CARE_AND_SEPARATION",
-                    "description": "Care and separation"
+                    "key": "NORMAL_ACCOMMODATION",
+                    "description": "Normal accommodation"
                   },
                   {
                     "key": "OTHER_NON_RESIDENTIAL",
@@ -943,7 +941,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 ]
               }
             """.trimIndent(),
-            false,
+            true,
           )
       }
     }
@@ -993,9 +991,18 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
             {
                 "specialistCellTypes": [
                   {
+                    "key": "ACCESSIBLE_CELL",
+                    "description": "Accessible cell",
+                    "additionalInformation": "Also known as wheelchair accessible or Disability and Discrimination Act (DDA) compliant"
+                  },
+                  {
                     "key": "BIOHAZARD_DIRTY_PROTEST",
                     "description": "Biohazard / dirty protest cell",
                     "additionalInformation": "Previously known as a dirty protest cell"
+                  },
+                  {
+                    "key": "CSU",
+                    "description": "Care and separation cell"
                   },
                   {
                     "key": "CAT_A",
@@ -1003,11 +1010,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "CONSTANT_SUPERVISION",
-                    "description": "Constant Supervision Cell"
-                  },
-                  {
-                    "key": "CSU",
-                    "description": "Case and separation unit cell"
+                    "description": "Constant supervision cell"
                   },
                   {
                     "key": "DRY",
@@ -1026,10 +1029,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Listener / crisis cell"
                   },
                   {
-                    "key": "SAFE_CELL",
-                    "description": "Safe cell"
-                  },
-                  {
                     "key": "LOCATE_FLAT_CELL",
                     "description": "Locate flat"
                   },
@@ -1042,18 +1041,17 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Mother and baby cell"
                   },
                   {
-                    "key": "UNFURNISHED",
-                    "description": "Unfurnished cell"
+                    "key": "SAFE_CELL",
+                    "description": "Safe cell"
                   },
                   {
-                    "key": "ACCESSIBLE_CELL",
-                    "description": "Accessible cell",
-                    "additionalInformation": "Also known as wheelchair accessible or Disability and Discrimination Act (DDA) compliant"
+                    "key": "UNFURNISHED",
+                    "description": "Unfurnished cell"
                   }
                 ]
               }
             """.trimIndent(),
-            false,
+            true,
           )
       }
     }
@@ -1103,65 +1101,65 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
             {
                 "usedForTypes": [
                   {
-                    "key": "STANDARD_ACCOMMODATION",
-                    "description": "Standard accommodation"
-                  },
-                  {
-                    "key": "PERSONALITY_DISORDER",
-                    "description": "Personality disorder unit"
-                  },
-                  {
-                    "key": "THERAPEUTIC_COMMUNITY",
-                    "description": "Therapeutic community"
-                  },
-                  {
-                    "key": "PIPE",
-                    "description": "Psychologically informed planned environment (PIPE)"
-                  },
+                    "key": "CLOSE_SUPERVISION_CENTRE",
+                    "description": "Close Supervision Centre (CSC)"
+                  }, 
                   {
                     "key": "SUB_MISUSE_DRUG_RECOVERY",
                     "description": "Drug recovery / Incentivised substance free living (ISFL)"
-                  },
-                  {
-                    "key": "VULNERABLE_PRISONERS",
-                    "description": "Vulnerable prisoners"
                   },
                   {
                     "key": "FIRST_NIGHT_CENTRE",
                     "description": "First night centre / Induction"
                   },  
                   {
-                    "key": "REMAND",
-                    "description": "Remand"
+                    "key": "HIGH_SECURITY",
+                    "description": "High security unit"
                   }, 
+                  {
+                    "key": "IPP_LONG_TERM_SENTENCES",
+                    "description": "Long-term sentences / Imprisonment for public protection (IPP)"
+                  },
                   {
                     "key": "MOTHER_AND_BABY",
                     "description": "Mother and baby"
                   },   
                   {
-                    "key": "YOUNG_PERSONS",
-                    "description": "Young persons"
-                  },    
-                  {
-                    "key": "HIGH_SECURITY",
-                    "description": "High security unit"
-                  }, 
-                  {
-                    "key": "CLOSE_SUPERVISION_CENTRE",
-                    "description": "Close Supervision Centre (CSC)"
-                  }, 
-                  {
                     "key": "PATHWAY_TO_PROG",
                     "description": "Pathway to progression"
                   },
                   {
-                    "key": "IPP_LONG_TERM_SENTENCES",
-                    "description": "Long-term sentences / Imprisonment for public protection (IPP)"
-                  }
+                    "key": "PERSONALITY_DISORDER",
+                    "description": "Personality disorder unit"
+                  },
+                  {
+                    "key": "PIPE",
+                    "description": "Psychologically informed planned environment (PIPE)"
+                  },
+                  {
+                    "key": "REMAND",
+                    "description": "Remand"
+                  }, 
+                  {
+                    "key": "STANDARD_ACCOMMODATION",
+                    "description": "Standard accommodation"
+                  },
+                  {
+                    "key": "THERAPEUTIC_COMMUNITY",
+                    "description": "Therapeutic community"
+                  },
+                  {
+                    "key": "VULNERABLE_PRISONERS",
+                    "description": "Vulnerable prisoners"
+                  },
+                  {
+                    "key": "YOUNG_PERSONS",
+                    "description": "Young persons"
+                  }    
                 ]
               }
             """.trimIndent(),
-            false,
+            true,
           )
       }
     }
