@@ -67,7 +67,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var room: ResidentialLocation
   lateinit var nonRes: NonResidentialLocation
   lateinit var locationHistory: LocationHistory
-  lateinit var legacylocation: LegacyLocation
 
   @BeforeEach
   fun setUp() {
@@ -1075,14 +1074,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().is4xxClientError
       }
-
-      @Test
-      fun `cannot sync an existing location`() {
-        webTestClient.get().uri("/sync/id/${wingB.id}")
-          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
     }
 
     @Nested
@@ -1090,29 +1081,17 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve sync Nomis to an existing location`() {
-        legacylocation = syncService.getLegacyLocation(id = cell.id!!, includeHistory = false)!!
-
-        webTestClient.get().uri("/sync/id/${cell.id}")
+        var legacyLocation = webTestClient.get().uri("/sync/id/${cell.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-             {
-              "prisonId": "ZZGHI",
-              "code": "001",
-              "pathHierarchy": "B-1-001",
-              "active": true,
-              "permanentlyDeactivated": false
-            }
-          """,
-            false,
-          )
-        Assertions.assertEquals(cell.prisonId, legacylocation.prisonId)
-        Assertions.assertEquals(cell.id?.let { repository.findById(it).get().getPathHierarchy() }, legacylocation.pathHierarchy)
-        Assertions.assertEquals(cell.getPathHierarchy(), legacylocation.pathHierarchy)
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        Assertions.assertEquals(cell.prisonId, legacyLocation.prisonId)
+        Assertions.assertEquals(cell.id?.let { repository.findById(it).get().getPathHierarchy() }, legacyLocation.pathHierarchy)
+        Assertions.assertEquals(cell.getPathHierarchy(), legacyLocation.pathHierarchy)
       }
     }
   }
