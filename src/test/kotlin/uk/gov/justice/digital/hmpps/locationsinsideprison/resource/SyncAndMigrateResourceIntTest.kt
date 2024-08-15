@@ -6,9 +6,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.Mockito.mock
-import org.mockito.kotlin.any
-import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
@@ -54,17 +51,17 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     fun fixedClock(): Clock = clock
   }
 
-  val syncService: SyncService = mock()
-  val locationRepository = mock(LocationRepository::class.java)
-
   @Autowired
   lateinit var repository: LocationRepository
 
   @Autowired
-  lateinit var locationHistoryRepository: LocationHistoryRepository
+  lateinit var syncService: SyncService
 
+  @Autowired
+  lateinit var locationHistoryRepository: LocationHistoryRepository
   lateinit var wingB: ResidentialLocation
   lateinit var landing1: ResidentialLocation
+
   lateinit var cell: Cell
   lateinit var permDeactivated: Cell
   lateinit var room: ResidentialLocation
@@ -140,26 +137,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     landing1.addChildLocation(room)
     landing1.addChildLocation(nonRes)
     repository.save(wingB)
-
-    legacylocation = LegacyLocation(
-      id = UUID.randomUUID(),
-      prisonId = "ZZGHI",
-      code = "001",
-      pathHierarchy = "B-1-001",
-      locationType = LocationType.CELL,
-      residentialHousingType = null,
-      localName = null,
-      comments = null,
-      capacity = null,
-      certification = null,
-      attributes = null,
-      usage = null,
-      active = true,
-      permanentlyDeactivated = false,
-      parentId = UUID.randomUUID(),
-      lastModifiedBy = "user",
-      lastModifiedDate = LocalDateTime.now(),
-    )
   }
 
   @DisplayName("POST /sync/upsert")
@@ -1113,9 +1090,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
       @Test
       fun `can retrieve sync Nomis to an existing location`() {
-        whenever(locationRepository.findById(any())).thenReturn(Optional.empty())
-        whenever(syncService.getLegacyLocation(any(), any())).thenReturn(legacylocation)
-        whenever(cell.id?.let { syncService.getLegacyLocation(it, true) }).thenReturn(legacylocation)
+        legacylocation = syncService.getLegacyLocation(id = cell.id!!, includeHistory = false)!!
 
         webTestClient.get().uri("/sync/id/${cell.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
