@@ -135,4 +135,55 @@ class LocationNonResidentialResource(
     audit(id.toString()) { results.location.copy(childLocations = null, parentLocation = null) }
     return results.location
   }
+
+  @PatchMapping("/non-residential/key/{key}")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Partial update of a non-residential location",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns updated location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location already exists",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun patchNonResidentialLocationByKey(
+    @Schema(description = "The location key", example = "MDI-VISIT", required = true)
+    @PathVariable
+    key: String,
+    @RequestBody
+    @Validated
+    patchLocationRequest: PatchNonResidentialLocationRequest,
+  ): Location {
+    val results = locationService.updateNonResidentialLocation(key, patchLocationRequest)
+    eventPublish(buildEventsToPublishOnUpdate(results))
+    audit(key) { results.location.copy(childLocations = null, parentLocation = null) }
+    return results.location
+  }
 }
