@@ -11,6 +11,7 @@ import java.util.*
 interface PatchLocationRequest {
   val code: String?
   val parentId: UUID?
+  val parentLocationKey: String?
 }
 
 /**
@@ -27,6 +28,9 @@ data class PatchResidentialLocationRequest(
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   override val parentId: UUID? = null,
+
+  @Schema(description = "Key of parent location", example = "MDI-B-1", required = false)
+  override val parentLocationKey: String? = null,
 
   @Schema(description = "Accommodation type", example = "NORMAL_ACCOMMODATION", required = false)
   val accommodationType: AccommodationType? = null,
@@ -49,6 +53,9 @@ data class PatchNonResidentialLocationRequest(
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   override val parentId: UUID? = null,
+
+  @Schema(description = "Key of parent location", example = "MDI-B-1", required = false)
+  override val parentLocationKey: String? = null,
 
   @Schema(description = "Non-residential usage", required = false)
   val usage: Set<NonResidentialUsageDto>? = null,
