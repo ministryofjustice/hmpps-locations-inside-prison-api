@@ -88,7 +88,7 @@ class NonResidentialLocation(
       includeNonResidential = includeNonResidential,
       useHistoryForUpdate = useHistoryForUpdate,
     ).copy(
-      usage = nonResidentialUsages.map { it.toDto() }.sortedBy { it.usageType.description },
+      usage = nonResidentialUsages.map { it.toDto() }.sortedBy { it.usageType.sequence },
     )
   }
 
