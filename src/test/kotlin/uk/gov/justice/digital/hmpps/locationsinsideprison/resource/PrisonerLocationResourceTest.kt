@@ -161,4 +161,82 @@ class PrisonerLocationResourceTest : CommonDataTestBase() {
       }
     }
   }
+
+  @Nested
+  inner class PrisonerLocationKeyTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/prisoner-locations/key/${wingZ.getKey()}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/prisoner-locations/prison/${wingZ.getKey()}")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/prisoner-locations/prison/${wingZ.getKey()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve a map of prisoners in cells within this code`() {
+        prisonerSearchMockServer.stubSearchByLocations(
+          cell1N.prisonId,
+          listOf(cell1N.getPathHierarchy(), cell1N.getPathHierarchy()),
+          true,
+        )
+
+        webTestClient.get().uri("/prisoner-locations/key/${cell1N.getKey()}")
+          .headers(setAuthorisation(roles = listOf("VIEW_PRISONER_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+            [
+              {
+                "cellLocation": "A-1-001",
+                "prisoners": [
+                  {
+                    "prisonerNumber": "A0000AA",
+                    "prisonId": "NMI",
+                    "prisonName": "NMI",
+                    "cellLocation": "A-1-001",
+                    "firstName": "Firstname-0",
+                    "lastName": "Surname-0",
+                    "gender": "MALE"
+                  },
+                  {
+                    "prisonerNumber": "A0001AA",
+                    "prisonId": "NMI",
+                    "prisonName": "NMI",
+                    "cellLocation": "A-1-001",
+                    "firstName": "Firstname-1",
+                    "lastName": "Surname-1",
+                    "gender": "MALE"
+                }
+            ]
+          }
+          ]
+          """,
+            false,
+          )
+      }
+    }
+  }
 }
