@@ -11,6 +11,7 @@ import jakarta.persistence.OneToOne
 import org.hibernate.annotations.BatchSize
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
@@ -354,13 +355,15 @@ class Cell(
     }
   }
 
-  override fun update(upsert: PatchResidentialLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
+  override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
     super.update(upsert, userOrSystemInContext, clock)
 
-    setAccommodationTypeForCell(upsert.accommodationType ?: this.accommodationType, userOrSystemInContext, clock)
+    if (upsert is PatchResidentialLocationRequest) {
+      setAccommodationTypeForCell(upsert.accommodationType ?: this.accommodationType, userOrSystemInContext, clock)
 
-    if (upsert.usedFor != null) {
-      updateUsedFor(upsert.usedFor, userOrSystemInContext, clock)
+      if (upsert.usedFor != null) {
+        updateUsedFor(upsert.usedFor, userOrSystemInContext, clock)
+      }
     }
 
     return this
