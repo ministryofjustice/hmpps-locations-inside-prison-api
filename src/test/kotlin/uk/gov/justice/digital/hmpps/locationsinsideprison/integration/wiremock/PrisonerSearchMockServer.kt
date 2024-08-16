@@ -46,7 +46,11 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
           AttributeQuery(
             matchers = listOf(
               Matcher(attribute = "prisonId", condition = "IS", searchTerm = prisonId),
-              Matcher(attribute = "cellLocation", condition = "IN", searchTerm = locations.distinct().sorted().joinToString(",")),
+              Matcher(
+                attribute = "cellLocation",
+                condition = "IN",
+                searchTerm = locations.distinct().sorted().joinToString(","),
+              ),
             ),
           ),
         ),
@@ -60,7 +64,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
       result = result.copy(
         content = locations.mapIndexed { index, location ->
           Prisoner(
-            prisonerNumber = "A${index.toString().padStart(4, '0') }AA",
+            prisonerNumber = "A${index.toString().padStart(4, '0')}AA",
             firstName = "Firstname-$index",
             lastName = "Surname-$index",
             prisonId = prisonId,

@@ -64,7 +64,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
 
       @Test
       fun `can retrieve details of a page of locations`() {
-        webTestClient.get().uri("/locations?size=13&sort=pathHierarchy,asc")
+        webTestClient.get().uri("/locations?size=14&sort=pathHierarchy,asc")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -73,10 +73,10 @@ class LocationResourceIntTest : CommonDataTestBase() {
             """
               {
                 "totalPages": 1,
-                "totalElements": 13,
+                "totalElements": 14,
                 "first": true,
                 "last": true,
-                "size": 13,
+                "size": 14,
                 "content": [
                   {
                     "prisonId": "NMI",
@@ -93,6 +93,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "locationType": "LANDING",
                     "localName": "LANDING A",
                     "key": "NMI-A-1"
+                  }, 
+                  {
+                    "prisonId": "NMI",
+                    "code": "001",
+                    "pathHierarchy": "A-1-001",
+                    "locationType": "CELL",
+                    "key": "NMI-A-1-001"
                   }, 
                   {
                     "prisonId": "MDI",
@@ -178,7 +185,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "sorted": true,
                   "unsorted": false
                 },
-                "numberOfElements": 13,
+                "numberOfElements": 14,
                 "pageable": {
                   "offset": 0,
                   "sort": {
@@ -186,7 +193,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "sorted": true,
                     "unsorted": false
                   },
-                  "pageSize": 13,
+                  "pageSize": 14,
                   "pageNumber": 0,
                   "paged": true,
                   "unpaged": false
