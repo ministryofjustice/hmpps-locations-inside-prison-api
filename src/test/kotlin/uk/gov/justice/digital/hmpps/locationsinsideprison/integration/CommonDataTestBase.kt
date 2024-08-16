@@ -26,6 +26,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
   lateinit var repository: LocationRepository
   lateinit var cell1: Cell
   lateinit var cell2: Cell
+  lateinit var cell1N: Cell
   lateinit var inactiveCellB3001: Cell
   lateinit var archivedCell: Cell
   lateinit var landingZ1: ResidentialLocation
@@ -51,7 +52,14 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         localName = "WING A",
       ),
     )
-
+    cell1N = repository.save(
+      buildCell(
+        pathHierarchy = "A-1-001",
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
+        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        prisonId = "NMI",
+      ),
+    )
     landingN1 = repository.save(
       buildResidentialLocation(
         prisonId = "NMI",
@@ -61,7 +69,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       ),
     )
 
-    wingN.addChildLocation(landingN1)
+    wingN.addChildLocation(landingN1.addChildLocation(cell1N))
     repository.save(wingN)
 
     wingZ = repository.save(
