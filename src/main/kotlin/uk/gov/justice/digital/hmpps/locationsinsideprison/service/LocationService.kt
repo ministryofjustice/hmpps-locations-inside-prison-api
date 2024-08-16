@@ -162,10 +162,7 @@ class LocationService(
       }
 
   fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
-    if (!key.contains("-")) throw LocationNotFoundException(key)
-
-    val (prisonId, code) = key.split("-", limit = 2)
-    return locationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code)?.toDto(
+    return locationRepository.findOneByKey(key)?.toDto(
       includeChildren = includeChildren,
       includeHistory = includeHistory,
     )
@@ -260,20 +257,43 @@ class LocationService(
 
   @Transactional
   fun updateResidentialLocation(id: UUID, patchLocationRequest: PatchResidentialLocationRequest): UpdateLocationResult {
-    val residentialLocation = residentialLocationRepository.findById(id)
-      .orElseThrow { LocationNotFoundException(id.toString()) }
+    val residentialLocation = residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
+    return patchLocation(residentialLocation, patchLocationRequest)
+  }
 
-    val (codeChanged, oldParent, parentChanged) = updateLocation(residentialLocation, patchLocationRequest)
+  @Transactional
+  fun updateResidentialLocation(key: String, patchLocationRequest: PatchResidentialLocationRequest): UpdateLocationResult {
+    val residentialLocation = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
+    return patchLocation(residentialLocation, patchLocationRequest)
+  }
 
-    residentialLocation.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
+  @Transactional
+  fun updateNonResidentialLocation(id: UUID, patchLocationRequest: PatchNonResidentialLocationRequest): UpdateLocationResult {
+    val nonResLocation = nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
+    return patchLocation(nonResLocation, patchLocationRequest)
+  }
 
-    log.info("Updated Residential Location [$residentialLocation]")
+  @Transactional
+  fun updateNonResidentialLocation(key: String, patchLocationRequest: PatchNonResidentialLocationRequest): UpdateLocationResult {
+    val nonResLocation = nonResidentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
+    return patchLocation(nonResLocation, patchLocationRequest)
+  }
+
+  private fun patchLocation(
+    location: Location,
+    patchLocationRequest: PatchLocationRequest,
+  ): UpdateLocationResult {
+    val (codeChanged, oldParent, parentChanged) = updateLocation(location, patchLocationRequest)
+
+    location.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
+
+    log.info("Updated Location [$location]")
     telemetryClient.trackEvent(
-      "Updated Residential Location",
+      "Updated Location",
       mapOf(
-        "id" to id.toString(),
-        "prisonId" to residentialLocation.prisonId,
-        "path" to residentialLocation.getPathHierarchy(),
+        "id" to location.id.toString(),
+        "prisonId" to location.prisonId,
+        "path" to location.getPathHierarchy(),
         "codeChanged" to "$codeChanged",
         "parentChanged" to "$parentChanged",
       ),
@@ -281,7 +301,7 @@ class LocationService(
     )
 
     return UpdateLocationResult(
-      residentialLocation.toDto(
+      location.toDto(
         includeChildren = codeChanged || parentChanged,
         includeParent = parentChanged,
         includeNonResidential = false,
@@ -314,34 +334,6 @@ class LocationService(
     return residentialLocation.toDto(includeChildren = true, includeNonResidential = false)
   }
 
-  @Transactional
-  fun updateNonResidentialLocation(id: UUID, patchLocationRequest: PatchNonResidentialLocationRequest): UpdateLocationResult {
-    val nonResLocation = nonResidentialLocationRepository.findById(id)
-      .orElseThrow { LocationNotFoundException(id.toString()) }
-
-    val (codeChanged, oldParent, parentChanged) = updateLocation(nonResLocation, patchLocationRequest)
-
-    nonResLocation.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
-
-    log.info("Updated Non Residential Location [$nonResLocation]")
-    telemetryClient.trackEvent(
-      "Updated Non Residential Location",
-      mapOf(
-        "id" to id.toString(),
-        "prisonId" to nonResLocation.prisonId,
-        "path" to nonResLocation.getPathHierarchy(),
-        "codeChanged" to "$codeChanged",
-        "parentChanged" to "$parentChanged",
-      ),
-      null,
-    )
-
-    return UpdateLocationResult(
-      nonResLocation.toDto(includeChildren = codeChanged || parentChanged, includeParent = parentChanged),
-      if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
-    )
-  }
-
   private fun updateLocation(
     locationToUpdate: Location,
     patchLocationRequest: PatchLocationRequest,
@@ -352,27 +344,30 @@ class LocationService(
 
     val codeChanged = patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode()
     val oldParent = locationToUpdate.getParent()
-    val parentChanged = patchLocationRequest.parentId != null && patchLocationRequest.parentId != oldParent?.id
-
-    if (parentChanged) {
-      locationToUpdate.addHistory(
-        LocationAttribute.PARENT_LOCATION,
-        oldParent?.id?.toString(),
-        patchLocationRequest.parentId?.toString(),
-        authenticationFacade.getUserOrSystemInContext(),
-        LocalDateTime.now(clock),
-      )
-    }
+    val parentChanged = (patchLocationRequest.parentId != null && patchLocationRequest.parentId != oldParent?.id) ||
+      (patchLocationRequest.parentLocationKey != null && patchLocationRequest.parentLocationKey != oldParent?.getKey())
 
     if (codeChanged || parentChanged) {
       val newCode = patchLocationRequest.code ?: locationToUpdate.getCode()
       val theParent = patchLocationRequest.parentId?.let {
         locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
+      } ?: patchLocationRequest.parentLocationKey?.let {
+        locationRepository.findOneByKey(it) ?: throw LocationNotFoundException(it)
       } ?: oldParent
       checkParentValid(theParent, newCode, locationToUpdate.prisonId)
 
       if (parentChanged && theParent?.id == locationToUpdate.id) throw ValidationException("Cannot set parent to self")
       theParent?.let { locationToUpdate.setParent(it) }
+
+      if (parentChanged) {
+        locationToUpdate.addHistory(
+          LocationAttribute.PARENT_LOCATION,
+          oldParent?.id?.toString(),
+          theParent?.id?.toString(),
+          authenticationFacade.getUserOrSystemInContext(),
+          LocalDateTime.now(clock),
+        )
+      }
     }
     return UpdatedSummary(codeChanged = codeChanged, oldParent = oldParent, parentChanged = parentChanged)
   }

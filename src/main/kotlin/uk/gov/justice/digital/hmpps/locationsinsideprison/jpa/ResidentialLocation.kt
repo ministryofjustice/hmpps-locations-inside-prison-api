@@ -6,7 +6,6 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -106,11 +105,6 @@ open class ResidentialLocation(
   open fun isConvertedCell(): Boolean = false
 
   private fun getInactiveCellCount() = cellLocations().count { it.isTemporarilyDeactivated() }
-
-  open fun update(upsert: PatchResidentialLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
-    updateCode(upsert.code, userOrSystemInContext, clock)
-    return this
-  }
 
   fun updateCellUsedFor(setOfUsedFor: Set<UsedForType>, userOrSystemInContext: String, clock: Clock) {
     cellLocations().forEach { it.updateUsedFor(setOfUsedFor, userOrSystemInContext, clock) }

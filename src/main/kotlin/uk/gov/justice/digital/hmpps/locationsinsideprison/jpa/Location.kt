@@ -25,6 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
@@ -570,6 +571,11 @@ abstract class Location(
 
       log.info("Temporarily Deactivated Location [${getKey()}]")
     }
+  }
+
+  open fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock): Location {
+    updateCode(upsert.code, userOrSystemInContext, clock)
+    return this
   }
 
   open fun updateDeactivatedDetails(

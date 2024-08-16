@@ -8,6 +8,7 @@ import jakarta.persistence.OneToMany
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import java.time.Clock
 import java.time.LocalDate
@@ -98,13 +99,22 @@ class NonResidentialLocation(
     )
   }
 
-  fun update(upsert: PatchNonResidentialLocationRequest, userOrSystemInContext: String, clock: Clock): NonResidentialLocation {
-    updateCode(upsert.code, userOrSystemInContext, clock)
-    updateUsage(upsert.usage, userOrSystemInContext, clock)
+  override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock): NonResidentialLocation {
+    super.update(upsert, userOrSystemInContext, clock)
 
-    if (upsert.locationType != null) {
-      addHistory(LocationAttribute.LOCATION_TYPE, getDerivedLocationType().description, upsert.locationType.description, updatedBy, LocalDateTime.now(clock))
-      this.locationType = upsert.locationType.baseType
+    if (upsert is PatchNonResidentialLocationRequest) {
+      updateUsage(upsert.usage, userOrSystemInContext, clock)
+
+      if (upsert.locationType != null) {
+        addHistory(
+          LocationAttribute.LOCATION_TYPE,
+          getDerivedLocationType().description,
+          upsert.locationType.description,
+          updatedBy,
+          LocalDateTime.now(clock),
+        )
+        this.locationType = upsert.locationType.baseType
+      }
     }
 
     return this

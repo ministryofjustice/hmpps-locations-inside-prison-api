@@ -349,4 +349,218 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       }
     }
   }
+
+  @DisplayName("PATCH /locations/non-residential/key/{key}")
+  @Nested
+  inner class PatchLocationTestByKey {
+    val changeCode = PatchResidentialLocationRequest(
+      code = "3",
+    )
+
+    val changeUsage = PatchNonResidentialLocationRequest(
+      code = "MEDICAL",
+      locationType = NonResidentialLocationType.APPOINTMENTS,
+      usage = setOf(
+        NonResidentialUsageDto(usageType = NonResidentialUsageType.APPOINTMENT, capacity = 20, sequence = 1),
+      ),
+    )
+
+    val removeUsage = PatchNonResidentialLocationRequest(
+      usage = emptySet(),
+    )
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.patch().uri("/locations/non-residential/key/${landingZ1.getKey()}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.patch().uri("/locations/non-residential/key/${landingZ1.getKey()}")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(changeCode))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.patch().uri("/locations/non-residential/key/${landingZ1.getKey()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(changeCode))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.patch().uri("/locations/non-residential/key/${landingZ1.getKey()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(changeCode))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.patch().uri("/locations/non-residential/key/${landingZ1.getKey()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"code": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot update to existing location`() {
+        webTestClient.patch().uri("/locations/non-residential/key/${adjRoom.getKey()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(changeCode.copy(code = "VISIT", parentId = wingZ.id))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can update details of a locations non-res usage`() {
+        webTestClient.patch().uri("/locations/non-residential/key/${visitRoom.getKey()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(changeUsage))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "MDI",
+              "code": "MEDICAL",
+              "pathHierarchy": "Z-MEDICAL",
+              "locationType": "APPOINTMENTS",
+              "active": true,
+              "key": "MDI-Z-MEDICAL",
+              "usage": [
+                {
+                  "usageType": "APPOINTMENT",
+                  "capacity": 20,
+                  "sequence": 1
+                }
+              ]
+            }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/${visitRoom.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+               {
+                 "key": "MDI-Z-MEDICAL",
+                 "usage": [
+                   {
+                     "usageType": "APPOINTMENT",
+                     "capacity": 20,
+                     "sequence": 1
+                   }
+                 ],
+                 "changeHistory": [
+                    {
+                      "attribute": "Code",
+                      "oldValue": "VISIT",
+                      "newValue": "MEDICAL"
+                    },
+                    {
+                      "attribute": "Location Type",
+                      "oldValue": "Visits",
+                      "newValue": "Appointments"
+                    },
+                    {
+                      "attribute": "Usage",
+                      "oldValue": "VISIT"
+                    },
+                    {
+                      "attribute": "Usage",
+                      "newValue": "APPOINTMENT"
+                    },
+                    {
+                      "attribute": "Non Residential Capacity",
+                      "newValue": "20"
+                    }
+                  ]
+               }
+            """.trimIndent(),
+            false,
+          )
+      }
+
+      @Test
+      fun `can remove details of a locations non-res usage`() {
+        webTestClient.patch().uri("/locations/non-residential/key/${visitRoom.getKey()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(removeUsage))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "MDI",
+              "code": "VISIT",
+              "pathHierarchy": "Z-VISIT",
+              "locationType": "VISITS",
+              "active": true,
+              "key": "MDI-Z-VISIT",
+              "usage": []
+            }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/key/MDI-Z-VISIT?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "MDI",
+              "code": "VISIT",
+              "pathHierarchy": "Z-VISIT",
+              "locationType": "VISITS",
+              "active": true,
+              "key": "MDI-Z-VISIT",
+              "usage": [],
+              "changeHistory": [
+                {
+                  "attribute": "Usage",
+                  "oldValue": "VISIT"
+                }
+              ]
+            }
+          """,
+            false,
+          )
+      }
+    }
+  }
 }
