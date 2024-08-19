@@ -8,7 +8,7 @@ import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -59,28 +59,28 @@ class LocationServiceTest {
 
   @Test
   fun `when update location and location not found throw LocationNotFoundException`() {
-    val updateLocationRequest = UpdateLocationRequest("L23", "comment", "User 1")
+    val updateLocationLocalNameRequest = UpdateLocationLocalNameRequest("L23", "User 1")
     whenever(locationRepository.findById(any())).thenReturn(Optional.empty())
     Assertions.assertThatExceptionOfType(LocationNotFoundException::class.java).isThrownBy {
-      service.updateLocation(UUID.randomUUID(), updateLocationRequest)
+      service.updateLocalName(UUID.randomUUID(), updateLocationLocalNameRequest)
     }
   }
 
   @Test
   fun `when update location and location is permanently deactivated throw ValidationException`() {
-    val updateLocationRequest = UpdateLocationRequest("L23", "comment", "User 1")
+    val updateLocationLocalNameRequest = UpdateLocationLocalNameRequest("L23", "User 1")
     val location: Location = mock()
     whenever(location.getKey()).thenReturn("L23-A-1-001")
     whenever(location.isPermanentlyDeactivated()).thenReturn(true)
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(location))
     Assertions.assertThatExceptionOfType(ValidationException::class.java).isThrownBy {
-      service.updateLocation(UUID.randomUUID(), updateLocationRequest)
+      service.updateLocalName(UUID.randomUUID(), updateLocationLocalNameRequest)
     }
   }
 
   @Test
   fun `update location`() {
-    val updateLocationRequest = UpdateLocationRequest("L23", "additional comment", "User 1")
+    val updateLocationLocalNameRequest = UpdateLocationLocalNameRequest("L23", "User 1")
     val location =
       Cell(
         id = UUID.randomUUID(),
@@ -102,8 +102,7 @@ class LocationServiceTest {
       )
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(location))
 
-    val cellDto = service.updateLocation(UUID.randomUUID(), updateLocationRequest)
-    Assertions.assertThat(cellDto.comments).isEqualTo("additional comment")
+    val cellDto = service.updateLocalName(UUID.randomUUID(), updateLocationLocalNameRequest)
     Assertions.assertThat(cellDto.localName).isEqualTo("L23")
   }
 
