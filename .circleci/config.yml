@@ -40,7 +40,7 @@ jobs:
       - hmpps/wait_till_ready_postgres
       - run:
           name: Run check
-          command: ./gradlew check koverHtmlReport
+          command: ./gradlew check
       - save_cache:
           paths:
             - ~/.gradle
@@ -50,9 +50,6 @@ jobs:
       - store_artifacts:
           path: build/reports/tests
           destination: test-report
-      - store_artifacts:
-          path: build/reports/kover/html
-          destination: test-coverage-report
 
 workflows:
   version: 2
