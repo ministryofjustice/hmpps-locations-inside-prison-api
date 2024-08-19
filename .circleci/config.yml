@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  hmpps: ministryofjustice/hmpps@9
+  hmpps: ministryofjustice/hmpps@10
 
 parameters:
   alerts-slack-channel:
@@ -16,7 +16,7 @@ parameters:
     default: "21.0"
   postgres-version:
     type: string
-    default: "15"
+    default: "16"
   localstack-version:
     type: string
     default: "3"
@@ -31,6 +31,8 @@ jobs:
       postgres_tag: << pipeline.parameters.postgres-version >>
       postgres_username: "locations_inside_prison"
       postgres_password: "locations_inside_prison"
+      java_options: "-Xmx2048m -XX:ParallelGCThreads=2 -XX:ConcGCThreads=2 -Djava.util.concurrent.ForkJoinPool.common.parallelism=2 -Dorg.gradle.daemon=true -Dkotlin.compiler.execution.strategy=in-process -Dorg.gradle.workers.max=1"
+      resource_class: "large"
     steps:
       - checkout
       - restore_cache:
