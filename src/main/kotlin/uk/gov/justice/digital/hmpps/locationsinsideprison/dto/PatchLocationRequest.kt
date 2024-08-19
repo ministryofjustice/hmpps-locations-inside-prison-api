@@ -61,18 +61,14 @@ data class PatchNonResidentialLocationRequest(
   val usage: Set<NonResidentialUsageDto>? = null,
 ) : PatchLocationRequest
 
-@Schema(description = "Request to update a location")
+@Schema(description = "Request to update the local name of a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-data class UpdateLocationRequest(
+data class UpdateLocationLocalNameRequest(
 
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @Schema(description = "Alternative description to display for location", example = "Wing A", required = true)
   @field:Size(max = 80, message = "Description must be less than 81 characters")
-  val localName: String? = null,
+  val localName: String,
 
-  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
-  @field:Size(max = 255, message = "Comments must be less than 256 characters")
-  val comments: String? = null,
-
-  @Schema(description = "Username of the staff updating the location", required = true)
-  val updatedBy: String,
+  @Schema(description = "Username of the staff updating the location", required = false)
+  val updatedBy: String? = null,
 )

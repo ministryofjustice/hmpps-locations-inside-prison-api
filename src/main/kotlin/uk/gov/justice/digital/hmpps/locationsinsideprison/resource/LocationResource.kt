@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import java.util.UUID
@@ -121,10 +121,10 @@ class LocationResource(
     return locationService.getLocations(pageable)
   }
 
-  @PutMapping("/{id}")
+  @PutMapping("/{id}/change-local-name")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
-    summary = "Update basic details of a location: local name, comments",
+    summary = "Update local name details of a location",
     description = "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
@@ -153,20 +153,20 @@ class LocationResource(
       ),
     ],
   )
-  fun updateLocation(
+  fun updateLocalName(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
     @RequestBody
     @Validated
-    updateLocationRequest: UpdateLocationRequest,
+    updateLocationLocalNameRequest: UpdateLocationLocalNameRequest,
   ): LocationDTO {
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
     ) {
-      locationService.updateLocation(
+      locationService.updateLocalName(
         id = id,
-        updateLocationRequest = updateLocationRequest,
+        updateLocationLocalNameRequest = updateLocationLocalNameRequest,
       )
     }
   }
