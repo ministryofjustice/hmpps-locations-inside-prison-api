@@ -24,7 +24,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationPrefixDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
@@ -283,7 +283,7 @@ class LocationService(
     location: Location,
     patchLocationRequest: PatchLocationRequest,
   ): UpdateLocationResult {
-    val (codeChanged, oldParent, parentChanged) = updateLocation(location, patchLocationRequest)
+    val (codeChanged, oldParent, parentChanged) = updateLocalName(location, patchLocationRequest)
 
     location.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
 
@@ -334,7 +334,7 @@ class LocationService(
     return residentialLocation.toDto(includeChildren = true, includeNonResidential = false)
   }
 
-  private fun updateLocation(
+  private fun updateLocalName(
     locationToUpdate: Location,
     patchLocationRequest: PatchLocationRequest,
   ): UpdatedSummary {
@@ -441,7 +441,7 @@ class LocationService(
   }
 
   @Transactional
-  fun updateLocation(id: UUID, updateLocationRequest: UpdateLocationRequest): LocationDTO {
+  fun updateLocalName(id: UUID, updateLocationLocalNameRequest: UpdateLocationLocalNameRequest): LocationDTO {
     val location = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -450,18 +450,12 @@ class LocationService(
     }
 
     location.updateLocalName(
-      localName = updateLocationRequest.localName,
-      userOrSystemInContext = updateLocationRequest.updatedBy,
+      localName = updateLocationLocalNameRequest.localName,
+      userOrSystemInContext = updateLocationLocalNameRequest.updatedBy ?: authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
     )
 
-    location.updateComments(
-      comments = updateLocationRequest.comments,
-      userOrSystemInContext = updateLocationRequest.updatedBy,
-      clock = clock,
-    )
-
-    log.info("Location updated [${location.getKey()}")
+    log.info("Location local name updated [${location.getKey()}")
 
     telemetryClient.trackEvent(
       "Location updated",
