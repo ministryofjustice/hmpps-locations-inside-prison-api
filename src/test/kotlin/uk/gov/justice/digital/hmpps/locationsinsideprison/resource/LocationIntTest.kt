@@ -15,6 +15,7 @@ import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.*
 
 const val EXPECTED_USERNAME = "A_TEST_USER"
 
@@ -236,6 +237,18 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .exchange()
           .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+
+      @Test
+      fun `location id not found`() {
+        webTestClient.get().uri("/locations/${UUID.randomUUID()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().is4xxClientError
       }
     }
 
