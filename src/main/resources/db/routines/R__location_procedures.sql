@@ -263,17 +263,6 @@ BEGIN
                           accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
     values (p_prison_id, 'H-1', '1', 'LANDING', v_current_parent_id, null, 'HEALTHCARE_INPATIENTS', 'HEALTHCARE', now(), now(), p_username);
 
-    -- archived cells
-    PERFORM create_archive_location(p_code := '3', p_prison_id := p_prison_id, p_parent_path := 'D', p_username := p_username, p_archive_reason := 'Closure', p_location_type := 'LANDING');
-    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'D-3', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
-    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'D-3', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
-    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'D-3', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
-
-    PERFORM create_archive_location(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_archive_reason := 'Merged to C-3-15');
-    PERFORM create_archive_location(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_archive_reason := 'Duplicate');
-    PERFORM create_archive_location(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_archive_reason := 'Duplicate');
-    PERFORM create_archive_location(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_archive_reason := 'Duplicate');
-
     -- cells in A-1
     PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'A-1', p_username := p_username, p_cell_type := 'ACCESSIBLE_CELL', p_max_cap := 2, p_working_cap := 2);
     PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'A-1', p_username := p_username, p_cell_type := 'ACCESSIBLE_CELL', p_max_cap := 2, p_working_cap := 2);
@@ -307,6 +296,200 @@ BEGIN
     PERFORM create_cell(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
     PERFORM create_cell(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
     PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+
+    -- cells in A-3
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+
+    -- cells in B-1
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+
+    -- cells in B-2
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+
+    -- cells in B-3
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_archive_location(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_archive_reason := 'Duplicate');
+    PERFORM create_archive_location(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_archive_reason := 'Duplicate');
+    PERFORM create_archive_location(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_archive_reason := 'Duplicate');
+
+
+    -- cells in C-1
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+
+    -- cells in C-2
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'C-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+
+    -- cells in C-3
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_archive_location(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_archive_reason := 'Merged to C-3-15');
+    PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+
+    -- cells in D-1
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+
+    -- cells in D-2
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+    PERFORM create_cell(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+    PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'D-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2);
+
+    -- D-3 archived cells
+    PERFORM create_archive_location(p_code := '3', p_prison_id := p_prison_id, p_parent_path := 'D', p_username := p_username, p_archive_reason := 'Closure', p_location_type := 'LANDING');
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'D-3', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'D-3', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'D-3', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+
+    -- cells in S-1
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '013', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '016', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '017', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '018', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
+    PERFORM create_cell(p_code := '019', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '020', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+
+    -- cells in H-1
+    PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '008', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '009', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
+    PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0);
 
     -- setup the signed op capacity
     insert into prison_signed_operation_capacity (signed_operation_capacity, prison_id, when_updated, updated_by)
