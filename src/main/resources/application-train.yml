@@ -9,4 +9,4 @@ hmpps.sqs:
 
 spring:
   flyway:
-    locations: classpath:db/migration,classpath:db/training
+    locations: classpath:db/migration,classpath:db/procs,classpath:db/training
