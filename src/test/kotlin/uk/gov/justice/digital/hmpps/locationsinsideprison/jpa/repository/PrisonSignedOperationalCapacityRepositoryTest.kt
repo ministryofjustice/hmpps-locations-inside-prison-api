@@ -16,6 +16,11 @@ import java.time.LocalDateTime
 @Transactional
 class PrisonSignedOperationalCapacityRepositoryTest : TestBase() {
 
+  val prisonIdBXI = "BXI"
+  val prisonIdMDI = "MDI"
+  val prisonIdXXX = "XXX"
+  val testUser = "USER"
+
   @Autowired
   lateinit var repository: PrisonSignedOperationCapacityRepository
 
@@ -26,7 +31,7 @@ class PrisonSignedOperationalCapacityRepositoryTest : TestBase() {
 
   @Test
   fun `Return null when capacity not defined for prison id`() {
-    var oc = repository.findOneByPrisonId("MDI")
+    var oc = repository.findOneByPrisonId(prisonIdMDI)
     assertThat(oc).isNull()
   }
 
@@ -36,8 +41,24 @@ class PrisonSignedOperationalCapacityRepositoryTest : TestBase() {
     var oc = repository.findOneByPrisonId("MDI")
     assertThat(oc?.id).isNotNull()
     assertThat(oc?.signedOperationCapacity).isEqualTo(130)
-    assertThat(oc?.prisonId).isEqualTo("MDI")
+    assertThat(oc?.prisonId).isEqualTo(prisonIdMDI)
     assertThat(oc?.whenUpdated).isEqualTo(LocalDateTime.now(clock))
-    assertThat(oc?.updatedBy).isEqualTo("USER")
+    assertThat(oc?.updatedBy).isEqualTo(testUser)
+  }
+
+  @Test
+  @Sql("classpath:repository/insert-prison-signed-operation-capacity.sql")
+  fun `Return null when prisonID is not valid`() {
+    var oc = repository.findOneByPrisonId(prisonIdXXX)
+    assertThat(oc).isNull()
+  }
+
+  @Test
+  @Sql("classpath:repository/insert-prison-signed-operation-capacity.sql")
+  fun `Return correct PrisonSignedOperationCapacity `() {
+    var oc = repository.findOneByPrisonId(prisonIdBXI)
+    assertThat(oc.toString()).contains("Prison Signed Operation Capacity")
+    assertThat(oc?.signedOperationCapacity).isEqualTo(130)
+    assertThat(oc.toString()).contains("BXI")
   }
 }
