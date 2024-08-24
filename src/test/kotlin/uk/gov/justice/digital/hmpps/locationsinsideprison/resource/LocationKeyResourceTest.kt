@@ -9,6 +9,8 @@ import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationKeyResourceTest : CommonDataTestBase() {
 
+  val xxxInvalid = "XXX"
+
   @DisplayName("GET /locations/key/{key}")
   @Nested
   inner class ViewLocationByKeyTest {
@@ -37,6 +39,19 @@ class LocationKeyResourceTest : CommonDataTestBase() {
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .exchange()
           .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+
+      @Test
+      fun `cannot get location keyId is not found`() {
+        webTestClient.get().uri("/locations/key/$xxxInvalid")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isNotFound
       }
     }
 
