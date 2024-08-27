@@ -941,6 +941,70 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             false,
           )
       }
+
+      @Test
+      fun `can migrate a location different deactivationReason REFURBISHMENT`() {
+        migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.REFURBISHMENT)
+
+        val result = webTestClient.post().uri("/migrate/location")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateRequest))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+      }
+
+      @Test
+      fun `can migrate a location different deactivationReason Refurbishment`() {
+        migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.REFURBISHMENT)
+
+        val result = webTestClient.post().uri("/migrate/location")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateRequest))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+      }
+
+      @Test
+      fun `can migrate a location different deactivationReason Staff shortage`() {
+        migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.STAFF_SHORTAGE)
+
+        val result = webTestClient.post().uri("/migrate/location")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateRequest))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+      }
+
+      @Test
+      fun `can migrate a location different deactivationReason Mothballed`() {
+        migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.MOTHBALLED)
+
+        val result = webTestClient.post().uri("/migrate/location")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateRequest))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+      }
     }
   }
 
