@@ -783,15 +783,12 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         assertThat(result.getKey()).isEqualTo("ZZGHI-B-1-002")
         assertThat(result.comments).isEqualTo("This is a new cell")
         assertThat(result.orderWithinParentLocation).isEqualTo(1)
-
         assertThat(result.capacity).isNotNull
         assertThat(result.capacity?.maxCapacity).isEqualTo(1)
         assertThat(result.capacity?.workingCapacity).isEqualTo(1)
-
         assertThat(result.attributes).isNotEmpty
         assertThat(result.attributes).contains(ResidentialAttributeValue.CAT_B)
-
-        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.DAMAGED)
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
         assertThat(result.proposedReactivationDate).isEqualTo(migrateRequest.proposedReactivationDate)
 
         webTestClient.get().uri("/locations/key/ZZGHI-B-1-002?includeHistory=true")
