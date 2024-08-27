@@ -64,6 +64,42 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var nonRes: NonResidentialLocation
   lateinit var locationHistory: LocationHistory
 
+  fun migrateRequestGeneration(deactivationReason: NomisDeactivatedReason): NomisMigrateLocationRequest {
+    var migrateRequest = NomisMigrateLocationRequest(
+      prisonId = "ZZGHI",
+      code = "002",
+      locationType = LocationType.CELL,
+      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+      comments = "This is a new cell",
+      orderWithinParentLocation = 1,
+      lastUpdatedBy = "user",
+      parentLocationPath = "B-1",
+      deactivationReason = deactivationReason,
+      proposedReactivationDate = LocalDateTime.now(clock).plusMonths(1).toLocalDate(),
+      lastModifiedDate = LocalDateTime.now(clock).minusYears(2),
+      capacity = CapacityDTO(1, 1),
+      certification = CertificationDTO(true, 1),
+      attributes = setOf(ResidentialAttributeValue.CAT_B),
+      history = listOf(
+        ChangeHistory(
+          attribute = LocationAttribute.DESCRIPTION.name,
+          oldValue = null,
+          newValue = "A New Cell",
+          amendedBy = "user2",
+          amendedDate = LocalDateTime.now(clock).minusYears(2),
+        ),
+        ChangeHistory(
+          attribute = LocationAttribute.COMMENTS.name,
+          oldValue = "Old comment",
+          newValue = "This is a new cell",
+          amendedBy = "user1",
+          amendedDate = LocalDateTime.now(clock).minusYears(1),
+        ),
+      ),
+    )
+    return migrateRequest
+  }
+
   @BeforeEach
   fun setUp() {
     locationHistoryRepository.deleteAll()
@@ -668,38 +704,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   @DisplayName("POST /migrate/location")
   @Nested
   inner class MigrateLocationTest {
-    var migrateRequest = NomisMigrateLocationRequest(
-      prisonId = "ZZGHI",
-      code = "002",
-      locationType = LocationType.CELL,
-      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-      comments = "This is a new cell",
-      orderWithinParentLocation = 1,
-      lastUpdatedBy = "user",
-      parentLocationPath = "B-1",
-      deactivationReason = NomisDeactivatedReason.DAMAGED,
-      proposedReactivationDate = LocalDateTime.now(clock).plusMonths(1).toLocalDate(),
-      lastModifiedDate = LocalDateTime.now(clock).minusYears(2),
-      capacity = CapacityDTO(1, 1),
-      certification = CertificationDTO(true, 1),
-      attributes = setOf(ResidentialAttributeValue.CAT_B),
-      history = listOf(
-        ChangeHistory(
-          attribute = LocationAttribute.DESCRIPTION.name,
-          oldValue = null,
-          newValue = "A New Cell",
-          amendedBy = "user2",
-          amendedDate = LocalDateTime.now(clock).minusYears(2),
-        ),
-        ChangeHistory(
-          attribute = LocationAttribute.COMMENTS.name,
-          oldValue = "Old comment",
-          newValue = "This is a new cell",
-          amendedBy = "user1",
-          amendedDate = LocalDateTime.now(clock).minusYears(1),
-        ),
-      ),
-    )
+    var migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.DAMAGED)
 
     @Nested
     inner class Security {
