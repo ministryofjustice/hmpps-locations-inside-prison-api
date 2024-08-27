@@ -16,6 +16,9 @@ import java.time.LocalDateTime
 @Transactional
 class PrisonSignedOperationalCapacityRepositoryTest : TestBase() {
 
+  val testPrisonId = "MDI"
+  val testUser = "USER"
+
   @Autowired
   lateinit var repository: PrisonSignedOperationCapacityRepository
 
@@ -26,18 +29,20 @@ class PrisonSignedOperationalCapacityRepositoryTest : TestBase() {
 
   @Test
   fun `Return null when capacity not defined for prison id`() {
-    var oc = repository.findOneByPrisonId("MDI")
+    val oc = repository.findOneByPrisonId(testPrisonId)
     assertThat(oc).isNull()
   }
 
   @Test
   @Sql("classpath:repository/insert-prison-signed-operation-capacity.sql")
   fun `Return result when capacity defined for prison id`() {
-    var oc = repository.findOneByPrisonId("MDI")
+    val oc = repository.findOneByPrisonId(testPrisonId)
     assertThat(oc?.id).isNotNull()
     assertThat(oc?.signedOperationCapacity).isEqualTo(130)
-    assertThat(oc?.prisonId).isEqualTo("MDI")
+    assertThat(oc?.prisonId).isEqualTo(testPrisonId)
     assertThat(oc?.whenUpdated).isEqualTo(LocalDateTime.now(clock))
-    assertThat(oc?.updatedBy).isEqualTo("USER")
+    assertThat(oc?.updatedBy).isEqualTo(testUser)
+    assertThat(oc.toString()).contains("Prison Signed Operation Capacity")
+    assertThat(oc.toString()).contains(testPrisonId)
   }
 }

@@ -537,6 +537,7 @@ class Cell(
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
     return super.toLegacyDto(includeHistory = includeHistory).copy(
+      ignoreWorkingCapacity = false,
       capacity = capacity?.toDto(),
       certification = certification?.toDto(),
     )

@@ -174,6 +174,7 @@ open class ResidentialLocation(
     return super.toLegacyDto(includeHistory = includeHistory).copy(
       residentialHousingType = residentialHousingType,
 
+      ignoreWorkingCapacity = true,
       capacity = CapacityDto(
         maxCapacity = getMaxCapacity(),
         workingCapacity = getWorkingCapacity(),
