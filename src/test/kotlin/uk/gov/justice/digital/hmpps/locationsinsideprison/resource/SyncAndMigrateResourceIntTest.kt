@@ -12,11 +12,13 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisDeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
@@ -791,51 +793,50 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
         assertThat(result.proposedReactivationDate).isEqualTo(migrateRequest.proposedReactivationDate)
 
-        webTestClient.get().uri("/locations/key/ZZGHI-B-1-002?includeHistory=true")
+        val resultLocation = webTestClient.get().uri("/locations/key/ZZGHI-B-1-002?includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-             {
-              "prisonId": "ZZGHI",
-              "code": "002",
-              "pathHierarchy": "B-1-002",
-              "locationType": "CELL",
-              "accommodationTypes": ["NORMAL_ACCOMMODATION"],
-              "active": false,
-              "key": "ZZGHI-B-1-002",
-              "capacity": {
-                "maxCapacity": 1,
-                "workingCapacity": 0
-              },
-              "deactivatedReason": "${migrateRequest.deactivationReason}",
-              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
-              "changeHistory": [
-                {
-                  "attribute": "Local Name",
-                  "newValue": "A New Cell",
-                  "amendedBy": "user2",
-                  "amendedDate": "${LocalDateTime.now(clock).minusYears(2)}"
-                },
-                {
-                  "attribute": "Comments",
-                  "oldValue": "Old comment",
-                  "newValue": "This is a new cell",
-                  "amendedBy": "user1",
-                  "amendedDate": "${LocalDateTime.now(clock).minusYears(1)}"
-                },
-                {
-                  "attribute": "Used For",
-                  "newValue": "Standard accommodation",
-                  "amendedBy": "user"
-                }
-              ]
-            }
-            """,
-            false,
-          )
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(resultLocation).isNotNull
+
+        assertThat(resultLocation.prisonId).isEqualTo("ZZGHI")
+        assertThat(resultLocation.code).isEqualTo("002")
+        assertThat(resultLocation.pathHierarchy).isEqualTo("B-1-002")
+        assertThat(resultLocation.locationType).isEqualTo(LocationType.CELL)
+        assertThat(resultLocation.accommodationTypes).containsExactly(AccommodationType.NORMAL_ACCOMMODATION)
+        assertThat(resultLocation.active).isFalse
+        assertThat(resultLocation.getKey()).isEqualTo("ZZGHI-B-1-002")
+
+        assertThat(resultLocation.capacity).isNotNull
+        assertThat(resultLocation.capacity?.maxCapacity).isEqualTo(1)
+        assertThat(resultLocation.capacity?.workingCapacity).isEqualTo(0)
+
+        assertThat(resultLocation.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+        assertThat(resultLocation.proposedReactivationDate).isEqualTo(migrateRequest.proposedReactivationDate)
+
+        assertThat(resultLocation.changeHistory).isNotNull
+        assertThat(resultLocation.changeHistory).hasSize(3)
+
+        val firstChange = resultLocation.changeHistory?.get(0)
+        assertThat(firstChange?.attribute).isEqualTo("Local Name")
+        assertThat(firstChange?.newValue).isEqualTo("A New Cell")
+        assertThat(firstChange?.amendedBy).isEqualTo("user2")
+        assertThat(firstChange?.amendedDate).isEqualTo(LocalDateTime.now(clock).minusYears(2))
+
+        val secondChange = resultLocation.changeHistory?.get(1)
+        assertThat(secondChange?.attribute).isEqualTo("Comments")
+        assertThat(secondChange?.oldValue).isEqualTo("Old comment")
+        assertThat(secondChange?.newValue).isEqualTo("This is a new cell")
+        assertThat(secondChange?.amendedBy).isEqualTo("user1")
+        assertThat(secondChange?.amendedDate).isEqualTo(LocalDateTime.now(clock).minusYears(1))
+
+        val thirdChange = resultLocation.changeHistory?.get(2)
+        assertThat(thirdChange?.attribute).isEqualTo("Used For")
+        assertThat(thirdChange?.newValue).isEqualTo("Standard accommodation")
+        assertThat(thirdChange?.amendedBy).isEqualTo("user")
       }
 
       @Test
