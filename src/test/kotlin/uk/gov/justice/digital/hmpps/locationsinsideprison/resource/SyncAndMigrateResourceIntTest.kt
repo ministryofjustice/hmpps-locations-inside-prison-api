@@ -943,8 +943,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `can migrate a location different deactivationReason REFURBISHMENT`() {
-        migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.REFURBISHMENT)
+      fun `can migrate a location different deactivationReason Local Work`() {
+        migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.LOCAL_WORK)
 
         val result = webTestClient.post().uri("/migrate/location")
           .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
@@ -955,7 +955,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           .expectBody(LegacyLocation::class.java)
           .returnResult().responseBody!!
 
-        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.MAINTENANCE)
       }
 
       @Test
