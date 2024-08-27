@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegra
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -763,36 +764,35 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can migrate a location`() {
-        webTestClient.post().uri("/migrate/location")
+        val result = webTestClient.post().uri("/migrate/location")
           .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(migrateRequest))
           .exchange()
           .expectStatus().isCreated
-          .expectBody().json(
-            // language=json
-            """ 
-             {
-              "prisonId": "ZZGHI",
-              "code": "002",
-              "pathHierarchy": "B-1-002",
-              "locationType": "CELL",
-              "residentialHousingType": "NORMAL_ACCOMMODATION",
-              "active": false,
-              "key": "ZZGHI-B-1-002",
-              "comments": "This is a new cell",
-              "orderWithinParentLocation": 1,
-              "capacity": {
-                "maxCapacity": 1,
-                "workingCapacity": 1
-              },
-              "attributes": ["CAT_B"],
-              "deactivatedReason": "${migrateRequest.deactivationReason}",
-              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}"
-            }
-          """,
-            false,
-          )
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result).isNotNull
+        assertThat(result.prisonId).isEqualTo("ZZGHI")
+        assertThat(result.code).isEqualTo("002")
+        assertThat(result.pathHierarchy).isEqualTo("B-1-002")
+        assertThat(result.locationType).isEqualTo(LocationType.CELL)
+        assertThat(result.residentialHousingType).isEqualTo(ResidentialHousingType.NORMAL_ACCOMMODATION)
+        assertThat(result.active).isFalse
+        assertThat(result.getKey()).isEqualTo("ZZGHI-B-1-002")
+        assertThat(result.comments).isEqualTo("This is a new cell")
+        assertThat(result.orderWithinParentLocation).isEqualTo(1)
+
+        assertThat(result.capacity).isNotNull
+        assertThat(result.capacity?.maxCapacity).isEqualTo(1)
+        assertThat(result.capacity?.workingCapacity).isEqualTo(1)
+
+        assertThat(result.attributes).isNotEmpty
+        assertThat(result.attributes).contains(ResidentialAttributeValue.CAT_B)
+
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.DAMAGED)
+        assertThat(result.proposedReactivationDate).isEqualTo(migrateRequest.proposedReactivationDate)
 
         webTestClient.get().uri("/locations/key/ZZGHI-B-1-002?includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
