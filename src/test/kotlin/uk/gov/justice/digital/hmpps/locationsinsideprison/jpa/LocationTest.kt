@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
@@ -39,6 +40,25 @@ class LocationTest {
     val dto = location.toLocationGroupDto()
     assertThat(dto.name).isEqualTo("Wing A")
   }
+
+  @Test
+  fun `toLocationGroupDto sets name to code and children list`() {
+    val locationGroupDto = generateLocationGroupDto(mutableListOf(childLocation1, childLocation2))
+
+    assertThat(locationGroupDto.name).isEqualTo("Block B")
+    assertThat(locationGroupDto.key).isEqualTo("B")
+    assertThat(locationGroupDto.children).isNotNull
+    assertThat(locationGroupDto.children?.size).isEqualTo(2)
+
+    val child1 = locationGroupDto.children?.get(0)
+    val child2 = locationGroupDto.children?.get(1)
+
+    assertThat(child1?.name).isEqualTo("Landing B-1")
+    assertThat(child1?.key).isEqualTo("1")
+
+    assertThat(child2?.name).isEqualTo("Landing B-2")
+    assertThat(child2?.key).isEqualTo("2")
+  }
 }
 
 fun generateWingLocation(localName: String?) = ResidentialLocation(
@@ -60,4 +80,22 @@ fun generateCellLocation() = Cell(
   createdBy = "user",
   whenCreated = LocalDateTime.now(),
   childLocations = mutableListOf(),
+)
+
+fun generateLocationGroupDto(childLocationList: MutableList<LocationGroupDto>) = LocationGroupDto(
+  name = "Block B",
+  key = "B",
+  children = List(childLocationList.size) { childLocationList[it] },
+)
+
+val childLocation1 = LocationGroupDto(
+  name = "Landing B-1",
+  key = "1",
+  children = mutableListOf(),
+)
+
+val childLocation2 = LocationGroupDto(
+  name = "Landing B-2",
+  key = "2",
+  children = mutableListOf(),
 )
