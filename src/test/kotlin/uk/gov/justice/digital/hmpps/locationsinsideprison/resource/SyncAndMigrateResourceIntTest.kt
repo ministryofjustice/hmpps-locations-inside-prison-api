@@ -34,7 +34,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SyncService
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.*
@@ -53,9 +52,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: LocationRepository
-
-  @Autowired
-  lateinit var syncService: SyncService
 
   @Autowired
   lateinit var locationHistoryRepository: LocationHistoryRepository
@@ -308,6 +304,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "attributes": [
                 "CAT_A"
               ],
+              "ignoreWorkingCapacity": false,
               "capacity": {
                 "maxCapacity": 3,
                 "workingCapacity": 3
@@ -399,6 +396,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-B-1-001",
               "orderWithinParentLocation": 1,
+              "ignoreWorkingCapacity": true,
               "capacity": {
                 "maxCapacity": 0,
                 "workingCapacity": 0
@@ -484,6 +482,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-B-1-012",
               "orderWithinParentLocation": 1,
+              "ignoreWorkingCapacity": false,
               "capacity": {
                 "maxCapacity": 1,
                 "workingCapacity": 1
@@ -564,6 +563,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-B-1-005",
               "orderWithinParentLocation": 1,
+              "ignoreWorkingCapacity": false,
               "capacity": {
                 "maxCapacity": 1,
                 "workingCapacity": 1
@@ -1080,8 +1080,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
 
       @Test
-      fun `can retrieve sync Nomis to an existing location`() {
-        var legacyLocation = webTestClient.get().uri("/sync/id/${cell.id}")
+      fun `can retrieve a cell by id`() {
+        val legacyLocation = webTestClient.get().uri("/sync/id/${cell.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -1090,9 +1090,26 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           .returnResult().responseBody!!
 
         Assertions.assertEquals(cell.prisonId, legacyLocation.prisonId)
-        Assertions.assertEquals(cell.id?.let { repository.findById(it).get().getPathHierarchy() }, legacyLocation.pathHierarchy)
+        Assertions.assertEquals(cell.id, legacyLocation.id)
         Assertions.assertEquals(cell.getPathHierarchy(), legacyLocation.pathHierarchy)
+        Assertions.assertFalse(legacyLocation.ignoreWorkingCapacity)
       }
+    }
+
+    @Test
+    fun `can retrieve a wing by id`() {
+      val legacyLocation = webTestClient.get().uri("/sync/id/${wingB.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody(LegacyLocation::class.java)
+        .returnResult().responseBody!!
+
+      Assertions.assertEquals(wingB.prisonId, legacyLocation.prisonId)
+      Assertions.assertEquals(wingB.id, legacyLocation.id)
+      Assertions.assertEquals(wingB.getPathHierarchy(), legacyLocation.pathHierarchy)
+      Assertions.assertTrue(legacyLocation.ignoreWorkingCapacity)
     }
   }
 }
