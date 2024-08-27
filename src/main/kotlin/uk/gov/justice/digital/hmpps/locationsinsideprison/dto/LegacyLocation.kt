@@ -37,6 +37,9 @@ data class LegacyLocation(
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   val comments: String? = null,
 
+  @Schema(description = "When set to true DO NOT SYNC the working capacity", required = true, defaultValue = "false")
+  val ignoreWorkingCapacity: Boolean = false,
+
   @Schema(description = "Capacity details of the location", required = false)
   val capacity: Capacity? = null,
 
