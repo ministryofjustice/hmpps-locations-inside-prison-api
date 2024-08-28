@@ -41,6 +41,18 @@ class LocationKeyResourceTest : CommonDataTestBase() {
     }
 
     @Nested
+    inner class Validation {
+
+      @Test
+      fun `cannot get location keyId is not found`() {
+        webTestClient.get().uri("/locations/key/XXX")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isNotFound
+      }
+    }
+
+    @Nested
     inner class HappyPath {
 
       @Test
