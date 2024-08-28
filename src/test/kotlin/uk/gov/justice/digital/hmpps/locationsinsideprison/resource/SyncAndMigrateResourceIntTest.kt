@@ -12,14 +12,17 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisDeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -63,6 +66,42 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var room: ResidentialLocation
   lateinit var nonRes: NonResidentialLocation
   lateinit var locationHistory: LocationHistory
+
+  fun migrateRequestGeneration(deactivationReason: NomisDeactivatedReason): NomisMigrateLocationRequest {
+    var migrateRequest = NomisMigrateLocationRequest(
+      prisonId = "ZZGHI",
+      code = "002",
+      locationType = LocationType.CELL,
+      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+      comments = "This is a new cell",
+      orderWithinParentLocation = 1,
+      lastUpdatedBy = "user",
+      parentLocationPath = "B-1",
+      deactivationReason = deactivationReason,
+      proposedReactivationDate = LocalDateTime.now(clock).plusMonths(1).toLocalDate(),
+      lastModifiedDate = LocalDateTime.now(clock).minusYears(2),
+      capacity = CapacityDTO(1, 1),
+      certification = CertificationDTO(true, 1),
+      attributes = setOf(ResidentialAttributeValue.CAT_B),
+      history = listOf(
+        ChangeHistory(
+          attribute = LocationAttribute.DESCRIPTION.name,
+          oldValue = null,
+          newValue = "A New Cell",
+          amendedBy = "user2",
+          amendedDate = LocalDateTime.now(clock).minusYears(2),
+        ),
+        ChangeHistory(
+          attribute = LocationAttribute.COMMENTS.name,
+          oldValue = "Old comment",
+          newValue = "This is a new cell",
+          amendedBy = "user1",
+          amendedDate = LocalDateTime.now(clock).minusYears(1),
+        ),
+      ),
+    )
+    return migrateRequest
+  }
 
   @BeforeEach
   fun setUp() {
@@ -668,38 +707,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   @DisplayName("POST /migrate/location")
   @Nested
   inner class MigrateLocationTest {
-    var migrateRequest = NomisMigrateLocationRequest(
-      prisonId = "ZZGHI",
-      code = "002",
-      locationType = LocationType.CELL,
-      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-      comments = "This is a new cell",
-      orderWithinParentLocation = 1,
-      lastUpdatedBy = "user",
-      parentLocationPath = "B-1",
-      deactivationReason = NomisDeactivatedReason.DAMAGED,
-      proposedReactivationDate = LocalDateTime.now(clock).plusMonths(1).toLocalDate(),
-      lastModifiedDate = LocalDateTime.now(clock).minusYears(2),
-      capacity = CapacityDTO(1, 1),
-      certification = CertificationDTO(true, 1),
-      attributes = setOf(ResidentialAttributeValue.CAT_B),
-      history = listOf(
-        ChangeHistory(
-          attribute = LocationAttribute.DESCRIPTION.name,
-          oldValue = null,
-          newValue = "A New Cell",
-          amendedBy = "user2",
-          amendedDate = LocalDateTime.now(clock).minusYears(2),
-        ),
-        ChangeHistory(
-          attribute = LocationAttribute.COMMENTS.name,
-          oldValue = "Old comment",
-          newValue = "This is a new cell",
-          amendedBy = "user1",
-          amendedDate = LocalDateTime.now(clock).minusYears(1),
-        ),
-      ),
-    )
+    var migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.DAMAGED)
 
     @Nested
     inner class Security {
@@ -758,82 +766,77 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     inner class HappyPath {
       @Test
       fun `can migrate a location`() {
-        webTestClient.post().uri("/migrate/location")
+        val result = webTestClient.post().uri("/migrate/location")
           .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(migrateRequest))
           .exchange()
           .expectStatus().isCreated
-          .expectBody().json(
-            // language=json
-            """ 
-             {
-              "prisonId": "ZZGHI",
-              "code": "002",
-              "pathHierarchy": "B-1-002",
-              "locationType": "CELL",
-              "residentialHousingType": "NORMAL_ACCOMMODATION",
-              "active": false,
-              "key": "ZZGHI-B-1-002",
-              "comments": "This is a new cell",
-              "orderWithinParentLocation": 1,
-              "capacity": {
-                "maxCapacity": 1,
-                "workingCapacity": 1
-              },
-              "attributes": ["CAT_B"],
-              "deactivatedReason": "${migrateRequest.deactivationReason}",
-              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}"
-            }
-          """,
-            false,
-          )
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
 
-        webTestClient.get().uri("/locations/key/ZZGHI-B-1-002?includeHistory=true")
+        assertThat(result).isNotNull
+        assertThat(result.prisonId).isEqualTo("ZZGHI")
+        assertThat(result.code).isEqualTo("002")
+        assertThat(result.pathHierarchy).isEqualTo("B-1-002")
+        assertThat(result.locationType).isEqualTo(LocationType.CELL)
+        assertThat(result.residentialHousingType).isEqualTo(ResidentialHousingType.NORMAL_ACCOMMODATION)
+        assertThat(result.active).isFalse
+        assertThat(result.getKey()).isEqualTo("ZZGHI-B-1-002")
+        assertThat(result.comments).isEqualTo("This is a new cell")
+        assertThat(result.orderWithinParentLocation).isEqualTo(1)
+        assertThat(result.capacity).isNotNull
+        assertThat(result.capacity?.maxCapacity).isEqualTo(1)
+        assertThat(result.capacity?.workingCapacity).isEqualTo(1)
+        assertThat(result.attributes).isNotEmpty
+        assertThat(result.attributes).contains(ResidentialAttributeValue.CAT_B)
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+        assertThat(result.proposedReactivationDate).isEqualTo(migrateRequest.proposedReactivationDate)
+
+        val resultLocation = webTestClient.get().uri("/locations/key/ZZGHI-B-1-002?includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-             {
-              "prisonId": "ZZGHI",
-              "code": "002",
-              "pathHierarchy": "B-1-002",
-              "locationType": "CELL",
-              "accommodationTypes": ["NORMAL_ACCOMMODATION"],
-              "active": false,
-              "key": "ZZGHI-B-1-002",
-              "capacity": {
-                "maxCapacity": 1,
-                "workingCapacity": 0
-              },
-              "deactivatedReason": "${migrateRequest.deactivationReason}",
-              "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
-              "changeHistory": [
-                {
-                  "attribute": "Local Name",
-                  "newValue": "A New Cell",
-                  "amendedBy": "user2",
-                  "amendedDate": "${LocalDateTime.now(clock).minusYears(2)}"
-                },
-                {
-                  "attribute": "Comments",
-                  "oldValue": "Old comment",
-                  "newValue": "This is a new cell",
-                  "amendedBy": "user1",
-                  "amendedDate": "${LocalDateTime.now(clock).minusYears(1)}"
-                },
-                {
-                  "attribute": "Used For",
-                  "newValue": "Standard accommodation",
-                  "amendedBy": "user"
-                }
-              ]
-            }
-            """,
-            false,
-          )
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(resultLocation).isNotNull
+
+        assertThat(resultLocation.prisonId).isEqualTo("ZZGHI")
+        assertThat(resultLocation.code).isEqualTo("002")
+        assertThat(resultLocation.pathHierarchy).isEqualTo("B-1-002")
+        assertThat(resultLocation.locationType).isEqualTo(LocationType.CELL)
+        assertThat(resultLocation.accommodationTypes).containsExactly(AccommodationType.NORMAL_ACCOMMODATION)
+        assertThat(resultLocation.active).isFalse
+        assertThat(resultLocation.getKey()).isEqualTo("ZZGHI-B-1-002")
+
+        assertThat(resultLocation.capacity).isNotNull
+        assertThat(resultLocation.capacity?.maxCapacity).isEqualTo(1)
+        assertThat(resultLocation.capacity?.workingCapacity).isEqualTo(0)
+
+        assertThat(resultLocation.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+        assertThat(resultLocation.proposedReactivationDate).isEqualTo(migrateRequest.proposedReactivationDate)
+
+        assertThat(resultLocation.changeHistory).isNotNull
+        assertThat(resultLocation.changeHistory).hasSize(3)
+
+        val firstChange = resultLocation.changeHistory?.get(0)
+        assertThat(firstChange?.attribute).isEqualTo("Local Name")
+        assertThat(firstChange?.newValue).isEqualTo("A New Cell")
+        assertThat(firstChange?.amendedBy).isEqualTo("user2")
+        assertThat(firstChange?.amendedDate).isEqualTo(LocalDateTime.now(clock).minusYears(2))
+
+        val secondChange = resultLocation.changeHistory?.get(1)
+        assertThat(secondChange?.attribute).isEqualTo("Comments")
+        assertThat(secondChange?.oldValue).isEqualTo("Old comment")
+        assertThat(secondChange?.newValue).isEqualTo("This is a new cell")
+        assertThat(secondChange?.amendedBy).isEqualTo("user1")
+        assertThat(secondChange?.amendedDate).isEqualTo(LocalDateTime.now(clock).minusYears(1))
+
+        val thirdChange = resultLocation.changeHistory?.get(2)
+        assertThat(thirdChange?.attribute).isEqualTo("Used For")
+        assertThat(thirdChange?.newValue).isEqualTo("Standard accommodation")
+        assertThat(thirdChange?.amendedBy).isEqualTo("user")
       }
 
       @Test
@@ -937,6 +940,70 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             """,
             false,
           )
+      }
+
+      @Test
+      fun `can migrate a location different deactivationReason Local Work`() {
+        migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.LOCAL_WORK)
+
+        val result = webTestClient.post().uri("/migrate/location")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateRequest))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.MAINTENANCE)
+      }
+
+      @Test
+      fun `can migrate a location different deactivationReason Refurbishment`() {
+        migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.REFURBISHMENT)
+
+        val result = webTestClient.post().uri("/migrate/location")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateRequest))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+      }
+
+      @Test
+      fun `can migrate a location different deactivationReason Staff shortage`() {
+        migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.STAFF_SHORTAGE)
+
+        val result = webTestClient.post().uri("/migrate/location")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateRequest))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+      }
+
+      @Test
+      fun `can migrate a location different deactivationReason Mothballed`() {
+        migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.MOTHBALLED)
+
+        val result = webTestClient.post().uri("/migrate/location")
+          .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(migrateRequest))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
       }
     }
   }

@@ -75,6 +75,25 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
     inner class Validation {
 
       @Test
+      @Sql("classpath:repository/insert-dummy-locations.sql")
+      fun `prisonId not found`() {
+        webTestClient.post().uri("/signed-op-cap/")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            """
+              { 
+                "prisonId": "XYZ",
+                "signedOperationCapacity": "10",
+                "updatedBy": "MALEMAN"
+              }
+            """.trimIndent(),
+          )
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
       fun `bad request when missing prisonId`() {
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
