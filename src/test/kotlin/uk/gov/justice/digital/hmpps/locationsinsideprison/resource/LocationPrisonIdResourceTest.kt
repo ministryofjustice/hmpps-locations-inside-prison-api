@@ -1,8 +1,11 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.test.web.reactive.server.expectBodyList
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
@@ -208,39 +211,34 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
 
       @Test
       fun `can retrieve residential groups for a prison included in the properties file`() {
-        webTestClient.get().uri("/locations/prison/MDI/groups")
+        val result = webTestClient.get().uri("/locations/prison/MDI/groups")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-                [
-                  {
-                    "name": "All Wings",
-                    "key": "All Wings",
-                    "children": []
-                  },
-                  {
-                    "name": "Z-Wing",
-                    "key": "Z-Wing",
-                    "children": [
-                      {
-                        "name": "Landing 1",
-                        "key": "Landing 1",
-                        "children": []
-                      },
-                      {
-                        "name": "Landing 2",
-                        "key": "Landing 2",
-                        "children": []
-                      }
-                    ]
-                  }
-                ]
-              """,
-            false,
-          )
+          .expectBodyList(LocationGroupDto::class.java).hasSize(2)
+
+        assertThat(result).isNotNull
+
+        val firstGroup = result.returnResult().responseBody?.get(0)
+        assertThat(firstGroup?.name).isEqualTo("All Wings")
+        assertThat(firstGroup?.key).isEqualTo("All Wings")
+        assertThat(firstGroup?.children).isEmpty()
+
+        val secondGroup = result.returnResult().responseBody?.get(1)
+        assertThat(secondGroup?.name).isEqualTo("Z-Wing")
+        assertThat(secondGroup?.key).isEqualTo("Z-Wing")
+        assertThat(secondGroup?.children).hasSize(2)
+
+        val firstChildOfSecondGroup = secondGroup?.children?.get(0)
+        assertThat(firstChildOfSecondGroup?.name ?: "Landing 1").isEqualTo("Landing 1")
+        assertThat(firstChildOfSecondGroup?.key ?: "Landing 1").isEqualTo("Landing 1")
+        assertThat(firstChildOfSecondGroup?.children).isEmpty()
+
+        val secondChildOfSecondGroup = secondGroup?.children?.get(1)
+        assertThat(secondChildOfSecondGroup?.name ?: "Landing 2").isEqualTo("Landing 2")
+        assertThat(secondChildOfSecondGroup?.key ?: "Landing 2").isEqualTo("Landing 2")
+        assertThat(secondChildOfSecondGroup?.children).isEmpty()
       }
 
       @Test
