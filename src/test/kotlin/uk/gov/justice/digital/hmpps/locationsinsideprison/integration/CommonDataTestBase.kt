@@ -38,6 +38,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
   lateinit var wingN: ResidentialLocation
   lateinit var visitRoom: NonResidentialLocation
   lateinit var adjRoom: NonResidentialLocation
+  lateinit var store: ResidentialLocation
 
   @BeforeEach
   fun setUp() {
@@ -122,6 +123,13 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       ),
     )
+    store = repository.save(
+      buildResidentialLocation(
+        pathHierarchy = "Z-1-01S",
+        locationType = LocationType.STORE,
+        localName = "Store Room",
+      ),
+    )
     inactiveCellB3001 = repository.save(
       buildCell(
         pathHierarchy = "B-A-001",
@@ -160,7 +168,8 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       .addChildLocation(
         landingZ1
           .addChildLocation(cell1)
-          .addChildLocation(cell2),
+          .addChildLocation(cell2)
+          .addChildLocation(store),
       )
       .addChildLocation(landingZ2)
 

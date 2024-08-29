@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.microsoft.applicationinsights.TelemetryClient
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.persistence.EntityManager
 import jakarta.persistence.EntityNotFoundException
 import jakarta.validation.ValidationException
 import org.slf4j.Logger
@@ -35,6 +36,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
@@ -73,6 +75,7 @@ class LocationService(
   private val signedOperationCapacityRepository: PrisonSignedOperationCapacityRepository,
   private val locationHistoryRepository: LocationHistoryRepository,
   private val cellLocationRepository: CellLocationRepository,
+  private val entityManager: EntityManager,
   private val prisonerLocationService: PrisonerLocationService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
@@ -104,7 +107,7 @@ class LocationService(
     val groups = locationGroupFromPropertiesService.getLocationGroups(prisonId)
     return groups.ifEmpty {
       residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
-        .filter { it.isActiveAndAllParentsActive() && it.isWingLandingSpur() }
+        .filter { it.isActiveAndAllParentsActive() && it.isStructural() }
         .map {
           it.toLocationGroupDto()
         }
@@ -614,8 +617,17 @@ class LocationService(
 
   @Transactional
   fun convertToNonResidentialCell(id: UUID, convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null): LocationDTO {
-    val locationToConvert = residentialLocationRepository.findById(id)
+    var locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (locationToConvert.isNonResType()) {
+      locationRepository.updateLocationType(locationToConvert.id!!, LocationType.CELL.name)
+      locationRepository.updateResidentialHousingType(locationToConvert.id!!, ResidentialHousingType.OTHER_USE.name, AccommodationType.OTHER_NON_RESIDENTIAL.name)
+      entityManager.flush()
+      entityManager.clear()
+      locationToConvert = residentialLocationRepository.findById(id)
+        .orElseThrow { LocationNotFoundException(id.toString()) }
+    }
 
     checkForPrisonersInLocation(locationToConvert)
 

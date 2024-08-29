@@ -118,6 +118,45 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION convert_to_non_res_cell(
+                                               IN p_prison_id varchar,
+                                               IN p_path_hierarchy varchar,
+                                               IN p_username varchar,
+                                               IN p_non_res_cell_type varchar,
+                                               IN p_other_converted_cell_type varchar
+) RETURNS UUID
+AS $$
+    DECLARE v_location_id UUID;
+    DECLARE v_capacity_id integer;
+    DECLARE v_certification_id integer;
+BEGIN
+
+    SELECT id, capacity_id, certification_id INTO v_location_id, v_capacity_id, v_certification_id
+    from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_path_hierarchy;
+
+    UPDATE location
+        SET converted_cell_type = p_non_res_cell_type,
+            other_converted_cell_type = p_other_converted_cell_type,
+            capacity_id = null,
+            location_type = 'CELL',
+            residential_housing_type = 'NORMAL_ACCOMMODATION',
+            accommodation_type = 'OTHER_NON_RESIDENTIAL',
+            updated_by = p_username,
+            when_updated = now()
+    WHERE id = v_location_id;
+
+    delete from capacity where id = v_capacity_id;
+
+    update certification
+        set certified = false
+    where id = v_certification_id;
+
+    delete from cell_used_for where location_id = v_location_id;
+    delete from specialist_cell where location_id = v_location_id;
+    return v_location_id;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE OR REPLACE FUNCTION create_archive_location(IN p_code varchar,
                                                    IN p_prison_id varchar,
                                                    IN p_parent_path varchar,

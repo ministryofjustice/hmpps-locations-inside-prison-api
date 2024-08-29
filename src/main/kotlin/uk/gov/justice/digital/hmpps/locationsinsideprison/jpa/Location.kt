@@ -336,7 +336,7 @@ abstract class Location(
       parentId = getParent()?.id,
       topLevelId = findTopLevelLocation().id!!,
       level = getLevel(),
-      leafLevel = findSubLocations().isEmpty(),
+      leafLevel = findSubLocations().isEmpty() && !isStructural() && !isArea(),
       lastModifiedDate = if (useHistoryForUpdate) {
         topHistoryEntry?.amendedDate ?: whenUpdated
       } else {
@@ -390,7 +390,7 @@ abstract class Location(
       key = code,
       name = getDerivedLocalName() ?: code,
       children = getActiveResidentialLocationsBelowThisLevel()
-        .filter { it.isWingLandingSpur() }
+        .filter { it.isStructural() }
         .map { it.toLocationGroupDto() }
         .sortedWith(NaturalOrderComparator()),
     )
@@ -748,7 +748,9 @@ abstract class Location(
   }
 
   fun isCell() = locationType == LocationType.CELL
-  fun isWingLandingSpur() = locationType in listOf(LocationType.WING, LocationType.LANDING, LocationType.SPUR)
+  fun isStructural() = locationType in ResidentialLocationType.entries.filter { it.structural }.map { it.baseType }
+  fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
+  fun isArea() = !isStructural() && !isCell() && !isNonResType()
   fun isLocationShownOnResidentialSummary() = locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
   fun isResidentialType() = locationType in ResidentialLocationType.entries.map { it.baseType }
 
@@ -756,7 +758,7 @@ abstract class Location(
     return LegacyLocation(
       id = id!!,
       code = getCode(),
-      locationType = locationType,
+      locationType = getDerivedLocationType(),
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
       parentId = getParent()?.id,

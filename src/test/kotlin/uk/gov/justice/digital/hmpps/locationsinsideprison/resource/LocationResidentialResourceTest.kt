@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLoca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
@@ -1420,6 +1421,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         otherConvertedCellType = "Taning room",
       )
 
+    var nonResStoreRoomRequest =
+      LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(
+        convertedCellType = ConvertedCellType.STORE,
+        otherConvertedCellType = "Store Room",
+      )
+
     @Nested
     inner class Security {
       @Test
@@ -1503,6 +1510,31 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
+      @Test
+      fun `can update convert room to non res cell`() {
+        prisonerSearchMockServer.stubSearchByLocations(store.prisonId, listOf(store.getPathHierarchy()), false)
+        val result = webTestClient.put().uri("/locations/${store.id}/convert-cell-to-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(nonResStoreRoomRequest)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.convertedCellType == ConvertedCellType.STORE)
+        assertThat(result.otherConvertedCellType == nonResStoreRoomRequest.otherConvertedCellType)
+        assertThat(result.locationType == LocationType.ROOM)
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to store.getKey(),
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
           )
