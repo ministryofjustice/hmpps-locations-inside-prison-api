@@ -73,10 +73,10 @@ class LocationResourceIntTest : CommonDataTestBase() {
             // language=json
             """
               {
-                "totalPages": 1,
-                "totalElements": 14,
+                "totalPages": 2,
+                "totalElements": 15,
                 "first": true,
-                "last": true,
+                "last": false,
                 "size": 14,
                 "content": [
                   {
@@ -111,45 +111,37 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   },
                   {
                     "prisonId": "MDI",
-                    "code": "Z",
-                    "pathHierarchy": "Z",
-                    "locationType": "WING",
-                    "key": "MDI-Z"
-                  },
-                  {
-                    "prisonId": "MDI",
                     "code": "B",
                     "pathHierarchy": "B",
                     "locationType": "WING",
                     "key": "MDI-B"
-                  },
-                  { 
-                    "prisonId": "MDI",
-                    "code": "VISIT",
-                    "pathHierarchy": "Z-VISIT",
-                    "locationType": "VISITS",
-                    "key": "MDI-Z-VISIT"
-                  }, 
-                  {
-                    "prisonId": "MDI",
-                    "code": "1",
-                    "pathHierarchy": "Z-1",
-                    "locationType": "LANDING",
-                    "key": "MDI-Z-1"
-                  },
+                   },
                   {
                     "prisonId": "MDI",
                     "code": "A",
                     "pathHierarchy": "B-A",
                     "locationType": "LANDING",
                     "key": "MDI-B-A"
-                  },
+                  },                   {
+                    "prisonId": "MDI",
+                    "code": "001",
+                    "pathHierarchy": "B-A-001",
+                    "locationType": "CELL",
+                    "key": "MDI-B-A-001"
+                   },
+                   {
+                    "prisonId": "MDI",
+                    "code": "Z",
+                    "pathHierarchy": "Z",
+                    "locationType": "WING",
+                    "key": "MDI-Z"
+                   },
                   {
                     "prisonId": "MDI",
-                    "code": "2",
-                    "pathHierarchy": "Z-2",
+                    "code": "1",
+                    "pathHierarchy": "Z-1",
                     "locationType": "LANDING",
-                    "key": "MDI-Z-2"
+                    "key": "MDI-Z-1"
                   },
                   {
                     "prisonId": "MDI",
@@ -174,10 +166,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   },
                   {
                     "prisonId": "MDI",
-                    "code": "001",
-                    "pathHierarchy": "B-A-001",
-                    "locationType": "CELL",
-                    "key": "MDI-B-A-001"
+                    "code": "01S",
+                    "pathHierarchy": "Z-1-01S",
+                    "locationType": "STORE",
+                    "key": "MDI-Z-1-01S"
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "2",
+                    "pathHierarchy": "Z-2",
+                    "locationType": "LANDING",
+                    "key": "MDI-Z-2"
                   }
                 ],
                 "number": 0,
@@ -343,6 +342,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                         "certified": true,
                         "capacityOfCertifiedCell": 2
                       }
+                    },
+                    {
+                      "prisonId": "MDI",
+                      "pathHierarchy": "Z-1-01S",
+                      "locationType": "STORE"
                     }
                   ]
                 },
@@ -556,13 +560,14 @@ class LocationResourceIntTest : CommonDataTestBase() {
             false,
           )
 
-        getDomainEvents(8).let {
+        getDomainEvents(9).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
+            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
             "location.inside.prison.deactivated" to "MDI-Z-VISIT",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
@@ -641,6 +646,25 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "deactivatedReason": "DAMAGED",
                       "isResidential": true,
                       "key": "MDI-Z-1-002"
+                    },
+                    {
+                      "prisonId": "MDI",
+                      "code": "01S",
+                      "pathHierarchy": "Z-1-01S",
+                      "locationType": "STORE",
+                      "localName": "Store Room",
+                      "permanentlyInactive": false,
+                      "status": "INACTIVE",
+                      "active": false,
+                      "deactivatedByParent": false,
+                      "deactivatedDate": "$now",
+                      "deactivatedReason": "DAMAGED",
+                      "deactivationReasonDescription": "Window smashed",
+                      "proposedReactivationDate": "$proposedReactivationDate",
+                      "level": 3,
+                      "leafLevel": true,
+                      "key": "MDI-Z-1-01S",
+                      "isResidential": true
                     }
                   ]
                 },
@@ -898,19 +922,21 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(12).let {
+        getDomainEvents(14).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
+            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
             "location.inside.prison.deactivated" to "MDI-Z-VISIT",
             "location.inside.prison.reactivated" to "MDI-Z",
             "location.inside.prison.reactivated" to "MDI-Z-1",
             "location.inside.prison.reactivated" to "MDI-Z-2",
             "location.inside.prison.reactivated" to "MDI-Z-1-001",
             "location.inside.prison.reactivated" to "MDI-Z-1-002",
+            "location.inside.prison.reactivated" to "MDI-Z-1-01S",
             "location.inside.prison.reactivated" to "MDI-Z-VISIT",
           )
         }
@@ -976,6 +1002,15 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-002"
+                    },
+                    {
+                      "prisonId": "MDI",
+                      "code": "01S",
+                      "pathHierarchy": "Z-1-01S",
+                      "locationType": "STORE",
+                      "active": true,
+                      "isResidential": true,
+                      "key": "MDI-Z-1-01S"
                     }
                   ]
                 },
@@ -1024,7 +1059,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(12).let {
+        getDomainEvents(13).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1",
@@ -1034,6 +1069,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
+            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
             "location.inside.prison.deactivated" to "MDI-Z-VISIT",
             "location.inside.prison.reactivated" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1",
@@ -1103,6 +1139,16 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "deactivatedReason": "MOTHBALLED",
                       "isResidential": true,
                       "key": "MDI-Z-1-002"
+                    },
+                    {
+                      "prisonId": "MDI",
+                      "code": "01S",
+                      "pathHierarchy": "Z-1-01S",
+                      "locationType": "STORE",
+                      "active": false,
+                      "deactivatedReason": "MOTHBALLED",
+                      "isResidential": true,
+                      "key": "MDI-Z-1-01S"
                     }
                   ]
                 },

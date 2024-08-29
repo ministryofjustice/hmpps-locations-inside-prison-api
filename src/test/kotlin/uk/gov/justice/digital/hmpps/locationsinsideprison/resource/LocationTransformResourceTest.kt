@@ -126,10 +126,11 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         val cellVisit = result.findByPathHierarchy("Z-VISIT")
         assertThat(cellVisit == null)
 
-        getDomainEvents(5).let {
+        getDomainEvents(6).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1-002",
+            "location.inside.prison.amended" to "MDI-Z-1-01S",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z-2",
             "location.inside.prison.amended" to "MDI-Z",
@@ -165,10 +166,11 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         val cellVisit = result.findByPathHierarchy("Z-VISIT")
         assertThat(cellVisit == null)
 
-        getDomainEvents(5).let {
+        getDomainEvents(6).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1-002",
+            "location.inside.prison.amended" to "MDI-Z-1-01S",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z-2",
             "location.inside.prison.amended" to "MDI-Z",
@@ -206,10 +208,11 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         val cellVisit = result.findByPathHierarchy("Z-VISIT")
         assertThat(cellVisit == null)
 
-        getDomainEvents(5).let {
+        getDomainEvents(6).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1-002",
+            "location.inside.prison.amended" to "MDI-Z-1-01S",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z-2",
             "location.inside.prison.amended" to "MDI-Z",

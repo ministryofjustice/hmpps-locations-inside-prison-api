@@ -160,6 +160,17 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                 },
                 {
                   "prisonId": "MDI",
+                  "code": "01S",
+                  "pathHierarchy": "Z-1-01S",
+                  "locationType": "STORE",
+                  "leafLevel": true,
+                  "localName": "Store Room",
+                  "active": true,
+                  "isResidential": true,
+                  "key": "MDI-Z-1-01S"
+                },
+                {
+                  "prisonId": "MDI",
                   "code": "VISIT",
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",

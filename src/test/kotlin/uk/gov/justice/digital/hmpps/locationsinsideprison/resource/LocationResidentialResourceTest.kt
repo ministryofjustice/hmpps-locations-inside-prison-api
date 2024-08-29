@@ -354,7 +354,14 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "level": 3,
                     "inactiveCells": 0,
                     "key": "MDI-Z-1-002"
-                  }
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "01S",
+                    "pathHierarchy": "Z-1-01S",
+                    "locationType": "STORE",
+                    "localName": "Store Room"
+                }
             ]
           }
           """,
@@ -869,6 +876,13 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "locationType": "CELL",
                   "active": true,
                   "key": "MDI-Z-3-002"
+                },
+                {
+                    "prisonId": "MDI",
+                    "code": "01S",
+                    "pathHierarchy": "Z-3-01S",
+                    "locationType": "STORE",
+                    "localName": "Store Room"
                 }
               ]
             }
@@ -876,12 +890,13 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             false,
           )
 
-        getDomainEvents(3).let {
-          assertThat(it).hasSize(3)
+        getDomainEvents(4).let {
+          assertThat(it).hasSize(4)
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-3",
             "location.inside.prison.amended" to "MDI-Z-3-001",
             "location.inside.prison.amended" to "MDI-Z-3-002",
+            "location.inside.prison.amended" to "MDI-Z-3-01S",
           )
         }
       }
@@ -1080,7 +1095,18 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                         "certified": true,
                         "capacityOfCertifiedCell": 2
                       }
-                    }
+                    },
+                  {
+                  "prisonId": "MDI",
+                  "code": "01S",
+                  "pathHierarchy": "B-1-01S",
+                  "locationType": "STORE",
+                  "leafLevel": true,
+                  "localName": "Store Room",
+                  "active": true,
+                  "isResidential": true,
+                  "key": "MDI-B-1-01S"
+                }
                   ]
                 }
               ]
@@ -1188,6 +1214,13 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "locationType": "CELL",
                   "active": true,
                   "key": "MDI-Z-3-002"
+                },
+                {
+                    "prisonId": "MDI",
+                    "code": "01S",
+                    "pathHierarchy": "Z-3-01S",
+                    "locationType": "STORE",
+                    "localName": "Store Room"
                 }
               ]
             }
@@ -1195,12 +1228,13 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             false,
           )
 
-        getDomainEvents(3).let {
-          assertThat(it).hasSize(3)
+        getDomainEvents(4).let {
+          assertThat(it).hasSize(4)
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-3",
             "location.inside.prison.amended" to "MDI-Z-3-001",
             "location.inside.prison.amended" to "MDI-Z-3-002",
+            "location.inside.prison.amended" to "MDI-Z-3-01S",
           )
         }
       }
@@ -1248,6 +1282,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               "pathHierarchy": "Z",
               "locationType": "WING",
               "key": "MDI-Z",
+              "leafLevel": false,
               "capacity": {
                 "maxCapacity": 0,
                 "workingCapacity": 0
@@ -1277,6 +1312,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 {
                   "code": "2",
                   "pathHierarchy": "Z-2",
+                  "leafLevel": false,
                   "locationType": "LANDING",
                   "key": "MDI-Z-2",
                   "capacity": {
@@ -1399,7 +1435,14 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                         "certified": true,
                         "capacityOfCertifiedCell": 2
                       }
-                    }
+                    },
+                   {
+                    "prisonId": "MDI",
+                    "code": "01S",
+                    "pathHierarchy": "B-1-01S",
+                    "locationType": "STORE",
+                    "localName": "Store Room"
+                }
                   ]
                 }
               ]
