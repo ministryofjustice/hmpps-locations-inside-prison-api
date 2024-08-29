@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import com.microsoft.applicationinsights.TelemetryClient
+import jakarta.persistence.EntityManager
 import jakarta.validation.ValidationException
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.Test
@@ -36,6 +37,7 @@ class LocationServiceTest {
   private val locationHistoryRepository: LocationHistoryRepository = mock()
   private val cellLocationRepository: CellLocationRepository = mock()
   private val prisonerLocationService: PrisonerLocationService = mock()
+  private val entityManager: EntityManager = mock()
   private val clock: Clock = TestBase.clock
   private val telemetryClient: TelemetryClient = mock()
   private val authenticationFacade: AuthenticationFacade = mock()
@@ -49,6 +51,7 @@ class LocationServiceTest {
     signedOperationCapacityRepository,
     locationHistoryRepository,
     cellLocationRepository,
+    entityManager,
     prisonerLocationService,
     clock,
     telemetryClient,

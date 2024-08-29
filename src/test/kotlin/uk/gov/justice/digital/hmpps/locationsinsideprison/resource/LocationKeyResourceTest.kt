@@ -69,6 +69,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                       "code": "Z",
                       "pathHierarchy": "Z",
                       "locationType": "WING",
+                      "leafLevel": false,
                       "childLocations": [
                         {
                           "prisonId": "MDI",
@@ -130,7 +131,18 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                               },
                               "isResidential": true,
                               "key": "MDI-Z-1-002"
-                            }
+                            },
+                            {
+                              "prisonId": "MDI",
+                              "code": "01S",
+                              "pathHierarchy": "Z-1-01S",
+                              "locationType": "STORE",
+                              "leafLevel": true,
+                              "localName": "Store Room",
+                              "active": true,
+                              "isResidential": true,
+                              "key": "MDI-Z-1-01S"
+                          }
                           ],
                           
                           "active": true,
@@ -150,6 +162,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                           "prisonId": "MDI",
                           "code": "2",
                           "pathHierarchy": "Z-2",
+                          "leafLevel": false,
                           "locationType": "LANDING",
                           "active": true,
                           "accommodationTypes":[],

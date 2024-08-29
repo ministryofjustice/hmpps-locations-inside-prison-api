@@ -854,7 +854,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "prisonId": "ZZGHI",
               "code": "002",
               "pathHierarchy": "B-1-002",
-              "locationType": "CELL",
+              "locationType": "ROOM",
               "residentialHousingType": "HOLDING_CELL",
               "active": false,
               "key": "ZZGHI-B-1-002",

@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLoca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
@@ -353,7 +354,14 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "level": 3,
                     "inactiveCells": 0,
                     "key": "MDI-Z-1-002"
-                  }
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "01S",
+                    "pathHierarchy": "Z-1-01S",
+                    "locationType": "STORE",
+                    "localName": "Store Room"
+                }
             ]
           }
           """,
@@ -868,6 +876,13 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "locationType": "CELL",
                   "active": true,
                   "key": "MDI-Z-3-002"
+                },
+                {
+                    "prisonId": "MDI",
+                    "code": "01S",
+                    "pathHierarchy": "Z-3-01S",
+                    "locationType": "STORE",
+                    "localName": "Store Room"
                 }
               ]
             }
@@ -875,12 +890,13 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             false,
           )
 
-        getDomainEvents(3).let {
-          assertThat(it).hasSize(3)
+        getDomainEvents(4).let {
+          assertThat(it).hasSize(4)
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-3",
             "location.inside.prison.amended" to "MDI-Z-3-001",
             "location.inside.prison.amended" to "MDI-Z-3-002",
+            "location.inside.prison.amended" to "MDI-Z-3-01S",
           )
         }
       }
@@ -1079,7 +1095,18 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                         "certified": true,
                         "capacityOfCertifiedCell": 2
                       }
-                    }
+                    },
+                  {
+                  "prisonId": "MDI",
+                  "code": "01S",
+                  "pathHierarchy": "B-1-01S",
+                  "locationType": "STORE",
+                  "leafLevel": true,
+                  "localName": "Store Room",
+                  "active": true,
+                  "isResidential": true,
+                  "key": "MDI-B-1-01S"
+                }
                   ]
                 }
               ]
@@ -1187,6 +1214,13 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "locationType": "CELL",
                   "active": true,
                   "key": "MDI-Z-3-002"
+                },
+                {
+                    "prisonId": "MDI",
+                    "code": "01S",
+                    "pathHierarchy": "Z-3-01S",
+                    "locationType": "STORE",
+                    "localName": "Store Room"
                 }
               ]
             }
@@ -1194,12 +1228,13 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             false,
           )
 
-        getDomainEvents(3).let {
-          assertThat(it).hasSize(3)
+        getDomainEvents(4).let {
+          assertThat(it).hasSize(4)
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-3",
             "location.inside.prison.amended" to "MDI-Z-3-001",
             "location.inside.prison.amended" to "MDI-Z-3-002",
+            "location.inside.prison.amended" to "MDI-Z-3-01S",
           )
         }
       }
@@ -1247,6 +1282,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               "pathHierarchy": "Z",
               "locationType": "WING",
               "key": "MDI-Z",
+              "leafLevel": false,
               "capacity": {
                 "maxCapacity": 0,
                 "workingCapacity": 0
@@ -1276,6 +1312,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 {
                   "code": "2",
                   "pathHierarchy": "Z-2",
+                  "leafLevel": false,
                   "locationType": "LANDING",
                   "key": "MDI-Z-2",
                   "capacity": {
@@ -1398,7 +1435,14 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                         "certified": true,
                         "capacityOfCertifiedCell": 2
                       }
-                    }
+                    },
+                   {
+                    "prisonId": "MDI",
+                    "code": "01S",
+                    "pathHierarchy": "B-1-01S",
+                    "locationType": "STORE",
+                    "localName": "Store Room"
+                }
                   ]
                 }
               ]
@@ -1418,6 +1462,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
       LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(
         convertedCellType = ConvertedCellType.OTHER,
         otherConvertedCellType = "Taning room",
+      )
+
+    var nonResStoreRoomRequest =
+      LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(
+        convertedCellType = ConvertedCellType.STORE,
+        otherConvertedCellType = "Store Room",
       )
 
     @Nested
@@ -1503,6 +1553,31 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
+      @Test
+      fun `can update convert room to non res cell`() {
+        prisonerSearchMockServer.stubSearchByLocations(store.prisonId, listOf(store.getPathHierarchy()), false)
+        val result = webTestClient.put().uri("/locations/${store.id}/convert-cell-to-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(nonResStoreRoomRequest)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.convertedCellType == ConvertedCellType.STORE)
+        assertThat(result.otherConvertedCellType == nonResStoreRoomRequest.otherConvertedCellType)
+        assertThat(result.locationType == LocationType.ROOM)
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to store.getKey(),
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
           )
