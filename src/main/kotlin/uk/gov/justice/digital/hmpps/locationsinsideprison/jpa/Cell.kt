@@ -178,7 +178,7 @@ class Cell(
     certification = null
   }
 
-  fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellType: SpecialistCellType?, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
+  fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
     addHistory(
       LocationAttribute.ACCOMMODATION_TYPE,
       this.accommodationType.description,
@@ -192,9 +192,7 @@ class Cell(
       addUsedFor(it, userOrSystemInContext, clock)
     }
 
-    specialistCellType?.let {
-      addSpecialistCellType(it, userOrSystemInContext, clock)
-    }
+    specialistCellTypes?.let { updateSpecialistCellTypes(specialistCellTypes = it, clock = clock, userOrSystemInContext = userOrSystemInContext) }
 
     setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock)
     certifyCell(userOrSystemInContext, clock)
