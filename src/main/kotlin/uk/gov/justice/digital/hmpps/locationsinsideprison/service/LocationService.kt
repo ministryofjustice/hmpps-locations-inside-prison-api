@@ -255,10 +255,7 @@ class LocationService(
       ?.let { throw LocationAlreadyExistsException("${createWingRequest.prisonId}-${createWingRequest.wingCode}") }
 
     val wing = createWingRequest.toEntity(authenticationFacade.getUserOrSystemInContext(), clock)
-    return locationRepository.save(wing).toDto(
-      includeChildren = true,
-      includeNonResidential = false,
-    )
+    return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false)
   }
 
   @Transactional
@@ -782,9 +779,7 @@ class LocationService(
     return list.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
   }
 
-  fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map {
-    it.toDto()
-  }.sortedWith(NaturalOrderComparator())
+  fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }.sortedWith(NaturalOrderComparator())
 
   fun getResidentialInactiveLocations(prisonId: String, parentLocationId: UUID?): List<LocationDTO> {
     val startLocation = parentLocationId?.let {
