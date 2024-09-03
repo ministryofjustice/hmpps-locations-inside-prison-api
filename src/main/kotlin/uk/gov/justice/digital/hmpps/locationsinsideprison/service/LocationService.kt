@@ -91,6 +91,7 @@ class LocationService(
     val toDto = locationRepository.findById(id).getOrNull()?.toDto(
       includeChildren = includeChildren,
       includeHistory = includeHistory,
+      countCells = false,
     )
     return toDto
   }
@@ -99,7 +100,7 @@ class LocationService(
     locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
       .filter { !it.isPermanentlyDeactivated() }
       .map {
-        it.toDto()
+        it.toDto(countCells = false)
       }
       .sortedBy { it.getKey() }
 
@@ -130,7 +131,7 @@ class LocationService(
   fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> =
     cellsInGroup(prisonId, groupName, cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true))
       .toMutableList()
-      .map { it.toDto() }
+      .map { it.toDto(countCells = false) }
       .sortedWith(NaturalOrderComparator())
 
   private fun cellsInGroup(
@@ -161,19 +162,20 @@ class LocationService(
   fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =
     nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
       .map {
-        it.toDto()
+        it.toDto(countCells = false)
       }
 
   fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
     return locationRepository.findOneByKey(key)?.toDto(
       includeChildren = includeChildren,
       includeHistory = includeHistory,
+      countCells = false,
     )
   }
 
   fun getLocationsByKeys(keys: List<String>): List<LocationDTO> =
     locationRepository.findAllByKeys(keys)
-      .map { it.toDto() }
+      .map { it.toDto(countCells = false) }
       .sortedBy { it.getKey() }
 
   fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LegacyLocation> {
@@ -183,7 +185,7 @@ class LocationService(
     locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId, locationType)
       .filter { it.isActive() }
       .map {
-        it.toDto()
+        it.toDto(countCells = false)
       }
       .sortedBy { it.getKey() }
 
@@ -202,7 +204,7 @@ class LocationService(
 
     val capacityChanged = request.isCell() && request.capacity != null
 
-    val location = locationRepository.save(locationToCreate).toDto(includeParent = capacityChanged)
+    val location = locationRepository.save(locationToCreate).toDto(includeParent = capacityChanged, countCells = false)
 
     log.info("Created Residential Location [${location.getKey()}]")
     telemetryClient.trackEvent(
@@ -233,7 +235,7 @@ class LocationService(
 
     val usageChanged = request.usage != null
 
-    val location = locationRepository.save(locationToCreate).toDto(includeParent = usageChanged)
+    val location = locationRepository.save(locationToCreate).toDto(includeParent = usageChanged, countCells = false)
 
     log.info("Created Non-Residential Location [${location.getKey()}]")
     telemetryClient.trackEvent(
@@ -255,7 +257,11 @@ class LocationService(
       ?.let { throw LocationAlreadyExistsException("${createWingRequest.prisonId}-${createWingRequest.wingCode}") }
 
     val wing = createWingRequest.toEntity(authenticationFacade.getUserOrSystemInContext(), clock)
-    return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false)
+    return locationRepository.save(wing).toDto(
+      includeChildren = true,
+      includeNonResidential = false,
+      countCells = false,
+    )
   }
 
   @Transactional
@@ -308,8 +314,9 @@ class LocationService(
         includeChildren = codeChanged || parentChanged,
         includeParent = parentChanged,
         includeNonResidential = false,
+        countCells = false,
       ),
-      if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true) else null,
+      if (parentChanged && oldParent != null) oldParent.toDto(includeParent = true, countCells = false) else null,
     )
   }
 
@@ -334,7 +341,7 @@ class LocationService(
       ),
       null,
     )
-    return residentialLocation.toDto(includeChildren = true, includeNonResidential = false)
+    return residentialLocation.toDto(includeChildren = true, includeNonResidential = false, countCells = false)
   }
 
   private fun updateLocalName(
@@ -407,7 +414,7 @@ class LocationService(
       ),
       null,
     )
-    return locCapChange.toDto(includeParent = true, includeNonResidential = false)
+    return locCapChange.toDto(includeParent = true, includeNonResidential = false, countCells = false)
   }
 
   @Transactional
@@ -440,7 +447,7 @@ class LocationService(
       ),
       null,
     )
-    return cell.toDto(includeParent = false, includeNonResidential = false)
+    return cell.toDto(includeParent = false, includeNonResidential = false, countCells = false)
   }
 
   @Transactional
@@ -468,7 +475,7 @@ class LocationService(
       ),
       null,
     )
-    return location.toDto()
+    return location.toDto(countCells = false)
   }
 
   @Transactional
@@ -512,7 +519,7 @@ class LocationService(
       null,
     )
 
-    return locationToDeactivate.toDto(includeChildren = true, includeParent = true)
+    return locationToDeactivate.toDto(includeChildren = true, includeParent = true, countCells = false)
   }
 
   @Transactional
@@ -549,7 +556,7 @@ class LocationService(
         null,
       )
     }
-    return locationToUpdate.toDto()
+    return locationToUpdate.toDto(countCells = false)
   }
 
   @Transactional
@@ -583,7 +590,7 @@ class LocationService(
       null,
     )
 
-    return locationToArchive.toDto(includeChildren = true, includeParent = true)
+    return locationToArchive.toDto(includeChildren = true, includeParent = true, countCells = false)
   }
 
   @Transactional
@@ -612,7 +619,7 @@ class LocationService(
       null,
     )
 
-    return locationToUpdate.toDto(includeChildren = reactivateSubLocations, includeParent = true)
+    return locationToUpdate.toDto(includeChildren = reactivateSubLocations, includeParent = true, countCells = false)
   }
 
   @Transactional
@@ -651,7 +658,7 @@ class LocationService(
       ),
       null,
     )
-    return locationToConvert.toDto(includeParent = true)
+    return locationToConvert.toDto(includeParent = true, countCells = false)
   }
 
   @Transactional
@@ -682,7 +689,7 @@ class LocationService(
       ),
       null,
     )
-    return locationToConvert.toDto(includeParent = true)
+    return locationToConvert.toDto(includeParent = true, countCells = false)
   }
 
   private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =
@@ -736,7 +743,7 @@ class LocationService(
       )
       .filter { !it.isPermanentlyDeactivated() }
       .filter { it.isCell() || it.isLocationShownOnResidentialSummary() }
-      .map { it.toDto(countInactiveCells = true) }
+      .map { it.toDto(countInactiveCells = true, countCells = true) }
       .sortedWith(NaturalOrderComparator())
 
     val latestHistory = if (id != null && returnLatestHistory) {
@@ -755,13 +762,14 @@ class LocationService(
         PrisonSummary(
           workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
           maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
+          numberOfCellLocations = locations.sumOf { it.numberOfCellLocations ?: 0 },
           signedOperationalCapacity = signedOperationCapacityRepository.findOneByPrisonId(prisonId)?.signedOperationCapacity ?: 0,
         )
       } else {
         null
       },
       locationHierarchy = currentLocation?.getHierarchy(),
-      parentLocation = currentLocation?.toDto(countInactiveCells = true, useHistoryForUpdate = true),
+      parentLocation = currentLocation?.toDto(countInactiveCells = true, useHistoryForUpdate = true, countCells = true),
       latestHistory = latestHistory,
       subLocations = locations,
       subLocationName = subLocationTypes,
@@ -778,7 +786,11 @@ class LocationService(
     return list.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
   }
 
-  fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }.sortedWith(NaturalOrderComparator())
+  fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map {
+    it.toDto(
+      countCells = false,
+    )
+  }.sortedWith(NaturalOrderComparator())
 
   fun getResidentialInactiveLocations(prisonId: String, parentLocationId: UUID?): List<LocationDTO> {
     val startLocation = parentLocationId?.let {
@@ -791,7 +803,7 @@ class LocationService(
       startLocation?.findAllLeafLocations() ?: cellLocationRepository.findAllByPrisonIdAndActive(prisonId, false)
       )
       .filter { it.isTemporarilyDeactivated() }
-      .map { it.toDto() }
+      .map { it.toDto(countCells = false) }
       .sortedWith(NaturalOrderComparator())
   }
 
@@ -893,6 +905,8 @@ data class PrisonSummary(
   val signedOperationalCapacity: Int,
   @Schema(description = "Prison max capacity")
   val maxCapacity: Int,
+  @Schema(description = "Total number of non-structural locations  e.g. cells and rooms")
+  val numberOfCellLocations: Int,
 )
 
 data class UpdatedSummary(

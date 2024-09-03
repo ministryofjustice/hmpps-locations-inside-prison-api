@@ -71,7 +71,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               "prisonSummary": {
                 "workingCapacity": 4,
                 "signedOperationalCapacity": 0,
-                "maxCapacity": 6
+                "maxCapacity": 6,
+                "numberOfCellLocations": 4
               },
               "subLocations":
             [
@@ -167,7 +168,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "deactivatedByParent": false,
                 "inactiveCells": 0,
                 "key": "MDI-Z",
-                "isResidential": true
+                "isResidential": true,
+                "numberOfCellLocations": 3
               },
               "latestHistory": [
                 {
@@ -277,7 +279,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
                 ],
-                
+                "numberOfCellLocations": 3,
                 "status": "ACTIVE",
                 "active": true,
                 "inactiveCells": 0,
@@ -401,7 +403,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
                 ],
-                
+                "numberOfCellLocations": 1,
                 "status": "ACTIVE",
                 "active": true,
                 "deactivatedByParent": false,
