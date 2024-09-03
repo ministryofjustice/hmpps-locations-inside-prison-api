@@ -1591,14 +1591,14 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
   inner class ConvertToCellTest {
     var convertToCellRequest = LocationResidentialResource.ConvertToCellRequest(
       accommodationType = AllowedAccommodationTypeForConversion.NORMAL_ACCOMMODATION,
-      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      specialistCellTypes = setOf(SpecialistCellType.ACCESSIBLE_CELL, SpecialistCellType.ISOLATION_DISEASES),
       maxCapacity = 2,
       workingCapacity = 2,
     )
 
     var convertToCellRequestNotValidMaxCapacity = LocationResidentialResource.ConvertToCellRequest(
       accommodationType = AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
-      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      specialistCellTypes = setOf(SpecialistCellType.ACCESSIBLE_CELL),
       maxCapacity = -1,
       workingCapacity = 2,
       usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
@@ -1606,7 +1606,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
     private var convertToCellRequestNotValidWorkingCapacity = LocationResidentialResource.ConvertToCellRequest(
       accommodationType = AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
-      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      specialistCellTypes = setOf(SpecialistCellType.ACCESSIBLE_CELL),
       maxCapacity = 1,
       workingCapacity = -1,
       usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
@@ -1614,7 +1614,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
     private var convertToCellRequestValidCareAndSeparation = LocationResidentialResource.ConvertToCellRequest(
       accommodationType = AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
-      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      specialistCellTypes = setOf(SpecialistCellType.ACCESSIBLE_CELL),
       maxCapacity = 2,
       workingCapacity = 2,
       usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
@@ -1622,7 +1622,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
     private var convertToCellRequestValidHealthCareInpatients = LocationResidentialResource.ConvertToCellRequest(
       accommodationType = AllowedAccommodationTypeForConversion.HEALTHCARE_INPATIENTS,
-      specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      specialistCellTypes = setOf(SpecialistCellType.ACCESSIBLE_CELL),
       maxCapacity = 2,
       workingCapacity = 2,
       usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.PERSONALITY_DISORDER),
@@ -1780,7 +1780,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         val cellZ1001 = result.findByPathHierarchy("Z-1-001")
         assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
         assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
-        assertThat(cellZ1001?.specialistCellTypes?.get(0)).isEqualTo(SpecialistCellType.ACCESSIBLE_CELL)
+        assertThat(cellZ1001?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL, SpecialistCellType.ISOLATION_DISEASES)
         assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
 
         getDomainEvents(3).let {
@@ -1814,7 +1814,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
       val cellZ1001 = result.findByPathHierarchy("Z-1-001")
       assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
       assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
-      assertThat(cellZ1001?.specialistCellTypes?.get(0)).isEqualTo(SpecialistCellType.ACCESSIBLE_CELL)
+      assertThat(cellZ1001?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
       assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
 
       getDomainEvents(3).let {
@@ -1847,7 +1847,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
       val cellZ1001 = result.findByPathHierarchy("Z-1-001")
       assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
       assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
-      assertThat(cellZ1001?.specialistCellTypes?.get(0)).isEqualTo(SpecialistCellType.ACCESSIBLE_CELL)
+      assertThat(cellZ1001?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
       assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
 
       getDomainEvents(3).let {
