@@ -375,7 +375,7 @@ class LocationResidentialResource(
   data class ConvertToCellRequest(
     @Schema(description = "Accommodation type of the location", example = "NORMAL_ACCOMMODATION", required = true)
     val accommodationType: AllowedAccommodationTypeForConversion,
-    @Schema(description = "Specialist cell types", example = "[ BIOHAZARD_DIRTY_PROTEST, ACCESSIBLE_CELL ]", required = false)
+    @Schema(description = "Specialist cell types", example = "[ \"BIOHAZARD_DIRTY_PROTEST\", \"ACCESSIBLE_CELL\" ]", required = false)
     val specialistCellTypes: Set<SpecialistCellType>? = null,
     @Schema(description = "Max capacity", example = "2", required = true)
     @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
@@ -385,7 +385,7 @@ class LocationResidentialResource(
     @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
     @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
     val workingCapacity: Int = 0,
-    @Schema(description = "Used For list", example = "[ STANDARD_ACCOMMODATION, PERSONALITY_DISORDER ]", required = false)
+    @Schema(description = "Used For list", example = "[ \"STANDARD_ACCOMMODATION\", \"PERSONALITY_DISORDER\" ]", required = false)
     val usedForTypes: List<UsedForType>? = null,
   )
 
