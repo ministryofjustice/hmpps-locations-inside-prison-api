@@ -369,7 +369,6 @@ abstract class Location(
               includeChildren = true,
               includeHistory = includeHistory,
               includeNonResidential = includeNonResidential,
-              countCells = false,
             )
           }
       } else {
@@ -380,7 +379,6 @@ abstract class Location(
           includeChildren = false,
           includeParent = true,
           includeHistory = includeHistory,
-          countCells = false,
         )
       } else {
         null
