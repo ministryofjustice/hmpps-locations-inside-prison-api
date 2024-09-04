@@ -519,6 +519,7 @@ class Cell(
     countInactiveCells: Boolean,
     includeNonResidential: Boolean,
     useHistoryForUpdate: Boolean,
+    countCells: Boolean,
   ): LocationDto {
     return super.toDto(
       includeChildren = includeChildren,
@@ -527,6 +528,7 @@ class Cell(
       countInactiveCells = countInactiveCells,
       includeNonResidential = includeNonResidential,
       useHistoryForUpdate = useHistoryForUpdate,
+      countCells = countCells,
     ).copy(
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
