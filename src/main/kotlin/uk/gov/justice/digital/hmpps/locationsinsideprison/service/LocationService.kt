@@ -736,7 +736,7 @@ class LocationService(
       )
       .filter { !it.isPermanentlyDeactivated() }
       .filter { it.isCell() || it.isLocationShownOnResidentialSummary() }
-      .map { it.toDto(countInactiveCells = true) }
+      .map { it.toDto(countInactiveCells = true, countCells = true) }
       .sortedWith(NaturalOrderComparator())
 
     val latestHistory = if (id != null && returnLatestHistory) {
@@ -755,13 +755,14 @@ class LocationService(
         PrisonSummary(
           workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
           maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
+          numberOfCellLocations = locations.sumOf { it.numberOfCellLocations ?: 0 },
           signedOperationalCapacity = signedOperationCapacityRepository.findOneByPrisonId(prisonId)?.signedOperationCapacity ?: 0,
         )
       } else {
         null
       },
       locationHierarchy = currentLocation?.getHierarchy(),
-      parentLocation = currentLocation?.toDto(countInactiveCells = true, useHistoryForUpdate = true),
+      parentLocation = currentLocation?.toDto(countInactiveCells = true, useHistoryForUpdate = true, countCells = true),
       latestHistory = latestHistory,
       subLocations = locations,
       subLocationName = subLocationTypes,
@@ -893,6 +894,8 @@ data class PrisonSummary(
   val signedOperationalCapacity: Int,
   @Schema(description = "Prison max capacity")
   val maxCapacity: Int,
+  @Schema(description = "Total number of non-structural locations  e.g. cells and rooms")
+  val numberOfCellLocations: Int,
 )
 
 data class UpdatedSummary(

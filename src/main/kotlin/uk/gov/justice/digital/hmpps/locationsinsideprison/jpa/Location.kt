@@ -271,6 +271,8 @@ abstract class Location(
     return leafLocations
   }
 
+  fun countCellAndNonResLocations() = findAllLeafLocations().count { it.isCell() || it.isNonResType() }
+
   fun findSubLocations(): List<Location> {
     val subLocations = mutableListOf<Location>()
 
@@ -319,6 +321,7 @@ abstract class Location(
     countInactiveCells: Boolean = false,
     includeNonResidential: Boolean = true,
     useHistoryForUpdate: Boolean = false,
+    countCells: Boolean = false,
   ): LocationDto {
     val topHistoryEntry = if (useHistoryForUpdate) {
       history.maxByOrNull { it.amendedDate }

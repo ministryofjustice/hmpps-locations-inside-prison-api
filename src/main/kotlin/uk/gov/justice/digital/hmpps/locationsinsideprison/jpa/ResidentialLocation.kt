@@ -138,6 +138,7 @@ open class ResidentialLocation(
     countInactiveCells: Boolean,
     includeNonResidential: Boolean,
     useHistoryForUpdate: Boolean,
+    countCells: Boolean,
   ): LocationDto {
     return super.toDto(
       includeChildren = includeChildren,
@@ -146,6 +147,7 @@ open class ResidentialLocation(
       countInactiveCells = countInactiveCells,
       includeNonResidential = includeNonResidential,
       useHistoryForUpdate = useHistoryForUpdate,
+      countCells = countCells,
     ).copy(
 
       capacity = CapacityDto(
@@ -164,6 +166,11 @@ open class ResidentialLocation(
       specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct().sortedBy { it.sequence },
       inactiveCells = if (countInactiveCells) {
         getInactiveCellCount()
+      } else {
+        null
+      },
+      numberOfCellLocations = if (countCells) {
+        countCellAndNonResLocations()
       } else {
         null
       },

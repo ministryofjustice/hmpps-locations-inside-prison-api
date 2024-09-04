@@ -127,6 +127,9 @@ data class Location(
   @Schema(description = "Number of inactive cells below this location", required = false)
   val inactiveCells: Int? = null,
 
+  @Schema(description = "Total number of non-structural locations are below this level, e.g. cells and rooms")
+  val numberOfCellLocations: Int? = null,
+
   @Schema(description = "Child Locations", required = false)
   val childLocations: List<Location>? = null,
 

@@ -32,6 +32,7 @@ class SignedOperationCapacityServiceTest {
       signedOperationalCapacity = 0,
       workingCapacity = 100,
       maxCapacity = 135,
+      numberOfCellLocations = 100,
     ),
     subLocations = emptyList(),
     topLevelLocationType = "Wing",
