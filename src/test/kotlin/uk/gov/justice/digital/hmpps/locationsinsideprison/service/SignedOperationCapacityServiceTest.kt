@@ -29,6 +29,7 @@ class SignedOperationCapacityServiceTest {
 
   private val residentialSummary = ResidentialSummary(
     prisonSummary = PrisonSummary(
+      prisonName = "HMP Moorland",
       signedOperationalCapacity = 0,
       workingCapacity = 100,
       maxCapacity = 135,

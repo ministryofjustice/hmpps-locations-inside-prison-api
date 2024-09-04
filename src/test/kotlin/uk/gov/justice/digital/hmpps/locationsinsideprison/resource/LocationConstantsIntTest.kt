@@ -1,11 +1,17 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 
 class LocationConstantsIntTest : SqsIntegrationTestBase() {
+
+  @BeforeEach
+  fun setUp() {
+    prisonRegisterMockServer.resetAll()
+  }
 
   @DisplayName("GET /constants/location-type")
   @Nested
@@ -1091,7 +1097,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
       @Test
-      fun `can retrieve used-for-type constants`() {
+      fun `can retrieve used-for-type standard prison constants`() {
         webTestClient.get().uri("/constants/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
           .exchange()
@@ -1101,10 +1107,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
             {
                 "usedForTypes": [
                   {
-                    "key": "CLOSE_SUPERVISION_CENTRE",
-                    "description": "Close Supervision Centre (CSC)"
-                  }, 
-                  {
                     "key": "SUB_MISUSE_DRUG_RECOVERY",
                     "description": "Drug recovery / Incentivised substance free living (ISFL)"
                   },
@@ -1113,20 +1115,12 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "First night centre / Induction"
                   },  
                   {
-                    "key": "HIGH_SECURITY",
-                    "description": "High security unit"
-                  }, 
-                  {
                     "key": "IPP_LONG_TERM_SENTENCES",
                     "description": "Long-term sentences / Imprisonment for public protection (IPP)"
                   },
                   {
-                    "key": "MOTHER_AND_BABY",
-                    "description": "Mother and baby"
-                  },   
-                  {
-                    "key": "PATHWAY_TO_PROG",
-                    "description": "Pathway to progression"
+                    "key": "OPEN_UNIT",
+                    "description": "Open unit in a closed establishment"
                   },
                   {
                     "key": "PERSONALITY_DISORDER",
@@ -1158,6 +1152,277 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   }    
                 ]
               }
+            """.trimIndent(),
+            true,
+          )
+      }
+    }
+  }
+
+  @DisplayName("GET /constants/used-for-type/{prisonId}")
+  @Nested
+  inner class ViewUsedForTypeByPrisonConstantsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/constants/used-for-type/MDI")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/constants/used-for-type/MDI")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/constants/used-for-type/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+
+      @Test
+      fun `cannot retrieve used-for-type when prison does not exist in register`() {
+        prisonRegisterMockServer.stubLookupPrison("XXI", returnResult = false)
+
+        webTestClient.get().uri("/constants/used-for-type/XXI")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot retrieve used-for-type when prison Id in invalid format`() {
+        webTestClient.get().uri("/constants/used-for-type/YYYYYYYYYY")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve used-for-type standard prison constants`() {
+        prisonRegisterMockServer.stubLookupPrison("MDI")
+
+        webTestClient.get().uri("/constants/used-for-type/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "usedForTypes": [
+                  {
+                    "key": "SUB_MISUSE_DRUG_RECOVERY",
+                    "description": "Drug recovery / Incentivised substance free living (ISFL)"
+                  },
+                  {
+                    "key": "FIRST_NIGHT_CENTRE",
+                    "description": "First night centre / Induction"
+                  },  
+                  {
+                    "key": "IPP_LONG_TERM_SENTENCES",
+                    "description": "Long-term sentences / Imprisonment for public protection (IPP)"
+                  },
+                  {
+                    "key": "OPEN_UNIT",
+                    "description": "Open unit in a closed establishment"
+                  },
+                  {
+                    "key": "PERSONALITY_DISORDER",
+                    "description": "Personality disorder unit"
+                  },
+                  {
+                    "key": "PIPE",
+                    "description": "Psychologically informed planned environment (PIPE)"
+                  },
+                  {
+                    "key": "REMAND",
+                    "description": "Remand"
+                  }, 
+                  {
+                    "key": "STANDARD_ACCOMMODATION",
+                    "description": "Standard accommodation"
+                  },
+                  {
+                    "key": "THERAPEUTIC_COMMUNITY",
+                    "description": "Therapeutic community"
+                  },
+                  {
+                    "key": "VULNERABLE_PRISONERS",
+                    "description": "Vulnerable prisoners"
+                  },
+                  {
+                    "key": "YOUNG_PERSONS",
+                    "description": "Young persons"
+                  }    
+                ]
+              }
+            """.trimIndent(),
+            true,
+          )
+      }
+
+      @Test
+      fun `can retrieve used-for-type female prison constants`() {
+        prisonRegisterMockServer.stubLookupPrison("STI", female = true)
+
+        webTestClient.get().uri("/constants/used-for-type/STI")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+            {
+              "usedForTypes": [
+                {
+                  "key": "SUB_MISUSE_DRUG_RECOVERY",
+                  "description": "Drug recovery / Incentivised substance free living (ISFL)"
+                },
+                {
+                  "key": "FIRST_NIGHT_CENTRE",
+                  "description": "First night centre / Induction"
+                },
+                {
+                  "key": "IPP_LONG_TERM_SENTENCES",
+                  "description": "Long-term sentences / Imprisonment for public protection (IPP)"
+                },
+                {
+                  "key": "MOTHER_AND_BABY",
+                  "description": "Mother and baby"
+                },
+                {
+                  "key": "OPEN_UNIT",
+                  "description": "Open unit in a closed establishment"
+                },
+                {
+                  "key": "PERINATAL_UNIT",
+                  "description": "Perinatal unit"
+                },
+                {
+                  "key": "PERSONALITY_DISORDER",
+                  "description": "Personality disorder unit"
+                },
+                {
+                  "key": "PIPE",
+                  "description": "Psychologically informed planned environment (PIPE)"
+                },
+                {
+                  "key": "REMAND",
+                  "description": "Remand"
+                },
+                {
+                  "key": "STANDARD_ACCOMMODATION",
+                  "description": "Standard accommodation"
+                },
+                {
+                  "key": "THERAPEUTIC_COMMUNITY",
+                  "description": "Therapeutic community"
+                },
+                {
+                  "key": "VULNERABLE_PRISONERS",
+                  "description": "Vulnerable prisoners"
+                },
+                {
+                  "key": "YOUNG_PERSONS",
+                  "description": "Young persons"
+                }
+              ]
+            }
+            """.trimIndent(),
+            true,
+          )
+      }
+
+      @Test
+      fun `can retrieve used-for-type secure estate prison constants`() {
+        prisonRegisterMockServer.stubLookupPrison("WAI", lthse = true)
+
+        webTestClient.get().uri("/constants/used-for-type/WAI")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+            {
+              "usedForTypes": [
+                {
+                  "key": "CLOSE_SUPERVISION_CENTRE",
+                  "description": "Close Supervision Centre (CSC)"
+                },
+                {
+                  "key": "SUB_MISUSE_DRUG_RECOVERY",
+                  "description": "Drug recovery / Incentivised substance free living (ISFL)"
+                },
+                {
+                  "key": "FIRST_NIGHT_CENTRE",
+                  "description": "First night centre / Induction"
+                },
+                {
+                  "key": "HIGH_SECURITY",
+                  "description": "High security unit"
+                },
+                {
+                  "key": "IPP_LONG_TERM_SENTENCES",
+                  "description": "Long-term sentences / Imprisonment for public protection (IPP)"
+                },
+                {
+                  "key": "OPEN_UNIT",
+                  "description": "Open unit in a closed establishment"
+                },
+                {
+                  "key": "PATHWAY_TO_PROG",
+                  "description": "Pathway to progression"
+                },
+                {
+                  "key": "PERSONALITY_DISORDER",
+                  "description": "Personality disorder unit"
+                },
+                {
+                  "key": "PIPE",
+                  "description": "Psychologically informed planned environment (PIPE)"
+                },
+                {
+                  "key": "REMAND",
+                  "description": "Remand"
+                },
+                {
+                  "key": "SEPARATION_CENTRE",
+                  "description": "Separation centre"
+                },
+                {
+                  "key": "STANDARD_ACCOMMODATION",
+                  "description": "Standard accommodation"
+                },
+                {
+                  "key": "THERAPEUTIC_COMMUNITY",
+                  "description": "Therapeutic community"
+                },
+                {
+                  "key": "VULNERABLE_PRISONERS",
+                  "description": "Vulnerable prisoners"
+                },
+                {
+                  "key": "YOUNG_PERSONS",
+                  "description": "Young persons"
+                }
+              ]
+            }
             """.trimIndent(),
             true,
           )

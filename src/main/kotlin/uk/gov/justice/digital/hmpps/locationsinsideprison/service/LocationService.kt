@@ -55,6 +55,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
@@ -77,6 +78,7 @@ class LocationService(
   private val cellLocationRepository: CellLocationRepository,
   private val entityManager: EntityManager,
   private val prisonerLocationService: PrisonerLocationService,
+  private val prisonService: PrisonService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
@@ -752,7 +754,10 @@ class LocationService(
         currentLocation.getHierarchy()[0].type.description + "s"
       },
       prisonSummary = if (id == null) {
+        val prisonDetails = prisonService.lookupPrisonDetails(prisonId) ?: throw PrisonNotFoundException(prisonId)
+
         PrisonSummary(
+          prisonName = prisonDetails.prisonName,
           workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
           maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
           numberOfCellLocations = locations.sumOf { it.numberOfCellLocations ?: 0 },
@@ -850,6 +855,11 @@ class LocationService(
       it.hasSpace()
     }.sortedBy { it.pathHierarchy }
   }
+
+  fun getUsedForTypesForPrison(prisonId: String): List<UsedForType> {
+    val prisonDetails = prisonService.lookupPrisonDetails(prisonId) ?: throw PrisonNotFoundException(prisonId)
+    return UsedForType.entries.filter { it.isStandard() || (prisonDetails.female && it.femaleOnly) || (prisonDetails.lthse && it.secureEstateOnly) }
+  }
 }
 
 fun buildEventsToPublishOnUpdate(results: UpdateLocationResult): () -> Map<InternalLocationDomainEventType, List<LocationDTO>> {
@@ -888,6 +898,8 @@ data class ResidentialSummary(
 @Schema(description = "Prison Summary Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PrisonSummary(
+  @Schema(description = "Prison name")
+  val prisonName: String,
   @Schema(description = "Prison working capacity")
   val workingCapacity: Int,
   @Schema(description = "Prison signed operational capacity")

@@ -17,6 +17,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
 
   @AfterEach
   fun cleanUp() {
+    prisonRegisterMockServer.resetAll()
     repository.deleteAll()
   }
 
@@ -168,6 +169,8 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
       @Test
       @Sql("classpath:repository/insert-dummy-locations.sql")
       fun `cannot update Signed Operation Capacity when more than max capacity`() {
+        prisonRegisterMockServer.stubLookupPrison("MDI")
+
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -190,6 +193,8 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
       @Test
       @Sql("classpath:repository/insert-dummy-locations.sql")
       fun `can create Signed Operation Capacity`() {
+        prisonRegisterMockServer.stubLookupPrison("MDI")
+
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -224,6 +229,8 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
       @Test
       @Sql("classpath:repository/insert-dummy-locations.sql")
       fun `can update Signed Operation Capacity`() {
+        prisonRegisterMockServer.stubLookupPrison("MDI")
+
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")

@@ -37,6 +37,7 @@ class LocationServiceTest {
   private val locationHistoryRepository: LocationHistoryRepository = mock()
   private val cellLocationRepository: CellLocationRepository = mock()
   private val prisonerLocationService: PrisonerLocationService = mock()
+  private val prisonService: PrisonService = mock()
   private val entityManager: EntityManager = mock()
   private val clock: Clock = TestBase.clock
   private val telemetryClient: TelemetryClient = mock()
@@ -53,6 +54,7 @@ class LocationServiceTest {
     cellLocationRepository,
     entityManager,
     prisonerLocationService,
+    prisonService,
     clock,
     telemetryClient,
     authenticationFacade,

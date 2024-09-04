@@ -34,7 +34,7 @@ Then run the API.
 ### Running the whole setup in docker
 
 ```shell
-docker compose --profile include-api up
+docker compose --profile include-api up --build
 ```
 
 ## Architecture

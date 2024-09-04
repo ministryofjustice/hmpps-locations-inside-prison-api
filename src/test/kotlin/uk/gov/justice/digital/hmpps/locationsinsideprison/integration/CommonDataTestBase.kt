@@ -43,6 +43,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
   @BeforeEach
   fun setUp() {
     prisonerSearchMockServer.resetAll()
+    prisonRegisterMockServer.resetAll()
     repository.deleteAll()
 
     wingN = repository.save(
