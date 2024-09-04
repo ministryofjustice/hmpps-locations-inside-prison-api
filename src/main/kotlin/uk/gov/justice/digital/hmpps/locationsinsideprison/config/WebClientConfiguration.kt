@@ -14,6 +14,7 @@ import java.time.Duration
 class WebClientConfiguration(
   @Value("\${api.base.url.oauth}") private val authBaseUri: String,
   @Value("\${api.base.url.prisoner-search}") private val prisonerSearchUri: String,
+  @Value("\${api.base.url.prison-register}") private val prisonRegisterUri: String,
   @Value("\${api.timeout:20s}") val healthTimeout: Duration,
 ) {
 
@@ -22,6 +23,9 @@ class WebClientConfiguration(
 
   @Bean
   fun prisonerSearchHealthWebClient(builder: WebClient.Builder): WebClient = builder.healthWebClient(prisonerSearchUri, healthTimeout)
+
+  @Bean
+  fun prisonRegisterWebClient(builder: WebClient.Builder): WebClient = builder.healthWebClient(prisonRegisterUri, healthTimeout)
 
   @Bean
   fun prisonerSearchWebClient(authorizedClientManager: OAuth2AuthorizedClientManager, builder: WebClient.Builder): WebClient =

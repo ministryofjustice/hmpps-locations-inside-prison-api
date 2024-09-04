@@ -6,6 +6,7 @@ api:
     url:
       oauth: http://localhost:9090/auth
       prisoner-search: http://localhost:8083
+      prison-register: http://localhost:8084
 
 management.endpoint:
   health.cache.time-to-live: 0
