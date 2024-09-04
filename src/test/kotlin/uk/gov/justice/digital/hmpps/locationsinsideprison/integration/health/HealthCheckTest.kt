@@ -13,6 +13,7 @@ class HealthCheckTest : SqsIntegrationTestBase() {
   fun `Health page reports ok`() {
     hmppsAuthMockServer.stubHealthPing(200)
     prisonerSearchMockServer.stubHealthPing(200)
+    prisonRegisterMockServer.stubHealthPing(200)
 
     webTestClient.get()
       .uri("/health")
@@ -27,6 +28,7 @@ class HealthCheckTest : SqsIntegrationTestBase() {
   fun `Health info reports version`() {
     hmppsAuthMockServer.stubHealthPing(200)
     prisonerSearchMockServer.stubHealthPing(200)
+    prisonRegisterMockServer.stubHealthPing(200)
 
     webTestClient.get().uri("/health")
       .exchange()

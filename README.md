@@ -26,10 +26,16 @@ LOCATIONS_INSIDE_PRISON_API_CLIENT_SECRET=
 Start the database and other required services via docker-compose with:
 
 ```shell
-docker compose -f docker-compose-local.yml up
+docker compose up
 ```
 
 Then run the API.
+
+### Running the whole setup in docker
+
+```shell
+docker compose --profile include-api up
+```
 
 ## Architecture
 

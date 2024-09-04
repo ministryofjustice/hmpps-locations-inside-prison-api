@@ -1,17 +1,106 @@
-version: "3"
 services:
+
   hmpps-locations-inside-prison-api:
     build:
       context: .
     network_mode: "host"
     container_name: hmpps-locations-inside-prison-api
-    ports:
-      - "8081:8080"
+    profiles:
+      - include-api
+    depends_on:
+      - hmpps-auth
+      - locations-inside-prison-db
+      - localstack
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health/ping"]
     environment:
       - SERVER_PORT=8080
       - SPRING_PROFILES_ACTIVE=dev
 
+  localstack:
+    image: localstack/localstack:3
+    networks:
+      - hmpps
+    container_name: localstack
+    ports:
+      - "4566:4566"
+      - "8999:8080"
+    environment:
+      - DEBUG=${DEBUG- }
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "${TMPDIR:-/tmp/localstack}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  hmpps-auth:
+    image: quay.io/hmpps/hmpps-auth:latest
+    networks:
+      - hmpps
+    container_name: hmpps-auth
+    ports:
+      - "9090:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/auth/health/ping"]
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - APPLICATION_AUTHENTICATION_UI_ALLOWLIST=0.0.0.0/0
+      - DELIUS_ENABLED=false
+      - NOMIS_ENABLED=false
+
+  locations-inside-prison-db:
+    image: postgres:16
+    networks:
+      - hmpps
+    container_name: locations-inside-prison-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=locations_inside_prison
+      - POSTGRES_USER=locations_inside_prison
+      - POSTGRES_DB=locations_inside_prison
+
+  prison-register:
+    image: quay.io/hmpps/prison-register:latest
+    container_name: prison-register
+    depends_on:
+      - hmpps-auth
+      - prison-register-db
+      - localstack
+    networks:
+      - hmpps
+    ports:
+      - "8084:8080"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health/ping" ]
+    environment:
+      - SERVER_PORT=8080
+      - SPRING_PROFILES_ACTIVE=dev
+      - API_BASE_URL_OAUTH=http://hmpps-auth:8080/auth
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://prison-register-db:5432/prison-register?sslmode=prefer
+      - HMPPS_SQS_LOCALSTACK_URL=http://localstack:4566
+
+  prison-register-db:
+    image: postgres:16
+    networks:
+      - hmpps
+    container_name: prison-register-db
+    restart: always
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_PASSWORD=prison-register
+      - POSTGRES_USER=prison-register
+      - POSTGRES_DB=prison-register
+
+  prisoner-search:
+    image: wiremock/wiremock:2.35.0
+    networks:
+      - hmpps
+    container_name: prisoner-search
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
 networks:
   hmpps:
