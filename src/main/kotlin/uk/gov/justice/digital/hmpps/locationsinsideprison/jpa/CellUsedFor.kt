@@ -49,20 +49,28 @@ class CellUsedFor(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 enum class UsedForType(
   val description: String,
+  val secureEstateOnly: Boolean = false,
+  val femaleOnly: Boolean = false,
   val sequence: Int = 99,
 ) {
-  CLOSE_SUPERVISION_CENTRE("Close Supervision Centre (CSC)", 1),
-  SUB_MISUSE_DRUG_RECOVERY("Drug recovery / Incentivised substance free living (ISFL)", 2),
-  FIRST_NIGHT_CENTRE("First night centre / Induction", 3),
-  HIGH_SECURITY("High security unit", 4),
-  IPP_LONG_TERM_SENTENCES("Long-term sentences / Imprisonment for public protection (IPP)", 5),
-  MOTHER_AND_BABY("Mother and baby", 6),
-  PATHWAY_TO_PROG("Pathway to progression", 7),
-  PERSONALITY_DISORDER("Personality disorder unit", 8),
-  PIPE("Psychologically informed planned environment (PIPE)", 9),
-  REMAND("Remand", 10),
-  STANDARD_ACCOMMODATION("Standard accommodation", 11),
-  THERAPEUTIC_COMMUNITY("Therapeutic community", 12),
-  VULNERABLE_PRISONERS("Vulnerable prisoners", 13),
-  YOUNG_PERSONS("Young persons", 14),
+  CLOSE_SUPERVISION_CENTRE("Close Supervision Centre (CSC)", sequence = 1, secureEstateOnly = true),
+  SUB_MISUSE_DRUG_RECOVERY("Drug recovery / Incentivised substance free living (ISFL)", sequence = 2),
+  FIRST_NIGHT_CENTRE("First night centre / Induction", sequence = 3),
+  HIGH_SECURITY("High security unit", sequence = 4, secureEstateOnly = true),
+  IPP_LONG_TERM_SENTENCES("Long-term sentences / Imprisonment for public protection (IPP)", sequence = 5),
+  MOTHER_AND_BABY("Mother and baby", sequence = 6, femaleOnly = true),
+  OPEN_UNIT("Open unit in a closed establishment", sequence = 7),
+  PATHWAY_TO_PROG("Pathway to progression", sequence = 8, secureEstateOnly = true),
+  PERINATAL_UNIT("Perinatal unit", sequence = 9, femaleOnly = true),
+  PERSONALITY_DISORDER("Personality disorder unit", sequence = 10),
+  PIPE("Psychologically informed planned environment (PIPE)", sequence = 11),
+  REMAND("Remand", sequence = 12),
+  SEPARATION_CENTRE("Separation centre", sequence = 13, secureEstateOnly = true),
+  STANDARD_ACCOMMODATION("Standard accommodation", sequence = 14),
+  THERAPEUTIC_COMMUNITY("Therapeutic community", sequence = 15),
+  VULNERABLE_PRISONERS("Vulnerable prisoners", sequence = 16),
+  YOUNG_PERSONS("Young persons", sequence = 17),
+  ;
+
+  fun isStandard() = !femaleOnly && !secureEstateOnly
 }

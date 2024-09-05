@@ -6,11 +6,15 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
+import jakarta.validation.constraints.Size
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.bind.annotation.ResponseStatus
@@ -25,6 +29,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 
 @RestController
 @Validated
@@ -33,7 +38,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
   name = "Constants",
   description = "Returns location reference data.",
 )
-class LocationConstants() : EventBaseResource() {
+class LocationConstants(
+  private val locationService: LocationService,
+) : EventBaseResource() {
 
   @GetMapping("/location-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -257,8 +264,9 @@ class LocationConstants() : EventBaseResource() {
   @GetMapping("used-for-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
   @ResponseStatus(HttpStatus.OK)
+  @Deprecated("Used For types are specific to prison, will be removed", replaceWith = ReplaceWith("/constants/used-for-type/{prisonId}"))
   @Operation(
-    summary = "Get used for type data",
+    summary = "Get used for type data for not female or secure estate",
     description = "Requires the READ_LOCATION_REFERENCE_DATA role.",
     responses = [
       ApiResponse(
@@ -280,7 +288,46 @@ class LocationConstants() : EventBaseResource() {
   @ResponseBody
   fun getUsedForTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "usedForTypes" to UsedForType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+      "usedForTypes" to UsedForType.entries.filter { it.isStandard() }.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+    )
+  }
+
+  @GetMapping("used-for-type/{prisonId}")
+  @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Get used for type data for not female or secure estate",
+    description = "Requires the READ_LOCATION_REFERENCE_DATA role.",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns used for type reference data",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the READ_LOCATION_REFERENCE_DATA role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @Validated
+  @ResponseBody
+  fun getUsedForTypeConstantsForSpecifiedPrison(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
+    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
+    @NotBlank(message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
+    prisonId: String,
+  ): Map<String, List<Constant>> {
+    return mapOf(
+      "usedForTypes" to locationService.getUsedForTypesForPrison(prisonId).sortedBy { it.sequence }.map { Constant(it.name, it.description) },
     )
   }
 

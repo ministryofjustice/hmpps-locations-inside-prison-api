@@ -59,6 +59,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     inner class HappyPath {
       @Test
       fun `can retrieve details of a locations at establishment level`() {
+        prisonRegisterMockServer.stubLookupPrison("MDI")
+
         webTestClient.get().uri("/locations/residential-summary/MDI")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()

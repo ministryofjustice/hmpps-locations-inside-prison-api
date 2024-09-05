@@ -349,15 +349,15 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
     inner class FailurePath {
       @Test
       fun `resource not found`() {
-        webTestClient.get().uri("/locations/prison/XYZ/group/Houseblock 1/location-prefix")
+        webTestClient.get().uri("/locations/prison/XYI/group/Houseblock 1/location-prefix")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().is4xxClientError
           .expectBody().json(
             """
                         {"status":404,
-                        "userMessage":"Location prefix not found for XYZ_Houseblock 1",
-                        "developerMessage":"Location prefix not found for XYZ_Houseblock 1",
+                        "userMessage":"Location prefix not found for XYI_Houseblock 1",
+                        "developerMessage":"Location prefix not found for XYI_Houseblock 1",
                         "errorCode":111}
                         """,
             false,
