@@ -28,7 +28,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NaturalOrderComparator
 import java.io.Serializable
 import java.time.Clock
@@ -145,7 +144,7 @@ abstract class Location(
       if (location == null) {
         return null
       }
-      if (location.isActive()) {
+      if (location.isActive() && !location.isPermanentlyDeactivated()) {
         return findDeactivatedLocation(location.getParent())
       }
       return location
@@ -172,7 +171,7 @@ abstract class Location(
 
   open fun isArchived() = archived
 
-  open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent()
+  open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent() && !isPermanentlyDeactivated()
 
   open fun isTemporarilyDeactivated() = !isActiveAndAllParentsActive() && !isPermanentlyDeactivated()
 
@@ -252,7 +251,9 @@ abstract class Location(
 
   private fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
 
-  fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>()
+  fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>().filter { !it.isPermanentlyDeactivated() }
+
+  fun leafResidentialLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>().filter { !it.isPermanentlyDeactivated() && !it.isStructural() && !it.isArea() }
 
   fun findAllLeafLocations(): List<Location> {
     val leafLocations = mutableListOf<Location>()
@@ -271,7 +272,7 @@ abstract class Location(
     return leafLocations
   }
 
-  fun countCellAndNonResLocations() = findAllLeafLocations().count { it.isCell() || it.isNonResType() }
+  fun countCellAndNonResLocations() = leafResidentialLocations().count()
 
   fun findSubLocations(): List<Location> {
     val subLocations = mutableListOf<Location>()
@@ -339,7 +340,7 @@ abstract class Location(
       parentId = getParent()?.id,
       topLevelId = findTopLevelLocation().id!!,
       level = getLevel(),
-      leafLevel = findSubLocations().isEmpty() && !isStructural() && !isArea(),
+      leafLevel = isLeafLevel(),
       lastModifiedDate = if (useHistoryForUpdate) {
         topHistoryEntry?.amendedDate ?: whenUpdated
       } else {
@@ -387,6 +388,8 @@ abstract class Location(
       deactivatedBy = deactivatedBy,
     )
   }
+
+  private fun isLeafLevel() = findSubLocations().isEmpty() && !isStructural() && !isArea()
 
   fun toLocationGroupDto(): LocationGroupDto {
     return LocationGroupDto(
@@ -696,11 +699,7 @@ abstract class Location(
 
   open fun reactivate(userOrSystemInContext: String, clock: Clock) {
     this.getParent()?.reactivate(userOrSystemInContext, clock)
-    if (!isActive()) {
-      if (isPermanentlyDeactivated()) {
-        throw LocationCannotBeReactivatedException("Location [${getKey()}] permanently deactivated")
-      }
-
+    if (!isActive() && !isPermanentlyDeactivated()) {
       val amendedDate = LocalDateTime.now(clock)
       addHistory(LocationAttribute.ACTIVE, "false", "true", userOrSystemInContext, amendedDate)
       addHistory(
@@ -753,7 +752,7 @@ abstract class Location(
   fun isCell() = locationType == LocationType.CELL
   fun isStructural() = locationType in ResidentialLocationType.entries.filter { it.structural }.map { it.baseType }
   fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
-  fun isArea() = !isStructural() && !isCell() && !isNonResType()
+  fun isArea() = locationType in ResidentialLocationType.entries.filter { it.area }.map { it.baseType }
   fun isLocationShownOnResidentialSummary() = locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
   fun isResidentialType() = locationType in ResidentialLocationType.entries.map { it.baseType }
 

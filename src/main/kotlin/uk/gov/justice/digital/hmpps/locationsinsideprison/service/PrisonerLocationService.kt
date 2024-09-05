@@ -19,7 +19,7 @@ class PrisonerLocationService(
 ) {
   fun prisonersInPrison(prisonId: String): List<PrisonerLocation> {
     val locations = cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true)
-    return getPrisonersAndMap(prisonersInLocations(prisonId, locations))
+    return getPrisonersAndMap(prisonersInLocations(prisonId, locations.filter { !it.isPermanentlyDeactivated() }))
   }
 
   fun prisonersInLocations(key: String): List<PrisonerLocation> {

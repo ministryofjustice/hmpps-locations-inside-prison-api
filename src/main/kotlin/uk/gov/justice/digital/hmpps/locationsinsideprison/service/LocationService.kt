@@ -50,6 +50,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityExcep
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
@@ -593,6 +594,10 @@ class LocationService(
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
+    if (locationToUpdate.isPermanentlyDeactivated()) {
+      throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
+    }
+
     locationToUpdate.reactivate(authenticationFacade.getUserOrSystemInContext(), clock)
 
     if (reactivateSubLocations) {
@@ -827,7 +832,7 @@ class LocationService(
       groupName = groupName,
       cellsToFilter = cellsToFilter,
     )
-      .filter { cell -> cell.isActiveAndAllParentsActive() && cell.isCertified() }
+      .filter { cell -> cell.isActiveAndAllParentsActive() && cell.isCertified() && !cell.isPermanentlyDeactivated() }
       .filter { cell ->
         specialistCellType == null || specialistCellType in cell.specialistCellTypes.map { it.specialistCellType }
       }

@@ -105,9 +105,9 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   {
                     "prisonId": "MDI",
                     "code": "ADJUDICATION",
-                    "pathHierarchy": "ADJUDICATION",
+                    "pathHierarchy": "Z-ADJUDICATION",
                     "locationType": "ADJUDICATION_ROOM",
-                    "key": "MDI-ADJUDICATION"
+                    "key": "MDI-Z-ADJUDICATION"
                   },
                   {
                     "prisonId": "MDI",
@@ -292,9 +292,20 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "VISIT",
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",
-                  
                   "active": true,
+                  "leafLevel": true,
+                  "level": 2,
                   "key": "MDI-Z-VISIT"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "active": true,
+                  "leafLevel": true,
+                  "level": 2,
+                  "key": "MDI-Z-ADJUDICATION"
                 },
                 {
                   "prisonId": "MDI",
@@ -519,7 +530,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .expectStatus().isOk
 
         prisonerSearchMockServer.resetAll()
-        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy()), false)
 
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -560,7 +571,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             false,
           )
 
-        getDomainEvents(9).let {
+        getDomainEvents(10).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
@@ -569,6 +580,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
             "location.inside.prison.deactivated" to "MDI-Z-1-01S",
             "location.inside.prison.deactivated" to "MDI-Z-VISIT",
+            "location.inside.prison.deactivated" to "MDI-Z-ADJUDICATION",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
           )
@@ -617,6 +629,20 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "permanentlyInactive": false,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "active": false,
+                  "deactivatedByParent": true,
+                  "proposedReactivationDate": "$proposedReactivationDate",
+                  "deactivatedDate": "$now",
+                  "deactivatedReason": "DAMAGED",
+                  "permanentlyInactive": false,
+                  "isResidential": false,
+                  "key": "MDI-Z-ADJUDICATION"
                 },
                 {
                   "prisonId": "MDI",
@@ -922,7 +948,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(14).let {
+        getDomainEvents(16).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
@@ -931,6 +957,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
             "location.inside.prison.deactivated" to "MDI-Z-1-01S",
             "location.inside.prison.deactivated" to "MDI-Z-VISIT",
+            "location.inside.prison.deactivated" to "MDI-Z-ADJUDICATION",
             "location.inside.prison.reactivated" to "MDI-Z",
             "location.inside.prison.reactivated" to "MDI-Z-1",
             "location.inside.prison.reactivated" to "MDI-Z-2",
@@ -938,6 +965,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.reactivated" to "MDI-Z-1-002",
             "location.inside.prison.reactivated" to "MDI-Z-1-01S",
             "location.inside.prison.reactivated" to "MDI-Z-VISIT",
+            "location.inside.prison.reactivated" to "MDI-Z-ADJUDICATION",
           )
         }
 
@@ -972,6 +1000,15 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "active": true,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "active": true,
+                  "isResidential": false,
+                  "key": "MDI-Z-ADJUDICATION"
                 },
                 {
                   "prisonId": "MDI",
@@ -1059,7 +1096,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(13).let {
+        getDomainEvents(14).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1",
@@ -1071,6 +1108,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
             "location.inside.prison.deactivated" to "MDI-Z-1-01S",
             "location.inside.prison.deactivated" to "MDI-Z-VISIT",
+            "location.inside.prison.deactivated" to "MDI-Z-ADJUDICATION",
             "location.inside.prison.reactivated" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
@@ -1108,6 +1146,15 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "active": true,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "active": true,
+                  "isResidential": false,
+                  "key": "MDI-Z-ADJUDICATION"
                 },
                 {
                   "prisonId": "MDI",

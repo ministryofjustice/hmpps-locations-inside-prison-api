@@ -90,6 +90,24 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                         },
                         {
                           "prisonId": "MDI",
+                          "code": "ADJUDICATION",
+                          "pathHierarchy": "Z-ADJUDICATION",
+                          "locationType": "ADJUDICATION_ROOM",
+                          "usage": [
+                            {
+                              "usageType": "ADJUDICATION_HEARING",
+                              "capacity": 15,
+                              "sequence": 1
+                            }
+                          ],
+                          "status": "ACTIVE",
+                          "level": 2,
+                          "leafLevel": true,
+                          "key": "MDI-Z-ADJUDICATION",
+                          "isResidential": false
+                        },
+                        {
+                          "prisonId": "MDI",
                           "code": "1",
                           "pathHierarchy": "Z-1",
                           "locationType": "LANDING",
@@ -273,19 +291,25 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                             "prisonId": "MDI",
                             "code": "003",
                             "pathHierarchy": "Z-1-003",
-                            "key": "MDI-Z-1-003"
+                            "key": "MDI-Z-1-003",
+                            "leafLevel": true,
+                            "level": 3
                           }, 
                           {
                             "prisonId": "MDI",
                             "code": "2",
                             "pathHierarchy": "Z-2",
-                            "key": "MDI-Z-2"
+                            "key": "MDI-Z-2",
+                            "leafLevel": false,
+                            "level": 2
                           }, 
                           {
                             "prisonId": "MDI",
                             "code": "VISIT",
                             "pathHierarchy": "Z-VISIT",
-                            "key": "MDI-Z-VISIT"
+                            "key": "MDI-Z-VISIT",
+                            "leafLevel": true,
+                            "level": 2
                           }]
                          """,
             false,

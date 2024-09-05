@@ -1105,53 +1105,77 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             """
             {
-                "usedForTypes": [
-                  {
-                    "key": "SUB_MISUSE_DRUG_RECOVERY",
-                    "description": "Drug recovery / Incentivised substance free living (ISFL)"
-                  },
-                  {
-                    "key": "FIRST_NIGHT_CENTRE",
-                    "description": "First night centre / Induction"
-                  },  
-                  {
-                    "key": "IPP_LONG_TERM_SENTENCES",
-                    "description": "Long-term sentences / Imprisonment for public protection (IPP)"
-                  },
-                  {
-                    "key": "OPEN_UNIT",
-                    "description": "Open unit in a closed establishment"
-                  },
-                  {
-                    "key": "PERSONALITY_DISORDER",
-                    "description": "Personality disorder unit"
-                  },
-                  {
-                    "key": "PIPE",
-                    "description": "Psychologically informed planned environment (PIPE)"
-                  },
-                  {
-                    "key": "REMAND",
-                    "description": "Remand"
-                  }, 
-                  {
-                    "key": "STANDARD_ACCOMMODATION",
-                    "description": "Standard accommodation"
-                  },
-                  {
-                    "key": "THERAPEUTIC_COMMUNITY",
-                    "description": "Therapeutic community"
-                  },
-                  {
-                    "key": "VULNERABLE_PRISONERS",
-                    "description": "Vulnerable prisoners"
-                  },
-                  {
-                    "key": "YOUNG_PERSONS",
-                    "description": "Young persons"
-                  }    
-                ]
-              }
+              "usedForTypes": [
+                {
+                  "key": "CLOSE_SUPERVISION_CENTRE",
+                  "description": "Close Supervision Centre (CSC)"
+                },
+                {
+                  "key": "SUB_MISUSE_DRUG_RECOVERY",
+                  "description": "Drug recovery / Incentivised substance free living (ISFL)"
+                },
+                {
+                  "key": "FIRST_NIGHT_CENTRE",
+                  "description": "First night centre / Induction"
+                },
+                {
+                  "key": "HIGH_SECURITY",
+                  "description": "High security unit"
+                },
+                {
+                  "key": "IPP_LONG_TERM_SENTENCES",
+                  "description": "Long-term sentences / Imprisonment for public protection (IPP)"
+                },
+                {
+                  "key": "MOTHER_AND_BABY",
+                  "description": "Mother and baby"
+                },
+                {
+                  "key": "OPEN_UNIT",
+                  "description": "Open unit in a closed establishment"
+                },
+                {
+                  "key": "PATHWAY_TO_PROG",
+                  "description": "Pathway to progression"
+                },
+                {
+                  "key": "PERINATAL_UNIT",
+                  "description": "Perinatal unit"
+                },
+                {
+                  "key": "PERSONALITY_DISORDER",
+                  "description": "Personality disorder unit"
+                },
+                {
+                  "key": "PIPE",
+                  "description": "Psychologically informed planned environment (PIPE)"
+                },
+                {
+                  "key": "REMAND",
+                  "description": "Remand"
+                },
+                {
+                  "key": "SEPARATION_CENTRE",
+                  "description": "Separation centre"
+                },
+                {
+                  "key": "STANDARD_ACCOMMODATION",
+                  "description": "Standard accommodation"
+                },
+                {
+                  "key": "THERAPEUTIC_COMMUNITY",
+                  "description": "Therapeutic community"
+                },
+                {
+                  "key": "VULNERABLE_PRISONERS",
+                  "description": "Vulnerable prisoners"
+                },
+                {
+                  "key": "YOUNG_PERSONS",
+                  "description": "Young persons"
+                }
+              ]
+            }
             """.trimIndent(),
             true,
           )
