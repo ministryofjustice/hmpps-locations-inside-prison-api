@@ -59,7 +59,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                {
                   "prisonId": "MDI",
                   "code": "ADJUDICATION",
-                  "pathHierarchy": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
                   "locationType": "ADJUDICATION_ROOM",
                   "usage": [
                     {
@@ -70,7 +70,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   ],
                   "active": true,
                   "isResidential": false,
-                  "key": "MDI-ADJUDICATION"
+                  "key": "MDI-Z-ADJUDICATION"
                 },
                 {
                   "prisonId": "MDI",
@@ -174,7 +174,8 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "code": "VISIT",
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",
-                  
+                  "leafLevel": true,
+                  "level": 2,
                   "active": true,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
@@ -411,7 +412,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                 "code":"003",
                 "pathHierarchy":"Z-1-003",
                 "locationType":"CELL",
-                "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                "accommodationTypes":[],
                 "permanentlyInactive":true,
                 "capacity":{"maxCapacity":0,"workingCapacity":0},
                 "status":"INACTIVE",

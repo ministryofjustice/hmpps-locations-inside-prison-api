@@ -9,6 +9,7 @@ enum class ResidentialLocationType(
   val display: Boolean = true,
   val nonResType: Boolean = false,
   val structural: Boolean = false,
+  val area: Boolean = false,
 ) {
   WING("Wing", LocationType.WING, structural = true),
   SPUR("Spur", LocationType.SPUR, structural = true),
@@ -22,10 +23,10 @@ enum class ResidentialLocationType(
   FAITH_AREA("Medical", LocationType.FAITH_AREA, nonResType = true),
   GROUP("Medical", LocationType.GROUP, nonResType = true),
   STORE("Medical", LocationType.STORE, nonResType = true),
-  AREA("Area", LocationType.AREA, false),
-  HOLDING_AREA("Holding Area", LocationType.HOLDING_AREA, false),
-  MOVEMENT_AREA("Movement Area", LocationType.MOVEMENT_AREA, false),
-  EXTERNAL_GROUNDS("External Grounds", LocationType.EXTERNAL_GROUNDS, false),
+  AREA("Area", LocationType.AREA, display = false, area = true),
+  HOLDING_AREA("Holding Area", LocationType.HOLDING_AREA, display = false, area = true),
+  MOVEMENT_AREA("Movement Area", LocationType.MOVEMENT_AREA, display = false, area = true),
+  EXTERNAL_GROUNDS("External Grounds", LocationType.EXTERNAL_GROUNDS, display = false, area = true),
 }
 
 enum class NonResidentialLocationType(

@@ -975,6 +975,17 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "key": "MDI-Z-VISIT"
                 },
                 {
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "status": "ACTIVE",
+                  "level": 2,
+                  "leafLevel": true,
+                  "key": "MDI-Z-ADJUDICATION",
+                  "isResidential": false
+                },
+                {
                   "code": "2",
                   "pathHierarchy": "Z-2",
                   "locationType": "LANDING",
@@ -1308,10 +1319,20 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       "sequence": 1
                     }
                   ],
-                  
                   "active": true,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "status": "ACTIVE",
+                  "level": 2,
+                  "leafLevel": true,
+                  "key": "MDI-Z-ADJUDICATION",
+                  "isResidential": false
                 },
                 {
                   "code": "2",

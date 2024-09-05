@@ -166,10 +166,12 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       ),
     )
     wingZ.addChildLocation(visitRoom)
+      .addChildLocation(adjRoom)
       .addChildLocation(
         landingZ1
           .addChildLocation(cell1)
           .addChildLocation(cell2)
+          .addChildLocation(archivedCell)
           .addChildLocation(store),
       )
       .addChildLocation(landingZ2)

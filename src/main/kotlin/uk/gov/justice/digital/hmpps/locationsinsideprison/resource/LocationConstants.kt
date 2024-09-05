@@ -264,9 +264,8 @@ class LocationConstants(
   @GetMapping("used-for-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
   @ResponseStatus(HttpStatus.OK)
-  @Deprecated("Used For types are specific to prison, will be removed", replaceWith = ReplaceWith("/constants/used-for-type/{prisonId}"))
   @Operation(
-    summary = "Get used for type data for not female or secure estate",
+    summary = "Get all used for types",
     description = "Requires the READ_LOCATION_REFERENCE_DATA role.",
     responses = [
       ApiResponse(
@@ -288,7 +287,7 @@ class LocationConstants(
   @ResponseBody
   fun getUsedForTypeConstants(): Map<String, List<Constant>> {
     return mapOf(
-      "usedForTypes" to UsedForType.entries.filter { it.isStandard() }.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+      "usedForTypes" to UsedForType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
     )
   }
 
