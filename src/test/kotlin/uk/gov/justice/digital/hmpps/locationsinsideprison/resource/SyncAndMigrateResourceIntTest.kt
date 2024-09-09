@@ -67,16 +67,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var nonRes: NonResidentialLocation
   lateinit var locationHistory: LocationHistory
 
-  enum class DeactivatedReasonOther {
-    NEW_BUILDING,
-    CELL_RECLAIMS,
-    CHANGE_OF_USE,
-    CLOSURE,
-    OUT_OF_USE,
-    CELLS_RETURNING_TO_USE,
-    OTHER,
-  }
-
   fun migrateRequestGeneration(deactivationReason: NomisDeactivatedReason, code: String? = null): NomisMigrateLocationRequest {
     var migrateRequest = NomisMigrateLocationRequest(
       prisonId = "ZZGHI",
@@ -1019,9 +1009,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       @Test
       fun `can migrate a location different deactivationReason Other`() {
         var i = 1000
+        val deactivatedReasonOther = listOf(NomisDeactivatedReason.NEW_BUILDING, NomisDeactivatedReason.CELL_RECLAIMS, NomisDeactivatedReason.CHANGE_OF_USE, NomisDeactivatedReason.CLOSURE, NomisDeactivatedReason.OUT_OF_USE, NomisDeactivatedReason.CELLS_RETURNING_TO_USE, NomisDeactivatedReason.OTHER)
 
-        DeactivatedReasonOther.entries.map {
-          migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.valueOf(it.toString()), String.format("%03d", i++))
+        deactivatedReasonOther.forEach {
+          migrateRequest =
+            migrateRequestGeneration(it, String.format("%03d", i++))
 
           val result = webTestClient.post().uri("/migrate/location")
             .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
@@ -1036,149 +1028,165 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         }
       }
     }
-  }
 
-  @DisplayName("DELETE /sync/delete")
-  @Nested
-  inner class DeleteLocationTest {
-
+    @DisplayName("DELETE /sync/delete")
     @Nested
-    inner class Security {
-      @Test
-      fun `access forbidden when no authority`() {
-        webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
-          .exchange()
-          .expectStatus().isUnauthorized
+    inner class DeleteLocationTest {
+
+      @Nested
+      inner class Security {
+        @Test
+        fun `access forbidden when no authority`() {
+          webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
+            .exchange()
+            .expectStatus().isUnauthorized
+        }
+
+        @Test
+        fun `access forbidden when no role`() {
+          webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
+            .headers(setAuthorisation(roles = listOf()))
+            .exchange()
+            .expectStatus().isForbidden
+        }
+
+        @Test
+        fun `access forbidden with wrong role`() {
+          webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
+            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+            .exchange()
+            .expectStatus().isForbidden
+        }
+
+        @Test
+        fun `access forbidden with right role, wrong scope`() {
+          webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
+            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+            .exchange()
+            .expectStatus().isForbidden
+        }
       }
 
-      @Test
-      fun `access forbidden when no role`() {
-        webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
-          .headers(setAuthorisation(roles = listOf()))
-          .exchange()
-          .expectStatus().isForbidden
+      @Nested
+      inner class Validation {
+        @Test
+        fun `access client error bad data`() {
+          webTestClient.delete().uri("/sync/delete/-23rf-$$££@")
+            .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+            .exchange()
+            .expectStatus().is4xxClientError
+        }
+
+        @Test
+        fun `handles location not found`() {
+          webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
+            .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+            .exchange()
+            .expectStatus().is4xxClientError
+        }
+
+        @Test
+        fun `cannot delete an existing location which as children`() {
+          webTestClient.delete().uri("/sync/delete/${wingB.id}")
+            .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+            .exchange()
+            .expectStatus().is4xxClientError
+        }
       }
 
-      @Test
-      fun `access forbidden with wrong role`() {
-        webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-          .exchange()
-          .expectStatus().isForbidden
-      }
+      @Nested
+      inner class HappyPath {
+        @Test
+        fun `can delete an existing location`() {
+          webTestClient.delete().uri("/sync/delete/${cell.id}")
+            .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+            .exchange()
+            .expectStatus().isNoContent
 
-      @Test
-      fun `access forbidden with right role, wrong scope`() {
-        webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-    }
+          assertThat(repository.findById(cell.id!!).getOrNull()).isNull()
 
-    @Nested
-    inner class Validation {
-      @Test
-      fun `access client error bad data`() {
-        webTestClient.delete().uri("/sync/delete/-23rf-$$££@")
-          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-
-      @Test
-      fun `handles location not found`() {
-        webTestClient.delete().uri("/sync/delete/${UUID.randomUUID()}")
-          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-
-      @Test
-      fun `cannot delete an existing location which as children`() {
-        webTestClient.delete().uri("/sync/delete/${wingB.id}")
-          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-    }
-
-    @Nested
-    inner class HappyPath {
-      @Test
-      fun `can delete an existing location`() {
-        webTestClient.delete().uri("/sync/delete/${cell.id}")
-          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
-          .exchange()
-          .expectStatus().isNoContent
-
-        assertThat(repository.findById(cell.id!!).getOrNull()).isNull()
-
-        getDomainEvents(1).let {
-          assertThat(it).hasSize(1)
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.deleted" to "ZZGHI-B-1-001",
-          )
+          getDomainEvents(1).let {
+            assertThat(it).hasSize(1)
+            assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+              "location.inside.prison.deleted" to "ZZGHI-B-1-001",
+            )
+          }
         }
       }
     }
-  }
 
-  @DisplayName("GET /sync/id/{id}")
-  @Nested
-  inner class SyncNomisToLocation {
-
+    @DisplayName("GET /sync/id/{id}")
     @Nested
-    inner class Security {
-      @Test
-      fun `access forbidden when no authority`() {
-        webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
-          .exchange()
-          .expectStatus().isUnauthorized
+    inner class SyncNomisToLocation {
+
+      @Nested
+      inner class Security {
+        @Test
+        fun `access forbidden when no authority`() {
+          webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
+            .exchange()
+            .expectStatus().isUnauthorized
+        }
+
+        @Test
+        fun `access forbidden when no role`() {
+          webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
+            .headers(setAuthorisation(roles = listOf()))
+            .exchange()
+            .expectStatus().isForbidden
+        }
+
+        @Test
+        fun `access forbidden with wrong role`() {
+          webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
+            .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+            .exchange()
+            .expectStatus().isForbidden
+        }
+      }
+
+      @Nested
+      inner class Validation {
+        @Test
+        fun `access client error bad data`() {
+          webTestClient.get().uri("/sync/id/-23rf-$$££@")
+            .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+            .exchange()
+            .expectStatus().is4xxClientError
+        }
+
+        @Test
+        fun `handles location not found`() {
+          webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
+            .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+            .exchange()
+            .expectStatus().is4xxClientError
+        }
+      }
+
+      @Nested
+      inner class HappyPath {
+
+        @Test
+        fun `can retrieve a cell by id`() {
+          val legacyLocation = webTestClient.get().uri("/sync/id/${cell.id}")
+            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+            .header("Content-Type", "application/json")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(LegacyLocation::class.java)
+            .returnResult().responseBody!!
+
+          Assertions.assertEquals(cell.prisonId, legacyLocation.prisonId)
+          Assertions.assertEquals(cell.id, legacyLocation.id)
+          Assertions.assertEquals(cell.getPathHierarchy(), legacyLocation.pathHierarchy)
+          Assertions.assertFalse(legacyLocation.ignoreWorkingCapacity)
+        }
       }
 
       @Test
-      fun `access forbidden when no role`() {
-        webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
-          .headers(setAuthorisation(roles = listOf()))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      fun `access forbidden with wrong role`() {
-        webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
-          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-          .exchange()
-          .expectStatus().isForbidden
-      }
-    }
-
-    @Nested
-    inner class Validation {
-      @Test
-      fun `access client error bad data`() {
-        webTestClient.get().uri("/sync/id/-23rf-$$££@")
-          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-
-      @Test
-      fun `handles location not found`() {
-        webTestClient.get().uri("/sync/id/${UUID.randomUUID()}")
-          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-    }
-
-    @Nested
-    inner class HappyPath {
-
-      @Test
-      fun `can retrieve a cell by id`() {
-        val legacyLocation = webTestClient.get().uri("/sync/id/${cell.id}")
+      fun `can retrieve a wing by id`() {
+        val legacyLocation = webTestClient.get().uri("/sync/id/${wingB.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -1186,27 +1194,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           .expectBody(LegacyLocation::class.java)
           .returnResult().responseBody!!
 
-        Assertions.assertEquals(cell.prisonId, legacyLocation.prisonId)
-        Assertions.assertEquals(cell.id, legacyLocation.id)
-        Assertions.assertEquals(cell.getPathHierarchy(), legacyLocation.pathHierarchy)
-        Assertions.assertFalse(legacyLocation.ignoreWorkingCapacity)
+        Assertions.assertEquals(wingB.prisonId, legacyLocation.prisonId)
+        Assertions.assertEquals(wingB.id, legacyLocation.id)
+        Assertions.assertEquals(wingB.getPathHierarchy(), legacyLocation.pathHierarchy)
+        Assertions.assertTrue(legacyLocation.ignoreWorkingCapacity)
       }
-    }
-
-    @Test
-    fun `can retrieve a wing by id`() {
-      val legacyLocation = webTestClient.get().uri("/sync/id/${wingB.id}")
-        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
-        .header("Content-Type", "application/json")
-        .exchange()
-        .expectStatus().isOk
-        .expectBody(LegacyLocation::class.java)
-        .returnResult().responseBody!!
-
-      Assertions.assertEquals(wingB.prisonId, legacyLocation.prisonId)
-      Assertions.assertEquals(wingB.id, legacyLocation.id)
-      Assertions.assertEquals(wingB.getPathHierarchy(), legacyLocation.pathHierarchy)
-      Assertions.assertTrue(legacyLocation.ignoreWorkingCapacity)
     }
   }
 }
