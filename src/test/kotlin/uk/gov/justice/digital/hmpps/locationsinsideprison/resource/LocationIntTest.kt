@@ -942,11 +942,16 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/bulk/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivateLocationsRequest(
-            mapOf(
-              cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Window smashed", proposedReactivationDate = proposedReactivationDate),
-              cell2.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.REFURBISHMENT, deactivationReasonDescription = "Fire", planetFmReference = "XXX122"))
-          )))
+          .bodyValue(
+            jsonString(
+              DeactivateLocationsRequest(
+                mapOf(
+                  cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Window smashed", proposedReactivationDate = proposedReactivationDate),
+                  cell2.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.REFURBISHMENT, deactivationReasonDescription = "Fire", planetFmReference = "XXX122"),
+                ),
+              ),
+            ),
+          )
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -1029,7 +1034,9 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "isResidential": true
                 }
               ]
-              """, false)
+              """,
+            false,
+          )
 
         getDomainEvents(4).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
