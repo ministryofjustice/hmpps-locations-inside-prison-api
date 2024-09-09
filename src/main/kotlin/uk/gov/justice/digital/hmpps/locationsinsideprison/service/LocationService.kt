@@ -25,6 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationPrefixDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -60,6 +61,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDe
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
 import java.time.LocalDate
@@ -207,20 +209,12 @@ class LocationService(
 
     val capacityChanged = request.isCell() && request.capacity != null
 
-    val location = locationRepository.save(locationToCreate).toDto(includeParent = capacityChanged)
+    val createdLocation = locationRepository.save(locationToCreate)
 
-    log.info("Created Residential Location [${location.getKey()}]")
-    telemetryClient.trackEvent(
-      "Created Residential Location",
-      mapOf(
-        "id" to location.id.toString(),
-        "prisonId" to location.prisonId,
-        "path" to location.pathHierarchy,
-      ),
-      null,
-    )
+    log.info("Created Residential Location [${createdLocation.getKey()}]")
+    trackLocationUpdate(createdLocation, "Created Residential Location")
 
-    return location
+    return createdLocation.toDto(includeParent = capacityChanged)
   }
 
   @Transactional
@@ -238,20 +232,12 @@ class LocationService(
 
     val usageChanged = request.usage != null
 
-    val location = locationRepository.save(locationToCreate).toDto(includeParent = usageChanged)
+    val createdLocation = locationRepository.save(locationToCreate)
 
-    log.info("Created Non-Residential Location [${location.getKey()}]")
-    telemetryClient.trackEvent(
-      "Created Non-Residential Location",
-      mapOf(
-        "id" to location.id.toString(),
-        "prisonId" to location.prisonId,
-        "path" to location.pathHierarchy,
-      ),
-      null,
-    )
+    log.info("Created Non-Residential Location [${createdLocation.getKey()}]")
+    trackLocationUpdate(createdLocation, "Created Non-Residential Location")
 
-    return location
+    return createdLocation.toDto(includeParent = usageChanged)
   }
 
   @Transactional
@@ -266,47 +252,42 @@ class LocationService(
   @Transactional
   fun updateResidentialLocation(id: UUID, patchLocationRequest: PatchResidentialLocationRequest): UpdateLocationResult {
     val residentialLocation = residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
-    return patchLocation(residentialLocation, patchLocationRequest)
+    return patchLocation(residentialLocation, patchLocationRequest).also {
+      trackLocationUpdate(it.location, "Updated Location")
+    }
   }
 
   @Transactional
   fun updateResidentialLocation(key: String, patchLocationRequest: PatchResidentialLocationRequest): UpdateLocationResult {
     val residentialLocation = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
-    return patchLocation(residentialLocation, patchLocationRequest)
+    return patchLocation(residentialLocation, patchLocationRequest).also {
+      trackLocationUpdate(it.location, "Updated Location")
+    }
   }
 
   @Transactional
   fun updateNonResidentialLocation(id: UUID, patchLocationRequest: PatchNonResidentialLocationRequest): UpdateLocationResult {
     val nonResLocation = nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
-    return patchLocation(nonResLocation, patchLocationRequest)
+    return patchLocation(nonResLocation, patchLocationRequest).also {
+      trackLocationUpdate(it.location, "Updated Location")
+    }
   }
 
   @Transactional
   fun updateNonResidentialLocation(key: String, patchLocationRequest: PatchNonResidentialLocationRequest): UpdateLocationResult {
     val nonResLocation = nonResidentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
-    return patchLocation(nonResLocation, patchLocationRequest)
+    return patchLocation(nonResLocation, patchLocationRequest).also {
+      trackLocationUpdate(it.location, "Updated Location")
+    }
   }
 
   private fun patchLocation(
     location: Location,
     patchLocationRequest: PatchLocationRequest,
   ): UpdateLocationResult {
-    val (codeChanged, oldParent, parentChanged) = updateLocalName(location, patchLocationRequest)
+    val (codeChanged, oldParent, parentChanged) = updateLocationDetails(location, patchLocationRequest)
 
     location.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
-
-    log.info("Updated Location [$location]")
-    telemetryClient.trackEvent(
-      "Updated Location",
-      mapOf(
-        "id" to location.id.toString(),
-        "prisonId" to location.prisonId,
-        "path" to location.getPathHierarchy(),
-        "codeChanged" to "$codeChanged",
-        "parentChanged" to "$parentChanged",
-      ),
-      null,
-    )
 
     return UpdateLocationResult(
       location.toDto(
@@ -330,19 +311,12 @@ class LocationService(
     )
 
     log.info("Updated Used for types for below Location [$residentialLocation.getKey()]")
-    telemetryClient.trackEvent(
-      "Updated Used For Type below Residential Location",
-      mapOf(
-        "id" to id.toString(),
-        "prisonId" to residentialLocation.prisonId,
-        "path" to residentialLocation.getPathHierarchy(),
-      ),
-      null,
-    )
+    trackLocationUpdate(residentialLocation, "Updated Used For Type below Residential Location")
+
     return residentialLocation.toDto(includeChildren = true, includeNonResidential = false)
   }
 
-  private fun updateLocalName(
+  private fun updateLocationDetails(
     locationToUpdate: Location,
     patchLocationRequest: PatchLocationRequest,
   ): UpdatedSummary {
@@ -448,7 +422,7 @@ class LocationService(
   }
 
   @Transactional
-  fun updateLocalName(id: UUID, updateLocationLocalNameRequest: UpdateLocationLocalNameRequest): LocationDTO {
+  fun updateLocationDetails(id: UUID, updateLocationLocalNameRequest: UpdateLocationLocalNameRequest): LocationDTO {
     val location = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -463,15 +437,8 @@ class LocationService(
     )
 
     log.info("Location local name updated [${location.getKey()}")
+    trackLocationUpdate(location, "Location local name updated")
 
-    telemetryClient.trackEvent(
-      "Location updated",
-      mapOf(
-        "id" to id.toString(),
-        "key" to location.getKey(),
-      ),
-      null,
-    )
     return location.toDto()
   }
 
@@ -506,15 +473,7 @@ class LocationService(
           )
         ) {
           deactivatedLocations.forEach {
-            telemetryClient.trackEvent(
-              "Temporarily Deactivated Location",
-              mapOf(
-                "id" to it.id.toString(),
-                "prisonId" to it.prisonId,
-                "path" to it.getPathHierarchy(),
-              ),
-              null,
-            )
+            trackLocationUpdate(it, "Temporarily Deactivated Location")
           }
         }
       }
@@ -587,21 +546,66 @@ class LocationService(
       clock = clock,
     )
 
-    telemetryClient.trackEvent(
-      "Permanently Deactivated Location",
-      mapOf(
-        "id" to id.toString(),
-        "prisonId" to locationToArchive.prisonId,
-        "path" to locationToArchive.getPathHierarchy(),
-      ),
-      null,
-    )
-
+    trackLocationUpdate(locationToArchive, "Permanently Deactivated Location")
     return locationToArchive.toDto(includeChildren = true, includeParent = true)
   }
 
   @Transactional
-  fun reactivateLocation(locationsToReactivate: ReactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+  fun updateCapacityOfCellLocations(locationsToUpdate: UpdateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+    val updatedLocations = mutableSetOf<Location>()
+
+    locationsToUpdate.locations.forEach { (key, locationDetail) ->
+      val locationToUpdate = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
+
+      if (locationToUpdate.isPermanentlyDeactivated()) {
+        throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
+      }
+
+      if (locationToUpdate is Cell) {
+        with(locationDetail) {
+          if (locationToUpdate.getMaxCapacity() != maxCapacity || locationToUpdate.getWorkingCapacity() != workingCapacity) {
+            updateCellCapacity(
+              locationToUpdate.id!!,
+              maxCapacity = maxCapacity,
+              workingCapacity = workingCapacity,
+            )
+            updatedLocations.add(locationToUpdate)
+          }
+
+          if (certified != locationToUpdate.isCertified()) {
+            if (certified) {
+              locationToUpdate.certifyCell(authenticationFacade.getUserOrSystemInContext(), clock)
+            } else {
+              deactivateLocations(
+                DeactivateLocationsRequest(
+                  mapOf(
+                    locationToUpdate.id!! to
+                      TemporaryDeactivationLocationRequest(
+                        deactivationReason = DeactivatedReason.OTHER,
+                        deactivationReasonDescription = "De-certified cell",
+                      ),
+                  ),
+                ),
+              )
+            }
+            updatedLocations.add(locationToUpdate)
+          }
+        }
+      }
+    }
+
+    val updatedLocationsDto = updatedLocations.map { it.toDto() }.toSet()
+    updatedLocations.forEach { trackLocationUpdate(it, "Updated Location") }
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to updatedLocations.flatMap { changed -> changed.getParentLocations().map { it.toDto() } }.toSet().minus(
+        updatedLocationsDto,
+      ).toList(),
+      InternalLocationDomainEventType.LOCATION_AMENDED to updatedLocationsDto.toList(),
+    )
+  }
+
+  @Transactional
+  fun reactivateLocations(locationsToReactivate: ReactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val locationsReactivated = mutableSetOf<Location>()
 
     locationsToReactivate.locations.forEach { (id, reactivationDetail) ->
@@ -626,7 +630,7 @@ class LocationService(
     }
 
     val reactivatedLocationsDto = locationsReactivated.map { it.toDto() }.toSet()
-    locationsReactivated.forEach { recordedReactivatedLocation(it) }
+    locationsReactivated.forEach { trackLocationUpdate(it, "Re-activated Location") }
     return mapOf(
       InternalLocationDomainEventType.LOCATION_AMENDED to locationsReactivated.flatMap { reactivated -> reactivated.getParentLocations().map { it.toDto() } }.toSet().minus(
         reactivatedLocationsDto,
@@ -635,13 +639,25 @@ class LocationService(
     )
   }
 
-  private fun recordedReactivatedLocation(location: Location) {
+  private fun trackLocationUpdate(location: Location, trackDescription: String) {
     telemetryClient.trackEvent(
-      "Re-activated Location",
+      trackDescription,
       mapOf(
         "id" to location.id!!.toString(),
         "prisonId" to location.prisonId,
         "path" to location.getPathHierarchy(),
+      ),
+      null,
+    )
+  }
+
+  private fun trackLocationUpdate(location: LocationDTO, trackDescription: String) {
+    telemetryClient.trackEvent(
+      trackDescription,
+      mapOf(
+        "id" to location.id.toString(),
+        "prisonId" to location.prisonId,
+        "path" to location.pathHierarchy,
       ),
       null,
     )
@@ -674,15 +690,7 @@ class LocationService(
       throw LocationNotFoundException(id.toString())
     }
 
-    telemetryClient.trackEvent(
-      "Converted Location to non-residential cell",
-      mapOf(
-        "id" to id.toString(),
-        "prisonId" to locationToConvert.prisonId,
-        "path" to locationToConvert.getPathHierarchy(),
-      ),
-      null,
-    )
+    trackLocationUpdate(locationToConvert, "Converted Location to non-residential cell")
     return locationToConvert.toDto(includeParent = true)
   }
 
@@ -705,15 +713,7 @@ class LocationService(
       throw LocationNotFoundException(id.toString())
     }
 
-    telemetryClient.trackEvent(
-      "Converted non-residential cell to residential cell",
-      mapOf(
-        "id" to id.toString(),
-        "prisonId" to locationToConvert.prisonId,
-        "path" to locationToConvert.getPathHierarchy(),
-      ),
-      null,
-    )
+    trackLocationUpdate(locationToConvert, "Converted non-residential cell to residential cell")
     return locationToConvert.toDto(includeParent = true)
   }
 

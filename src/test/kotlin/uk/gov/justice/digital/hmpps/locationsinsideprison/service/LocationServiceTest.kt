@@ -67,7 +67,7 @@ class LocationServiceTest {
     val updateLocationLocalNameRequest = UpdateLocationLocalNameRequest("L23", "User 1")
     whenever(locationRepository.findById(any())).thenReturn(Optional.empty())
     Assertions.assertThatExceptionOfType(LocationNotFoundException::class.java).isThrownBy {
-      service.updateLocalName(UUID.randomUUID(), updateLocationLocalNameRequest)
+      service.updateLocationDetails(UUID.randomUUID(), updateLocationLocalNameRequest)
     }
   }
 
@@ -79,7 +79,7 @@ class LocationServiceTest {
     whenever(location.isPermanentlyDeactivated()).thenReturn(true)
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(location))
     Assertions.assertThatExceptionOfType(ValidationException::class.java).isThrownBy {
-      service.updateLocalName(UUID.randomUUID(), updateLocationLocalNameRequest)
+      service.updateLocationDetails(UUID.randomUUID(), updateLocationLocalNameRequest)
     }
   }
 
@@ -107,7 +107,7 @@ class LocationServiceTest {
       )
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(location))
 
-    val cellDto = service.updateLocalName(UUID.randomUUID(), updateLocationLocalNameRequest)
+    val cellDto = service.updateLocationDetails(UUID.randomUUID(), updateLocationLocalNameRequest)
     Assertions.assertThat(cellDto.localName).isEqualTo("L23")
   }
 
