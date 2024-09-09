@@ -483,6 +483,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                     "maxCapacity": 2,
                     "workingCapacity": 0
                   },
+                  "oldWorkingCapacity": 2,
                   "certification": {
                     "certified": true,
                     "capacityOfCertifiedCell": 2
@@ -543,6 +544,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                     "maxCapacity": 2,
                     "workingCapacity": 0
                   },
+                  "oldWorkingCapacity": 2,
                   "certification": {
                     "certified": true,
                     "capacityOfCertifiedCell": 2
@@ -588,6 +590,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                     "maxCapacity": 2,
                     "workingCapacity": 0
                   },
+                  "oldWorkingCapacity": 2,
                   "certification": {
                     "certified": true,
                     "capacityOfCertifiedCell": 2
