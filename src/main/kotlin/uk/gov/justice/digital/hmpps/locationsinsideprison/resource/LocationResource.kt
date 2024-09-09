@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
@@ -181,7 +182,7 @@ class LocationResource(
     responses = [
       ApiResponse(
         responseCode = "200",
-        description = "Returns deactivated location",
+        description = "Returns deactivated locations",
       ),
       ApiResponse(
         responseCode = "400",
@@ -213,21 +214,45 @@ class LocationResource(
     @Validated
     temporaryDeactivationLocationRequest: TemporaryDeactivationLocationRequest,
   ): List<LocationDTO> {
-    val deactivatedLocation = locationService.deactivateLocation(
-      id,
-      deactivatedReason = temporaryDeactivationLocationRequest.deactivationReason,
-      deactivationReasonDescription = temporaryDeactivationLocationRequest.deactivationReasonDescription,
-      proposedReactivationDate = temporaryDeactivationLocationRequest.proposedReactivationDate,
-      planetFmReference = temporaryDeactivationLocationRequest.planetFmReference,
-    )
+    return deactivate(DeactivateLocationsRequest(mapOf(id to temporaryDeactivationLocationRequest)))
+  }
 
-    eventPublish { deactivatedLocation }
-
-    val locations = deactivatedLocation[InternalLocationDomainEventType.LOCATION_DEACTIVATED]
-    locations?.forEach {
-      audit(it.getKey()) { it.copy(childLocations = null, parentLocation = null) }
-    }
-    return locations ?: emptyList()
+  @PutMapping("/bulk/deactivate/temporary")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Bulk temporarily deactivate a location",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns deactivated locations",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun bulkDeactivateLocations(
+    @RequestBody @Validated deactivateLocationsRequest: DeactivateLocationsRequest,
+  ): List<LocationDTO> {
+    return deactivate(deactivateLocationsRequest)
   }
 
   @PutMapping("/{id}/update/temporary-deactivation")
@@ -341,7 +366,7 @@ class LocationResource(
     responses = [
       ApiResponse(
         responseCode = "200",
-        description = "Returns updated location",
+        description = "Returns reactivation location",
       ),
       ApiResponse(
         responseCode = "400",
@@ -376,24 +401,13 @@ class LocationResource(
       defaultValue = "false",
     ) cascadeReactivation: Boolean = false,
   ): LocationDTO {
-    val reactivateLocation = locationService.reactivateLocation(
-      ReactivateLocationsRequest(
-        mapOf(
-          id to ReactivationDetail(cascadeReactivation = cascadeReactivation),
-        ),
-      ),
-    )
-    eventPublish { reactivateLocation }
-    val reactivatedLocation = reactivateLocation[InternalLocationDomainEventType.LOCATION_REACTIVATED]?.first()
-      ?: throw LocationNotFoundException(id.toString())
-    audit(reactivatedLocation.getKey()) { reactivatedLocation.copy(childLocations = null, parentLocation = null) }
-    return reactivatedLocation
+    return reactivate(ReactivateLocationsRequest(mapOf(id to ReactivationDetail(cascadeReactivation = cascadeReactivation)))).first()
   }
 
   @PutMapping("/bulk/reactivate")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
-    summary = "Re-activate a series of locations",
+    summary = "Re-activates a series of locations",
     description = "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
@@ -425,6 +439,10 @@ class LocationResource(
   fun bulkReactivateLocations(
     @RequestBody @Validated reactivateLocationsRequest: ReactivateLocationsRequest,
   ): List<LocationDTO> {
+    return reactivate(reactivateLocationsRequest)
+  }
+
+  private fun reactivate(reactivateLocationsRequest: ReactivateLocationsRequest): List<Location> {
     val reactivatedLocations = locationService.reactivateLocation(reactivateLocationsRequest)
     eventPublish { reactivatedLocations }
 
@@ -434,7 +452,27 @@ class LocationResource(
     }
     return locations ?: emptyList()
   }
+
+  private fun deactivate(
+    deactivateLocationsRequest: DeactivateLocationsRequest,
+  ): List<Location> {
+    val deactivatedLocation = locationService.deactivateLocations(deactivateLocationsRequest)
+    eventPublish { deactivatedLocation }
+
+    val locations = deactivatedLocation[InternalLocationDomainEventType.LOCATION_DEACTIVATED]
+    locations?.forEach {
+      audit(it.getKey()) { it.copy(childLocations = null, parentLocation = null) }
+    }
+    return locations ?: emptyList()
+  }
 }
+
+@Schema(description = "Deactivation Locations Request")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class DeactivateLocationsRequest(
+  @Schema(description = "List of locations to deactivate", example = " { \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"deactivationReason\": \"DAMAGED\" } }")
+  val locations: Map<UUID, TemporaryDeactivationLocationRequest>,
+)
 
 @Schema(description = "Reactivation Locations Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)

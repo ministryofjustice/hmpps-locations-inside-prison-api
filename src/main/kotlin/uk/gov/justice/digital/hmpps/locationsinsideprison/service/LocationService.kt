@@ -48,6 +48,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Residen
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
@@ -475,51 +476,50 @@ class LocationService(
   }
 
   @Transactional
-  fun deactivateLocation(
-    id: UUID,
-    deactivatedReason: DeactivatedReason,
-    deactivationReasonDescription: String? = null,
-    proposedReactivationDate: LocalDate? = null,
-    planetFmReference: String? = null,
-  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
-    val locationToDeactivate = locationRepository.findById(id)
-      .orElseThrow { LocationNotFoundException(id.toString()) }
-
-    if (locationToDeactivate.isTemporarilyDeactivated()) {
-      throw AlreadyDeactivatedLocationException(locationToDeactivate.getKey())
-    }
-
-    checkForPrisonersInLocation(locationToDeactivate)
-
-    if (deactivatedReason == DeactivatedReason.OTHER && deactivationReasonDescription.isNullOrEmpty()) {
-      throw ReasonForDeactivationMustBeProvidedException(locationToDeactivate.getKey())
-    }
-
+  fun deactivateLocations(locationsToDeactivate: DeactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val deactivatedLocations = mutableSetOf<Location>()
 
-    if (locationToDeactivate.temporarilyDeactivate(
-        deactivatedReason = deactivatedReason,
-        deactivatedDate = LocalDateTime.now(clock),
-        deactivationReasonDescription = deactivationReasonDescription,
-        planetFmReference = planetFmReference,
-        proposedReactivationDate = proposedReactivationDate,
-        userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
-        clock = clock,
-        deactivatedLocations = deactivatedLocations,
-      )
-    ) {
-      deactivatedLocations.forEach {
-        telemetryClient.trackEvent(
-          "Temporarily Deactivated Location",
-          mapOf(
-            "id" to it.id.toString(),
-            "prisonId" to it.prisonId,
-            "path" to it.getPathHierarchy(),
-          ),
-          null,
-        )
+    locationsToDeactivate.locations.forEach { (id, deactivationDetail) ->
+      val locationToDeactivate = locationRepository.findById(id)
+        .orElseThrow { LocationNotFoundException(id.toString()) }
+
+      if (locationToDeactivate.isTemporarilyDeactivated()) {
+        throw AlreadyDeactivatedLocationException(locationToDeactivate.getKey())
+      }
+
+      checkForPrisonersInLocation(locationToDeactivate)
+
+      with(deactivationDetail) {
+        if (deactivationReason == DeactivatedReason.OTHER && deactivationReasonDescription.isNullOrEmpty()) {
+          throw ReasonForDeactivationMustBeProvidedException(locationToDeactivate.getKey())
+        }
+
+        if (locationToDeactivate.temporarilyDeactivate(
+            deactivatedReason = deactivationReason,
+            deactivatedDate = LocalDateTime.now(clock),
+            deactivationReasonDescription = deactivationReasonDescription,
+            planetFmReference = planetFmReference,
+            proposedReactivationDate = proposedReactivationDate,
+            userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+            clock = clock,
+            deactivatedLocations = deactivatedLocations,
+          )
+        ) {
+          deactivatedLocations.forEach {
+            telemetryClient.trackEvent(
+              "Temporarily Deactivated Location",
+              mapOf(
+                "id" to it.id.toString(),
+                "prisonId" to it.prisonId,
+                "path" to it.getPathHierarchy(),
+              ),
+              null,
+            )
+          }
+        }
       }
     }
+
     val deactivatedLocationsDto = deactivatedLocations.map { it.toDto() }.toSet()
     return mapOf(
       InternalLocationDomainEventType.LOCATION_AMENDED to deactivatedLocations.flatMap { deactivatedLoc -> deactivatedLoc.getParentLocations().map { it.toDto() } }.toSet().minus(
