@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
@@ -529,6 +530,14 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+
         prisonerSearchMockServer.resetAll()
         prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy()), false)
 
@@ -538,51 +547,14 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Window smashed", proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-              {
-                "id": "${wingZ.id}",
-                "prisonId": "MDI",
-                "code": "Z",
-                "pathHierarchy": "Z",
-                "locationType": "WING",
-                "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
-                "capacity": {
-                  "maxCapacity": 2,
-                  "workingCapacity": 0
-                },
-                "certification": {
-                  "certified": true,
-                  "capacityOfCertifiedCell": 2
-                },
-                "active": false,
-                "deactivatedDate": "$now",
-                "deactivatedReason": "DAMAGED",
-                "deactivationReasonDescription": "Window smashed",
-                "permanentlyInactive": false,
-                "proposedReactivationDate": "$proposedReactivationDate",
-                "topLevelId": "${wingZ.id}",
-                "isResidential": true,
-                "key": "MDI-Z",
-                "deactivatedBy": "LOCATIONS_INSIDE_PRISON_API"
-              }
-          """,
-            false,
-          )
 
-        getDomainEvents(10).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
-            "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
             "location.inside.prison.deactivated" to "MDI-Z-1-01S",
-            "location.inside.prison.deactivated" to "MDI-Z-VISIT",
-            "location.inside.prison.deactivated" to "MDI-Z-ADJUDICATION",
-            "location.inside.prison.amended" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z",
           )
         }
 
@@ -667,6 +639,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "active": false,
                       "deactivatedByParent": false,
+                      "oldWorkingCapacity": 2,
                       "proposedReactivationDate": "$proposedReactivationDate",
                       "deactivatedDate": "$now",
                       "deactivatedReason": "DAMAGED",
@@ -728,38 +701,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = "Not Needed", proposedReactivationDate = proposedReactivationDate)))
           .exchange()
           .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-              {
-                "id": "${cell1.id}",
-                "prisonId": "MDI",
-                "code": "001",
-                "pathHierarchy": "Z-1-001",
-                "locationType": "CELL",
-                "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
-                "capacity": {
-                  "maxCapacity": 2,
-                  "workingCapacity": 0
-                },
-                "certification": {
-                  "certified": true,
-                  "capacityOfCertifiedCell": 2
-                },
-                "active": false,
-                "deactivatedDate": "$now",
-                "deactivatedReason": "OTHER",
-                "deactivationReasonDescription": "Not Needed",
-                "permanentlyInactive": false,
-                "proposedReactivationDate": "$proposedReactivationDate",
-                "topLevelId": "${wingZ.id}",
-                "isResidential": true,
-                "key": "MDI-Z-1-001",
-                "deactivatedBy": "LOCATIONS_INSIDE_PRISON_API"
-              }
-          """,
-            false,
-          )
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -814,6 +755,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "locationType": "CELL",
                 "accommodationTypes":["NORMAL_ACCOMMODATION"],
                 "active": false,
+                "oldWorkingCapacity": 2,
                 "deactivatedByParent": false,
                 "proposedReactivationDate": "$proposedReactivationDate",
                 "deactivatedDate": "$now",
@@ -872,6 +814,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "locationType": "CELL",
                 "accommodationTypes":["NORMAL_ACCOMMODATION"],
                 "active": false,
+                "oldWorkingCapacity": 2,
                 "deactivatedByParent": false,
                 "proposedReactivationDate": "$proposedReactivationDate",
                 "deactivatedDate": "$now",
@@ -942,13 +885,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        webTestClient.put().uri("/locations/${wingZ.id}/reactivate?cascade-reactivation=true")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isOk
-
-        getDomainEvents(16).let {
+        getDomainEvents(6).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
@@ -956,16 +893,23 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
             "location.inside.prison.deactivated" to "MDI-Z-1-01S",
-            "location.inside.prison.deactivated" to "MDI-Z-VISIT",
-            "location.inside.prison.deactivated" to "MDI-Z-ADJUDICATION",
+          )
+        }
+
+        webTestClient.put().uri("/locations/${wingZ.id}/reactivate?cascade-reactivation=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(6).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.reactivated" to "MDI-Z",
             "location.inside.prison.reactivated" to "MDI-Z-1",
             "location.inside.prison.reactivated" to "MDI-Z-2",
             "location.inside.prison.reactivated" to "MDI-Z-1-001",
             "location.inside.prison.reactivated" to "MDI-Z-1-002",
             "location.inside.prison.reactivated" to "MDI-Z-1-01S",
-            "location.inside.prison.reactivated" to "MDI-Z-VISIT",
-            "location.inside.prison.reactivated" to "MDI-Z-ADJUDICATION",
           )
         }
 
@@ -1080,6 +1024,14 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+
         prisonerSearchMockServer.resetAll()
         prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy(), cell1.getPathHierarchy()), false)
 
@@ -1090,28 +1042,27 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
+        getDomainEvents(5).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z",
+            "location.inside.prison.deactivated" to "MDI-Z-1",
+            "location.inside.prison.deactivated" to "MDI-Z-2",
+            "location.inside.prison.deactivated" to "MDI-Z-1-002",
+            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
+          )
+        }
+
         webTestClient.put().uri("/locations/${cell1.id}/reactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(14).let {
+        getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.deactivated" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z",
-            "location.inside.prison.deactivated" to "MDI-Z",
-            "location.inside.prison.deactivated" to "MDI-Z-1",
-            "location.inside.prison.deactivated" to "MDI-Z-2",
-            "location.inside.prison.deactivated" to "MDI-Z-1-001",
-            "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
-            "location.inside.prison.deactivated" to "MDI-Z-VISIT",
-            "location.inside.prison.deactivated" to "MDI-Z-ADJUDICATION",
             "location.inside.prison.reactivated" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z",
+            "location.inside.prison.reactivated" to "MDI-Z-1",
+            "location.inside.prison.reactivated" to "MDI-Z",
           )
         }
 
@@ -1183,6 +1134,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "locationType": "CELL",
                       "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "active": false,
+                      "oldWorkingCapacity": 2,
                       "deactivatedReason": "MOTHBALLED",
                       "isResidential": true,
                       "key": "MDI-Z-1-002"
@@ -1215,6 +1167,244 @@ class LocationResourceIntTest : CommonDataTestBase() {
           """,
             false,
           )
+      }
+    }
+  }
+
+  @DisplayName("PUT /locations/bulk/reactivate")
+  @Nested
+  inner class BulkReactivateLocationTest {
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/locations/bulk/reactivate")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/locations/bulk/reactivate")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{ "locations": { "${wingZ.id!!}": { "cascadeReactivation": false } }}""")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/locations/bulk/reactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{ "locations": { "${wingZ.id!!}": { "cascadeReactivation": false } }}""")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.put().uri("/locations/bulk/reactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{ "locations": { "${wingZ.id!!}": { "cascadeReactivation": false } }}""")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can reactivate a number of locations`() {
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy(), cell1.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(6).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z",
+            "location.inside.prison.deactivated" to "MDI-Z-1",
+            "location.inside.prison.deactivated" to "MDI-Z-2",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.deactivated" to "MDI-Z-1-002",
+            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
+          )
+        }
+
+        prisonerSearchMockServer.resetAll()
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/bulk/reactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ReactivateLocationsRequest(
+                locations = mapOf(
+                  cell1.id!! to ReactivationDetail(capacity = Capacity(maxCapacity = 3, workingCapacity = 3)),
+                  cell2.id!! to ReactivationDetail(),
+                ),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(4).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.reactivated" to "MDI-Z-1-001",
+            "location.inside.prison.reactivated" to "MDI-Z-1-002",
+            "location.inside.prison.reactivated" to "MDI-Z-1",
+            "location.inside.prison.reactivated" to "MDI-Z",
+          )
+        }
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "MDI",
+              "code": "Z",
+              "pathHierarchy": "Z",
+              "locationType": "WING",
+              "active": true,
+              "key": "MDI-Z",
+              "capacity": {
+                "maxCapacity": 5,
+                "workingCapacity": 5
+              },
+              "certification": {
+                "capacityOfCertifiedCell": 4
+              },
+              "childLocations": [
+                {
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "active": true,
+                  "isResidential": false,
+                  "key": "MDI-Z-VISIT"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "active": true,
+                  "isResidential": false,
+                  "key": "MDI-Z-ADJUDICATION"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "1",
+                  "pathHierarchy": "Z-1",
+                  "locationType": "LANDING",
+                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "active": true,
+                  "isResidential": true,
+                  "key": "MDI-Z-1",
+                  "childLocations": [
+                    {
+                      "prisonId": "MDI",
+                      "code": "001",
+                      "pathHierarchy": "Z-1-001",
+                      "locationType": "CELL",
+                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "active": true,
+                      "isResidential": true,
+                      "key": "MDI-Z-1-001",
+                      "capacity": {
+                        "maxCapacity": 3,
+                        "workingCapacity": 3
+                      }
+                    },
+                    {
+                      "prisonId": "MDI",
+                      "code": "002",
+                      "pathHierarchy": "Z-1-002",
+                      "locationType": "CELL",
+                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "active": true,
+                      "isResidential": true,
+                      "key": "MDI-Z-1-002",
+                      "capacity": {
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
+                      }
+                    },
+                    {
+                      "prisonId": "MDI",
+                      "code": "01S",
+                      "pathHierarchy": "Z-1-01S",
+                      "locationType": "STORE",
+                      "active": false,
+                      "deactivatedReason": "DAMAGED",
+                      "isResidential": true,
+                      "key": "MDI-Z-1-01S"
+                    }
+                  ]
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "accommodationTypes":[],
+                  "active": false,
+                  "deactivatedReason": "DAMAGED",
+                  "isResidential": true,
+                  "key": "MDI-Z-2"
+                }
+              ]
+            }
+          """,
+            false,
+          )
+
+        prisonerSearchMockServer.resetAll()
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/bulk/reactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ReactivateLocationsRequest(
+                locations = mapOf(
+                  landingZ1.id!! to ReactivationDetail(cascadeReactivation = true),
+                  landingZ2.id!! to ReactivationDetail(),
+                ),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(4).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.reactivated" to "MDI-Z-1-01S",
+            "location.inside.prison.reactivated" to "MDI-Z-2",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
       }
     }
   }

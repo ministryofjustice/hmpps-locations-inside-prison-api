@@ -197,6 +197,20 @@ abstract class Location(
     return getParent()?.findTopLevelLocation() ?: this
   }
 
+  fun getParentLocations(): List<Location> {
+    val parents = mutableListOf<Location>()
+
+    fun goUp(location: Location?) {
+      if (location != null) {
+        parents.add(location)
+        goUp(location.getParent())
+      }
+    }
+
+    goUp(this.getParent())
+    return parents
+  }
+
   private fun getLevel(): Int {
     fun goUp(location: Location?, level: Int): Int {
       if (location == null) {
@@ -509,7 +523,8 @@ abstract class Location(
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
     clock: Clock,
-  ) {
+    deactivatedLocations: MutableSet<Location>? = null,
+  ): Boolean {
     if (!isActive()) {
       log.warn("Location [${getKey()}] is already deactivated")
     } else {
@@ -571,12 +586,16 @@ abstract class Location(
             proposedReactivationDate = proposedReactivationDate,
             userOrSystemInContext = userOrSystemInContext,
             clock = clock,
+            deactivatedLocations = deactivatedLocations,
           )
         }
       }
+      deactivatedLocations?.add(this)
 
       log.info("Temporarily Deactivated Location [${getKey()}]")
+      return true
     }
+    return false
   }
 
   open fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock): Location {
@@ -697,8 +716,8 @@ abstract class Location(
     }
   }
 
-  open fun reactivate(userOrSystemInContext: String, clock: Clock) {
-    this.getParent()?.reactivate(userOrSystemInContext, clock)
+  open fun reactivate(userOrSystemInContext: String, clock: Clock, maxCapacity: Int? = null, workingCapacity: Int? = null, reactivatedLocations: MutableSet<Location>? = null): Boolean {
+    this.getParent()?.reactivate(userOrSystemInContext = userOrSystemInContext, clock = clock, maxCapacity = maxCapacity, workingCapacity = workingCapacity, reactivatedLocations = reactivatedLocations)
     if (!isActive() && !isPermanentlyDeactivated()) {
       val amendedDate = LocalDateTime.now(clock)
       addHistory(LocationAttribute.ACTIVE, "false", "true", userOrSystemInContext, amendedDate)
@@ -741,8 +760,21 @@ abstract class Location(
       this.whenUpdated = amendedDate
       this.deactivatedBy = null
 
+      if (this is Cell && (maxCapacity != null || workingCapacity != null)) {
+        setCapacity(
+          maxCapacity = maxCapacity ?: getMaxCapacity() ?: 0,
+          workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
+          userOrSystemInContext = userOrSystemInContext,
+          clock = clock,
+        )
+      }
+
+      reactivatedLocations?.add(this)
       log.info("Re-activated Location [${getKey()}]")
+      return true
     }
+
+    return false
   }
 
   override fun toString(): String {
