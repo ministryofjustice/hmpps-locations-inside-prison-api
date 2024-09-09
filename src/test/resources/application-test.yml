@@ -22,7 +22,7 @@ spring:
     allow-bean-definition-overriding: true
 
   jpa:
-    show-sql: true
+    show-sql: false
 
 hmpps.sqs:
   provider: localstack

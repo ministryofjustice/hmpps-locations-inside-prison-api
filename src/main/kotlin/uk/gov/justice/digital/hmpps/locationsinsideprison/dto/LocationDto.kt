@@ -61,6 +61,9 @@ data class Location(
   @Schema(description = "Capacity details of the location", required = false)
   val capacity: Capacity? = null,
 
+  @Schema(description = "When a cell is inactive, show the active working capacity value", required = false)
+  val oldWorkingCapacity: Int? = null,
+
   @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
   val certification: Certification? = null,
 
@@ -171,6 +174,24 @@ data class Location(
 
     traverse(this)
     return locations
+  }
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as Location
+
+    if (prisonId != other.prisonId) return false
+    if (pathHierarchy != other.pathHierarchy) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = prisonId.hashCode()
+    result = 31 * result + pathHierarchy.hashCode()
+    return result
   }
 }
 

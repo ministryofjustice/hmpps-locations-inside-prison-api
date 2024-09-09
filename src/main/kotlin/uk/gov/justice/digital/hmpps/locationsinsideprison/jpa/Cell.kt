@@ -263,6 +263,7 @@ class Cell(
       LocalDateTime.now(clock),
     )
 
+    log.info("${getKey()}: Updating max capacity from ${capacity?.maxCapacity ?: 0} to $maxCapacity and working capacity from ${capacity?.workingCapacity ?: 0} to $workingCapacity")
     if (capacity != null) {
       capacity?.setCapacity(maxCapacity, workingCapacity)
     } else {
@@ -530,6 +531,11 @@ class Cell(
       useHistoryForUpdate = useHistoryForUpdate,
       countCells = countCells,
     ).copy(
+      oldWorkingCapacity = if (isTemporarilyDeactivated()) {
+        getWorkingCapacity()
+      } else {
+        null
+      },
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
     )
