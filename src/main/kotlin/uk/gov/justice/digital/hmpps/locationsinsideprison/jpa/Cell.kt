@@ -303,7 +303,7 @@ class Cell(
     addHistory(
       LocationAttribute.CERTIFIED_CAPACITY,
       certification?.capacityOfCertifiedCell?.toString(),
-      "0",
+      (certification?.capacityOfCertifiedCell ?: 0).toString(),
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )

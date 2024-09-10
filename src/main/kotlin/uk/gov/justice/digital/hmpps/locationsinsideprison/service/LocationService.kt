@@ -576,6 +576,7 @@ class LocationService(
             if (certified) {
               locationToUpdate.certifyCell(authenticationFacade.getUserOrSystemInContext(), clock)
             } else {
+              locationToUpdate.deCertifyCell(authenticationFacade.getUserOrSystemInContext(), clock)
               deactivateLocations(
                 DeactivateLocationsRequest(
                   mapOf(
@@ -597,10 +598,7 @@ class LocationService(
     val updatedLocationsDto = updatedLocations.map { it.toDto() }.toSet()
     updatedLocations.forEach { trackLocationUpdate(it, "Updated Location") }
     return mapOf(
-      InternalLocationDomainEventType.LOCATION_AMENDED to updatedLocations.flatMap { changed -> changed.getParentLocations().map { it.toDto() } }.toSet().minus(
-        updatedLocationsDto,
-      ).toList(),
-      InternalLocationDomainEventType.LOCATION_AMENDED to updatedLocationsDto.toList(),
+      InternalLocationDomainEventType.LOCATION_AMENDED to updatedLocations.flatMap { changed -> changed.getParentLocations().map { it.toDto() } }.toSet().plus(updatedLocationsDto).toList()
     )
   }
 
