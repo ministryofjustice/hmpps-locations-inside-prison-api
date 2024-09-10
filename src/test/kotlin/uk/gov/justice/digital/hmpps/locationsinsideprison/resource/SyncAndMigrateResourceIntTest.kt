@@ -67,10 +67,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var nonRes: NonResidentialLocation
   lateinit var locationHistory: LocationHistory
 
-  fun migrateRequestGeneration(deactivationReason: NomisDeactivatedReason): NomisMigrateLocationRequest {
+  fun migrateRequestGeneration(deactivationReason: NomisDeactivatedReason, code: String? = null): NomisMigrateLocationRequest {
     var migrateRequest = NomisMigrateLocationRequest(
       prisonId = "ZZGHI",
-      code = "002",
+      code = code ?: "002",
       locationType = LocationType.CELL,
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "This is a new cell",
@@ -943,7 +943,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `can migrate a location different deactivationReason Local Work`() {
+      fun `can migrate a location different deactivationReason Mainteance`() {
         migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.LOCAL_WORK)
 
         val result = webTestClient.post().uri("/migrate/location")
@@ -1004,6 +1004,36 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           .returnResult().responseBody!!
 
         assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.valueOf(migrateRequest.deactivationReason.toString()))
+      }
+
+      @Test
+      fun `can migrate a location different deactivationReason Other`() {
+        var i = 1000
+        val deactivatedReasonOther = listOf(
+          NomisDeactivatedReason.NEW_BUILDING,
+          NomisDeactivatedReason.CELL_RECLAIMS,
+          NomisDeactivatedReason.CHANGE_OF_USE,
+          NomisDeactivatedReason.CLOSURE,
+          NomisDeactivatedReason.OUT_OF_USE,
+          NomisDeactivatedReason.CELLS_RETURNING_TO_USE,
+          NomisDeactivatedReason.OTHER,
+        )
+
+        deactivatedReasonOther.forEach {
+          migrateRequest =
+            migrateRequestGeneration(it, String.format("%03d", i++))
+
+          val result = webTestClient.post().uri("/migrate/location")
+            .headers(setAuthorisation(roles = listOf("ROLE_MIGRATE_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(migrateRequest))
+            .exchange()
+            .expectStatus().isCreated
+            .expectBody(LegacyLocation::class.java)
+            .returnResult().responseBody!!
+
+          assertThat(result.deactivatedReason).isEqualTo(DeactivatedReason.OTHER)
+        }
       }
     }
   }
