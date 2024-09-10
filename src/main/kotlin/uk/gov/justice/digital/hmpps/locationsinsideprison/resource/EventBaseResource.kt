@@ -73,4 +73,24 @@ abstract class EventBaseResource {
         auditData = location.copy(changeHistory = null),
       )
     }
+
+  protected fun reactivate(reactivatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> {
+    return auditAndEmit(InternalLocationDomainEventType.LOCATION_REACTIVATED, reactivatedLocations)
+  }
+
+  protected fun deactivate(deactivatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> {
+    return auditAndEmit(InternalLocationDomainEventType.LOCATION_DEACTIVATED, deactivatedLocations)
+  }
+
+  protected fun update(updatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> {
+    return auditAndEmit(InternalLocationDomainEventType.LOCATION_AMENDED, updatedLocations)
+  }
+
+  private fun auditAndEmit(eventType: InternalLocationDomainEventType, locations: Map<InternalLocationDomainEventType, List<Location>>): List<Location> {
+    eventPublish { locations }
+    locations[eventType]?.forEach {
+      audit(it.getKey()) { it.copy(childLocations = null, parentLocation = null) }
+    }
+    return locations[eventType] ?: emptyList()
+  }
 }

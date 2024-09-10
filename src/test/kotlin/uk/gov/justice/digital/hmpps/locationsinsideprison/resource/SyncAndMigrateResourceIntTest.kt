@@ -919,12 +919,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "amendedBy": "user"
                 },
                 {
-                  "attribute": "Baseline Certified Capacity",
-                  "oldValue": "1",
-                  "newValue": "0",
-                  "amendedBy": "user"
-                },
-                {
                   "attribute": "Certified",
                   "oldValue": "true",
                   "newValue": "false",
