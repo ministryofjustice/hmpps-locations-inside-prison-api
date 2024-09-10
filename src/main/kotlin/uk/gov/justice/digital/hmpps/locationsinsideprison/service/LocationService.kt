@@ -285,7 +285,7 @@ class LocationService(
     location: Location,
     patchLocationRequest: PatchLocationRequest,
   ): UpdateLocationResult {
-    val (codeChanged, oldParent, parentChanged) = updateLocationDetails(location, patchLocationRequest)
+    val (codeChanged, oldParent, parentChanged) = updateLocalName(location, patchLocationRequest)
 
     location.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
 
@@ -316,7 +316,7 @@ class LocationService(
     return residentialLocation.toDto(includeChildren = true, includeNonResidential = false)
   }
 
-  private fun updateLocationDetails(
+  private fun updateLocalName(
     locationToUpdate: Location,
     patchLocationRequest: PatchLocationRequest,
   ): UpdatedSummary {
@@ -422,7 +422,7 @@ class LocationService(
   }
 
   @Transactional
-  fun updateLocationDetails(id: UUID, updateLocationLocalNameRequest: UpdateLocationLocalNameRequest): LocationDTO {
+  fun updateLocalName(id: UUID, updateLocationLocalNameRequest: UpdateLocationLocalNameRequest): LocationDTO {
     val location = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -598,7 +598,7 @@ class LocationService(
     val updatedLocationsDto = updatedLocations.map { it.toDto() }.toSet()
     updatedLocations.forEach { trackLocationUpdate(it, "Updated Location") }
     return mapOf(
-      InternalLocationDomainEventType.LOCATION_AMENDED to updatedLocations.flatMap { changed -> changed.getParentLocations().map { it.toDto() } }.toSet().plus(updatedLocationsDto).toList()
+      InternalLocationDomainEventType.LOCATION_AMENDED to updatedLocations.flatMap { changed -> changed.getParentLocations().map { it.toDto() } }.toSet().plus(updatedLocationsDto).toList(),
     )
   }
 

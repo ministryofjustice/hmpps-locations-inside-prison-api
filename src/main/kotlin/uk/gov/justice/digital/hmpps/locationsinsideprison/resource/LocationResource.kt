@@ -164,7 +164,7 @@ class LocationResource(
     return eventPublishAndAudit(
       InternalLocationDomainEventType.LOCATION_AMENDED,
     ) {
-      locationService.updateLocationDetails(
+      locationService.updateLocalName(
         id = id,
         updateLocationLocalNameRequest = updateLocationLocalNameRequest,
       )
