@@ -9,6 +9,7 @@ import java.util.UUID
 @Repository
 interface ResidentialLocationRepository : JpaRepository<ResidentialLocation, UUID> {
   fun findOneByPrisonIdAndId(prisonId: String, id: UUID): ResidentialLocation?
+  fun findAllByPrisonId(prisonId: String): List<ResidentialLocation>
   fun findAllByPrisonIdAndParentId(prisonId: String, parentId: UUID): List<ResidentialLocation>
   fun findAllByPrisonIdAndParentIsNull(prisonId: String): List<ResidentialLocation>
   fun findAllByPrisonIdAndArchivedIsTrue(prisonId: String): List<ResidentialLocation>
