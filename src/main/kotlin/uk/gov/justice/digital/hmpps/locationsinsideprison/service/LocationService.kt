@@ -1044,13 +1044,18 @@ data class CapacityUpdateResult(
   val audit: Map<String, List<CapacityChanges>>,
 )
 
-@Schema(description = "Bulk Update Cell Capacity change")
+@Schema(description = "Capacity change audit")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CapacityChanges(
+  @Schema(description = "Location reference", example = "MDI-1-1-001")
   val key: String,
+  @Schema(description = "textual description of the changes", example = "Working capacity from 2 ==> 1")
   val message: String,
+  @Schema(description = "Attribute changed in the update", example = "workingCapacity")
   val type: String? = null,
+  @Schema(description = "Old value of this attribute", example = "2")
   val previousValue: Int? = null,
+  @Schema(description = "New value of this attribute", example = "1")
   val newValue: Int? = null,
 
 )
