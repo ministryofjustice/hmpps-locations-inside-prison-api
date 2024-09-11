@@ -37,6 +37,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
@@ -258,7 +259,7 @@ class LocationService(
     val residentialLocation =
       residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
     return patchLocation(residentialLocation, patchLocationRequest).also {
-      trackLocationUpdate(it.location, "Updated Location")
+      trackLocationUpdate(it.location)
     }
   }
 
@@ -269,7 +270,7 @@ class LocationService(
   ): UpdateLocationResult {
     val residentialLocation = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
     return patchLocation(residentialLocation, patchLocationRequest).also {
-      trackLocationUpdate(it.location, "Updated Location")
+      trackLocationUpdate(it.location)
     }
   }
 
@@ -281,7 +282,7 @@ class LocationService(
     val nonResLocation =
       nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
     return patchLocation(nonResLocation, patchLocationRequest).also {
-      trackLocationUpdate(it.location, "Updated Location")
+      trackLocationUpdate(it.location)
     }
   }
 
@@ -292,7 +293,7 @@ class LocationService(
   ): UpdateLocationResult {
     val nonResLocation = nonResidentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
     return patchLocation(nonResLocation, patchLocationRequest).also {
-      trackLocationUpdate(it.location, "Updated Location")
+      trackLocationUpdate(it.location)
     }
   }
 
@@ -578,13 +579,14 @@ class LocationService(
 
   @Transactional
   fun updateCapacityOfCellLocations(capacitiesToUpdate: UpdateCapacityRequest): CapacityUpdateResult {
-    val updatedCapacities = mutableSetOf<Location>()
-    val audit = mutableMapOf<String, String>()
+    val updatedCapacities = mutableSetOf<ResidentialLocation>()
+    val audit = mutableMapOf<String, List<CapacityChanges>>()
 
     capacitiesToUpdate.locations.forEach { (key, capacityChange) ->
+      val changes = mutableListOf<CapacityChanges>()
       val location = residentialLocationRepository.findOneByKey(key)
       if (location != null) {
-        if (location.isActiveAndAllParentsActive()) {
+        if (!location.isPermanentlyDeactivated()) {
           if (location is Cell) {
             with(capacityChange) {
               if (location.getMaxCapacity() != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
@@ -596,14 +598,18 @@ class LocationService(
                     maxCapacity = maxCapacity,
                     workingCapacity = workingCapacity,
                   )
-                  audit[key] =
-                    "Updated max capacity from ${oldMaxCapacity ?: 0} to $maxCapacity and working capacity from ${oldWorkingCapacity ?: 0} to $workingCapacity"
+                  if (oldMaxCapacity != maxCapacity) {
+                    changes.add(CapacityChanges(key, message = "Max capacity from $oldMaxCapacity ==> $maxCapacity", type = "maxCapacity", previousValue = oldMaxCapacity, newValue = maxCapacity))
+                  }
+                  if (oldWorkingCapacity != workingCapacity) {
+                    changes.add(CapacityChanges(key, message = "Working capacity from $oldWorkingCapacity ==> $workingCapacity", type = "workingCapacity", previousValue = oldWorkingCapacity, newValue = workingCapacity))
+                  }
                   updatedCapacities.add(location)
                 } catch (e: Exception) {
-                  audit[key] = "Update failed: ${e.message}"
+                  changes.add(CapacityChanges(key, message = "Update failed: ${e.message}"))
                 }
               } else {
-                audit[key] = "Capacity not changed"
+                changes.add(CapacityChanges(key, message = "Capacity not changed"))
               }
               if (capacityOfCertifiedCell != null && capacityOfCertifiedCell != location.getCapacityOfCertifiedCell()) {
                 val oldCapacityOfCertifiedCell = location.getCapacityOfCertifiedCell()
@@ -612,23 +618,29 @@ class LocationService(
                   authenticationFacade.getUserOrSystemInContext(),
                   clock,
                 )
-                audit[key] =
-                  audit[key] + " - Updated CNA from ${oldCapacityOfCertifiedCell ?: 0} to $capacityOfCertifiedCell"
+                changes.add(CapacityChanges(key, message = "Baseline CNA from $oldCapacityOfCertifiedCell ==> $capacityOfCertifiedCell", type = "CNA", previousValue = oldCapacityOfCertifiedCell, newValue = capacityOfCertifiedCell))
                 updatedCapacities.add(location)
               }
             }
           } else {
-            audit[key] = "Not a cell"
+            changes.add(CapacityChanges(key, message = "Not a cell"))
           }
         } else {
-          audit[key] = "Not active location"
+          changes.add(CapacityChanges(key, message = "Archived location"))
         }
       } else {
-        audit[key] = "Location not found"
+        changes.add(CapacityChanges(key, message = "Location not found"))
       }
+      audit[key] = changes
+      log.info("$key: ${changes.joinToString { "${it.type}: ${it.previousValue} ==> ${it.newValue}" }}")
     }
     val updatedLocationsDto = updatedCapacities.map { it.toDto() }.toSet()
-    updatedCapacities.forEach { trackLocationUpdate(it, "Updated Capacity") }
+
+    audit.flatMap { it.value }.forEach { l ->
+      var trackMap = mapOf("key" to l.key, "message" to l.message)
+      l.type?.let { trackMap = trackMap.plus("${l.type}" to "${l.previousValue} ==> ${l.newValue}") }
+      telemetryClient.trackEvent("CAPACITY_CHANGE", trackMap, null)
+    }
     return CapacityUpdateResult(
       updatedLocations = mapOf(
         InternalLocationDomainEventType.LOCATION_AMENDED to updatedCapacities.flatMap { changed ->
@@ -694,9 +706,9 @@ class LocationService(
     )
   }
 
-  private fun trackLocationUpdate(location: LocationDTO, trackDescription: String) {
+  private fun trackLocationUpdate(location: LocationDTO) {
     telemetryClient.trackEvent(
-      trackDescription,
+      "Updated Location",
       mapOf(
         "id" to location.id.toString(),
         "prisonId" to location.prisonId,
@@ -1029,5 +1041,16 @@ data class UpdateLocationResult(
 
 data class CapacityUpdateResult(
   val updatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>,
-  val audit: Map<String, String>,
+  val audit: Map<String, List<CapacityChanges>>,
+)
+
+@Schema(description = "Bulk Update Cell Capacity change")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class CapacityChanges(
+  val key: String,
+  val message: String,
+  val type: String? = null,
+  val previousValue: Int? = null,
+  val newValue: Int? = null,
+
 )
