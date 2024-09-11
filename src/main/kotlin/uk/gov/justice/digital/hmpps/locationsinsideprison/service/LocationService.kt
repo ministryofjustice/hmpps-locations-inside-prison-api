@@ -25,7 +25,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationPrefixDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -61,7 +60,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDe
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateLocationsRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateCapacityRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
 import java.time.LocalDate
@@ -134,6 +133,7 @@ class LocationService(
 
     return LocationPrefixDto(locationPrefix)
   }
+
   fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> =
     cellsInGroup(prisonId, groupName, cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true))
       .toMutableList()
@@ -165,7 +165,10 @@ class LocationService(
     return Predicate { it.getPathHierarchy().startsWith(prefixToMatch) }
   }
 
-  fun getLocationsByPrisonAndNonResidentialUsageType(prisonId: String, usageType: NonResidentialUsageType): List<LocationDTO> =
+  fun getLocationsByPrisonAndNonResidentialUsageType(
+    prisonId: String,
+    usageType: NonResidentialUsageType,
+  ): List<LocationDTO> =
     nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
       .map {
         it.toDto()
@@ -186,6 +189,7 @@ class LocationService(
   fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LegacyLocation> {
     return locationRepository.findAll(pageable).map(Location::toLegacyDto)
   }
+
   fun getLocationByPrisonAndLocationType(prisonId: String, locationType: LocationType): List<LocationDTO> =
     locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId, locationType)
       .filter { it.isActive() }
@@ -251,14 +255,18 @@ class LocationService(
 
   @Transactional
   fun updateResidentialLocation(id: UUID, patchLocationRequest: PatchResidentialLocationRequest): UpdateLocationResult {
-    val residentialLocation = residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
+    val residentialLocation =
+      residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
     return patchLocation(residentialLocation, patchLocationRequest).also {
       trackLocationUpdate(it.location, "Updated Location")
     }
   }
 
   @Transactional
-  fun updateResidentialLocation(key: String, patchLocationRequest: PatchResidentialLocationRequest): UpdateLocationResult {
+  fun updateResidentialLocation(
+    key: String,
+    patchLocationRequest: PatchResidentialLocationRequest,
+  ): UpdateLocationResult {
     val residentialLocation = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
     return patchLocation(residentialLocation, patchLocationRequest).also {
       trackLocationUpdate(it.location, "Updated Location")
@@ -266,15 +274,22 @@ class LocationService(
   }
 
   @Transactional
-  fun updateNonResidentialLocation(id: UUID, patchLocationRequest: PatchNonResidentialLocationRequest): UpdateLocationResult {
-    val nonResLocation = nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
+  fun updateNonResidentialLocation(
+    id: UUID,
+    patchLocationRequest: PatchNonResidentialLocationRequest,
+  ): UpdateLocationResult {
+    val nonResLocation =
+      nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
     return patchLocation(nonResLocation, patchLocationRequest).also {
       trackLocationUpdate(it.location, "Updated Location")
     }
   }
 
   @Transactional
-  fun updateNonResidentialLocation(key: String, patchLocationRequest: PatchNonResidentialLocationRequest): UpdateLocationResult {
+  fun updateNonResidentialLocation(
+    key: String,
+    patchLocationRequest: PatchNonResidentialLocationRequest,
+  ): UpdateLocationResult {
     val nonResLocation = nonResidentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
     return patchLocation(nonResLocation, patchLocationRequest).also {
       trackLocationUpdate(it.location, "Updated Location")
@@ -365,7 +380,11 @@ class LocationService(
 
     val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
     if (maxCapacity < prisoners.size) {
-      throw CapacityException(locCapChange.getKey(), "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})", ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel)
+      throw CapacityException(
+        locCapChange.getKey(),
+        "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})",
+        ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
+      )
     }
 
     locCapChange.setCapacity(
@@ -399,7 +418,11 @@ class LocationService(
 
     // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialists cell types
     if (specialistCellTypes.isEmpty() && cell.accommodationType == AccommodationType.NORMAL_ACCOMMODATION && cell.getWorkingCapacity() == 0) {
-      throw CapacityException(cell.getKey(), "Cannot removes specialist cell types for a normal accommodation with a working capacity of 0", ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed)
+      throw CapacityException(
+        cell.getKey(),
+        "Cannot removes specialist cell types for a normal accommodation with a working capacity of 0",
+        ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
+      )
     }
 
     cell.updateSpecialistCellTypes(
@@ -432,7 +455,8 @@ class LocationService(
 
     location.updateLocalName(
       localName = updateLocationLocalNameRequest.localName,
-      userOrSystemInContext = updateLocationLocalNameRequest.updatedBy ?: authenticationFacade.getUserOrSystemInContext(),
+      userOrSystemInContext = updateLocationLocalNameRequest.updatedBy
+        ?: authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
     )
 
@@ -481,7 +505,9 @@ class LocationService(
 
     val deactivatedLocationsDto = deactivatedLocations.map { it.toDto() }.toSet()
     return mapOf(
-      InternalLocationDomainEventType.LOCATION_AMENDED to deactivatedLocations.flatMap { deactivatedLoc -> deactivatedLoc.getParentLocations().map { it.toDto() } }.toSet().minus(
+      InternalLocationDomainEventType.LOCATION_AMENDED to deactivatedLocations.flatMap { deactivatedLoc ->
+        deactivatedLoc.getParentLocations().map { it.toDto() }
+      }.toSet().minus(
         deactivatedLocationsDto,
       ).toList(),
       InternalLocationDomainEventType.LOCATION_DEACTIVATED to deactivatedLocationsDto.toList(),
@@ -551,54 +577,63 @@ class LocationService(
   }
 
   @Transactional
-  fun updateCapacityOfCellLocations(locationsToUpdate: UpdateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
-    val updatedLocations = mutableSetOf<Location>()
+  fun updateCapacityOfCellLocations(capacitiesToUpdate: UpdateCapacityRequest): CapacityUpdateResult {
+    val updatedCapacities = mutableSetOf<Location>()
+    val audit = mutableMapOf<String, String>()
 
-    locationsToUpdate.locations.forEach { (key, locationDetail) ->
-      val locationToUpdate = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
+    capacitiesToUpdate.locations.forEach { (key, capacityChange) ->
+      val location = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
 
-      if (locationToUpdate.isPermanentlyDeactivated()) {
-        throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
-      }
-
-      if (locationToUpdate is Cell) {
-        with(locationDetail) {
-          if (locationToUpdate.getMaxCapacity() != maxCapacity || locationToUpdate.getWorkingCapacity() != workingCapacity) {
-            updateCellCapacity(
-              locationToUpdate.id!!,
-              maxCapacity = maxCapacity,
-              workingCapacity = workingCapacity,
-            )
-            updatedLocations.add(locationToUpdate)
-          }
-
-          if (certified != locationToUpdate.isCertified()) {
-            if (certified) {
-              locationToUpdate.certifyCell(authenticationFacade.getUserOrSystemInContext(), clock)
+      if (location.isActiveAndAllParentsActive()) {
+        if (location is Cell) {
+          with(capacityChange) {
+            if (location.getMaxCapacity() != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
+              try {
+                val oldWorkingCapacity = location.getWorkingCapacity()
+                val oldMaxCapacity = location.getMaxCapacity()
+                updateCellCapacity(
+                  location.id!!,
+                  maxCapacity = maxCapacity,
+                  workingCapacity = workingCapacity,
+                )
+                audit[key] =
+                  "Updated max capacity from ${oldMaxCapacity ?: 0} to $maxCapacity and working capacity from ${oldWorkingCapacity ?: 0} to $workingCapacity"
+                updatedCapacities.add(location)
+              } catch (e: Exception) {
+                audit[key] = "Update failed: ${e.message}"
+              }
             } else {
-              locationToUpdate.deCertifyCell(authenticationFacade.getUserOrSystemInContext(), clock)
-              deactivateLocations(
-                DeactivateLocationsRequest(
-                  mapOf(
-                    locationToUpdate.id!! to
-                      TemporaryDeactivationLocationRequest(
-                        deactivationReason = DeactivatedReason.OTHER,
-                        deactivationReasonDescription = "De-certified cell",
-                      ),
-                  ),
-                ),
-              )
+              audit[key] = "Capacity not changed"
             }
-            updatedLocations.add(locationToUpdate)
+            if (capacityOfCertifiedCell != null && capacityOfCertifiedCell != location.getCapacityOfCertifiedCell()) {
+              val oldCapacityOfCertifiedCell = location.getCapacityOfCertifiedCell()
+              location.setCapacityOfCertifiedCell(
+                capacityOfCertifiedCell,
+                authenticationFacade.getUserOrSystemInContext(),
+                clock,
+              )
+              audit[key] =
+                audit[key] + " - Updated CNA from ${oldCapacityOfCertifiedCell ?: 0} to $capacityOfCertifiedCell"
+              updatedCapacities.add(location)
+            }
           }
+        } else {
+          audit[key] = "Not a cell"
         }
+      } else {
+        audit[key] = "Not active location"
       }
     }
 
-    val updatedLocationsDto = updatedLocations.map { it.toDto() }.toSet()
-    updatedLocations.forEach { trackLocationUpdate(it, "Updated Location") }
-    return mapOf(
-      InternalLocationDomainEventType.LOCATION_AMENDED to updatedLocations.flatMap { changed -> changed.getParentLocations().map { it.toDto() } }.toSet().plus(updatedLocationsDto).toList(),
+    val updatedLocationsDto = updatedCapacities.map { it.toDto() }.toSet()
+    updatedCapacities.forEach { trackLocationUpdate(it, "Updated Capacity") }
+    return CapacityUpdateResult(
+      updatedLocations = mapOf(
+        InternalLocationDomainEventType.LOCATION_AMENDED to updatedCapacities.flatMap { changed ->
+          changed.getParentLocations().map { it.toDto() }
+        }.toSet().plus(updatedLocationsDto).toList(),
+      ),
+      audit = audit,
     )
   }
 
@@ -614,7 +649,13 @@ class LocationService(
         throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
       }
 
-      locationToUpdate.reactivate(userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(), clock = clock, reactivatedLocations = locationsReactivated, maxCapacity = reactivationDetail.capacity?.maxCapacity, workingCapacity = reactivationDetail.capacity?.workingCapacity)
+      locationToUpdate.reactivate(
+        userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+        clock = clock,
+        reactivatedLocations = locationsReactivated,
+        maxCapacity = reactivationDetail.capacity?.maxCapacity,
+        workingCapacity = reactivationDetail.capacity?.workingCapacity,
+      )
 
       if (reactivationDetail.cascadeReactivation) {
         locationToUpdate.findSubLocations().forEach { location ->
@@ -630,7 +671,9 @@ class LocationService(
     val reactivatedLocationsDto = locationsReactivated.map { it.toDto() }.toSet()
     locationsReactivated.forEach { trackLocationUpdate(it, "Re-activated Location") }
     return mapOf(
-      InternalLocationDomainEventType.LOCATION_AMENDED to locationsReactivated.flatMap { reactivated -> reactivated.getParentLocations().map { it.toDto() } }.toSet().minus(
+      InternalLocationDomainEventType.LOCATION_AMENDED to locationsReactivated.flatMap { reactivated ->
+        reactivated.getParentLocations().map { it.toDto() }
+      }.toSet().minus(
         reactivatedLocationsDto,
       ).toList(),
       InternalLocationDomainEventType.LOCATION_REACTIVATED to reactivatedLocationsDto.toList(),
@@ -662,13 +705,21 @@ class LocationService(
   }
 
   @Transactional
-  fun convertToNonResidentialCell(id: UUID, convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null): LocationDTO {
+  fun convertToNonResidentialCell(
+    id: UUID,
+    convertedCellType: ConvertedCellType,
+    otherConvertedCellType: String? = null,
+  ): LocationDTO {
     var locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     if (locationToConvert.isNonResType()) {
       locationRepository.updateLocationType(locationToConvert.id!!, LocationType.CELL.name)
-      locationRepository.updateResidentialHousingType(locationToConvert.id!!, ResidentialHousingType.OTHER_USE.name, AccommodationType.OTHER_NON_RESIDENTIAL.name)
+      locationRepository.updateResidentialHousingType(
+        locationToConvert.id!!,
+        ResidentialHousingType.OTHER_USE.name,
+        AccommodationType.OTHER_NON_RESIDENTIAL.name,
+      )
       entityManager.flush()
       entityManager.clear()
       locationToConvert = residentialLocationRepository.findById(id)
@@ -693,7 +744,14 @@ class LocationService(
   }
 
   @Transactional
-  fun convertToCell(id: UUID, accommodationType: AllowedAccommodationTypeForConversion, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, usedForTypes: List<UsedForType>? = null): LocationDTO {
+  fun convertToCell(
+    id: UUID,
+    accommodationType: AllowedAccommodationTypeForConversion,
+    specialistCellTypes: Set<SpecialistCellType>? = null,
+    maxCapacity: Int = 0,
+    workingCapacity: Int = 0,
+    usedForTypes: List<UsedForType>? = null,
+  ): LocationDTO {
     val locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -789,7 +847,8 @@ class LocationService(
           workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
           maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
           numberOfCellLocations = locations.sumOf { it.numberOfCellLocations ?: 0 },
-          signedOperationalCapacity = signedOperationCapacityRepository.findOneByPrisonId(prisonId)?.signedOperationCapacity ?: 0,
+          signedOperationalCapacity = signedOperationCapacityRepository.findOneByPrisonId(prisonId)?.signedOperationCapacity
+            ?: 0,
         )
       } else {
         null
@@ -812,7 +871,9 @@ class LocationService(
     return list.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
   }
 
-  fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }.sortedWith(NaturalOrderComparator())
+  fun getArchivedLocations(prisonId: String): List<LocationDTO> =
+    residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }
+      .sortedWith(NaturalOrderComparator())
 
   fun getResidentialInactiveLocations(prisonId: String, parentLocationId: UUID?): List<LocationDTO> {
     val startLocation = parentLocationId?.let {
@@ -870,8 +931,19 @@ class LocationService(
         maxCapacity = cell.getMaxCapacity() ?: 0,
         workingCapacity = cell.getWorkingCapacity() ?: 0,
         localName = cell.localName,
-        specialistCellTypes = cell.specialistCellTypes.map { CellWithSpecialistCellTypes.CellType(it.specialistCellType, it.specialistCellType.description) },
-        legacyAttributes = cell.attributes.filter { it.attributeType == ResidentialAttributeType.LOCATION_ATTRIBUTE }.map { CellWithSpecialistCellTypes.ResidentialLocationAttribute(it.attributeValue, it.attributeValue.description) },
+        specialistCellTypes = cell.specialistCellTypes.map {
+          CellWithSpecialistCellTypes.CellType(
+            it.specialistCellType,
+            it.specialistCellType.description,
+          )
+        },
+        legacyAttributes = cell.attributes.filter { it.attributeType == ResidentialAttributeType.LOCATION_ATTRIBUTE }
+          .map {
+            CellWithSpecialistCellTypes.ResidentialLocationAttribute(
+              it.attributeValue,
+              it.attributeValue.description,
+            )
+          },
         noOfOccupants = mapOfOccupancy[cell.getPathHierarchy()]?.size ?: 0,
         prisonersInCell = if (includePrisonerInformation) {
           mapOfOccupancy[cell.getPathHierarchy()]
@@ -911,7 +983,11 @@ data class ResidentialSummary(
   val prisonSummary: PrisonSummary? = null,
   @Schema(description = "The top level type of locations", required = true, example = "Wings")
   val topLevelLocationType: String,
-  @Schema(description = "The description of the type of sub locations most common", required = false, examples = ["Wings", "Landings", "Spurs", "Cells"])
+  @Schema(
+    description = "The description of the type of sub locations most common",
+    required = false,
+    examples = ["Wings", "Landings", "Spurs", "Cells"],
+  )
   val subLocationName: String? = null,
   @Schema(description = "Parent locations, top to bottom", required = true)
   val locationHierarchy: List<LocationSummary>? = null,
@@ -947,4 +1023,9 @@ data class UpdatedSummary(
 data class UpdateLocationResult(
   val location: LocationDTO,
   val otherParentLocationChanged: LocationDTO? = null,
+)
+
+data class CapacityUpdateResult(
+  val updatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>,
+  val audit: Map<String, String>,
 )

@@ -95,6 +95,22 @@ class Cell(
 
   fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
 
+  fun setCapacityOfCertifiedCell(capacityOfCertifiedCell: Int, userOrSystemInContext: String, clock: Clock): Boolean {
+    addHistory(
+      LocationAttribute.CERTIFIED_CAPACITY,
+      certification?.capacityOfCertifiedCell?.toString(),
+      capacityOfCertifiedCell.toString(),
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
+
+    if (certification != null) {
+      certification!!.capacityOfCertifiedCell = capacityOfCertifiedCell
+      return true
+    }
+    return false
+  }
+
   fun isCertified() = certification?.certified ?: false
 
   override fun getDerivedLocationType() = if (isConvertedCell()) {

@@ -141,15 +141,17 @@ class BulkUpdateResource(
     ],
   )
   fun bulkUpdateLocations(
-    @RequestBody @Validated updateLocationsRequest: UpdateLocationsRequest,
-  ): List<Location> {
-    return update(locationService.updateCapacityOfCellLocations(updateLocationsRequest))
+    @RequestBody @Validated updateCapacityRequest: UpdateCapacityRequest,
+  ): Map<String, String> {
+    val updateCapacityOfCellLocations = locationService.updateCapacityOfCellLocations(updateCapacityRequest)
+    update(updateCapacityOfCellLocations.updatedLocations)
+    return updateCapacityOfCellLocations.audit
   }
 }
 
-@Schema(description = "Update Locations Request")
+@Schema(description = "Update Capacities Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-data class UpdateLocationsRequest(
+data class UpdateCapacityRequest(
   @Schema(description = "List of locations to update", example = " { \"MDI-1-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"certified\": \"true\" } } }")
   val locations: Map<String, CellCapacityUpdateDetail>,
 )
@@ -190,7 +192,8 @@ data class CellCapacityUpdateDetail(
   @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
   val workingCapacity: Int,
 
-  @Schema(description = "Indicates that this location is certified for use as a residential location", example = "true", required = true, defaultValue = "false")
-  val certified: Boolean = false,
-
+  @Schema(description = "Indicates the capacity of the certified location (cell)", example = "1", required = false)
+  @field:Max(value = 99, message = "CNA cannot be greater than 99")
+  @field:PositiveOrZero(message = "CNA cannot be less than 0")
+  val capacityOfCertifiedCell: Int? = null,
 )
