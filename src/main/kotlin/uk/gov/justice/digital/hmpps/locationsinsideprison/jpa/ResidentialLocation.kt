@@ -67,7 +67,7 @@ open class ResidentialLocation(
       .sumOf { it.getMaxCapacity() ?: 0 }
   }
 
-  private fun getBaselineCapacity(): Int {
+  private fun getCapacityOfCertifiedCell(): Int {
     return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .sumOf { it.getCapacityOfCertifiedCell() ?: 0 }
   }
@@ -83,7 +83,7 @@ open class ResidentialLocation(
       .toSet()
   }
 
-  fun getAccommodationTypes(): Set<AccommodationType> {
+  private fun getAccommodationTypes(): Set<AccommodationType> {
     return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .map { it.accommodationType }
       .toSet()
@@ -157,7 +157,7 @@ open class ResidentialLocation(
 
       certification = CertificationDto(
         certified = hasCertifiedCells(),
-        capacityOfCertifiedCell = getBaselineCapacity(),
+        capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
       ),
 
       accommodationTypes = getAccommodationTypes().map { it }.distinct().sortedBy { it.sequence },
@@ -189,7 +189,7 @@ open class ResidentialLocation(
 
       certification = CertificationDto(
         certified = hasCertifiedCells(),
-        capacityOfCertifiedCell = getBaselineCapacity(),
+        capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
       ),
 
       attributes = getAttributes().map { it.attributeValue }.distinct().sortedBy { it.name },

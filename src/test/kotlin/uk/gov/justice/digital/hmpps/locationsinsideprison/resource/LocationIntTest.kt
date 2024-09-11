@@ -1643,29 +1643,29 @@ class LocationResourceIntTest : CommonDataTestBase() {
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.put().uri("/locations/bulk/update")
+        webTestClient.put().uri("/locations/bulk/capacity-update")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
-          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1, "certified": true } }}""")
+          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1 } }}""")
           .exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.put().uri("/locations/bulk/update")
+        webTestClient.put().uri("/locations/bulk/capacity-update")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
-          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1, "certified": true } }}""").exchange()
+          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1 } }}""").exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with right role, wrong scope`() {
-        webTestClient.put().uri("/locations/bulk/update")
+        webTestClient.put().uri("/locations/bulk/capacity-update")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
-          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1, "certified": true } }}""").exchange()
+          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1 } }}""").exchange()
           .expectStatus().isForbidden
       }
     }
@@ -1674,12 +1674,15 @@ class LocationResourceIntTest : CommonDataTestBase() {
     inner class HappyPath {
 
       @Test
-      fun `can update a number of locations`() {
-        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy()), false)
-        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy()), false)
-        prisonerSearchMockServer.stubSearchByLocations(wingN.prisonId, listOf(cell1N.getPathHierarchy()), false)
+      fun `can bulk update a cell capacities`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(cell2.prisonId, listOf(cell2.getPathHierarchy()), true)
+        prisonerSearchMockServer.stubSearchByLocations(cell1N.prisonId, listOf(cell1N.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations("MDI", listOf("1-2-008"), false)
+        prisonerSearchMockServer.stubSearchByLocations(archivedCell.prisonId, listOf(archivedCell.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(inactiveCellB3001.prisonId, listOf(inactiveCellB3001.getPathHierarchy()), false)
 
-        webTestClient.put().uri("/locations/bulk/update")
+        webTestClient.put().uri("/locations/bulk/capacity-update")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(
@@ -1687,8 +1690,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
               UpdateCapacityRequest(
                 locations = mapOf(
                   cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, capacityOfCertifiedCell = 3),
-                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
-                  cell1N.getKey() to CellCapacityUpdateDetail(maxCapacity = 4, workingCapacity = 1, capacityOfCertifiedCell = 1),
+                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0),
+                  cell1N.getKey() to CellCapacityUpdateDetail(maxCapacity = 4, workingCapacity = 1),
+                  "MDI-1-2-008" to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
+                  archivedCell.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
+                  inactiveCellB3001.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
                 ),
               ),
             ),
@@ -1699,23 +1705,95 @@ class LocationResourceIntTest : CommonDataTestBase() {
             // language=json
             """
               {
-                "MDI-Z-1-001": "Updated max capacity from 2 to 3 and working capacity from 2 to 3 - Updated CNA from 2 to 3",
-                "MDI-Z-1-002": "Updated max capacity from 2 to 3 and working capacity from 2 to 3",
-                "NMI-A-1-001": "Updated max capacity from 2 to 4 and working capacity from 2 to 1 - Updated CNA from 2 to 1"
-              }
+                "MDI-Z-1-001": [
+                  {
+                    "key": "MDI-Z-1-001",
+                    "message": "Max capacity from 2 ==> 3",
+                    "type": "maxCapacity",
+                    "previousValue": 2,
+                    "newValue": 3
+                  },
+                  {
+                    "key": "MDI-Z-1-001",
+                    "message": "Working capacity from 2 ==> 3",
+                    "type": "workingCapacity",
+                    "previousValue": 2,
+                    "newValue": 3
+                  },
+                  {
+                    "key": "MDI-Z-1-001",
+                    "message": "Baseline CNA from 2 ==> 3",
+                    "type": "CNA",
+                    "previousValue": 2,
+                    "newValue": 3
+                  }
+                ],
+                "MDI-Z-1-002": [
+                  {
+                    "key": "MDI-Z-1-002",
+                    "message": "Update failed: Max capacity (0) cannot be decreased below current cell occupancy (1)"
+                  }
+                ],
+                "NMI-A-1-001": [
+                  {
+                    "key": "NMI-A-1-001",
+                    "message": "Max capacity from 2 ==> 4",
+                    "type": "maxCapacity",
+                    "previousValue": 2,
+                    "newValue": 4
+                  },
+                  {
+                    "key": "NMI-A-1-001",
+                    "message": "Working capacity from 2 ==> 1",
+                    "type": "workingCapacity",
+                    "previousValue": 2,
+                    "newValue": 1
+                  }
+                ],
+                "MDI-1-2-008": [
+                  {
+                    "key": "MDI-1-2-008",
+                    "message": "Location not found"
+                  }
+                ],
+                "MDI-Z-1-003": [
+                  {
+                    "key": "MDI-Z-1-003",
+                    "message": "Archived location"
+                  }
+                ],
+                "MDI-B-A-001": [
+                  {
+                    "key": "MDI-B-A-001",
+                    "message": "Max capacity from 2 ==> 3",
+                    "type": "maxCapacity",
+                    "previousValue": 2,
+                    "newValue": 3
+                  },
+                  {
+                    "key": "MDI-B-A-001",
+                    "message": "Working capacity from 2 ==> 3",
+                    "type": "workingCapacity",
+                    "previousValue": 2,
+                    "newValue": 3
+                  }
+                ]
+              }              
               """,
             false,
           )
 
-        getDomainEvents(7).let {
+        getDomainEvents(9).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1-002",
             "location.inside.prison.amended" to "NMI-A-1-001",
+            "location.inside.prison.amended" to "MDI-B-A-001",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
             "location.inside.prison.amended" to "NMI-A-1",
             "location.inside.prison.amended" to "NMI-A",
+            "location.inside.prison.amended" to "MDI-B-A",
+            "location.inside.prison.amended" to "MDI-B",
           )
         }
 
@@ -1730,8 +1808,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
               {
                 "key": "MDI-Z",
                 "capacity": {
-                  "maxCapacity": 6,
-                  "workingCapacity": 6
+                  "maxCapacity": 5,
+                  "workingCapacity": 5
                 },
                 "certification": {
                   "certified": true,
@@ -1747,8 +1825,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   {
                     "key": "MDI-Z-1",
                     "capacity": {
-                      "maxCapacity": 6,
-                      "workingCapacity": 6
+                      "maxCapacity": 5,
+                      "workingCapacity": 5
                     },
                     "certification": {
                       "certified": true,
@@ -1780,8 +1858,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       {
                         "key": "MDI-Z-1-002",
                         "capacity": {
-                          "maxCapacity": 3,
-                          "workingCapacity": 3
+                          "maxCapacity": 2,
+                          "workingCapacity": 2
                         },
                         "certification": {
                           "certified": true,
