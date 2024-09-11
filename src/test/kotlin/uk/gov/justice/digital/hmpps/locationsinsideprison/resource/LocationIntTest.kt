@@ -1674,7 +1674,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
     inner class HappyPath {
 
       @Test
-      fun `can update a number of locations`() {
+      fun `can bulk update a cell capacities`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
         prisonerSearchMockServer.stubSearchByLocations(cell2.prisonId, listOf(cell2.getPathHierarchy()), true)
         prisonerSearchMockServer.stubSearchByLocations(cell1N.prisonId, listOf(cell1N.getPathHierarchy()), false)
@@ -1783,15 +1783,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
             false,
           )
 
-        getDomainEvents(7).let {
+        getDomainEvents(9).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1-002",
             "location.inside.prison.amended" to "NMI-A-1-001",
+            "location.inside.prison.amended" to "MDI-B-A-001",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
             "location.inside.prison.amended" to "NMI-A-1",
             "location.inside.prison.amended" to "NMI-A",
+            "location.inside.prison.amended" to "MDI-B-A",
+            "location.inside.prison.amended" to "MDI-B",
           )
         }
 
@@ -1806,8 +1808,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
               {
                 "key": "MDI-Z",
                 "capacity": {
-                  "maxCapacity": 6,
-                  "workingCapacity": 6
+                  "maxCapacity": 5,
+                  "workingCapacity": 5
                 },
                 "certification": {
                   "certified": true,
@@ -1823,8 +1825,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   {
                     "key": "MDI-Z-1",
                     "capacity": {
-                      "maxCapacity": 6,
-                      "workingCapacity": 6
+                      "maxCapacity": 5,
+                      "workingCapacity": 5
                     },
                     "certification": {
                       "certified": true,
@@ -1856,8 +1858,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       {
                         "key": "MDI-Z-1-002",
                         "capacity": {
-                          "maxCapacity": 3,
-                          "workingCapacity": 3
+                          "maxCapacity": 2,
+                          "workingCapacity": 2
                         },
                         "certification": {
                           "certified": true,
