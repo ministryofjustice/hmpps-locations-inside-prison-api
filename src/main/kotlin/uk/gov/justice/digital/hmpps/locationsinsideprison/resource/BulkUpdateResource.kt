@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.microsoft.applicationinsights.TelemetryClient
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CapacityChanges
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import java.util.*
 
@@ -30,6 +32,7 @@ import java.util.*
 )
 class BulkUpdateResource(
   private val locationService: LocationService,
+  private val telemetryClient: TelemetryClient,
 ) : EventBaseResource() {
 
   @PutMapping("deactivate/temporary")
@@ -108,15 +111,15 @@ class BulkUpdateResource(
     return reactivate(locationService.reactivateLocations(reactivateLocationsRequest))
   }
 
-  @PutMapping("update")
+  @PutMapping("capacity-update")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
-    summary = "Updates a series of locations",
+    summary = "Update capacity in map of cell locations",
     description = "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
         responseCode = "200",
-        description = "Returns updated locations",
+        description = "Returns list of changes made to capacity locations",
       ),
       ApiResponse(
         responseCode = "400",
@@ -140,19 +143,27 @@ class BulkUpdateResource(
       ),
     ],
   )
-  fun bulkUpdateLocations(
+  fun bulkUpdateCapacity(
     @RequestBody @Validated updateCapacityRequest: UpdateCapacityRequest,
-  ): Map<String, String> {
-    val updateCapacityOfCellLocations = locationService.updateCapacityOfCellLocations(updateCapacityRequest)
-    update(updateCapacityOfCellLocations.updatedLocations)
-    return updateCapacityOfCellLocations.audit
+  ): Map<String, List<CapacityChanges>> {
+    with(locationService.updateCapacityOfCellLocations(updateCapacityRequest)) {
+      update(updatedLocations)
+      return audit
+    }
   }
 }
 
 @Schema(description = "Update Capacities Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class UpdateCapacityRequest(
-  @Schema(description = "List of locations to update", example = " { \"MDI-1-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"certified\": \"true\" } } }")
+  @Schema(
+    description = "List of capacities to update",
+    example = """{
+  "locations": {
+    "TCI-A-1-001": { "maxCapacity": 2, "workingCapacity": 1, "capacityOfCertifiedCell": 2 },
+    "TCI-A-1-002": { "maxCapacity": 3, "workingCapacity": 1, "capacityOfCertifiedCell": 1 }
+  }""",
+  )
   val locations: Map<String, CellCapacityUpdateDetail>,
 )
 

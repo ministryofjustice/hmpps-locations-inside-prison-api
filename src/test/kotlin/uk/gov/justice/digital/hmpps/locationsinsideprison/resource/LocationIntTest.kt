@@ -1643,29 +1643,29 @@ class LocationResourceIntTest : CommonDataTestBase() {
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.put().uri("/locations/bulk/update")
+        webTestClient.put().uri("/locations/bulk/capacity-update")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
-          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1, "certified": true } }}""")
+          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1 } }}""")
           .exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.put().uri("/locations/bulk/update")
+        webTestClient.put().uri("/locations/bulk/capacity-update")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
-          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1, "certified": true } }}""").exchange()
+          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1 } }}""").exchange()
           .expectStatus().isForbidden
       }
 
       @Test
       fun `access forbidden with right role, wrong scope`() {
-        webTestClient.put().uri("/locations/bulk/update")
+        webTestClient.put().uri("/locations/bulk/capacity-update")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
-          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1, "certified": true } }}""").exchange()
+          .bodyValue("""{ "locations": { "${wingZ.getKey()}": { "maxCapacity": 1, "workingCapacity": 1 } }}""").exchange()
           .expectStatus().isForbidden
       }
     }
@@ -1679,7 +1679,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy()), false)
         prisonerSearchMockServer.stubSearchByLocations(wingN.prisonId, listOf(cell1N.getPathHierarchy()), false)
 
-        webTestClient.put().uri("/locations/bulk/update")
+        webTestClient.put().uri("/locations/bulk/capacity-update")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(
@@ -1698,11 +1698,70 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .expectBody().json(
             // language=json
             """
-              {
-                "MDI-Z-1-001": "Updated max capacity from 2 to 3 and working capacity from 2 to 3 - Updated CNA from 2 to 3",
-                "MDI-Z-1-002": "Updated max capacity from 2 to 3 and working capacity from 2 to 3",
-                "NMI-A-1-001": "Updated max capacity from 2 to 4 and working capacity from 2 to 1 - Updated CNA from 2 to 1"
-              }
+        {
+          "MDI-Z-1-001": [
+            {
+              "key": "MDI-Z-1-001",
+              "message": "Max capacity from 2 ==> 3",
+              "type": "maxCapacity",
+              "previousValue": 2,
+              "newValue": 3
+            },
+            {
+              "key": "MDI-Z-1-001",
+              "message": "Working capacity from 2 ==> 3",
+              "type": "workingCapacity",
+              "previousValue": 2,
+              "newValue": 3
+            },
+            {
+              "key": "MDI-Z-1-001",
+              "message": "Baseline CNA from 2 ==> 3",
+              "type": "CNA",
+              "previousValue": 2,
+              "newValue": 3
+            }
+          ],
+          "MDI-Z-1-002": [
+            {
+              "key": "MDI-Z-1-002",
+              "message": "Max capacity from 2 ==> 3",
+              "type": "maxCapacity",
+              "previousValue": 2,
+              "newValue": 3
+            },
+            {
+              "key": "MDI-Z-1-002",
+              "message": "Working capacity from 2 ==> 3",
+              "type": "workingCapacity",
+              "previousValue": 2,
+              "newValue": 3
+            }
+          ],
+          "NMI-A-1-001": [
+            {
+              "key": "NMI-A-1-001",
+              "message": "Max capacity from 2 ==> 4",
+              "type": "maxCapacity",
+              "previousValue": 2,
+              "newValue": 4
+            },
+            {
+              "key": "NMI-A-1-001",
+              "message": "Working capacity from 2 ==> 1",
+              "type": "workingCapacity",
+              "previousValue": 2,
+              "newValue": 1
+            },
+            {
+              "key": "NMI-A-1-001",
+              "message": "Baseline CNA from 2 ==> 1",
+              "type": "CNA",
+              "previousValue": 2,
+              "newValue": 1
+            }
+          ]
+        }
               """,
             false,
           )

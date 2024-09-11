@@ -89,11 +89,11 @@ class Cell(
   residentialHousingType = residentialHousingType,
 ) {
 
-  fun getWorkingCapacity() = capacity?.workingCapacity
+  override fun getWorkingCapacity() = capacity?.workingCapacity ?: 0
 
-  fun getMaxCapacity() = capacity?.maxCapacity
+  override fun getMaxCapacity() = capacity?.maxCapacity ?: 0
 
-  fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
+  override fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell ?: 0
 
   fun setCapacityOfCertifiedCell(capacityOfCertifiedCell: Int, userOrSystemInContext: String, clock: Clock): Boolean {
     addHistory(
