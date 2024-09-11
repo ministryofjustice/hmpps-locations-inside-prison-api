@@ -582,49 +582,51 @@ class LocationService(
     val audit = mutableMapOf<String, String>()
 
     capacitiesToUpdate.locations.forEach { (key, capacityChange) ->
-      val location = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
-
-      if (location.isActiveAndAllParentsActive()) {
-        if (location is Cell) {
-          with(capacityChange) {
-            if (location.getMaxCapacity() != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
-              try {
-                val oldWorkingCapacity = location.getWorkingCapacity()
-                val oldMaxCapacity = location.getMaxCapacity()
-                updateCellCapacity(
-                  location.id!!,
-                  maxCapacity = maxCapacity,
-                  workingCapacity = workingCapacity,
+      val location = residentialLocationRepository.findOneByKey(key)
+      if (location != null) {
+        if (location.isActiveAndAllParentsActive()) {
+          if (location is Cell) {
+            with(capacityChange) {
+              if (location.getMaxCapacity() != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
+                try {
+                  val oldWorkingCapacity = location.getWorkingCapacity()
+                  val oldMaxCapacity = location.getMaxCapacity()
+                  updateCellCapacity(
+                    location.id!!,
+                    maxCapacity = maxCapacity,
+                    workingCapacity = workingCapacity,
+                  )
+                  audit[key] =
+                    "Updated max capacity from ${oldMaxCapacity ?: 0} to $maxCapacity and working capacity from ${oldWorkingCapacity ?: 0} to $workingCapacity"
+                  updatedCapacities.add(location)
+                } catch (e: Exception) {
+                  audit[key] = "Update failed: ${e.message}"
+                }
+              } else {
+                audit[key] = "Capacity not changed"
+              }
+              if (capacityOfCertifiedCell != null && capacityOfCertifiedCell != location.getCapacityOfCertifiedCell()) {
+                val oldCapacityOfCertifiedCell = location.getCapacityOfCertifiedCell()
+                location.setCapacityOfCertifiedCell(
+                  capacityOfCertifiedCell,
+                  authenticationFacade.getUserOrSystemInContext(),
+                  clock,
                 )
                 audit[key] =
-                  "Updated max capacity from ${oldMaxCapacity ?: 0} to $maxCapacity and working capacity from ${oldWorkingCapacity ?: 0} to $workingCapacity"
+                  audit[key] + " - Updated CNA from ${oldCapacityOfCertifiedCell ?: 0} to $capacityOfCertifiedCell"
                 updatedCapacities.add(location)
-              } catch (e: Exception) {
-                audit[key] = "Update failed: ${e.message}"
               }
-            } else {
-              audit[key] = "Capacity not changed"
             }
-            if (capacityOfCertifiedCell != null && capacityOfCertifiedCell != location.getCapacityOfCertifiedCell()) {
-              val oldCapacityOfCertifiedCell = location.getCapacityOfCertifiedCell()
-              location.setCapacityOfCertifiedCell(
-                capacityOfCertifiedCell,
-                authenticationFacade.getUserOrSystemInContext(),
-                clock,
-              )
-              audit[key] =
-                audit[key] + " - Updated CNA from ${oldCapacityOfCertifiedCell ?: 0} to $capacityOfCertifiedCell"
-              updatedCapacities.add(location)
-            }
+          } else {
+            audit[key] = "Not a cell"
           }
         } else {
-          audit[key] = "Not a cell"
+          audit[key] = "Not active location"
         }
       } else {
-        audit[key] = "Not active location"
+        audit[key] = "Location not found"
       }
     }
-
     val updatedLocationsDto = updatedCapacities.map { it.toDto() }.toSet()
     updatedCapacities.forEach { trackLocationUpdate(it, "Updated Capacity") }
     return CapacityUpdateResult(
