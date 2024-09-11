@@ -259,7 +259,7 @@ class LocationService(
     val residentialLocation =
       residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
     return patchLocation(residentialLocation, patchLocationRequest).also {
-      trackLocationUpdate(it.location, "Updated Location")
+      trackLocationUpdate(it.location)
     }
   }
 
@@ -270,7 +270,7 @@ class LocationService(
   ): UpdateLocationResult {
     val residentialLocation = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
     return patchLocation(residentialLocation, patchLocationRequest).also {
-      trackLocationUpdate(it.location, "Updated Location")
+      trackLocationUpdate(it.location)
     }
   }
 
@@ -282,7 +282,7 @@ class LocationService(
     val nonResLocation =
       nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
     return patchLocation(nonResLocation, patchLocationRequest).also {
-      trackLocationUpdate(it.location, "Updated Location")
+      trackLocationUpdate(it.location)
     }
   }
 
@@ -293,7 +293,7 @@ class LocationService(
   ): UpdateLocationResult {
     val nonResLocation = nonResidentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
     return patchLocation(nonResLocation, patchLocationRequest).also {
-      trackLocationUpdate(it.location, "Updated Location")
+      trackLocationUpdate(it.location)
     }
   }
 
@@ -706,9 +706,9 @@ class LocationService(
     )
   }
 
-  private fun trackLocationUpdate(location: LocationDTO, trackDescription: String) {
+  private fun trackLocationUpdate(location: LocationDTO) {
     telemetryClient.trackEvent(
-      trackDescription,
+      "Updated Location",
       mapOf(
         "id" to location.id.toString(),
         "prisonId" to location.prisonId,

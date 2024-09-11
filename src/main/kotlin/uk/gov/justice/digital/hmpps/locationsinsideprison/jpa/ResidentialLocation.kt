@@ -57,17 +57,17 @@ open class ResidentialLocation(
   updatedBy = createdBy,
 ) {
 
-  open fun getWorkingCapacity(): Int {
+  private fun getWorkingCapacity(): Int {
     return cellLocations().filter { it.isActiveAndAllParentsActive() }
       .sumOf { it.getWorkingCapacity() ?: 0 }
   }
 
-  open fun getMaxCapacity(): Int {
+  private fun getMaxCapacity(): Int {
     return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .sumOf { it.getMaxCapacity() ?: 0 }
   }
 
-  open fun getCapacityOfCertifiedCell(): Int {
+  private fun getCapacityOfCertifiedCell(): Int {
     return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .sumOf { it.getCapacityOfCertifiedCell() ?: 0 }
   }
@@ -83,7 +83,7 @@ open class ResidentialLocation(
       .toSet()
   }
 
-  fun getAccommodationTypes(): Set<AccommodationType> {
+  private fun getAccommodationTypes(): Set<AccommodationType> {
     return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .map { it.accommodationType }
       .toSet()

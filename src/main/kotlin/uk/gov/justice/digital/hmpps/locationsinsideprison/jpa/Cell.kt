@@ -89,11 +89,11 @@ class Cell(
   residentialHousingType = residentialHousingType,
 ) {
 
-  override fun getWorkingCapacity() = capacity?.workingCapacity ?: 0
+  fun getWorkingCapacity() = capacity?.workingCapacity
 
-  override fun getMaxCapacity() = capacity?.maxCapacity ?: 0
+  fun getMaxCapacity() = capacity?.maxCapacity
 
-  override fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell ?: 0
+  fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
 
   fun setCapacityOfCertifiedCell(capacityOfCertifiedCell: Int, userOrSystemInContext: String, clock: Clock): Boolean {
     addHistory(
@@ -362,7 +362,7 @@ class Cell(
     return cellUsedFor
   }
 
-  fun removeUsedFor(typeToRemove: UsedForType, userOrSystemInContext: String, clock: Clock) {
+  private fun removeUsedFor(typeToRemove: UsedForType = UsedForType.STANDARD_ACCOMMODATION, userOrSystemInContext: String, clock: Clock) {
     val usedForToRemove = usedFor.find { it.usedFor == typeToRemove }
     if (usedForToRemove != null) {
       addHistory(LocationAttribute.USED_FOR, typeToRemove.description, null, userOrSystemInContext, LocalDateTime.now(clock))
@@ -437,7 +437,7 @@ class Cell(
     if (this.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
       addUsedFor(UsedForType.STANDARD_ACCOMMODATION, userOrSystemInContext, clock)
     } else {
-      removeUsedFor(UsedForType.STANDARD_ACCOMMODATION, userOrSystemInContext, clock)
+      removeUsedFor(userOrSystemInContext = userOrSystemInContext, clock = clock)
     }
   }
 
