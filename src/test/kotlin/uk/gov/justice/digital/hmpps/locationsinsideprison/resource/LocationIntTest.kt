@@ -1675,9 +1675,12 @@ class LocationResourceIntTest : CommonDataTestBase() {
 
       @Test
       fun `can update a number of locations`() {
-        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy()), false)
-        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy()), false)
-        prisonerSearchMockServer.stubSearchByLocations(wingN.prisonId, listOf(cell1N.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(cell2.prisonId, listOf(cell2.getPathHierarchy()), true)
+        prisonerSearchMockServer.stubSearchByLocations(cell1N.prisonId, listOf(cell1N.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations("MDI", listOf("1-2-008"), false)
+        prisonerSearchMockServer.stubSearchByLocations(archivedCell.prisonId, listOf(archivedCell.getPathHierarchy()), false)
+        prisonerSearchMockServer.stubSearchByLocations(inactiveCellB3001.prisonId, listOf(inactiveCellB3001.getPathHierarchy()), false)
 
         webTestClient.put().uri("/locations/bulk/capacity-update")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1687,8 +1690,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
               UpdateCapacityRequest(
                 locations = mapOf(
                   cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, capacityOfCertifiedCell = 3),
-                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
-                  cell1N.getKey() to CellCapacityUpdateDetail(maxCapacity = 4, workingCapacity = 1, capacityOfCertifiedCell = 1),
+                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0),
+                  cell1N.getKey() to CellCapacityUpdateDetail(maxCapacity = 4, workingCapacity = 1),
+                  "MDI-1-2-008" to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
+                  archivedCell.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
+                  inactiveCellB3001.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
                 ),
               ),
             ),
@@ -1698,70 +1704,81 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .expectBody().json(
             // language=json
             """
-        {
-          "MDI-Z-1-001": [
-            {
-              "key": "MDI-Z-1-001",
-              "message": "Max capacity from 2 ==> 3",
-              "type": "maxCapacity",
-              "previousValue": 2,
-              "newValue": 3
-            },
-            {
-              "key": "MDI-Z-1-001",
-              "message": "Working capacity from 2 ==> 3",
-              "type": "workingCapacity",
-              "previousValue": 2,
-              "newValue": 3
-            },
-            {
-              "key": "MDI-Z-1-001",
-              "message": "Baseline CNA from 2 ==> 3",
-              "type": "CNA",
-              "previousValue": 2,
-              "newValue": 3
-            }
-          ],
-          "MDI-Z-1-002": [
-            {
-              "key": "MDI-Z-1-002",
-              "message": "Max capacity from 2 ==> 3",
-              "type": "maxCapacity",
-              "previousValue": 2,
-              "newValue": 3
-            },
-            {
-              "key": "MDI-Z-1-002",
-              "message": "Working capacity from 2 ==> 3",
-              "type": "workingCapacity",
-              "previousValue": 2,
-              "newValue": 3
-            }
-          ],
-          "NMI-A-1-001": [
-            {
-              "key": "NMI-A-1-001",
-              "message": "Max capacity from 2 ==> 4",
-              "type": "maxCapacity",
-              "previousValue": 2,
-              "newValue": 4
-            },
-            {
-              "key": "NMI-A-1-001",
-              "message": "Working capacity from 2 ==> 1",
-              "type": "workingCapacity",
-              "previousValue": 2,
-              "newValue": 1
-            },
-            {
-              "key": "NMI-A-1-001",
-              "message": "Baseline CNA from 2 ==> 1",
-              "type": "CNA",
-              "previousValue": 2,
-              "newValue": 1
-            }
-          ]
-        }
+              {
+                "MDI-Z-1-001": [
+                  {
+                    "key": "MDI-Z-1-001",
+                    "message": "Max capacity from 2 ==> 3",
+                    "type": "maxCapacity",
+                    "previousValue": 2,
+                    "newValue": 3
+                  },
+                  {
+                    "key": "MDI-Z-1-001",
+                    "message": "Working capacity from 2 ==> 3",
+                    "type": "workingCapacity",
+                    "previousValue": 2,
+                    "newValue": 3
+                  },
+                  {
+                    "key": "MDI-Z-1-001",
+                    "message": "Baseline CNA from 2 ==> 3",
+                    "type": "CNA",
+                    "previousValue": 2,
+                    "newValue": 3
+                  }
+                ],
+                "MDI-Z-1-002": [
+                  {
+                    "key": "MDI-Z-1-002",
+                    "message": "Update failed: Max capacity (0) cannot be decreased below current cell occupancy (1)"
+                  }
+                ],
+                "NMI-A-1-001": [
+                  {
+                    "key": "NMI-A-1-001",
+                    "message": "Max capacity from 2 ==> 4",
+                    "type": "maxCapacity",
+                    "previousValue": 2,
+                    "newValue": 4
+                  },
+                  {
+                    "key": "NMI-A-1-001",
+                    "message": "Working capacity from 2 ==> 1",
+                    "type": "workingCapacity",
+                    "previousValue": 2,
+                    "newValue": 1
+                  }
+                ],
+                "MDI-1-2-008": [
+                  {
+                    "key": "MDI-1-2-008",
+                    "message": "Location not found"
+                  }
+                ],
+                "MDI-Z-1-003": [
+                  {
+                    "key": "MDI-Z-1-003",
+                    "message": "Archived location"
+                  }
+                ],
+                "MDI-B-A-001": [
+                  {
+                    "key": "MDI-B-A-001",
+                    "message": "Max capacity from 2 ==> 3",
+                    "type": "maxCapacity",
+                    "previousValue": 2,
+                    "newValue": 3
+                  },
+                  {
+                    "key": "MDI-B-A-001",
+                    "message": "Working capacity from 2 ==> 3",
+                    "type": "workingCapacity",
+                    "previousValue": 2,
+                    "newValue": 3
+                  }
+                ]
+              }              
               """,
             false,
           )

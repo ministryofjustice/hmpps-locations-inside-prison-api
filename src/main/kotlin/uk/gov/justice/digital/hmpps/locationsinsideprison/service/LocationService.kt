@@ -586,7 +586,7 @@ class LocationService(
       val changes = mutableListOf<CapacityChanges>()
       val location = residentialLocationRepository.findOneByKey(key)
       if (location != null) {
-        if (location.isActiveAndAllParentsActive()) {
+        if (!location.isPermanentlyDeactivated()) {
           if (location is Cell) {
             with(capacityChange) {
               if (location.getMaxCapacity() != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
@@ -626,7 +626,7 @@ class LocationService(
             changes.add(CapacityChanges(key, message = "Not a cell"))
           }
         } else {
-          changes.add(CapacityChanges(key, message = "Not active location"))
+          changes.add(CapacityChanges(key, message = "Archived location"))
         }
       } else {
         changes.add(CapacityChanges(key, message = "Location not found"))
