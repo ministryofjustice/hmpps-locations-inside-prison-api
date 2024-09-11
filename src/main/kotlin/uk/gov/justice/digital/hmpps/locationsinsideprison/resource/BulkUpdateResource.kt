@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.microsoft.applicationinsights.TelemetryClient
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
@@ -32,7 +31,6 @@ import java.util.*
 )
 class BulkUpdateResource(
   private val locationService: LocationService,
-  private val telemetryClient: TelemetryClient,
 ) : EventBaseResource() {
 
   @PutMapping("deactivate/temporary")
