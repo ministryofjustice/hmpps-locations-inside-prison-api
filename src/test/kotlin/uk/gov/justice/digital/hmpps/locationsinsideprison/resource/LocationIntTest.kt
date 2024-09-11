@@ -1684,17 +1684,28 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .header("Content-Type", "application/json")
           .bodyValue(
             jsonString(
-              UpdateLocationsRequest(
+              UpdateCapacityRequest(
                 locations = mapOf(
-                  cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, certified = true),
-                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, certified = false),
-                  cell1N.getKey() to CellCapacityUpdateDetail(maxCapacity = 4, workingCapacity = 1, certified = true),
+                  cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, capacityOfCertifiedCell = 3),
+                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
+                  cell1N.getKey() to CellCapacityUpdateDetail(maxCapacity = 4, workingCapacity = 1, capacityOfCertifiedCell = 1),
                 ),
               ),
             ),
           )
           .exchange()
           .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "MDI-Z-1-001": "Updated max capacity from 2 to 3 and working capacity from 2 to 3 - Updated CNA from 2 to 3",
+                "MDI-Z-1-002": "Updated max capacity from 2 to 3 and working capacity from 2 to 3",
+                "NMI-A-1-001": "Updated max capacity from 2 to 4 and working capacity from 2 to 1 - Updated CNA from 2 to 1"
+              }
+              """,
+            false,
+          )
 
         getDomainEvents(7).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -1716,120 +1727,83 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .expectBody().json(
             // language=json
             """
-             {
-              "prisonId": "MDI",
-              "code": "Z",
-              "pathHierarchy": "Z",
-              "locationType": "WING",
-              "active": true,
-              "key": "MDI-Z",
-              "capacity": {
-                "maxCapacity": 6,
-                "workingCapacity": 3
-              },
-              "certification": {
-                "capacityOfCertifiedCell": 4
-              },
-              "childLocations": [
-                {
-                  "prisonId": "MDI",
-                  "code": "VISIT",
-                  "pathHierarchy": "Z-VISIT",
-                  "locationType": "VISITS",
-                  "active": true,
-                  "isResidential": false,
-                  "key": "MDI-Z-VISIT"
+              {
+                "key": "MDI-Z",
+                "capacity": {
+                  "maxCapacity": 6,
+                  "workingCapacity": 6
                 },
-                {
-                  "prisonId": "MDI",
-                  "code": "ADJUDICATION",
-                  "pathHierarchy": "Z-ADJUDICATION",
-                  "locationType": "ADJUDICATION_ROOM",
-                  "active": true,
-                  "isResidential": false,
-                  "key": "MDI-Z-ADJUDICATION"
+                "certification": {
+                  "certified": true,
+                  "capacityOfCertifiedCell": 5
                 },
-                {
-                  "prisonId": "MDI",
-                  "code": "1",
-                  "pathHierarchy": "Z-1",
-                  "locationType": "LANDING",
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
-                  "active": true,
-                  "isResidential": true,
-                  "key": "MDI-Z-1",
-                  "capacity": {
-                    "maxCapacity": 6,
-                    "workingCapacity": 3
+                "childLocations": [
+                  {
+                    "key": "MDI-Z-VISIT"
                   },
-                  "certification": {
-                    "certified": true,
-                    "capacityOfCertifiedCell": 4
+                  {
+                    "key": "MDI-Z-ADJUDICATION"
                   },
-                  "childLocations": [
-                    {
-                      "prisonId": "MDI",
-                      "code": "001",
-                      "pathHierarchy": "Z-1-001",
-                      "locationType": "CELL",
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
-                      "active": true,
-                      "isResidential": true,
-                      "key": "MDI-Z-1-001",
-                      "capacity": {
-                        "maxCapacity": 3,
-                        "workingCapacity": 3
-                      },
-                      "certification": {
-                        "certified": true,
-                        "capacityOfCertifiedCell": 2
-                      }
+                  {
+                    "key": "MDI-Z-1",
+                    "capacity": {
+                      "maxCapacity": 6,
+                      "workingCapacity": 6
                     },
-                    {
-                      "prisonId": "MDI",
-                      "code": "002",
-                      "pathHierarchy": "Z-1-002",
-                      "locationType": "CELL",
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
-                      "status": "INACTIVE",
-                      "active": false,
-                      "isResidential": true,
-                      "key": "MDI-Z-1-002",
-                      "deactivatedReason": "OTHER",
-                      "deactivationReasonDescription": "De-certified cell",
-                      "capacity": {
-                        "maxCapacity": 3,
-                        "workingCapacity": 0
-                      },
-                      "certification": {
-                        "certified": false,
-                        "capacityOfCertifiedCell": 2
-                      }
+                    "certification": {
+                      "certified": true,
+                      "capacityOfCertifiedCell": 5
                     },
-                    {
-                      "prisonId": "MDI",
-                      "code": "01S",
-                      "pathHierarchy": "Z-1-01S",
-                      "locationType": "STORE",
-                      "active": true,
-                      "isResidential": true,
-                      "key": "MDI-Z-1-01S"
+                    "childLocations": [
+                      {
+                        "key": "MDI-Z-1-01S",
+                        "capacity": {
+                          "maxCapacity": 0,
+                          "workingCapacity": 0
+                        },
+                        "certification": {
+                          "certified": false,
+                          "capacityOfCertifiedCell": 0
+                        }
+                      },
+                      {
+                        "key": "MDI-Z-1-001",
+                        "capacity": {
+                          "maxCapacity": 3,
+                          "workingCapacity": 3
+                        },
+                        "certification": {
+                          "certified": true,
+                          "capacityOfCertifiedCell": 3
+                        }
+                      },
+                      {
+                        "key": "MDI-Z-1-002",
+                        "capacity": {
+                          "maxCapacity": 3,
+                          "workingCapacity": 3
+                        },
+                        "certification": {
+                          "certified": true,
+                          "capacityOfCertifiedCell": 2
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "key": "MDI-Z-2",
+                    "capacity": {
+                      "maxCapacity": 0,
+                      "workingCapacity": 0
+                    },
+                    "certification": {
+                      "certified": false,
+                      "capacityOfCertifiedCell": 0
                     }
-                  ]
-                },
-                {
-                  "prisonId": "MDI",
-                  "code": "2",
-                  "pathHierarchy": "Z-2",
-                  "locationType": "LANDING",
-                  "accommodationTypes":[],
-                  "active": true,
-                  "isResidential": true,
-                  "key": "MDI-Z-2"
-                }
-              ]
-            }
-          """,
+                  }
+                ]
+              } 
+             """,
             false,
           )
       }
