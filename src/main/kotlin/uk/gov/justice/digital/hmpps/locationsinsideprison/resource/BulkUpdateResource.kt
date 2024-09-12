@@ -156,7 +156,8 @@ class BulkUpdateResource(
 data class UpdateCapacityRequest(
   @Schema(
     description = "List of capacities to update",
-    example = "{\"TCI-A-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"capacityOfCertifiedCell\": 2 }, \"TCI-A-1-002\": { \"maxCapacity\": 3, \"workingCapacity\": 1, \"capacityOfCertifiedCell\": 1 } }")
+    example = "{\"TCI-A-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"capacityOfCertifiedCell\": 2 }, \"TCI-A-1-002\": { \"maxCapacity\": 3, \"workingCapacity\": 1, \"capacityOfCertifiedCell\": 1 } }",
+  )
   val locations: Map<String, CellCapacityUpdateDetail>,
 )
 
