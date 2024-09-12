@@ -156,11 +156,7 @@ class BulkUpdateResource(
 data class UpdateCapacityRequest(
   @Schema(
     description = "List of capacities to update",
-    example = """{
-  "locations": {
-    "TCI-A-1-001": { "maxCapacity": 2, "workingCapacity": 1, "capacityOfCertifiedCell": 2 },
-    "TCI-A-1-002": { "maxCapacity": 3, "workingCapacity": 1, "capacityOfCertifiedCell": 1 }
-  }""",
+    example = "{\"TCI-A-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"capacityOfCertifiedCell\": 2 }, \"TCI-A-1-002\": { \"maxCapacity\": 3, \"workingCapacity\": 1, \"capacityOfCertifiedCell\": 1 } }",
   )
   val locations: Map<String, CellCapacityUpdateDetail>,
 )
@@ -168,14 +164,14 @@ data class UpdateCapacityRequest(
 @Schema(description = "Deactivation Locations Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class DeactivateLocationsRequest(
-  @Schema(description = "List of locations to deactivate", example = " { \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"deactivationReason\": \"DAMAGED\" } }")
+  @Schema(description = "List of locations to deactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"deactivationReason\": \"DAMAGED\" } }")
   val locations: Map<UUID, TemporaryDeactivationLocationRequest>,
 )
 
 @Schema(description = "Reactivation Locations Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivateLocationsRequest(
-  @Schema(description = "List of locations to reactivate", example = " { \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
+  @Schema(description = "List of locations to reactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
   val locations: Map<UUID, ReactivationDetail>,
 )
 
