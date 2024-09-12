@@ -757,6 +757,16 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().is4xxClientError
       }
+
+      @Test
+      fun `cannot add a localname more that 30 characters`() {
+        webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "localName": "1234567890123456789012345678901"} """)
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
     }
 
     @Nested
