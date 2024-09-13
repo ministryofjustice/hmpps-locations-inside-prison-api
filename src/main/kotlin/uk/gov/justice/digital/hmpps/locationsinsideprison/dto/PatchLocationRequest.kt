@@ -66,7 +66,7 @@ data class PatchNonResidentialLocationRequest(
 data class UpdateLocationLocalNameRequest(
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = true)
-  @field:Size(max = 80, message = "Description must be less than 81 characters")
+  @field:Size(max = 30, message = "Description must be less than 31 characters")
   val localName: String,
 
   @Schema(description = "Username of the staff updating the location", required = false)
