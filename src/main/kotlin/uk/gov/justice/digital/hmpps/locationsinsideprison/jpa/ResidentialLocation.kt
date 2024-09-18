@@ -6,6 +6,8 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -114,14 +116,14 @@ open class ResidentialLocation(
     cellLocations().forEach { it.updateSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock) }
   }
 
-  override fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
-    super.sync(upsert, updatedBy, clock)
+  override fun sync(upsert: NomisSyncLocationRequest, clock: Clock): ResidentialLocation {
+    super.sync(upsert, clock)
 
     addHistory(
       LocationAttribute.RESIDENTIAL_HOUSING_TYPE,
       this.residentialHousingType.name,
       upsert.residentialHousingType?.name,
-      updatedBy,
+      upsert.lastUpdatedBy,
       LocalDateTime.now(clock),
     )
     upsert.residentialHousingType?.let {
@@ -195,6 +197,19 @@ open class ResidentialLocation(
       attributes = getAttributes().map { it.attributeValue }.distinct().sortedBy { it.name },
     )
   }
+
+  override fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation =
+    super.toResidentialPrisonerLocation(mapOfPrisoners).copy(
+      capacity = CapacityDto(
+        maxCapacity = getMaxCapacity(),
+        workingCapacity = getWorkingCapacity(),
+      ),
+
+      certification = CertificationDto(
+        certified = hasCertifiedCells(),
+        capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+      ),
+    )
 }
 
 enum class ResidentialHousingType(

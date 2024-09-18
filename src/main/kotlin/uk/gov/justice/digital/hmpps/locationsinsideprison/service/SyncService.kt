@@ -24,7 +24,7 @@ import kotlin.jvm.optionals.getOrNull
 
 @Service
 @Transactional
-class SyncService(
+open class SyncService(
   private val locationRepository: LocationRepository,
   private val entityManager: EntityManager,
   private val clock: Clock,
@@ -95,7 +95,7 @@ class SyncService(
       if (parent.id == id) throw ValidationException("Cannot set parent to self")
       locationToUpdate.setParent(parent)
     }
-    locationToUpdate.sync(upsert, upsert.lastUpdatedBy, clock)
+    locationToUpdate.sync(upsert, clock)
 
     return locationToUpdate.toLegacyDto()
   }
