@@ -13,6 +13,7 @@ interface ResidentialLocationRepository : JpaRepository<ResidentialLocation, UUI
   fun findAllByPrisonIdAndParentIsNull(prisonId: String): List<ResidentialLocation>
   fun findAllByPrisonIdAndArchivedIsTrue(prisonId: String): List<ResidentialLocation>
   fun findOneByPrisonIdAndPathHierarchy(prisonId: String, pathHierarchy: String): ResidentialLocation?
+  fun findAllByPrisonIdAndActiveIsTrue(prisonId: String): List<ResidentialLocation>
 
   @Query("select l from ResidentialLocation l where concat(l.prisonId,'-',l.pathHierarchy) = :key")
   fun findOneByKey(key: String): ResidentialLocation?

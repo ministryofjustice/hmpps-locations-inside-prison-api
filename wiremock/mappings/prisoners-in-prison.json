@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "urlPath": "/prisoner-search/prison/([A-Z]{2}I)"
+  },
+  "response": {
+    "status": 200,
+    "bodyFileName": "prisoners-in-prison.json",
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}

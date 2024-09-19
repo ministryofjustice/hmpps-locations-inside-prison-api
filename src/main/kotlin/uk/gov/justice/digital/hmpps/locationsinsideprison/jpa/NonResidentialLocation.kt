@@ -112,7 +112,7 @@ class NonResidentialLocation(
           LocationAttribute.LOCATION_TYPE,
           getDerivedLocationType().description,
           upsert.locationType.description,
-          updatedBy,
+          userOrSystemInContext,
           LocalDateTime.now(clock),
         )
         this.locationType = upsert.locationType.baseType
@@ -122,9 +122,9 @@ class NonResidentialLocation(
     return this
   }
 
-  override fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): NonResidentialLocation {
-    super.sync(upsert, userOrSystemInContext, clock)
-    updateUsage(upsert.usage, userOrSystemInContext, clock)
+  override fun sync(upsert: NomisSyncLocationRequest, clock: Clock): NonResidentialLocation {
+    super.sync(upsert, clock)
+    updateUsage(upsert.usage, upsert.lastUpdatedBy, clock)
     return this
   }
 
@@ -145,7 +145,7 @@ class NonResidentialLocation(
     clock: Clock,
   ) {
     val oldUsages = this.nonResidentialUsages.map { it.usageType }.toSet()
-    val newUsages = (usage.map { it.usageType } ?: emptySet()).toSet()
+    val newUsages = usage.map { it.usageType }.toSet()
 
     newUsages.subtract(oldUsages).forEach { newAttribute ->
       addHistory(LocationAttribute.USAGE, null, newAttribute.name, updatedBy, LocalDateTime.now(clock))

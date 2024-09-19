@@ -22,6 +22,10 @@ class PrisonerLocationService(
     return getPrisonersAndMap(prisonersInLocations(prisonId, locations.filter { !it.isPermanentlyDeactivated() }))
   }
 
+  fun prisonersInPrisonAllLocations(prisonId: String): List<PrisonerLocation> {
+    return getPrisonersAndMap(prisonerSearchService.getPrisonersInPrison(prisonId))
+  }
+
   fun prisonersInLocations(key: String): List<PrisonerLocation> {
     val location = locationRepository.findOneByKey(key)
       ?: throw LocationNotFoundException("Location $key not found")
@@ -51,10 +55,11 @@ class PrisonerLocationService(
 
   private fun getPrisonersAndMap(prisonerLocations: List<Prisoner>) =
     prisonerLocations
+      .filter { it.cellLocation != null }
       .groupBy { it.cellLocation }
       .map {
         PrisonerLocation(
-          cellLocation = it.key,
+          cellLocation = it.key!!,
           prisoners = it.value,
         )
       }.sortedBy { it.cellLocation }

@@ -27,14 +27,16 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequ
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NaturalOrderComparator
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
 import java.io.Serializable
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.SortedSet
-import java.util.UUID
+import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
 @Entity
@@ -177,7 +179,7 @@ abstract class Location(
 
   private fun hasDeactivatedParent() = findDeactivatedParent() != null
 
-  open fun isPermanentlyDeactivated() = findArchivedLocationInHierarchy()?.archived ?: false
+  open fun isPermanentlyDeactivated() = findArchivedLocationInHierarchy()?.archived == true
 
   fun addChildLocation(childLocation: Location): Location {
     childLocation.parent = this
@@ -416,6 +418,30 @@ abstract class Location(
     )
   }
 
+  open fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation =
+    ResidentialPrisonerLocation(
+      locationId = id!!,
+      key = getKey(),
+      locationCode = getCode(),
+      locationType = getDerivedLocationType(),
+      fullLocationPath = getPathHierarchy(),
+      localName = if (this is Cell) {
+        getCode()
+      } else {
+        formatLocation(localName ?: getCode())
+      },
+      prisoners = mapOfPrisoners[getPathHierarchy()] ?: emptyList(),
+      deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
+      status = getStatus(),
+      isAResidentialCell = this is Cell,
+      subLocations = this.childLocations.filter { !it.isPermanentlyDeactivated() }
+        .filterIsInstance<ResidentialLocation>()
+        .map {
+          it.toResidentialPrisonerLocation(mapOfPrisoners)
+        }
+        .sortedWith(NaturalOrderComparator()),
+    )
+
   private fun getDerivedLocalName() = if (!isCell()) {
     localName?.capitalizeWords()
   } else {
@@ -451,19 +477,23 @@ abstract class Location(
 
   open fun updateLocalName(localName: String?, userOrSystemInContext: String, clock: Clock) {
     if (!isCell()) {
-      addHistory(LocationAttribute.DESCRIPTION, this.localName, localName, updatedBy, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.DESCRIPTION, this.localName, localName, userOrSystemInContext, LocalDateTime.now(clock))
       this.localName = localName
+      this.updatedBy = userOrSystemInContext
+      this.whenUpdated = LocalDateTime.now(clock)
     }
   }
 
   open fun updateComments(comments: String?, userOrSystemInContext: String, clock: Clock) {
-    addHistory(LocationAttribute.COMMENTS, this.comments, comments, updatedBy, LocalDateTime.now(clock))
+    addHistory(LocationAttribute.COMMENTS, this.comments, comments, userOrSystemInContext, LocalDateTime.now(clock))
     this.comments = comments
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = LocalDateTime.now(clock)
   }
 
   open fun updateCode(code: String?, userOrSystemInContext: String, clock: Clock): Location {
     if (code != null && this.getCode() != code) {
-      addHistory(LocationAttribute.CODE, getCode(), code, updatedBy, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.CODE, getCode(), code, userOrSystemInContext, LocalDateTime.now(clock))
       setCode(code)
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = LocalDateTime.now(clock)
@@ -471,26 +501,26 @@ abstract class Location(
     return this
   }
 
-  open fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): Location {
-    addHistory(LocationAttribute.CODE, getCode(), upsert.code, updatedBy, LocalDateTime.now(clock))
+  open fun sync(upsert: NomisSyncLocationRequest, clock: Clock): Location {
+    addHistory(LocationAttribute.CODE, getCode(), upsert.code, upsert.lastUpdatedBy, LocalDateTime.now(clock))
     setCode(upsert.code)
 
-    addHistory(LocationAttribute.LOCATION_TYPE, getDerivedLocationType().description, upsert.locationType.description, updatedBy, LocalDateTime.now(clock))
+    addHistory(LocationAttribute.LOCATION_TYPE, getDerivedLocationType().description, upsert.locationType.description, upsert.lastUpdatedBy, LocalDateTime.now(clock))
     this.locationType = upsert.locationType
 
-    addHistory(LocationAttribute.DESCRIPTION, this.localName, upsert.localName, updatedBy, LocalDateTime.now(clock))
+    addHistory(LocationAttribute.DESCRIPTION, this.localName, upsert.localName, upsert.lastUpdatedBy, LocalDateTime.now(clock))
     this.localName = upsert.localName
 
-    addHistory(LocationAttribute.COMMENTS, this.comments, upsert.comments, updatedBy, LocalDateTime.now(clock))
+    addHistory(LocationAttribute.COMMENTS, this.comments, upsert.comments, upsert.lastUpdatedBy, LocalDateTime.now(clock))
     this.comments = upsert.comments
 
-    addHistory(LocationAttribute.ORDER_WITHIN_PARENT_LOCATION, this.orderWithinParentLocation?.toString(), upsert.orderWithinParentLocation?.toString(), updatedBy, LocalDateTime.now(clock))
+    addHistory(LocationAttribute.ORDER_WITHIN_PARENT_LOCATION, this.orderWithinParentLocation?.toString(), upsert.orderWithinParentLocation?.toString(), upsert.lastUpdatedBy, LocalDateTime.now(clock))
     this.orderWithinParentLocation = upsert.orderWithinParentLocation
 
-    this.updatedBy = userOrSystemInContext
+    this.updatedBy = upsert.lastUpdatedBy
     this.whenUpdated = LocalDateTime.now(clock)
 
-    updateActiveStatusSyncOnly(upsert, clock, updatedBy)
+    updateActiveStatusSyncOnly(upsert, clock, upsert.lastUpdatedBy)
     return this
   }
 
@@ -781,12 +811,11 @@ abstract class Location(
     return getKey()
   }
 
-  fun isCell() = locationType == LocationType.CELL
+  fun isCell() = this is Cell
   fun isStructural() = locationType in ResidentialLocationType.entries.filter { it.structural }.map { it.baseType }
   fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
   fun isArea() = locationType in ResidentialLocationType.entries.filter { it.area }.map { it.baseType }
   fun isLocationShownOnResidentialSummary() = locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
-  fun isResidentialType() = locationType in ResidentialLocationType.entries.map { it.baseType }
 
   open fun toLegacyDto(includeHistory: Boolean = false): LegacyLocation {
     return LegacyLocation(

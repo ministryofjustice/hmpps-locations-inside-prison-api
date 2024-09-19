@@ -22,9 +22,9 @@ class PrisonLocationServiceTest {
   fun `Get prisoners by prison id when cell location exist and location is active`() {
     val cell1: Cell = mock()
     val cell2: Cell = mock()
-    val prisoner1 = Prisoner("P1", "First Name", "Last Name", "A", "Prison Name", "C1", gender = "MALE")
-    val prisoner2 = Prisoner("P2", "First Name", "Last Name", "B", "Prison Name", "C2", gender = "MALE")
-    val prisoner3 = Prisoner("P3", "First Name", "Last Name", "B", "Prison Name", "C2", gender = "MALE")
+    val prisoner1 = Prisoner(prisonerNumber = "P1", firstName = "First Name", lastName = "Last Name", prisonId = "A", prisonName = "Prison Name", cellLocation = "C1", gender = "MALE", inOutStatus = "IN", status = "ACTIVE")
+    val prisoner2 = Prisoner(prisonerNumber = "P2", firstName = "First Name", lastName = "Last Name", prisonId = "B", prisonName = "Prison Name", cellLocation = "C2", gender = "MALE", inOutStatus = "IN", status = "ACTIVE")
+    val prisoner3 = Prisoner(prisonerNumber = "P3", firstName = "First Name", lastName = "Last Name", prisonId = "B", prisonName = "Prison Name", cellLocation = "C2", gender = "MALE", inOutStatus = "IN", status = "ACTIVE")
     whenever(cell1.getPathHierarchy()).thenReturn("A")
     whenever(cell2.getPathHierarchy()).thenReturn("B")
     whenever(cellLocationRepository.findAllByPrisonIdAndActive(any(), any())).thenReturn(listOf(cell1, cell2))
@@ -57,7 +57,17 @@ class PrisonLocationServiceTest {
     whenever(cell.getPathHierarchy()).thenReturn("path")
     whenever(cell.cellLocations()).thenReturn(listOf(cell))
     whenever(cell.prisonId).thenReturn("MDI")
-    val prisoner = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1", gender = "MALE")
+    val prisoner = Prisoner(
+      prisonerNumber = "P1",
+      prisonId = "First Name",
+      prisonName = "Last Name",
+      cellLocation = "MDI",
+      firstName = "Prison Name",
+      lastName = "C1",
+      gender = "MALE",
+      inOutStatus = "IN",
+      status = "ACTIVE",
+    )
 
     whenever(locationRepository.findOneByKey(any())).thenReturn(cell)
 
@@ -84,7 +94,18 @@ class PrisonLocationServiceTest {
     whenever(cell.getPathHierarchy()).thenReturn("path")
     whenever(cell.cellLocations()).thenReturn(listOf(cell))
     whenever(cell.prisonId).thenReturn("MDI")
-    val prisoner = Prisoner("P1", "First Name", "Last Name", "MDI", "Prison Name", "C1", gender = "MALE", alerts = alerts)
+    val prisoner = Prisoner(
+      prisonerNumber = "P1",
+      prisonId = "First Name",
+      prisonName = "Last Name",
+      cellLocation = "MDI",
+      firstName = "Prison Name",
+      lastName = "C1",
+      gender = "MALE",
+      inOutStatus = "IN",
+      status = "ACTIVE",
+      alerts = alerts,
+    )
 
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(cell))
 

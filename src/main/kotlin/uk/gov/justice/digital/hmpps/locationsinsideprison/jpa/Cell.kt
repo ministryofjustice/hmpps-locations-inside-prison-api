@@ -111,7 +111,7 @@ class Cell(
     return false
   }
 
-  fun isCertified() = certification?.certified ?: false
+  fun isCertified() = certification?.certified == true
 
   override fun getDerivedLocationType() = if (isConvertedCell()) {
     LocationType.ROOM
@@ -410,15 +410,15 @@ class Cell(
     this.usedFor.retainAll(usedFor.map { addUsedFor(it, userOrSystemInContext, clock) }.toSet())
   }
 
-  override fun sync(upsert: NomisSyncLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
-    super.sync(upsert, userOrSystemInContext, clock)
+  override fun sync(upsert: NomisSyncLocationRequest, clock: Clock): Cell {
+    super.sync(upsert, clock)
 
-    setAccommodationTypeForCell(residentialHousingType.mapToAccommodationType(), userOrSystemInContext, clock)
-    handleNomisCapacitySync(upsert, userOrSystemInContext, clock)
+    setAccommodationTypeForCell(residentialHousingType.mapToAccommodationType(), upsert.lastUpdatedBy, clock)
+    handleNomisCapacitySync(upsert, upsert.lastUpdatedBy, clock)
 
     if (upsert.attributes != null) {
-      recordRemovedAttributes(upsert.attributes, userOrSystemInContext, clock)
-      attributes.retainAll(upsert.attributes.map { addAttribute(it, userOrSystemInContext, clock) }.toSet())
+      recordRemovedAttributes(upsert.attributes, upsert.lastUpdatedBy, clock)
+      attributes.retainAll(upsert.attributes.map { addAttribute(it, upsert.lastUpdatedBy, clock) }.toSet())
     }
 
     return this
@@ -537,8 +537,8 @@ class Cell(
     includeNonResidential: Boolean,
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
-  ): LocationDto {
-    return super.toDto(
+  ): LocationDto =
+    super.toDto(
       includeChildren = includeChildren,
       includeParent = includeParent,
       includeHistory = includeHistory,
@@ -555,13 +555,11 @@ class Cell(
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
     )
-  }
 
-  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
-    return super.toLegacyDto(includeHistory = includeHistory).copy(
+  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation =
+    super.toLegacyDto(includeHistory = includeHistory).copy(
       ignoreWorkingCapacity = false,
       capacity = capacity?.toDto(),
       certification = certification?.toDto(),
     )
-  }
 }

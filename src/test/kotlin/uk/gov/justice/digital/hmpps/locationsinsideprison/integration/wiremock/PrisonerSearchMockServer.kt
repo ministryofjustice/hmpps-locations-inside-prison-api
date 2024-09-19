@@ -9,6 +9,7 @@ import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.http.HttpHeader
 import com.github.tomakehurst.wiremock.http.HttpHeaders
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeQuery
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeSearch
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Matcher
@@ -71,6 +72,12 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
             prisonName = prisonId,
             cellLocation = location,
             gender = "MALE",
+            status = LocationStatus.ACTIVE.name,
+            lastMovementTypeCode = "ADM",
+            inOutStatus = "IN",
+            csra = "High",
+            category = "C",
+            alerts = emptyList(),
           )
         },
       )
