@@ -68,9 +68,7 @@ class PrisonRollCountService(
         netVacancies = locations.sumOf { it.getNetVacancies() },
         outOfOrder = locations.sumOf { it.getOutOfOrder() },
       ),
-      locations = locations.map {
-        it.toDto()
-      },
+      locations = removeLocations(locations),
     )
     return prisonRollCount
   }
@@ -159,13 +157,6 @@ data class ResidentialPrisonerLocation(
       subLocations = removeLocations(subLocations),
     )
 
-  private fun removeLocations(locations: List<ResidentialPrisonerLocation>): List<ResidentialLocationRollCount> {
-    return locations
-      .filter { it.status == LocationStatus.ACTIVE && !it.isAResidentialCell }
-      .map {
-        it.toDto()
-      }
-  }
   private fun getRollCount() =
     LocationRollCount(
       bedsInUse = getBedsInUse(),
@@ -260,3 +251,10 @@ data class LocationRollCount(
   @Schema(description = "Out of order", required = true)
   val outOfOrder: Int = 0,
 )
+
+fun removeLocations(locations: List<ResidentialPrisonerLocation>): List<ResidentialLocationRollCount> =
+  locations
+    .filter { it.status == LocationStatus.ACTIVE && !it.isAResidentialCell }
+    .map {
+      it.toDto()
+    }
