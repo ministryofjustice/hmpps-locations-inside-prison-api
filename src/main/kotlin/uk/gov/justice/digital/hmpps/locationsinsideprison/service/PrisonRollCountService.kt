@@ -8,19 +8,16 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
-import java.util.UUID
-import kotlin.jvm.optionals.getOrNull
+import java.util.*
 
 @Service
 @Transactional(readOnly = true)
-open class PrisonRollCountService(
+class PrisonRollCountService(
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val prisonerLocationService: PrisonerLocationService,
 
@@ -28,31 +25,13 @@ open class PrisonRollCountService(
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
-  fun getPrisonRollCount(prisonId: String, locationId: UUID? = null): PrisonRollCount {
-    val topLocation =
-      if (locationId != null) {
-        residentialLocationRepository.findById(locationId).getOrNull()
-          ?: throw LocationNotFoundException(locationId.toString())
-      } else {
-        null
-      }
+  fun getPrisonRollCount(prisonId: String): PrisonRollCount {
+    val listOfPrisoners = prisonerLocationService.prisonersInPrisonAllLocations(prisonId)
+      .flatMap { it.prisoners }
 
-    val topLocationId = topLocation?.id
-    val listOfPrisoners = if (topLocationId != null) {
-      prisonerLocationService.prisonersInLocations(topLocationId)
-    } else {
-      prisonerLocationService.prisonersInPrisonAllLocations(prisonId)
-    }.flatMap { it.prisoners }
+    val mapOfPrisoners = listOfPrisoners.filter { it.cellLocation != null }.groupBy { it.cellLocation!! }
 
-    val mapOfPrisoners = listOfPrisoners.groupBy { it.cellLocation }
-
-    val locations: List<ResidentialPrisonerLocation> = (
-      if (topLocationId != null) {
-        residentialLocationRepository.findAllByPrisonIdAndParentId(prisonId, topLocationId)
-      } else {
-        residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
-      }
-      )
+    val locations: List<ResidentialPrisonerLocation> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
       .filter { !it.isPermanentlyDeactivated() }
       .filter { it.isCell() || it.isLocationShownOnResidentialSummary() }
       .map { it.toResidentialPrisonerLocation(mapOfPrisoners) }
@@ -61,10 +40,11 @@ open class PrisonRollCountService(
     val enRouteCount = 0
     val movementCount = MovementCount(0, 0)
 
+    val currentRoll = listOfPrisoners.size
     val rollSummary = PrisonRollSummary(
       prisonId = prisonId,
-      numUnlockRollToday = locations.sumOf { it.getCurrentRoll() } - movementCount.numArrivedToday + movementCount.numOutToday,
-      numCurrentPopulation = locations.sumOf { it.getCurrentRoll() },
+      numUnlockRollToday = currentRoll - movementCount.numArrivedToday + movementCount.numOutToday,
+      numCurrentPopulation = currentRoll,
       numArrivedToday = movementCount.numArrivedToday,
       numOutToday = movementCount.numOutToday,
       numOut = listOfPrisoners.filter { it.inOutStatus == "OUT" }.size,
@@ -72,7 +52,7 @@ open class PrisonRollCountService(
       numCourt = listOfPrisoners.filter { it.lastMovementTypeCode == "COURT" }.size,
     )
 
-    return PrisonRollCount(
+    val prisonRollCount = PrisonRollCount(
       prisonId = prisonId,
       numUnlockRollToday = rollSummary.numUnlockRollToday,
       numCurrentPopulation = rollSummary.numCurrentPopulation,
@@ -91,6 +71,7 @@ open class PrisonRollCountService(
       ),
       locations = locations,
     )
+    return prisonRollCount
   }
 }
 
@@ -151,43 +132,25 @@ data class PrisonRollCount(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ResidentialPrisonerLocation(
   @Schema(description = "Location Id", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
-  val id: UUID,
+  val locationId: UUID,
 
-  @Schema(description = "Prison ID", example = "MDI", required = true)
-  val prisonId: String,
-
-  @Schema(description = "Location Code", example = "001", required = true)
-  val code: String,
-
-  @Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
-  val pathHierarchy: String,
+  @Schema(description = "Unique key to this location", example = "LEI-A-1-001", required = true)
+  val key: String,
 
   @Schema(description = "Location Type", example = "CELL", required = true)
   val locationType: LocationType,
 
+  @Schema(description = "Location Code", example = "001", required = true)
+  val locationCode: String,
+
+  @Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
+  val fullLocationPath: String,
+
   @Schema(description = "Alternative description to display for location, (Not Cells)", example = "Wing A", required = false)
   val localName: String? = null,
 
-  @Schema(description = "Capacity details of the location", required = false)
-  val capacity: Capacity? = null,
-
   @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
-  val certification: Certification? = null,
-
-  @Schema(description = "Current Level within hierarchy, starts at 1, e.g Wing = 1", examples = ["1", "2", "3"], required = true)
-  val level: Int,
-
-  @Schema(description = "Indicates this is the lowest level, often a cell", example = "false", required = true)
-  val leafLevel: Boolean,
-
-  @Schema(description = "Parent Location", required = false)
-  val parentLocation: ResidentialPrisonerLocation? = null,
-
-  @Schema(description = "Sub Locations", required = false)
-  val childLocations: List<ResidentialPrisonerLocation>? = null,
-
-  @Schema(description = "list of prisoners in the cell", required = true)
-  val prisoners: List<Prisoner>,
+  val certified: Boolean = false,
 
   @Schema(description = "Status of the location", example = "ACTIVE", required = true)
   val status: LocationStatus,
@@ -195,38 +158,61 @@ data class ResidentialPrisonerLocation(
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
 
-  @Schema(description = "Indicated the location is a cell", example = "true", required = true)
-  val cell: Boolean = false,
+  @Schema(description = "Sub Locations", required = false)
+  val subLocations: List<ResidentialPrisonerLocation>? = null,
 
+  @Schema(description = "Capacity details of the location", required = false)
+  @JsonIgnore
+  val capacity: Capacity? = null,
+
+  @Schema(description = "list of prisoners in the cell", required = false)
+  @JsonIgnore
+  val prisoners: List<Prisoner>? = null,
+
+  @JsonIgnore
+  val isAResidentialCell: Boolean = false,
 ) : SortAttribute {
 
-  @Schema(description = "Beds in use", required = true)
-  fun getCurrentRoll(): Int = getCells().sumOf { it.prisoners.size }
+  @Schema(description = "Roll count details", required = true)
+  fun getRollCount() =
+    LocationRollCount(
+      bedsInUse = getBedsInUse(),
+      currentlyInCell = getCurrentlyInCell(),
+      currentlyOut = getCurrentlyOut(),
+      workingCapacity = capacity?.workingCapacity ?: 0,
+      maxCapacity = capacity?.maxCapacity ?: 0,
+      netVacancies = getNetVacancies(),
+      outOfOrder = getOutOfOrder(),
+    )
 
-  @Schema(description = "Beds in use", required = true)
-  fun getBedsInUse(): Int = getCells().sumOf { it.prisoners.size }
+  @JsonIgnore
+  fun getNetVacancies() = getActualCapacity() - getNumOfOccupants()
 
-  @Schema(description = "Currently in cell", required = true)
-  fun getCurrentlyInCell(): Int = getCells().sumOf { it.prisoners.filter { p -> p.inOutStatus == "IN" }.size }
+  private fun getNumOfOccupants(): Int = getCells().sumOf { it.prisoners?.size ?: 0 }
 
-  @Schema(description = "Currently out", required = true)
-  fun getCurrentlyOut(): Int = getCells().sumOf { it.prisoners.filter { p -> p.inOutStatus == "OUT" }.size }
+  private fun getActualCapacity() = capacity?.let { if (it.workingCapacity != 0) it.workingCapacity else it.maxCapacity } ?: 0
 
-  @Schema(description = "Net vacancies", required = true)
-  fun getNetVacancies(): Int = 0
+  @JsonIgnore
+  fun getBedsInUse(): Int = getNumOfOccupants()
 
-  @Schema(description = "Out of order", required = true)
+  @JsonIgnore
+  fun getCurrentlyInCell(): Int = getCells().sumOf { it.prisoners?.filter { p -> p.inOutStatus == "IN" }?.size ?: 0 }
+
+  @JsonIgnore
+  fun getCurrentlyOut(): Int = getCells().sumOf { it.prisoners?.filter { p -> p.inOutStatus == "OUT" }?.size ?: 0 }
+
+  @JsonIgnore
   fun getOutOfOrder(): Int = getCells().filter { it.status == LocationStatus.INACTIVE && it.deactivatedReason?.outOfUse == true }.size
 
-  fun getCells(): List<ResidentialPrisonerLocation> {
+  private fun getCells(): List<ResidentialPrisonerLocation> {
     val leafLocations = mutableListOf<ResidentialPrisonerLocation>()
 
     fun traverse(location: ResidentialPrisonerLocation) {
-      if (location.cell) {
+      if (location.isAResidentialCell) {
         leafLocations.add(location)
       } else {
-        if (location.childLocations != null) {
-          for (childLocation in location.childLocations) {
+        if (location.subLocations != null) {
+          for (childLocation in location.subLocations) {
             traverse(childLocation)
           }
         }
@@ -237,15 +223,8 @@ data class ResidentialPrisonerLocation(
     return leafLocations
   }
 
-  @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
-  fun getKey(): String {
-    return "$prisonId-$pathHierarchy"
-  }
-
   @JsonIgnore
-  override fun getSortName(): String {
-    return localName?.capitalizeWords() ?: pathHierarchy
-  }
+  override fun getSortName() = localName?.capitalizeWords() ?: fullLocationPath
 }
 
 @Schema(description = "Summary of cell usage for this level")
@@ -259,6 +238,8 @@ data class LocationRollCount(
   val currentlyOut: Int = 0,
   @Schema(description = "Working capacity", required = true)
   val workingCapacity: Int = 0,
+  @Schema(description = "Max capacity", required = true)
+  val maxCapacity: Int = 0,
   @Schema(description = "Net vacancies", required = true)
   val netVacancies: Int = 0,
   @Schema(description = "Out of order", required = true)

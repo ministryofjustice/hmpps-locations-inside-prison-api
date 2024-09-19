@@ -55,10 +55,11 @@ class PrisonerLocationService(
 
   private fun getPrisonersAndMap(prisonerLocations: List<Prisoner>) =
     prisonerLocations
+      .filter { it.cellLocation != null }
       .groupBy { it.cellLocation }
       .map {
         PrisonerLocation(
-          cellLocation = it.key,
+          cellLocation = it.key!!,
           prisoners = it.value,
         )
       }.sortedBy { it.cellLocation }

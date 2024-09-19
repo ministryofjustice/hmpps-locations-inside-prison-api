@@ -27,6 +27,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequ
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NaturalOrderComparator
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
@@ -420,20 +421,26 @@ abstract class Location(
 
   open fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation =
     ResidentialPrisonerLocation(
-      id = id!!,
-      code = getCode(),
+      locationId = id!!,
+      key = getKey(),
+      locationCode = getCode(),
       locationType = getDerivedLocationType(),
-      pathHierarchy = getPathHierarchy(),
-      prisonId = prisonId,
-      level = getLevel(),
-      localName = getDerivedLocalName(),
-      leafLevel = isLeafLevel(),
+      fullLocationPath = getPathHierarchy(),
+      localName = if (this is Cell) {
+        getCode()
+      } else {
+        formatLocation(localName ?: getCode())
+      },
       prisoners = mapOfPrisoners[getPathHierarchy()] ?: emptyList(),
-      childLocations = childLocations.filter { it is ResidentialLocation && !it.isPermanentlyDeactivated() }.map { it.toResidentialPrisonerLocation(mapOfPrisoners) },
-      parentLocation = getParent()?.toResidentialPrisonerLocation(mapOfPrisoners),
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       status = getStatus(),
-      cell = isCell(),
+      isAResidentialCell = this is Cell,
+      subLocations = this.childLocations.filter { !it.isPermanentlyDeactivated() }
+        .filterIsInstance<ResidentialLocation>()
+        .map {
+          it.toResidentialPrisonerLocation(mapOfPrisoners)
+        }
+        .sortedWith(NaturalOrderComparator()),
     )
 
   private fun getDerivedLocalName() = if (!isCell()) {
@@ -810,7 +817,6 @@ abstract class Location(
   fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
   fun isArea() = locationType in ResidentialLocationType.entries.filter { it.area }.map { it.baseType }
   fun isLocationShownOnResidentialSummary() = locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
-  fun isResidentialType() = locationType in ResidentialLocationType.entries.map { it.baseType }
 
   open fun toLegacyDto(includeHistory: Boolean = false): LegacyLocation {
     return LegacyLocation(

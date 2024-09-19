@@ -204,11 +204,7 @@ open class ResidentialLocation(
         maxCapacity = getMaxCapacity(),
         workingCapacity = getWorkingCapacity(),
       ),
-
-      certification = CertificationDto(
-        certified = hasCertifiedCells(),
-        capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
-      ),
+      certified = hasCertifiedCells(),
     )
 }
 

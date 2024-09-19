@@ -66,7 +66,7 @@ class PrisonLocationServiceTest {
       lastName = "C1",
       gender = "MALE",
       inOutStatus = "IN",
-      status = "ACTIVE"
+      status = "ACTIVE",
     )
 
     whenever(locationRepository.findOneByKey(any())).thenReturn(cell)
@@ -104,7 +104,7 @@ class PrisonLocationServiceTest {
       gender = "MALE",
       inOutStatus = "IN",
       status = "ACTIVE",
-      alerts = alerts
+      alerts = alerts,
     )
 
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(cell))

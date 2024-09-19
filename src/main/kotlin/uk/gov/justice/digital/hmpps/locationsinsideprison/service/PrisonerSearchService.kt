@@ -81,8 +81,8 @@ data class Prisoner(
   val prisonId: String?,
   @Schema(description = "Prison Name", example = "HMP Leeds", required = false)
   val prisonName: String?,
-  @Schema(description = "Cell location of the prisoner", example = "1-1-001", required = true)
-  val cellLocation: String,
+  @Schema(description = "Cell location of the prisoner", example = "1-1-001", required = false)
+  val cellLocation: String? = null,
   @Schema(description = "Prisoner first name", example = "Dave", required = true)
   val firstName: String,
   @Schema(description = "Prisoner last name", example = "Jones", required = true)
