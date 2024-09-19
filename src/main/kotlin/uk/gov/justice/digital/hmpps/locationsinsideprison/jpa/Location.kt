@@ -33,8 +33,7 @@ import java.io.Serializable
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.SortedSet
-import java.util.UUID
+import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
 @Entity
@@ -781,7 +780,7 @@ abstract class Location(
     return getKey()
   }
 
-  fun isCell() = locationType == LocationType.CELL
+  fun isCell() = this is Cell
   fun isStructural() = locationType in ResidentialLocationType.entries.filter { it.structural }.map { it.baseType }
   fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
   fun isArea() = locationType in ResidentialLocationType.entries.filter { it.area }.map { it.baseType }
