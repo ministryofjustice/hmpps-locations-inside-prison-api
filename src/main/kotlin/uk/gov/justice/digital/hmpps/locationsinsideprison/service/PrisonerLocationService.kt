@@ -2,6 +2,8 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -17,13 +19,16 @@ class PrisonerLocationService(
   private val locationRepository: LocationRepository,
   private val prisonerSearchService: PrisonerSearchService,
 ) {
+  companion object {
+    val log: Logger = LoggerFactory.getLogger(this::class.java)
+  }
   fun prisonersInPrison(prisonId: String): List<PrisonerLocation> {
     val locations = cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true)
     return getPrisonersAndMap(prisonersInLocations(prisonId, locations.filter { !it.isPermanentlyDeactivated() }))
   }
 
-  fun prisonersInPrisonAllLocations(prisonId: String): List<PrisonerLocation> {
-    return getPrisonersAndMap(prisonerSearchService.getPrisonersInPrison(prisonId))
+  fun prisonersInPrisonAllLocations(prisonId: String): List<Prisoner> {
+    return prisonerSearchService.getPrisonersInPrison(prisonId)
   }
 
   fun prisonersInLocations(key: String): List<PrisonerLocation> {

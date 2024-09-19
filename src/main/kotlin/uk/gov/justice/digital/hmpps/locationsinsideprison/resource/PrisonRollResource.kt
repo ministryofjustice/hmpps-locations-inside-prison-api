@@ -12,10 +12,12 @@ import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollCount
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollCountService
+import java.util.*
 
 @RestController
 @Validated
@@ -62,6 +64,40 @@ class PrisonRollResource(
     )
     @PathVariable
     prisonId: String,
+    @RequestParam(name = "include-cells", required = false, defaultValue = "false") includeCells: Boolean = false,
   ): PrisonRollCount =
-    prisonRollCountService.getPrisonRollCount(prisonId)
+    prisonRollCountService.getPrisonRollCount(prisonId, includeCells)
+
+  @GetMapping("/cells-only/{locationId}")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Provides the list of cells with roll counts under a specified location provided",
+    description = "Requires role ESTABLISHMENT_ROLL or agency in caseload.",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns cell list of roll-counts for a specific prison and sub-location",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the ESTABLISHMENT_ROLL role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @PreAuthorize("hasRole('ESTABLISHMENT_ROLL')")
+  fun getCellLevelRollCount(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable
+    prisonId: String,
+    @Schema(description = "Location ID of parent of the cells", required = true, example = "2475f250-434a-4257-afe7-b911f1773a4d")
+    @PathVariable
+    locationId: UUID,
+  ): PrisonRollCount =
+    prisonRollCountService.getPrisonCellRollCount(prisonId, locationId)
 }

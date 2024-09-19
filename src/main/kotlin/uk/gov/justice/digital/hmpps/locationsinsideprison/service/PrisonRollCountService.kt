@@ -24,10 +24,12 @@ class PrisonRollCountService(
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
-  fun getPrisonRollCount(prisonId: String): PrisonRollCount {
-    val listOfPrisoners = prisonerLocationService.prisonersInPrisonAllLocations(prisonId)
-      .flatMap { it.prisoners }
 
+  fun getPrisonRollCount(prisonId: String, includeCells: Boolean = false): PrisonRollCount {
+    val enRouteCount = 0
+    val movementCount = MovementCount(0, 0)
+
+    val listOfPrisoners = prisonerLocationService.prisonersInPrisonAllLocations(prisonId)
     val mapOfPrisoners = listOfPrisoners.filter { it.cellLocation != null }.groupBy { it.cellLocation!! }
 
     val locations: List<ResidentialPrisonerLocation> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
@@ -35,9 +37,6 @@ class PrisonRollCountService(
       .filter { it.isCell() || it.isLocationShownOnResidentialSummary() }
       .map { it.toResidentialPrisonerLocation(mapOfPrisoners) }
       .sortedWith(NaturalOrderComparator())
-
-    val enRouteCount = 0
-    val movementCount = MovementCount(0, 0)
 
     val currentRoll = listOfPrisoners.size
     val rollSummary = PrisonRollSummary(
@@ -48,7 +47,7 @@ class PrisonRollCountService(
       numOutToday = movementCount.numOutToday,
       numOut = listOfPrisoners.filter { it.inOutStatus == "OUT" }.size,
       numTap = listOfPrisoners.filter { it.lastMovementTypeCode == "TAP" }.size,
-      numCourt = listOfPrisoners.filter { it.lastMovementTypeCode == "COURT" }.size,
+      numCourt = listOfPrisoners.filter { it.lastMovementTypeCode == "CRT" }.size,
     )
 
     val prisonRollCount = PrisonRollCount(
@@ -60,6 +59,9 @@ class PrisonRollCountService(
       numInReception = mapOfPrisoners["RECP"]?.size ?: 0,
       numStillToArrive = enRouteCount,
       numNoCellAllocated = mapOfPrisoners["CSWAP"]?.size ?: 0,
+      numOut = rollSummary.numOut,
+      numTap = rollSummary.numTap,
+      numCourt = rollSummary.numCourt,
       totals = LocationRollCount(
         bedsInUse = locations.sumOf { it.getBedsInUse() },
         currentlyInCell = locations.sumOf { it.getCurrentlyInCell() },
@@ -68,9 +70,14 @@ class PrisonRollCountService(
         netVacancies = locations.sumOf { it.getNetVacancies() },
         outOfOrder = locations.sumOf { it.getOutOfOrder() },
       ),
-      locations = removeLocations(locations),
+      locations = removeLocations(locations, includeCells = includeCells),
     )
     return prisonRollCount
+  }
+
+  fun getPrisonCellRollCount(prisonId: String, locationId: UUID): PrisonRollCount {
+    val rollCount = getPrisonRollCount(prisonId = prisonId, includeCells = true)
+    return rollCount.copy(locations = rollCount.findSubLocation(locationId)?.let { listOf(it) }.orEmpty())
   }
 }
 
@@ -119,13 +126,34 @@ data class PrisonRollCount(
   val numOutToday: Int,
   @Schema(description = "No cell allocated", required = true)
   val numNoCellAllocated: Int,
+  @Schema(description = "Number out of prison", required = true)
+  val numOut: Int,
+  @Schema(description = "Number out on temporary absence", required = true)
+  val numTap: Int,
+  @Schema(description = "Number out at court", required = true)
+  val numCourt: Int,
 
   @Schema(description = "Totals", required = true)
   val totals: LocationRollCount,
 
   @Schema(description = "Residential location roll count summary", required = true)
   val locations: List<ResidentialLocationRollCount>,
-)
+) {
+
+  fun findSubLocation(parentLocationId: UUID): ResidentialLocationRollCount? {
+    fun traverse(locations: List<ResidentialLocationRollCount>?, parentLocationId: UUID): ResidentialLocationRollCount? {
+      if (locations == null) return null
+      for (childLocation in locations) {
+        if (childLocation.locationId == parentLocationId) {
+          return childLocation
+        }
+        return childLocation.subLocations?.let { traverse(it, parentLocationId) }
+      }
+      return null
+    }
+    return traverse(locations, parentLocationId)
+  }
+}
 
 data class ResidentialPrisonerLocation(
   val locationId: UUID,
@@ -143,7 +171,7 @@ data class ResidentialPrisonerLocation(
   val isAResidentialCell: Boolean = false,
 ) : SortAttribute {
 
-  fun toDto() =
+  fun toDto(includeCells: Boolean = false) =
     ResidentialLocationRollCount(
       locationId = locationId,
       key = key,
@@ -154,7 +182,7 @@ data class ResidentialPrisonerLocation(
       certified = certified,
       deactivatedReason = deactivatedReason,
       rollCount = getRollCount(),
-      subLocations = removeLocations(subLocations),
+      subLocations = removeLocations(subLocations, includeCells = includeCells),
     )
 
   private fun getRollCount() =
@@ -204,6 +232,9 @@ data class ResidentialPrisonerLocation(
 @Schema(description = "Residential Prisoner Location Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ResidentialLocationRollCount(
+  @Schema(description = "Unique key to this location", example = "LEI-A-1-001", required = true)
+  val key: String,
+
   @Schema(description = "Location Id", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
   val locationId: UUID,
 
@@ -231,8 +262,6 @@ data class ResidentialLocationRollCount(
   @Schema(description = "Sub Locations", required = false)
   val subLocations: List<ResidentialLocationRollCount>? = null,
 
-  @Schema(description = "Unique key to this location", example = "LEI-A-1-001", required = true)
-  val key: String,
 )
 
 @Schema(description = "Summary of cell usage for this level")
@@ -252,9 +281,9 @@ data class LocationRollCount(
   val outOfOrder: Int = 0,
 )
 
-fun removeLocations(locations: List<ResidentialPrisonerLocation>): List<ResidentialLocationRollCount> =
+fun removeLocations(locations: List<ResidentialPrisonerLocation>, includeCells: Boolean = false): List<ResidentialLocationRollCount> =
   locations
-    .filter { it.status == LocationStatus.ACTIVE && !it.isAResidentialCell }
+    .filter { it.status == LocationStatus.ACTIVE && (includeCells || !it.isAResidentialCell) }
     .map {
-      it.toDto()
+      it.toDto(includeCells)
     }
