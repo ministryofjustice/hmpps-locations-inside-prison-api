@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationHistoryRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -25,9 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
 import java.time.LocalDateTime
-import java.util.Optional
-import java.util.Properties
-import java.util.UUID
+import java.util.*
 
 class LocationServiceTest {
   private val locationRepository: LocationRepository = mock()
@@ -84,14 +83,14 @@ class LocationServiceTest {
   }
 
   @Test
-  fun `update location`() {
+  fun `Local name of wing can be changed`() {
     val updateLocationLocalNameRequest = UpdateLocationLocalNameRequest("L23", "User 1")
     val location =
-      Cell(
+      ResidentialLocation(
         id = UUID.randomUUID(),
         code = "code",
         pathHierarchy = "ph",
-        locationType = LocationType.LOCATION,
+        locationType = LocationType.WING,
         prisonId = "MDI",
         parent = null,
         localName = "R23",
@@ -107,8 +106,34 @@ class LocationServiceTest {
       )
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(location))
 
-    val cellDto = service.updateLocalName(UUID.randomUUID(), updateLocationLocalNameRequest)
-    Assertions.assertThat(cellDto.localName).isEqualTo("L23")
+    val locationDto = service.updateLocalName(UUID.randomUUID(), updateLocationLocalNameRequest)
+    Assertions.assertThat(locationDto.localName).isEqualTo("L23")
+  }
+
+  @Test
+  fun `Can not set local name for cell`() {
+    val updateLocationLocalNameRequest = UpdateLocationLocalNameRequest("L23", "User 1")
+    val location =
+      Cell(
+        id = UUID.randomUUID(),
+        code = "code",
+        pathHierarchy = "ph",
+        prisonId = "MDI",
+        parent = null,
+        comments = "comment 1",
+        orderWithinParentLocation = 2,
+        active = true,
+        deactivatedDate = null,
+        deactivatedReason = null,
+        proposedReactivationDate = null,
+        createdBy = "User 1 ",
+        childLocations = mutableListOf(),
+        whenCreated = LocalDateTime.now(clock),
+      )
+    whenever(locationRepository.findById(any())).thenReturn(Optional.of(location))
+
+    val locationDto = service.updateLocalName(UUID.randomUUID(), updateLocationLocalNameRequest)
+    Assertions.assertThat(locationDto.localName).isEqualTo(null)
   }
 
   @Test
