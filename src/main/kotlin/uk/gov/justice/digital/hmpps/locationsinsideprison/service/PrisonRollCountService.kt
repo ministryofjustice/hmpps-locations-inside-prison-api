@@ -11,14 +11,18 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import java.util.*
+import kotlin.jvm.optionals.getOrNull
 
 @Service
 @Transactional(readOnly = true)
 class PrisonRollCountService(
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val prisonerLocationService: PrisonerLocationService,
+  private val prisonApiService: PrisonApiService,
 
 ) {
   companion object {
@@ -26,28 +30,63 @@ class PrisonRollCountService(
   }
 
   fun getPrisonRollCount(prisonId: String, includeCells: Boolean = false): PrisonRollCount {
-    val enRouteCount = 0
-    val movementCount = MovementCount(0, 0)
+    val movements = prisonApiService.getMovementTodayInAndOutOfPrison(prisonId)
 
     val listOfPrisoners = prisonerLocationService.prisonersInPrisonAllLocations(prisonId)
     val mapOfPrisoners = listOfPrisoners.filter { it.cellLocation != null }.groupBy { it.cellLocation!! }
 
-    val locations: List<ResidentialPrisonerLocation> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
-      .filter { !it.isPermanentlyDeactivated() }
-      .filter { it.isCell() || it.isLocationShownOnResidentialSummary() }
-      .map { it.toResidentialPrisonerLocation(mapOfPrisoners) }
-      .sortedWith(NaturalOrderComparator())
+    return prisonRollCount(
+      prisonId,
+      mapOfPrisoners,
+      listOfPrisoners,
+      movements,
+      includeCells,
+      residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId),
+    )
+  }
+
+  fun getPrisonCellRollCount(prisonId: String, locationId: UUID): PrisonRollCount {
+    val movements = prisonApiService.getMovementTodayInAndOutOfPrison(prisonId)
+    val currentLocation = residentialLocationRepository.findById(locationId).getOrNull() ?: throw LocationNotFoundException(locationId.toString())
+
+    val listOfPrisoners = prisonerLocationService.prisonersInLocations(prisonId, currentLocation.cellLocations())
+    val mapOfPrisoners = listOfPrisoners.filter { it.cellLocation != null }.groupBy { it.cellLocation!! }
+
+    return prisonRollCount(
+      prisonId,
+      mapOfPrisoners,
+      listOfPrisoners,
+      movements,
+      includeCells = true,
+      listOf(currentLocation),
+    )
+  }
+
+  private fun prisonRollCount(
+    prisonId: String,
+    mapOfPrisoners: Map<String, List<Prisoner>>,
+    listOfPrisoners: List<Prisoner>,
+    movements: PrisonRollMovementInfo,
+    includeCells: Boolean,
+    residentialLocations: List<ResidentialLocation>,
+  ): PrisonRollCount {
+    val locations: List<ResidentialPrisonerLocation> =
+      residentialLocations
+        .filter { !it.isPermanentlyDeactivated() }
+        .filter { it.isCell() || it.isLocationShownOnResidentialSummary() }
+        .map { it.toResidentialPrisonerLocation(mapOfPrisoners) }
+        .sortedWith(NaturalOrderComparator())
 
     val currentRoll = listOfPrisoners.filter { it.inOutStatus == "IN" }.size
 
     val prisonRollCount = PrisonRollCount(
       prisonId = prisonId,
-      numUnlockRollToday = currentRoll - movementCount.numArrivedToday + movementCount.numOutToday,
+      numUnlockRollToday = currentRoll - movements.inOutMovementsToday.`in` + movements.inOutMovementsToday.out,
       numCurrentPopulation = currentRoll,
-      numOutToday = movementCount.numOutToday,
-      numArrivedToday = movementCount.numArrivedToday,
+      numOutToday = movements.inOutMovementsToday.out,
+      numArrivedToday = movements.inOutMovementsToday.`in`,
       numInReception = mapOfPrisoners["RECP"]?.size ?: 0,
-      numStillToArrive = enRouteCount,
+      numStillToArrive = movements.enRouteToday,
       numNoCellAllocated = mapOfPrisoners["CSWAP"]?.size ?: 0,
       totals = LocationRollCount(
         bedsInUse = locations.sumOf { it.getBedsInUse() },
@@ -61,17 +100,7 @@ class PrisonRollCountService(
     )
     return prisonRollCount
   }
-
-  fun getPrisonCellRollCount(prisonId: String, locationId: UUID): PrisonRollCount {
-    val rollCount = getPrisonRollCount(prisonId = prisonId, includeCells = true)
-    return rollCount.copy(locations = rollCount.findSubLocation(locationId)?.let { listOf(it) }.orEmpty())
-  }
 }
-
-data class MovementCount(
-  val numArrivedToday: Int,
-  val numOutToday: Int,
-)
 
 data class ResidentialPrisonerLocation(
   val locationId: UUID,
@@ -86,7 +115,7 @@ data class ResidentialPrisonerLocation(
   val subLocations: List<ResidentialPrisonerLocation>,
   val capacity: Capacity? = null,
   val prisoners: List<Prisoner>? = null,
-  val isAResidentialCell: Boolean = false,
+  val isLeafLevel: Boolean = false,
 ) : SortAttribute {
 
   fun toDto(includeCells: Boolean = false) =
@@ -131,7 +160,7 @@ data class ResidentialPrisonerLocation(
     val leafLocations = mutableListOf<ResidentialPrisonerLocation>()
 
     fun traverse(location: ResidentialPrisonerLocation) {
-      if (location.isAResidentialCell) {
+      if (location.isLeafLevel) {
         leafLocations.add(location)
       } else {
         for (childLocation in location.subLocations) {
@@ -172,22 +201,7 @@ data class PrisonRollCount(
 
   @Schema(description = "Residential location roll count summary", required = true)
   val locations: List<ResidentialLocationRollCount>,
-) {
-
-  fun findSubLocation(parentLocationId: UUID): ResidentialLocationRollCount? {
-    fun traverse(locations: List<ResidentialLocationRollCount>?, parentLocationId: UUID): ResidentialLocationRollCount? {
-      if (locations == null) return null
-      for (childLocation in locations) {
-        if (childLocation.locationId == parentLocationId) {
-          return childLocation
-        }
-        return childLocation.subLocations?.let { traverse(it, parentLocationId) }
-      }
-      return null
-    }
-    return traverse(locations, parentLocationId)
-  }
-}
+)
 
 @Schema(description = "Summary of cell usage for this level")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -243,7 +257,7 @@ data class ResidentialLocationRollCount(
 
 fun removeLocations(locations: List<ResidentialPrisonerLocation>, includeCells: Boolean = false): List<ResidentialLocationRollCount> =
   locations
-    .filter { it.status == LocationStatus.ACTIVE && (includeCells || !it.isAResidentialCell) }
+    .filter { it.status == LocationStatus.ACTIVE && (includeCells || !it.isLeafLevel) }
     .map {
       it.toDto(includeCells)
     }

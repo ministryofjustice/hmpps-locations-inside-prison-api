@@ -1,0 +1,139 @@
+{
+  "totalPages": 1,
+  "totalElements": 1,
+  "first": true,
+  "last": true,
+  "size": 1,
+  "content": [
+    {
+      "prisonerNumber": "A1234AA",
+      "firstName": "Robert",
+      "middleNames": "John James",
+      "lastName": "Larsen",
+      "gender": "Female",
+      "status": "ACTIVE IN",
+      "lastMovementTypeCode": "CRT",
+      "lastMovementReasonCode": "CA",
+      "inOutStatus": "IN",
+      "prisonId": "MDI",
+      "prisonName": "HMP Moorland",
+      "cellLocation": "A-1-001",
+      "alerts": [
+        {
+          "alertType": "H",
+          "alertCode": "HA",
+          "active": true,
+          "expired": true
+        }
+      ],
+      "csra": "HIGH",
+      "category": "C"
+    },
+    {
+      "prisonerNumber": "A1234AB",
+      "firstName": "Robert",
+      "middleNames": "John James",
+      "lastName": "Larsen",
+      "gender": "Female",
+      "status": "ACTIVE IN",
+      "lastMovementTypeCode": "CRT",
+      "lastMovementReasonCode": "CA",
+      "inOutStatus": "IN",
+      "prisonId": "MDI",
+      "prisonName": "Moorland",
+      "cellLocation": "A-1-002",
+      "alerts": [
+        {
+          "alertType": "H",
+          "alertCode": "HA",
+          "active": true,
+          "expired": true
+        }
+      ],
+      "csra": "HIGH",
+      "category": "C"
+    },
+    {
+      "prisonerNumber": "A1234AC",
+      "firstName": "Robert",
+      "middleNames": "John James",
+      "lastName": "Larsen",
+      "gender": "Female",
+      "status": "ACTIVE IN",
+      "lastMovementTypeCode": "CRT",
+      "lastMovementReasonCode": "CA",
+      "inOutStatus": "IN",
+      "prisonId": "MDI",
+      "prisonName": "HMP Moorland",
+      "cellLocation": "A-1-003",
+      "alerts": [
+        {
+          "alertType": "H",
+          "alertCode": "HA",
+          "active": true,
+          "expired": true
+        }
+      ],
+      "csra": "HIGH",
+      "category": "C"
+    },
+    {
+      "prisonerNumber": "A1234AD",
+      "firstName": "Robert",
+      "middleNames": "John James",
+      "lastName": "Larsen",
+      "gender": "Female",
+      "status": "ACTIVE IN",
+      "lastMovementTypeCode": "CRT",
+      "lastMovementReasonCode": "CA",
+      "inOutStatus": "IN",
+      "prisonId": "MDI",
+      "prisonName": "HMP Moorland",
+      "cellLocation": "A-1-004",
+      "alerts": [
+        {
+          "alertType": "H",
+          "alertCode": "HA",
+          "active": true,
+          "expired": true
+        }
+      ],
+      "csra": "HIGH",
+      "category": "C"
+    },
+    {
+      "prisonerNumber": "A1234AE",
+      "firstName": "Robert",
+      "middleNames": "John James",
+      "lastName": "Larsen",
+      "gender": "Male",
+      "status": "ACTIVE IN",
+      "lastMovementTypeCode": "CRT",
+      "lastMovementReasonCode": "CA",
+      "inOutStatus": "IN",
+      "prisonId": "MDI",
+      "prisonName": "HMP Moorland",
+      "cellLocation": "A-1-002",
+      "alerts": [
+        {
+          "alertType": "H",
+          "alertCode": "HA",
+          "active": true,
+          "expired": true
+        }
+      ],
+      "csra": "HIGH",
+      "category": "C"
+    }
+  ],
+  "number": 0,
+  "numberOfElements": 1,
+  "pageable": {
+    "offset": 0,
+    "pageSize": 1,
+    "paged": true,
+    "pageNumber": 0,
+    "unpaged": true
+  },
+  "empty": false
+}
