@@ -74,7 +74,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 
 @Service
 @Transactional(readOnly = true)
-open class LocationService(
+class LocationService(
   private val locationRepository: LocationRepository,
   private val nonResidentialLocationRepository: NonResidentialLocationRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
@@ -200,7 +200,7 @@ open class LocationService(
       .sortedBy { it.getKey() }
 
   @Transactional
-  open fun createResidentialLocation(request: CreateResidentialLocationRequest): LocationDTO {
+  fun createResidentialLocation(request: CreateResidentialLocationRequest): LocationDTO {
     val parentLocation = getParentLocation(request.parentId)
 
     checkParentValid(
@@ -223,7 +223,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun createNonResidentialLocation(request: CreateNonResidentialLocationRequest): LocationDTO {
+  fun createNonResidentialLocation(request: CreateNonResidentialLocationRequest): LocationDTO {
     val parentLocation = getParentLocation(request.parentId)
 
     checkParentValid(
@@ -246,7 +246,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun createWing(createWingRequest: CreateWingRequest): LocationDTO {
+  fun createWing(createWingRequest: CreateWingRequest): LocationDTO {
     locationRepository.findOneByPrisonIdAndPathHierarchy(createWingRequest.prisonId, createWingRequest.wingCode)
       ?.let { throw LocationAlreadyExistsException("${createWingRequest.prisonId}-${createWingRequest.wingCode}") }
 
@@ -255,7 +255,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun updateResidentialLocation(id: UUID, patchLocationRequest: PatchResidentialLocationRequest): UpdateLocationResult {
+  fun updateResidentialLocation(id: UUID, patchLocationRequest: PatchResidentialLocationRequest): UpdateLocationResult {
     val residentialLocation =
       residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
     return patchLocation(residentialLocation, patchLocationRequest).also {
@@ -264,7 +264,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun updateResidentialLocation(
+  fun updateResidentialLocation(
     key: String,
     patchLocationRequest: PatchResidentialLocationRequest,
   ): UpdateLocationResult {
@@ -275,7 +275,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun updateNonResidentialLocation(
+  fun updateNonResidentialLocation(
     id: UUID,
     patchLocationRequest: PatchNonResidentialLocationRequest,
   ): UpdateLocationResult {
@@ -287,7 +287,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun updateNonResidentialLocation(
+  fun updateNonResidentialLocation(
     key: String,
     patchLocationRequest: PatchNonResidentialLocationRequest,
   ): UpdateLocationResult {
@@ -316,7 +316,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun updateResidentialLocationUsedForTypes(id: UUID, usedFor: Set<UsedForType>): LocationDTO {
+  fun updateResidentialLocationUsedForTypes(id: UUID, usedFor: Set<UsedForType>): LocationDTO {
     val residentialLocation = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -371,7 +371,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int): LocationDTO {
+  fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int): LocationDTO {
     val locCapChange = cellLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -409,7 +409,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun updateSpecialistCellTypes(id: UUID, specialistCellTypes: Set<SpecialistCellType>): LocationDTO {
+  fun updateSpecialistCellTypes(id: UUID, specialistCellTypes: Set<SpecialistCellType>): LocationDTO {
     val cell = cellLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -446,7 +446,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun updateLocalName(id: UUID, updateLocationLocalNameRequest: UpdateLocationLocalNameRequest): LocationDTO {
+  fun updateLocalName(id: UUID, updateLocationLocalNameRequest: UpdateLocationLocalNameRequest): LocationDTO {
     val location = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -468,7 +468,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun deactivateLocations(locationsToDeactivate: DeactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+  fun deactivateLocations(locationsToDeactivate: DeactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val deactivatedLocations = mutableSetOf<Location>()
 
     locationsToDeactivate.locations.forEach { (id, deactivationDetail) ->
@@ -516,7 +516,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun updateDeactivatedDetails(
+  fun updateDeactivatedDetails(
     id: UUID,
     deactivatedReason: DeactivatedReason,
     deactivationReasonDescription: String? = null,
@@ -553,7 +553,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun permanentlyDeactivateLocation(
+  fun permanentlyDeactivateLocation(
     id: UUID,
     reasonForPermanentDeactivation: String,
   ): LocationDTO {
@@ -578,7 +578,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun updateCapacityOfCellLocations(capacitiesToUpdate: UpdateCapacityRequest): CapacityUpdateResult {
+  fun updateCapacityOfCellLocations(capacitiesToUpdate: UpdateCapacityRequest): CapacityUpdateResult {
     val updatedCapacities = mutableSetOf<ResidentialLocation>()
     val audit = mutableMapOf<String, List<CapacityChanges>>()
 
@@ -652,7 +652,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun reactivateLocations(locationsToReactivate: ReactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+  fun reactivateLocations(locationsToReactivate: ReactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val locationsReactivated = mutableSetOf<Location>()
 
     locationsToReactivate.locations.forEach { (id, reactivationDetail) ->
@@ -719,7 +719,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun convertToNonResidentialCell(
+  fun convertToNonResidentialCell(
     id: UUID,
     convertedCellType: ConvertedCellType,
     otherConvertedCellType: String? = null,
@@ -758,7 +758,7 @@ open class LocationService(
   }
 
   @Transactional
-  open fun convertToCell(
+  fun convertToCell(
     id: UUID,
     accommodationType: AllowedAccommodationTypeForConversion,
     specialistCellTypes: Set<SpecialistCellType>? = null,
