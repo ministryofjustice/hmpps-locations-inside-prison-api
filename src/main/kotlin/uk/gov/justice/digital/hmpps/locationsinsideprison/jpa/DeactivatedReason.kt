@@ -8,12 +8,12 @@ import io.swagger.v3.oas.annotations.media.Schema
 enum class DeactivatedReason(
   val description: String,
   val sequence: Int = 99,
-  val outOfUse: Boolean = true,
+  val indicatesOutOfOrder: Boolean = true,
 ) {
   DAMAGED("Damage", 1),
   DAMP("Damp / mould", 2),
   MAINTENANCE("Maintenance", 3),
-  MOTHBALLED("Mothballed", 4, outOfUse = false),
+  MOTHBALLED("Mothballed", 4, indicatesOutOfOrder = false),
   PEST("Pest control", 5),
   REFURBISHMENT("Refurbishment", 6),
   SECURITY_SEALED("Security sealed", 7),
