@@ -20,7 +20,7 @@ class PrisonRollCountService(
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val prisonerLocationService: PrisonerLocationService,
 
-) {
+  ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
@@ -239,7 +239,7 @@ data class ResidentialLocationRollCount(
   @Schema(description = "Sub Locations", required = false)
   val subLocations: List<ResidentialLocationRollCount>? = null,
 
-)
+  )
 
 fun removeLocations(locations: List<ResidentialPrisonerLocation>, includeCells: Boolean = false): List<ResidentialLocationRollCount> =
   locations
