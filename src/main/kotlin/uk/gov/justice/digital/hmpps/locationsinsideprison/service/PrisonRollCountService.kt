@@ -38,36 +38,23 @@ class PrisonRollCountService(
       .map { it.toResidentialPrisonerLocation(mapOfPrisoners) }
       .sortedWith(NaturalOrderComparator())
 
-    val currentRoll = listOfPrisoners.size
-    val rollSummary = PrisonRollSummary(
-      prisonId = prisonId,
-      numUnlockRollToday = currentRoll - movementCount.numArrivedToday + movementCount.numOutToday,
-      numCurrentPopulation = currentRoll,
-      numArrivedToday = movementCount.numArrivedToday,
-      numOutToday = movementCount.numOutToday,
-      numOut = listOfPrisoners.filter { it.inOutStatus == "OUT" }.size,
-      numTap = listOfPrisoners.filter { it.lastMovementTypeCode == "TAP" }.size,
-      numCourt = listOfPrisoners.filter { it.lastMovementTypeCode == "CRT" }.size,
-    )
+    val currentRoll = listOfPrisoners.filter { it.inOutStatus == "IN" }.size
 
     val prisonRollCount = PrisonRollCount(
       prisonId = prisonId,
-      numUnlockRollToday = rollSummary.numUnlockRollToday,
-      numCurrentPopulation = rollSummary.numCurrentPopulation,
-      numOutToday = rollSummary.numOutToday,
-      numArrivedToday = rollSummary.numArrivedToday,
+      numUnlockRollToday = currentRoll - movementCount.numArrivedToday + movementCount.numOutToday,
+      numCurrentPopulation = currentRoll,
+      numOutToday = movementCount.numOutToday,
+      numArrivedToday = movementCount.numArrivedToday,
       numInReception = mapOfPrisoners["RECP"]?.size ?: 0,
       numStillToArrive = enRouteCount,
       numNoCellAllocated = mapOfPrisoners["CSWAP"]?.size ?: 0,
-      numOut = rollSummary.numOut,
-      numTap = rollSummary.numTap,
-      numCourt = rollSummary.numCourt,
       totals = LocationRollCount(
         bedsInUse = locations.sumOf { it.getBedsInUse() },
         currentlyInCell = locations.sumOf { it.getCurrentlyInCell() },
         currentlyOut = locations.sumOf { it.getCurrentlyOut() },
-        workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
-        netVacancies = locations.sumOf { it.getNetVacancies() },
+        workingCapacity = locations.sumOf { it.getWorkingCapacity() },
+        netVacancies = locations.sumOf { it.getWorkingCapacity() - it.getCurrentlyInCell() },
         outOfOrder = locations.sumOf { it.getOutOfOrder() },
       ),
       locations = removeLocations(locations, includeCells = includeCells),
@@ -85,75 +72,6 @@ data class MovementCount(
   val numArrivedToday: Int,
   val numOutToday: Int,
 )
-
-@Schema(description = "Prison Roll Summary")
-@JsonInclude(JsonInclude.Include.NON_NULL)
-data class PrisonRollSummary(
-  @Schema(description = "Prison Id", required = true)
-  val prisonId: String,
-  @Schema(description = "Unlock roll today", required = true)
-  val numUnlockRollToday: Int,
-  @Schema(description = "Arrived today", required = true)
-  val numArrivedToday: Int,
-  @Schema(description = "Out today", required = true)
-  val numOutToday: Int,
-  @Schema(description = "Number out of prison", required = true)
-  val numOut: Int,
-  @Schema(description = "Number out on temporary absence", required = true)
-  val numTap: Int,
-  @Schema(description = "Number out at court", required = true)
-  val numCourt: Int,
-  @Schema(description = "Current population", required = true)
-  val numCurrentPopulation: Int,
-)
-
-@Schema(description = "Establishment Roll Count")
-@JsonInclude(JsonInclude.Include.NON_NULL)
-data class PrisonRollCount(
-  @Schema(description = "Prison Id", required = true)
-  val prisonId: String,
-  @Schema(description = "Unlock roll today", required = true)
-  val numUnlockRollToday: Int,
-  @Schema(description = "Current population", required = true)
-  val numCurrentPopulation: Int,
-  @Schema(description = "Arrived today", required = true)
-  val numArrivedToday: Int,
-  @Schema(description = "In reception", required = true)
-  val numInReception: Int,
-  @Schema(description = "Still to arrive", required = true)
-  val numStillToArrive: Int,
-  @Schema(description = "Out today", required = true)
-  val numOutToday: Int,
-  @Schema(description = "No cell allocated", required = true)
-  val numNoCellAllocated: Int,
-  @Schema(description = "Number out of prison", required = true)
-  val numOut: Int,
-  @Schema(description = "Number out on temporary absence", required = true)
-  val numTap: Int,
-  @Schema(description = "Number out at court", required = true)
-  val numCourt: Int,
-
-  @Schema(description = "Totals", required = true)
-  val totals: LocationRollCount,
-
-  @Schema(description = "Residential location roll count summary", required = true)
-  val locations: List<ResidentialLocationRollCount>,
-) {
-
-  fun findSubLocation(parentLocationId: UUID): ResidentialLocationRollCount? {
-    fun traverse(locations: List<ResidentialLocationRollCount>?, parentLocationId: UUID): ResidentialLocationRollCount? {
-      if (locations == null) return null
-      for (childLocation in locations) {
-        if (childLocation.locationId == parentLocationId) {
-          return childLocation
-        }
-        return childLocation.subLocations?.let { traverse(it, parentLocationId) }
-      }
-      return null
-    }
-    return traverse(locations, parentLocationId)
-  }
-}
 
 data class ResidentialPrisonerLocation(
   val locationId: UUID,
@@ -190,16 +108,16 @@ data class ResidentialPrisonerLocation(
       bedsInUse = getBedsInUse(),
       currentlyInCell = getCurrentlyInCell(),
       currentlyOut = getCurrentlyOut(),
-      workingCapacity = capacity?.workingCapacity ?: 0,
+      workingCapacity = getWorkingCapacity(),
       netVacancies = getNetVacancies(),
       outOfOrder = getOutOfOrder(),
     )
 
-  fun getNetVacancies() = getActualCapacity() - getNumOfOccupants()
+  fun getWorkingCapacity() = capacity?.workingCapacity ?: 0
+
+  private fun getNetVacancies() = getWorkingCapacity() - getNumOfOccupants()
 
   private fun getNumOfOccupants(): Int = getCells().sumOf { it.prisoners?.size ?: 0 }
-
-  private fun getActualCapacity() = capacity?.let { if (it.workingCapacity != 0) it.workingCapacity else it.maxCapacity } ?: 0
 
   fun getBedsInUse(): Int = getNumOfOccupants()
 
@@ -207,7 +125,7 @@ data class ResidentialPrisonerLocation(
 
   fun getCurrentlyOut(): Int = getCells().sumOf { it.prisoners?.filter { p -> p.inOutStatus == "OUT" }?.size ?: 0 }
 
-  fun getOutOfOrder(): Int = getCells().filter { it.status == LocationStatus.INACTIVE && it.deactivatedReason?.outOfUse == true }.size
+  fun getOutOfOrder(): Int = getCells().filter { it.status == LocationStatus.INACTIVE && it.deactivatedReason?.indicatesOutOfOrder == true }.size
 
   private fun getCells(): List<ResidentialPrisonerLocation> {
     val leafLocations = mutableListOf<ResidentialPrisonerLocation>()
@@ -228,6 +146,65 @@ data class ResidentialPrisonerLocation(
 
   override fun getSortName() = localName?.capitalizeWords() ?: fullLocationPath
 }
+
+@Schema(description = "Establishment Roll Count")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class PrisonRollCount(
+  @Schema(description = "Prison Id", required = true)
+  val prisonId: String,
+  @Schema(description = "Unlock roll today", required = true)
+  val numUnlockRollToday: Int,
+  @Schema(description = "Current population", required = true)
+  val numCurrentPopulation: Int,
+  @Schema(description = "Arrived today", required = true)
+  val numArrivedToday: Int,
+  @Schema(description = "In reception", required = true)
+  val numInReception: Int,
+  @Schema(description = "Still to arrive", required = true)
+  val numStillToArrive: Int,
+  @Schema(description = "Out today", required = true)
+  val numOutToday: Int,
+  @Schema(description = "No cell allocated", required = true)
+  val numNoCellAllocated: Int,
+
+  @Schema(description = "Totals", required = true)
+  val totals: LocationRollCount,
+
+  @Schema(description = "Residential location roll count summary", required = true)
+  val locations: List<ResidentialLocationRollCount>,
+) {
+
+  fun findSubLocation(parentLocationId: UUID): ResidentialLocationRollCount? {
+    fun traverse(locations: List<ResidentialLocationRollCount>?, parentLocationId: UUID): ResidentialLocationRollCount? {
+      if (locations == null) return null
+      for (childLocation in locations) {
+        if (childLocation.locationId == parentLocationId) {
+          return childLocation
+        }
+        return childLocation.subLocations?.let { traverse(it, parentLocationId) }
+      }
+      return null
+    }
+    return traverse(locations, parentLocationId)
+  }
+}
+
+@Schema(description = "Summary of cell usage for this level")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class LocationRollCount(
+  @Schema(description = "Beds in use", required = true)
+  val bedsInUse: Int = 0,
+  @Schema(description = "Currently in cell", required = true)
+  val currentlyInCell: Int = 0,
+  @Schema(description = "Currently out", required = true)
+  val currentlyOut: Int = 0,
+  @Schema(description = "Working capacity", required = true)
+  val workingCapacity: Int = 0,
+  @Schema(description = "Net vacancies", required = true)
+  val netVacancies: Int = 0,
+  @Schema(description = "Out of order", required = true)
+  val outOfOrder: Int = 0,
+)
 
 @Schema(description = "Residential Prisoner Location Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -262,23 +239,6 @@ data class ResidentialLocationRollCount(
   @Schema(description = "Sub Locations", required = false)
   val subLocations: List<ResidentialLocationRollCount>? = null,
 
-)
-
-@Schema(description = "Summary of cell usage for this level")
-@JsonInclude(JsonInclude.Include.NON_NULL)
-data class LocationRollCount(
-  @Schema(description = "Beds in use", required = true)
-  val bedsInUse: Int = 0,
-  @Schema(description = "Currently in cell", required = true)
-  val currentlyInCell: Int = 0,
-  @Schema(description = "Currently out", required = true)
-  val currentlyOut: Int = 0,
-  @Schema(description = "Working capacity", required = true)
-  val workingCapacity: Int = 0,
-  @Schema(description = "Net vacancies", required = true)
-  val netVacancies: Int = 0,
-  @Schema(description = "Out of order", required = true)
-  val outOfOrder: Int = 0,
 )
 
 fun removeLocations(locations: List<ResidentialPrisonerLocation>, includeCells: Boolean = false): List<ResidentialLocationRollCount> =
