@@ -3,13 +3,12 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
-import com.github.tomakehurst.wiremock.client.WireMock.anyUrl
 import com.github.tomakehurst.wiremock.client.WireMock.equalToJson
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.post
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching
 import com.github.tomakehurst.wiremock.http.HttpHeader
 import com.github.tomakehurst.wiremock.http.HttpHeaders
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeQuery
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeSearch
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Matcher
@@ -64,27 +63,17 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
     if (returnResult) {
       result = result.copy(
         content = locations.mapIndexed { index, location ->
-          Prisoner(
-            prisonerNumber = "A${index.toString().padStart(4, '0')}AA",
-            firstName = "Firstname-$index",
-            lastName = "Surname-$index",
+          createPrisoner(
             prisonId = prisonId,
-            prisonName = prisonId,
             cellLocation = location,
-            gender = "MALE",
-            status = LocationStatus.ACTIVE.name,
-            lastMovementTypeCode = "ADM",
-            inOutStatus = "IN",
-            csra = "High",
-            category = "C",
-            alerts = emptyList(),
+            index = index,
           )
         },
       )
     }
 
     stubFor(
-      post(anyUrl())
+      post(urlPathMatching("/attribute-search"))
         .withRequestBody(
           equalToJson(requestBody, true, false),
         )
@@ -96,4 +85,43 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
         ),
     )
   }
+
+  fun stubAllPrisonersInPrison(
+    prisonId: String,
+  ) {
+    var result = SearchResult(
+      content = listOf(
+        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-001", index = 1000, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-002", index = 1001, inOutStatus = "OUT", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-003", index = 1002, inOutStatus = "IN", status = "ACTIVE IN"),
+      ),
+    )
+
+    stubFor(
+      get(urlPathMatching("/prisoner-search/prison/$prisonId"))
+        .willReturn(
+          aResponse()
+            .withHeader("Content-Type", "application/json")
+            .withBody(mapper.writeValueAsBytes(result))
+            .withStatus(200),
+        ),
+    )
+  }
 }
+
+fun createPrisoner(prisonId: String, cellLocation: String, index: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN") =
+  Prisoner(
+    prisonerNumber = "A${index.toString().padStart(4, '0')}AA",
+    firstName = "Firstname-$index",
+    lastName = "Surname-$index",
+    prisonId = prisonId,
+    prisonName = prisonId,
+    cellLocation = cellLocation,
+    gender = "MALE",
+    status = status,
+    lastMovementTypeCode = "ADM",
+    inOutStatus = inOutStatus,
+    csra = "High",
+    category = "C",
+    alerts = emptyList(),
+  )

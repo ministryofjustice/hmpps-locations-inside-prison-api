@@ -269,7 +269,7 @@ abstract class Location(
 
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>().filter { !it.isPermanentlyDeactivated() }
 
-  fun leafResidentialLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>().filter { !it.isPermanentlyDeactivated() && !it.isStructural() && !it.isArea() }
+  private fun leafResidentialLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>().filter { !it.isPermanentlyDeactivated() && !it.isStructural() && !it.isArea() }
 
   fun findAllLeafLocations(): List<Location> {
     val leafLocations = mutableListOf<Location>()
@@ -425,7 +425,7 @@ abstract class Location(
       locationCode = getCode(),
       locationType = getDerivedLocationType(),
       fullLocationPath = getPathHierarchy(),
-      localName = if (this is Cell) {
+      localName = if (isCell()) {
         getCode()
       } else {
         formatLocation(localName ?: getCode())
@@ -433,7 +433,7 @@ abstract class Location(
       prisoners = mapOfPrisoners[getPathHierarchy()] ?: emptyList(),
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       status = getStatus(),
-      isAResidentialCell = this is Cell,
+      isLeafLevel = isLeafLevel(),
       subLocations = this.childLocations.filter { !it.isPermanentlyDeactivated() }
         .filterIsInstance<ResidentialLocation>()
         .map {

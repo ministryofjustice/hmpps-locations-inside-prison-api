@@ -11,6 +11,7 @@ api:
       oauth: http://localhost:8090/auth
       prisoner-search: http://localhost:8094
       prison-register: http://localhost:8095
+      prison-api: http://localhost:8096
 
 spring:
   datasource:
