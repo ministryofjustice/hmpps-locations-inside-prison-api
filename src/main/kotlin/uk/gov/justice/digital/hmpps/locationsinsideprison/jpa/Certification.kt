@@ -50,3 +50,9 @@ class Certification(
     return "Certification(certified=$certified, capacityOfCertifiedCell=$capacityOfCertifiedCell)"
   }
 }
+
+fun getCertifiedSummary(certification: Certification?) = if (certification?.certified == true) {
+  "Certified"
+} else {
+  "Uncertified"
+}

@@ -173,14 +173,6 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "isResidential": true,
                 "numberOfCellLocations": 3
               },
-              "latestHistory": [
-                {
-                  "attribute": "Comments",
-                  "newValue": "A New Comment",
-                  "amendedBy": "$EXPECTED_USERNAME",
-                  "amendedDate": "$now"
-                }
-              ],
               "topLevelLocationType": "Wings",
                "locationHierarchy": [
                   {

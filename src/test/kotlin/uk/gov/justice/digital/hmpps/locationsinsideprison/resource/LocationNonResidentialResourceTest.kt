@@ -268,16 +268,6 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                  ],
                  "changeHistory": [
                     {
-                      "attribute": "Code",
-                      "oldValue": "VISIT",
-                      "newValue": "MEDICAL"
-                    },
-                    {
-                      "attribute": "Location Type",
-                      "oldValue": "Visits",
-                      "newValue": "Appointments"
-                    },
-                    {
                       "attribute": "Usage",
                       "oldValue": "VISIT"
                     },
@@ -286,7 +276,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                       "newValue": "APPOINTMENT"
                     },
                     {
-                      "attribute": "Non Residential Capacity",
+                      "attribute": "Non residential capacity",
                       "newValue": "20"
                     }
                   ]
@@ -482,16 +472,6 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                  ],
                  "changeHistory": [
                     {
-                      "attribute": "Code",
-                      "oldValue": "VISIT",
-                      "newValue": "MEDICAL"
-                    },
-                    {
-                      "attribute": "Location Type",
-                      "oldValue": "Visits",
-                      "newValue": "Appointments"
-                    },
-                    {
                       "attribute": "Usage",
                       "oldValue": "VISIT"
                     },
@@ -500,7 +480,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                       "newValue": "APPOINTMENT"
                     },
                     {
-                      "attribute": "Non Residential Capacity",
+                      "attribute": "Non residential capacity",
                       "newValue": "20"
                     }
                   ]
