@@ -558,7 +558,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           )
         }
 
-        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true&includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -587,6 +587,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "certified": true,
                 "capacityOfCertifiedCell": 2
               },
+              "changeHistory": [
+                {
+                  "attribute": "Deactivation reason",
+                  "newValue": "Damage - Window smashed"
+                },
+                {
+                  "attribute": "Status",
+                  "oldValue": "Active",
+                  "newValue": "Inactive"
+                }
+              ],
               "childLocations": [
                 {
                   "prisonId": "MDI",
@@ -709,6 +720,37 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-Z",
           )
         }
+
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "key": "${cell1.getKey()}",
+                "deactivatedReason": "OTHER",
+                "deactivationReasonDescription": "Not Needed",
+               "changeHistory": [
+                  {
+                    "attribute": "Deactivation reason",
+                    "newValue": "Other - Not Needed"
+                  },
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Inactive"
+                  },
+                  {
+                    "attribute": "Used for",
+                    "newValue": "Standard accommodation",
+                    "amendedBy": "A_TEST_USER"
+                  }
+                ]
+              }
+            """.trimIndent(),
+          )
       }
 
       @Test
@@ -740,7 +782,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           )
         }
 
-        webTestClient.get().uri("/locations/${cell1.id}?includeChildren=true")
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -763,7 +805,28 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "deactivationReasonDescription": "Spiders",
                 "planetFmReference": "334423",
                 "isResidential": true,
-                "key": "MDI-Z-1-001"
+                "key": "MDI-Z-1-001",
+                "changeHistory": [
+                    {
+                      "attribute": "Deactivation reason",
+                      "oldValue": "Damage",
+                      "newValue": "Mothballed - Spiders"
+                    },
+                    {
+                      "attribute": "Deactivation reason",
+                      "newValue": "Damage"
+                    },
+                    {
+                      "attribute": "Status",
+                      "oldValue": "Active",
+                      "newValue": "Inactive"
+                    },
+                    {
+                      "attribute": "Used for",
+                      "newValue": "Standard accommodation",
+                      "amendedBy": "A_TEST_USER"
+                    }
+                  ]
             }
           """,
             false,
@@ -778,7 +841,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Water damage")))
           .exchange()
           .expectStatus().isOk
 
@@ -799,7 +862,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           )
         }
 
-        webTestClient.get().uri("/locations/${cell1.id}?includeChildren=true")
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -822,7 +885,28 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "deactivationReasonDescription": "Poor state",
                 "planetFmReference": "334423",
                 "isResidential": true,
-                "key": "MDI-Z-1-001"
+                "key": "MDI-Z-1-001",
+              "changeHistory": [
+                {
+                  "attribute": "Deactivation reason",
+                  "oldValue": "Damage - Water damage",
+                  "newValue": "Other - Poor state"
+                },
+                {
+                  "attribute": "Deactivation reason",
+                  "newValue": "Damage - Water damage"
+                },
+                {
+                  "attribute": "Status",
+                  "oldValue": "Active",
+                  "newValue": "Inactive"
+                },
+                {
+                  "attribute": "Used for",
+                  "newValue": "Standard accommodation",
+                  "amendedBy": "A_TEST_USER"
+                }
+              ]
             }
           """,
             false,
@@ -913,7 +997,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           )
         }
 
-        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true&includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -935,6 +1019,22 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "certification": {
                 "capacityOfCertifiedCell": 4
               },
+              "changeHistory": [
+                {
+                  "attribute": "Status",
+                  "oldValue": "Inactive",
+                  "newValue": "Active"
+                },
+                {
+                  "attribute": "Deactivation reason",
+                  "newValue": "Mothballed"
+                },
+                {
+                  "attribute": "Status",
+                  "oldValue": "Active",
+                  "newValue": "Inactive"
+                }
+              ],
               "childLocations": [
                 {
                   "prisonId": "MDI",
@@ -972,7 +1072,23 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "active": true,
                       "isResidential": true,
-                      "key": "MDI-Z-1-001"
+                      "key": "MDI-Z-1-001",
+                      "changeHistory": [
+                        {
+                          "attribute": "Status",
+                          "oldValue": "Inactive",
+                          "newValue": "Active"
+                        },
+                        {
+                          "attribute": "Deactivation reason",
+                          "newValue": "Mothballed"
+                        },
+                        {
+                          "attribute": "Used for",
+                          "newValue": "Standard accommodation",
+                          "amendedBy": "A_TEST_USER"
+                        }
+                      ]
                     },
                     {
                       "prisonId": "MDI",
@@ -1066,7 +1182,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           )
         }
 
-        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true&includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -1125,7 +1241,28 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "accommodationTypes":["NORMAL_ACCOMMODATION"],
                       "active": true,
                       "isResidential": true,
-                      "key": "MDI-Z-1-001"
+                      "key": "MDI-Z-1-001",
+                      "changeHistory": [
+                        {
+                          "attribute": "Status",
+                          "oldValue": "Inactive",
+                          "newValue": "Active"
+                        },
+                        {
+                          "attribute": "Deactivation reason",
+                          "newValue": "Damage"
+                        },
+                        {
+                          "attribute": "Status",
+                          "oldValue": "Active",
+                          "newValue": "Inactive"
+                        },
+                        {
+                          "attribute": "Used for",
+                          "newValue": "Standard accommodation",
+                          "amendedBy": "A_TEST_USER"
+                        }
+                      ]
                     },
                     {
                       "prisonId": "MDI",

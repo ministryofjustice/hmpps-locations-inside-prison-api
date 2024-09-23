@@ -206,6 +206,14 @@ class Cell(
     setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock)
     certifyCell(userOrSystemInContext, clock)
 
+    addHistory(
+      LocationAttribute.CONVERTED_CELL_TYPE,
+      this.getConvertedCellTypeSummary(),
+      "Cell",
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
+
     convertedCellType = null
     otherConvertedCellType = null
 

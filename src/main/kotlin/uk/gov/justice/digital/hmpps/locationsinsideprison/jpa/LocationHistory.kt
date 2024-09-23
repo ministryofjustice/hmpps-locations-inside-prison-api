@@ -89,7 +89,7 @@ enum class LocationAttribute(
   CERTIFIED(description = "Certification", display = true),
   STATUS(description = "Status", display = true),
   DEACTIVATION_REASON(description = "Deactivation reason", display = true),
-  CONVERTED_CELL_TYPE(description = "Cell type", display = true),
+  CONVERTED_CELL_TYPE(description = "Converted cell type", display = true),
 
   CODE(description = "Code"),
   LOCATION_TYPE(description = "Location type"),

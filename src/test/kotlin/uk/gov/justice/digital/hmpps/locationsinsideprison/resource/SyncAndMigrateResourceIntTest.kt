@@ -905,7 +905,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "amendedBy": "user"
                 },
                 {
-                  "attribute": "Cell type",
+                  "attribute": "Converted cell type",
                   "newValue": "Holding room",
                   "amendedBy": "user"
                 }

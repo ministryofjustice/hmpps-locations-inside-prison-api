@@ -319,8 +319,8 @@ abstract class Location(
       val locationHistory = LocationHistory(
         location = this,
         attributeName = attributeName,
-        oldValue = oldValue,
-        newValue = newValue,
+        oldValue = if (oldValue.isNullOrBlank()) null else oldValue,
+        newValue = if (newValue.isNullOrBlank()) null else newValue,
         amendedBy = amendedBy,
         amendedDate = amendedDate,
       )
@@ -402,7 +402,7 @@ abstract class Location(
       } else {
         null
       },
-      changeHistory = if (includeHistory) history.filter { it.attributeName.display }.map { it.toDto() }.sortedByDescending { it.amendedDate } else null,
+      changeHistory = if (includeHistory) history.filter { it.attributeName.display }.sortedByDescending { it.amendedDate }.sortedByDescending { it.id }.map { it.toDto() } else null,
       deactivatedBy = deactivatedBy,
     )
   }

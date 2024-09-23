@@ -1584,6 +1584,46 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-Z",
           )
         }
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "key": "${cell1.getKey()}",
+                "changeHistory": [
+                  {
+                    "attribute": "Certification",
+                    "oldValue": "Certified",
+                    "newValue": "Uncertified"
+                  },
+                  {
+                    "attribute": "Working capacity",
+                    "oldValue": "2"
+                  },
+                  {
+                    "attribute": "Max capacity",
+                    "oldValue": "2"
+                  },
+                  {
+                    "attribute": "Used for",
+                    "oldValue": "Standard accommodation"
+                  },
+                  {
+                    "attribute": "Converted cell type",
+                    "newValue": "Other - Taning room"
+                  },
+                  {
+                    "attribute": "Used for",
+                    "newValue": "Standard accommodation",
+                    "amendedBy": "A_TEST_USER"
+                  }
+                ]
+              }
+            """.trimIndent(),
+          )
       }
 
       @Test
@@ -1609,6 +1649,25 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-Z",
           )
         }
+
+        webTestClient.get().uri("/locations/${store.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "key": "${store.getKey()}",
+                "changeHistory": [
+                  {
+                    "attribute": "Converted cell type",
+                    "newValue": "Store room - Store Room"
+                  }
+                ]
+              }
+            """.trimIndent(),
+          )
       }
     }
   }
@@ -1817,6 +1876,80 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-Z",
           )
         }
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "key": "${cell1.getKey()}",
+                "changeHistory": [
+                  {
+                    "attribute": "Converted cell type",
+                    "oldValue": "Other",
+                    "newValue": "Cell"
+                  },
+                  {
+                    "attribute": "Certification",
+                    "oldValue": "Uncertified",
+                    "newValue": "Certified"
+                  },
+                  {
+                    "attribute": "Working capacity",
+                    "newValue": "2"
+                  },
+                  {
+                    "attribute": "Max capacity",
+                    "newValue": "2"
+                  },
+                  {
+                    "attribute": "Cell type",
+                    "newValue": "Isolation cell for communicable diseases"
+                  },
+                  {
+                    "attribute": "Cell type",
+                    "newValue": "Accessible cell"
+                  },
+                  {
+                    "attribute": "Used for",
+                    "newValue": "Standard accommodation"
+                  },
+                  {
+                    "attribute": "Converted cell type",
+                    "newValue": "Other",
+                    "amendedBy": "Aleman"
+                  },
+                  {
+                    "attribute": "Certification",
+                    "oldValue": "Certified",
+                    "newValue": "Uncertified"
+                  },
+                  {
+                    "attribute": "Used for",
+                    "oldValue": "Standard accommodation",
+                    "amendedBy": "Aleman"
+                  },
+                  {
+                    "attribute": "Max capacity",
+                    "oldValue": "2",
+                    "amendedBy": "Aleman"
+                  },
+                  {
+                    "attribute": "Working capacity",
+                    "oldValue": "2",
+                    "amendedBy": "Aleman"
+                  },
+                  {
+                    "attribute": "Used for",
+                    "newValue": "Standard accommodation",
+                    "amendedBy": "A_TEST_USER"
+                  }
+                ]
+              }
+            """.trimIndent(),
+          )
       }
     }
 
