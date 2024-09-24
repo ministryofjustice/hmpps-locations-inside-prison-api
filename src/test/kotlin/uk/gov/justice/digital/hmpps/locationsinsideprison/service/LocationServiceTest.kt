@@ -16,7 +16,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationHistoryRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
@@ -33,7 +32,6 @@ class LocationServiceTest {
   private val nonResidentialLocationRepository: NonResidentialLocationRepository = mock()
   private val residentialLocationRepository: ResidentialLocationRepository = mock()
   private val signedOperationCapacityRepository: PrisonSignedOperationCapacityRepository = mock()
-  private val locationHistoryRepository: LocationHistoryRepository = mock()
   private val cellLocationRepository: CellLocationRepository = mock()
   private val prisonerLocationService: PrisonerLocationService = mock()
   private val prisonService: PrisonService = mock()
@@ -49,7 +47,6 @@ class LocationServiceTest {
     nonResidentialLocationRepository,
     residentialLocationRepository,
     signedOperationCapacityRepository,
-    locationHistoryRepository,
     cellLocationRepository,
     entityManager,
     prisonerLocationService,

@@ -121,15 +121,20 @@ class Cell(
 
   override fun isConvertedCell() = convertedCellType != null
 
+  private fun getConvertedCellTypeSummary() = listOfNotNull(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
+
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock) {
     addHistory(
       LocationAttribute.CONVERTED_CELL_TYPE,
-      this.convertedCellType?.description,
-      convertedCellType.description,
+      this.getConvertedCellTypeSummary(),
+      listOfNotNull(convertedCellType.description, otherConvertedCellType).joinToString(" - "),
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
     this.convertedCellType = convertedCellType
+    if (convertedCellType == ConvertedCellType.OTHER) {
+      this.otherConvertedCellType = otherConvertedCellType
+    }
 
     addHistory(
       LocationAttribute.LOCATION_TYPE,
@@ -146,18 +151,6 @@ class Cell(
       LocalDateTime.now(clock),
     )
     setAccommodationTypeForCell(AccommodationType.OTHER_NON_RESIDENTIAL, userOrSystemInContext, clock)
-
-    if (convertedCellType == ConvertedCellType.OTHER) {
-      addHistory(
-        LocationAttribute.OTHER_CONVERTED_CELL_TYPE,
-        accommodationType.description,
-        AccommodationType.OTHER_NON_RESIDENTIAL.description,
-        userOrSystemInContext,
-        LocalDateTime.now(clock),
-      )
-
-      this.otherConvertedCellType = otherConvertedCellType
-    }
 
     addHistory(
       LocationAttribute.CAPACITY,
@@ -215,20 +208,13 @@ class Cell(
 
     addHistory(
       LocationAttribute.CONVERTED_CELL_TYPE,
-      this.convertedCellType?.description,
-      null,
+      this.getConvertedCellTypeSummary(),
+      "Cell",
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
-    convertedCellType = null
 
-    addHistory(
-      LocationAttribute.OTHER_CONVERTED_CELL_TYPE,
-      this.otherConvertedCellType,
-      null,
-      userOrSystemInContext,
-      LocalDateTime.now(clock),
-    )
+    convertedCellType = null
     otherConvertedCellType = null
 
     this.updatedBy = userOrSystemInContext
@@ -291,18 +277,20 @@ class Cell(
   }
 
   fun certifyCell(userOrSystemInContext: String, clock: Clock) {
-    addHistory(
-      LocationAttribute.CERTIFIED,
-      certification?.certified?.toString(),
-      true.toString(),
-      userOrSystemInContext,
-      LocalDateTime.now(clock),
-    )
+    val oldCertification = getCertifiedSummary(this.certification)
     if (certification != null) {
       certification?.setCertification(true, certification?.capacityOfCertifiedCell ?: 0)
     } else {
       certification = Certification(certified = true, capacityOfCertifiedCell = 0)
     }
+
+    addHistory(
+      LocationAttribute.CERTIFIED,
+      oldCertification,
+      getCertifiedSummary(this.certification),
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
 
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
@@ -311,8 +299,8 @@ class Cell(
   fun deCertifyCell(userOrSystemInContext: String, clock: Clock) {
     addHistory(
       LocationAttribute.CERTIFIED,
-      certification?.certified?.toString(),
-      false.toString(),
+      getCertifiedSummary(this.certification),
+      "Uncertified",
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
@@ -472,14 +460,12 @@ class Cell(
     }
 
     upsert.certification?.let {
-      with(upsert.certification) {
-        addHistory(
-          LocationAttribute.CERTIFIED,
-          certification?.certified?.toString(),
-          certified.toString(),
-          userOrSystemInContext,
-          LocalDateTime.now(clock),
-        )
+      with(it) {
+        val oldCertification = if (certified) {
+          "Certified"
+        } else {
+          "Uncertified"
+        }
         addHistory(
           LocationAttribute.CERTIFIED_CAPACITY,
           certification?.capacityOfCertifiedCell?.toString(),
@@ -492,6 +478,14 @@ class Cell(
         } else {
           certification = Certification(certified = certified, capacityOfCertifiedCell = capacityOfCertifiedCell)
         }
+
+        addHistory(
+          LocationAttribute.CERTIFIED,
+          oldCertification,
+          getCertifiedSummary(certification),
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+        )
       }
     }
   }
