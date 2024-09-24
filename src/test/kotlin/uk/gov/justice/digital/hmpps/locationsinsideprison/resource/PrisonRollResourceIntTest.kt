@@ -145,14 +145,24 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
           .expectBody().json(
             """ 
               {
-                "prisonId": "MDI",
-                "numUnlockRollToday": 3,
-                "numCurrentPopulation": 2,
-                "numArrivedToday": 1,
-                "numInReception": 0,
-                "numStillToArrive": 2,
-                "numOutToday": 2,
-                "numNoCellAllocated": 0,
+              "locationHierarchy": [
+                {
+                  "id": "${wingZ.id!!}",
+                  "prisonId": "MDI",
+                  "code": "Z",
+                  "type": "WING",
+                  "pathHierarchy": "Z",
+                  "level": 1
+                },
+                {
+                  "id": "${landingZ1.id!!}",
+                  "prisonId": "MDI",
+                  "code": "1",
+                  "type": "LANDING",
+                  "pathHierarchy": "Z-1",
+                  "level": 2
+                }
+              ],
                 "totals": {
                   "bedsInUse": 2,
                   "currentlyInCell": 2,
