@@ -4,6 +4,7 @@ enum class LocationStatus(
   val description: String,
 ) {
   ACTIVE("Active"),
-  INACTIVE("In-Active"),
-  NON_RESIDENTIAL("Non-Residential"),
+  INACTIVE("Inactive"),
+  NON_RESIDENTIAL("Non-residential"),
+  ARCHIVED("Archived"),
 }

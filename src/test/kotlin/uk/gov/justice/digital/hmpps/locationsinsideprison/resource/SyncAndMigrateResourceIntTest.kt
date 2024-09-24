@@ -818,25 +818,18 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         assertThat(resultLocation.proposedReactivationDate).isEqualTo(migrateRequest.proposedReactivationDate)
 
         assertThat(resultLocation.changeHistory).isNotNull
-        assertThat(resultLocation.changeHistory).hasSize(3)
+        assertThat(resultLocation.changeHistory).hasSize(2)
 
-        val firstChange = resultLocation.changeHistory?.get(0)
-        assertThat(firstChange?.attribute).isEqualTo("Local Name")
-        assertThat(firstChange?.newValue).isEqualTo("A New Cell")
-        assertThat(firstChange?.amendedBy).isEqualTo("user2")
-        assertThat(firstChange?.amendedDate).isEqualTo(LocalDateTime.now(clock).minusYears(2))
+        val newestChange = resultLocation.changeHistory?.get(0)
+        assertThat(newestChange?.attribute).isEqualTo("Used for")
+        assertThat(newestChange?.newValue).isEqualTo("Standard accommodation")
+        assertThat(newestChange?.amendedBy).isEqualTo("user")
 
-        val secondChange = resultLocation.changeHistory?.get(1)
-        assertThat(secondChange?.attribute).isEqualTo("Comments")
-        assertThat(secondChange?.oldValue).isEqualTo("Old comment")
-        assertThat(secondChange?.newValue).isEqualTo("This is a new cell")
-        assertThat(secondChange?.amendedBy).isEqualTo("user1")
-        assertThat(secondChange?.amendedDate).isEqualTo(LocalDateTime.now(clock).minusYears(1))
-
-        val thirdChange = resultLocation.changeHistory?.get(2)
-        assertThat(thirdChange?.attribute).isEqualTo("Used For")
-        assertThat(thirdChange?.newValue).isEqualTo("Standard accommodation")
-        assertThat(thirdChange?.amendedBy).isEqualTo("user")
+        val olderChange = resultLocation.changeHistory?.get(1)
+        assertThat(olderChange?.attribute).isEqualTo("Local name")
+        assertThat(olderChange?.newValue).isEqualTo("A New Cell")
+        assertThat(olderChange?.amendedBy).isEqualTo("user2")
+        assertThat(olderChange?.amendedDate).isEqualTo(LocalDateTime.now(clock).minusYears(2))
       }
 
       @Test
@@ -890,42 +883,29 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
               "changeHistory": [
                 {
-                  "attribute": "Local Name",
+                  "attribute": "Local name",
                   "newValue": "A New Cell",
                   "amendedBy": "user2",
                   "amendedDate": "${LocalDateTime.now(clock).minusYears(2)}"
                 },
                 {
-                  "attribute": "Comments",
-                  "oldValue": "Old comment",
-                  "newValue": "This is a new cell",
-                  "amendedBy": "user1",
-                  "amendedDate": "${LocalDateTime.now(clock).minusYears(1)}"
-                },
-                {
-                  "attribute": "Location Type",
-                  "oldValue": "CELL",
-                  "newValue": "ROOM",
-                  "amendedBy": "user"
-                },
-                {
-                  "attribute": "Working Capacity",
+                  "attribute": "Working capacity",
                   "oldValue": "1",
                   "amendedBy": "user"
                 },
                 {
-                  "attribute": "Max Capacity",
+                  "attribute": "Max capacity",
                   "oldValue": "1",
                   "amendedBy": "user"
                 },
                 {
-                  "attribute": "Certified",
-                  "oldValue": "true",
-                  "newValue": "false",
+                  "attribute": "Certification",
+                  "oldValue": "Certified",
+                  "newValue": "Uncertified",
                   "amendedBy": "user"
                 },
                 {
-                  "attribute": "Converted Cell Type",
+                  "attribute": "Converted cell type",
                   "newValue": "Holding room",
                   "amendedBy": "user"
                 }
