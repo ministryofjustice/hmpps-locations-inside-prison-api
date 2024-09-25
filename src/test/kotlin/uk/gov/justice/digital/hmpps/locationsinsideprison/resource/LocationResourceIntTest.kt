@@ -11,14 +11,13 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
-
-const val EXPECTED_USERNAME = "A_TEST_USER"
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResourceIntTest : CommonDataTestBase() {

@@ -21,11 +21,11 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springframework.boot:spring-boot-starter-validation")
 
-  implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:4.3.2")
+  implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:4.4.4")
   implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.7.0")
 
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
-  implementation("com.zaxxer:HikariCP:5.1.0")
+  implementation("com.zaxxer:HikariCP:6.0.0")
   runtimeOnly("org.postgresql:postgresql")
   implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
