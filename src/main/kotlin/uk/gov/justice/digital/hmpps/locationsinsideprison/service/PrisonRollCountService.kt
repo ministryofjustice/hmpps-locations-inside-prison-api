@@ -10,6 +10,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
@@ -45,21 +46,26 @@ class PrisonRollCountService(
     )
   }
 
-  fun getPrisonCellRollCount(prisonId: String, locationId: UUID): PrisonRollCount {
-    val movements = prisonApiService.getMovementTodayInAndOutOfPrison(prisonId)
+  fun getPrisonCellRollCount(prisonId: String, locationId: UUID): PrisonCellRollCount {
     val currentLocation = residentialLocationRepository.findById(locationId).getOrNull() ?: throw LocationNotFoundException(locationId.toString())
+    if (currentLocation.isPermanentlyDeactivated()) {
+      throw LocationNotFoundException("${currentLocation.getKey()} : location not found or permanently deactivated")
+    }
+    if (!currentLocation.isLocationShownOnResidentialSummary()) {
+      throw LocationNotFoundException("${currentLocation.getKey()} : location cannot be displayed as not a residential location")
+    }
 
     val listOfPrisoners = prisonerLocationService.prisonersInLocations(prisonId, currentLocation.cellLocations())
     val mapOfPrisoners = listOfPrisoners.filter { it.cellLocation != null }.groupBy { it.cellLocation!! }
 
-    return prisonRollCount(
-      prisonId,
-      mapOfPrisoners,
-      listOfPrisoners,
-      movements,
-      includeCells = true,
-      listOf(currentLocation),
+    val locations = currentLocation.toResidentialPrisonerLocation(mapOfPrisoners)
+
+    val prisonRollCount = PrisonCellRollCount(
+      locationHierarchy = currentLocation.getHierarchy(),
+      totals = locationRollCount(listOf(locations)),
+      locations = removeLocations(listOf(locations), includeCells = true),
     )
+    return prisonRollCount
   }
 
   private fun prisonRollCount(
@@ -88,18 +94,21 @@ class PrisonRollCountService(
       numInReception = mapOfPrisoners["RECP"]?.size ?: 0,
       numStillToArrive = movements.enRouteToday,
       numNoCellAllocated = mapOfPrisoners["CSWAP"]?.size ?: 0,
-      totals = LocationRollCount(
-        bedsInUse = locations.sumOf { it.getBedsInUse() },
-        currentlyInCell = locations.sumOf { it.getCurrentlyInCell() },
-        currentlyOut = locations.sumOf { it.getCurrentlyOut() },
-        workingCapacity = locations.sumOf { it.getWorkingCapacity() },
-        netVacancies = locations.sumOf { it.getWorkingCapacity() - it.getCurrentlyInCell() },
-        outOfOrder = locations.sumOf { it.getOutOfOrder() },
-      ),
+      totals = locationRollCount(locations),
       locations = removeLocations(locations, includeCells = includeCells),
     )
     return prisonRollCount
   }
+
+  private fun locationRollCount(locations: List<ResidentialPrisonerLocation>) =
+    LocationRollCount(
+      bedsInUse = locations.sumOf { it.getBedsInUse() },
+      currentlyInCell = locations.sumOf { it.getCurrentlyInCell() },
+      currentlyOut = locations.sumOf { it.getCurrentlyOut() },
+      workingCapacity = locations.sumOf { it.getWorkingCapacity() },
+      netVacancies = locations.sumOf { it.getWorkingCapacity() - it.getCurrentlyInCell() },
+      outOfOrder = locations.sumOf { it.getOutOfOrder() },
+    )
 }
 
 data class ResidentialPrisonerLocation(
@@ -195,6 +204,19 @@ data class PrisonRollCount(
   val numOutToday: Int,
   @Schema(description = "No cell allocated", required = true)
   val numNoCellAllocated: Int,
+
+  @Schema(description = "Totals", required = true)
+  val totals: LocationRollCount,
+
+  @Schema(description = "Residential location roll count summary", required = true)
+  val locations: List<ResidentialLocationRollCount>,
+)
+
+@Schema(description = "Establishment Roll Count for Cells")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class PrisonCellRollCount(
+  @Schema(description = "Parent locations, top to bottom", required = true)
+  val locationHierarchy: List<LocationSummary>? = null,
 
   @Schema(description = "Totals", required = true)
   val totals: LocationRollCount,

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonCellRollCount
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollCount
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollCountService
 import java.util.*
@@ -109,6 +110,6 @@ class PrisonRollResource(
     @Schema(description = "Location ID of parent of the cells", required = true, example = "2475f250-434a-4257-afe7-b911f1773a4d")
     @PathVariable
     locationId: UUID,
-  ): PrisonRollCount =
+  ): PrisonCellRollCount =
     prisonRollCountService.getPrisonCellRollCount(prisonId, locationId)
 }
