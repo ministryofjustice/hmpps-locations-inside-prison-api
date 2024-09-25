@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository
 
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.Companion.clock
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
@@ -13,7 +14,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EXPECTED_USERNAME
 import java.time.LocalDateTime
 
 fun buildResidentialLocation(

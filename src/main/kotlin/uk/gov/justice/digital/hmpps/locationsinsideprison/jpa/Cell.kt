@@ -124,18 +124,7 @@ class Cell(
   private fun getConvertedCellTypeSummary() = listOfNotNull(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock) {
-    addHistory(
-      LocationAttribute.CONVERTED_CELL_TYPE,
-      this.getConvertedCellTypeSummary(),
-      listOfNotNull(convertedCellType.description, otherConvertedCellType).joinToString(" - "),
-      userOrSystemInContext,
-      LocalDateTime.now(clock),
-    )
-    this.convertedCellType = convertedCellType
-    if (convertedCellType == ConvertedCellType.OTHER) {
-      this.otherConvertedCellType = otherConvertedCellType
-    }
-
+    updateNonResidentialCellType(convertedCellType, otherConvertedCellType, userOrSystemInContext, clock)
     addHistory(
       LocationAttribute.LOCATION_TYPE,
       locationType.name,
@@ -174,6 +163,20 @@ class Cell(
 
     recordRemovedUsedForTypes(usedFor.map { it.usedFor }.toSet(), userOrSystemInContext, clock)
     usedFor.clear()
+  }
+
+  fun updateNonResidentialCellType(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock) {
+    addHistory(
+      LocationAttribute.CONVERTED_CELL_TYPE,
+      this.getConvertedCellTypeSummary(),
+      listOfNotNull(convertedCellType.description, otherConvertedCellType).joinToString(" - "),
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
+    this.convertedCellType = convertedCellType
+    if (convertedCellType == ConvertedCellType.OTHER) {
+      this.otherConvertedCellType = otherConvertedCellType
+    }
 
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)

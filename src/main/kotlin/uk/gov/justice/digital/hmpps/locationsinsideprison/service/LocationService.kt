@@ -716,6 +716,30 @@ class LocationService(
   }
 
   @Transactional
+  fun updateNonResidentialCellType(
+    id: UUID,
+    convertedCellType: ConvertedCellType,
+    otherConvertedCellType: String? = null,
+  ): LocationDTO {
+    var nonResCellToUpdate = cellLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (!nonResCellToUpdate.isConvertedCell()) {
+      throw LocationNotFoundException("${nonResCellToUpdate.getKey()} is not a non-residential cell")
+    }
+
+    nonResCellToUpdate.updateNonResidentialCellType(
+      convertedCellType = convertedCellType,
+      otherConvertedCellType = otherConvertedCellType,
+      userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+      clock = clock,
+    )
+
+    trackLocationUpdate(nonResCellToUpdate, "Updated non-residential cell type")
+    return nonResCellToUpdate.toDto()
+  }
+
+  @Transactional
   fun convertToNonResidentialCell(
     id: UUID,
     convertedCellType: ConvertedCellType,
