@@ -307,6 +307,55 @@ class LocationResidentialResource(
     }
   }
 
+  @PutMapping("/{id}/update-non-res-cell")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Updates a non res cell type",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns updated location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun updateNonResidentialCellType(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    updateNonResCellTypeRequest: UpdateNonResCellTypeRequest,
+  ): Location {
+    return eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_AMENDED,
+    ) {
+      with(updateNonResCellTypeRequest) {
+        locationService.updateNonResidentialCellType(id, convertedCellType, otherConvertedCellType)
+      }
+    }
+  }
+
   @PutMapping("/{id}/convert-to-cell")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
@@ -373,6 +422,15 @@ class LocationResidentialResource(
     @Schema(description = "Cell type to convert to", example = "SHOWER", required = true)
     val convertedCellType: ConvertedCellType,
     @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false, maxLength = 255)
+    @field:Size(max = 255, message = "Description of other cell type must be no more than 255 characters")
+    val otherConvertedCellType: String? = null,
+  )
+
+  @Schema(description = "Request to update the type of a non-res cell location")
+  data class UpdateNonResCellTypeRequest(
+    @Schema(description = "Cell type to change to", example = "SHOWER", required = true)
+    val convertedCellType: ConvertedCellType,
+    @Schema(description = "When other, the cell type name", example = "Hot Tub", required = false, maxLength = 255)
     @field:Size(max = 255, message = "Description of other cell type must be no more than 255 characters")
     val otherConvertedCellType: String? = null,
   )

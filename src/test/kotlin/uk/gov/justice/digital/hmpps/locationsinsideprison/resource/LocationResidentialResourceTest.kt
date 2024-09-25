@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -1663,6 +1664,160 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   {
                     "attribute": "Converted cell type",
                     "newValue": "Store room - Store Room"
+                  }
+                ]
+              }
+            """.trimIndent(),
+          )
+      }
+    }
+  }
+
+  @DisplayName("PUT /locations/{id}/update-non-res-cell")
+  @Nested
+  inner class UpdateNonResCellType {
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/locations/${cell1.id}/update-non-res-cell")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/locations/${cell1.id}/update-non-res-cell")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "convertedCellType": "OFFICE" } """)
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/locations/${cell1.id}/update-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "convertedCellType": "OFFICE" } """)
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.put().uri("/locations/${cell1.id}/update-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "convertedCellType": "OFFICE" } """)
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.put().uri("/locations/${cell1.id}/update-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{}""")
+          .exchange()
+          .expectStatus().isEqualTo(400)
+      }
+
+      @Test
+      fun `cannot update non res cell as ID is not found`() {
+        webTestClient.put().uri("/locations/${java.util.UUID.randomUUID()}/update-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "convertedCellType": "OFFICE" } """)
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
+
+      @Test
+      fun `cannot update non res cell as is not a non res cell`() {
+        webTestClient.put().uri("/locations/${cell2.id!!}/update-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "convertedCellType": "OFFICE" } """)
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can update non-res cell type`() {
+        cell1.convertToNonResidentialCell(
+          convertedCellType = ConvertedCellType.OTHER,
+          otherConvertedCellType = "Playroom",
+          userOrSystemInContext = EXPECTED_USERNAME,
+          clock = clock,
+        )
+        repository.save(cell1)
+
+        val result = webTestClient.put().uri("/locations/${cell1.id}/update-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "convertedCellType": "OFFICE" } """)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(result.findByPathHierarchy("Z-1-001")!!.convertedCellType == ConvertedCellType.OFFICE)
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+          )
+        }
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "key": "${cell1.getKey()}",
+                "changeHistory": [
+                  {
+                    "attribute": "Converted cell type",
+                    "oldValue": "Other - Playroom",
+                    "newValue": "Office"
+                  },
+                  {
+                    "attribute": "Converted cell type",
+                    "newValue": "Other - Playroom"
+                  },
+                  {
+                    "attribute": "Certification",
+                    "oldValue": "Certified",
+                    "newValue": "Uncertified"
+                  },
+                  {
+                    "attribute": "Used for",
+                    "oldValue": "Standard accommodation"
+                  },
+                  {
+                    "attribute": "Max capacity",
+                    "oldValue": "2"
+                  },
+                  {
+                    "attribute": "Working capacity",
+                    "oldValue": "2"
+                  },
+                  {
+                    "attribute": "Used for",
+                    "newValue": "Standard accommodation"
                   }
                 ]
               }
