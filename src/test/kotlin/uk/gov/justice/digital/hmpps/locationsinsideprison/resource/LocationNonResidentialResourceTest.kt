@@ -270,11 +270,11 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                  "changeHistory": [
                     {
                       "attribute": "Usage",
-                      "oldValue": "VISIT"
+                      "oldValue": "Visit"
                     },
                     {
                       "attribute": "Usage",
-                      "newValue": "APPOINTMENT"
+                      "newValue": "Appointment"
                     },
                     {
                       "attribute": "Non residential capacity",
@@ -330,7 +330,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "changeHistory": [
                 {
                   "attribute": "Usage",
-                  "oldValue": "VISIT"
+                  "oldValue": "Visit"
                 }
               ]
             }
@@ -474,11 +474,11 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                  "changeHistory": [
                     {
                       "attribute": "Usage",
-                      "oldValue": "VISIT"
+                      "oldValue": "Visit"
                     },
                     {
                       "attribute": "Usage",
-                      "newValue": "APPOINTMENT"
+                      "newValue": "Appointment"
                     },
                     {
                       "attribute": "Non residential capacity",
@@ -534,7 +534,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "changeHistory": [
                 {
                   "attribute": "Usage",
-                  "oldValue": "VISIT"
+                  "oldValue": "Visit"
                 }
               ]
             }

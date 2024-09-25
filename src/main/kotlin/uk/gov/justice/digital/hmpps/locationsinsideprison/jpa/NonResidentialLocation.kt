@@ -148,14 +148,14 @@ class NonResidentialLocation(
     val newUsages = usage.map { it.usageType }.toSet()
 
     newUsages.subtract(oldUsages).forEach { newAttribute ->
-      addHistory(LocationAttribute.USAGE, null, newAttribute.name, updatedBy, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.USAGE, null, newAttribute.description, updatedBy, LocalDateTime.now(clock))
       usage.find { it.usageType == newAttribute }?.capacity?.let { capacity ->
         addHistory(LocationAttribute.NON_RESIDENTIAL_CAPACITY, null, capacity.toString(), updatedBy, LocalDateTime.now(clock))
       }
     }
 
     oldUsages.subtract(newUsages).forEach { removedAttribute ->
-      addHistory(LocationAttribute.USAGE, removedAttribute.name, null, updatedBy, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.USAGE, removedAttribute.description, null, updatedBy, LocalDateTime.now(clock))
     }
 
     newUsages.intersect(oldUsages).forEach { existingType ->

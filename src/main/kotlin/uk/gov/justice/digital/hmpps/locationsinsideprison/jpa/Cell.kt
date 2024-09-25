@@ -132,13 +132,6 @@ class Cell(
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
-    addHistory(
-      LocationAttribute.ACCOMMODATION_TYPE,
-      accommodationType.description,
-      AccommodationType.OTHER_NON_RESIDENTIAL.description,
-      userOrSystemInContext,
-      LocalDateTime.now(clock),
-    )
     setAccommodationTypeForCell(AccommodationType.OTHER_NON_RESIDENTIAL, userOrSystemInContext, clock)
 
     addHistory(
@@ -191,13 +184,6 @@ class Cell(
   }
 
   fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
-    addHistory(
-      LocationAttribute.ACCOMMODATION_TYPE,
-      this.accommodationType.description,
-      accommodationType.mapsTo.description,
-      userOrSystemInContext,
-      LocalDateTime.now(clock),
-    )
     setAccommodationTypeForCell(accommodationType.mapsTo, userOrSystemInContext, clock)
 
     usedForTypes?.forEach {
@@ -500,7 +486,7 @@ class Cell(
   ) {
     val oldAttributes = this.attributes.map { it.attributeValue }.toSet()
     oldAttributes.subtract(attributes).forEach { removedAttribute ->
-      addHistory(LocationAttribute.ATTRIBUTES, removedAttribute.name, null, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.ATTRIBUTES, removedAttribute.description, null, userOrSystemInContext, LocalDateTime.now(clock))
     }
   }
 
@@ -511,7 +497,7 @@ class Cell(
   ) {
     val oldSpecialistCellTypes = this.specialistCellTypes.map { it.specialistCellType }.toSet()
     oldSpecialistCellTypes.subtract(specialistCellTypes).forEach { removedSpecialistCellType ->
-      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, removedSpecialistCellType.name, null, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, removedSpecialistCellType.description, null, userOrSystemInContext, LocalDateTime.now(clock))
     }
   }
 
@@ -522,7 +508,7 @@ class Cell(
   ) {
     val oldUsedFor = this.usedFor.map { it.usedFor }.toSet()
     oldUsedFor.subtract(usedFor).forEach { removedUsedFor ->
-      addHistory(LocationAttribute.USED_FOR, removedUsedFor.name, null, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.USED_FOR, removedUsedFor.description, null, userOrSystemInContext, LocalDateTime.now(clock))
     }
   }
 

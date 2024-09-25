@@ -121,8 +121,8 @@ open class ResidentialLocation(
 
     addHistory(
       LocationAttribute.RESIDENTIAL_HOUSING_TYPE,
-      this.residentialHousingType.name,
-      upsert.residentialHousingType?.name,
+      this.residentialHousingType.description,
+      upsert.residentialHousingType?.description,
       upsert.lastUpdatedBy,
       LocalDateTime.now(clock),
     )
