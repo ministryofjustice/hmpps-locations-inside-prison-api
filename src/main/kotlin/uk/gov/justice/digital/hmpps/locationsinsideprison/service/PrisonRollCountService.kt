@@ -163,7 +163,7 @@ data class ResidentialPrisonerLocation(
 
   fun getCurrentlyOut(): Int = getCells().sumOf { it.prisoners?.filter { p -> p.inOutStatus == "OUT" }?.size ?: 0 }
 
-  fun getOutOfOrder(): Int = getCells().filter { it.status == LocationStatus.INACTIVE && it.deactivatedReason?.indicatesOutOfOrder == true }.size
+  fun getOutOfOrder(): Int = getCells().filter { it.status == LocationStatus.INACTIVE }.size
 
   private fun getCells(): List<ResidentialPrisonerLocation> {
     val leafLocations = mutableListOf<ResidentialPrisonerLocation>()
