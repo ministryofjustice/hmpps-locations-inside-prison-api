@@ -760,6 +760,19 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().is4xxClientError
       }
+
+      @Test
+      fun `cannot set a location to the same local name as another location`() {
+        assertThat(
+          webTestClient.put().uri("/locations/${landingZ2.id}/change-local-name")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(""" { "localName": "Landing 1"} """)
+            .exchange()
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(119)
+      }
     }
 
     @Nested
@@ -815,6 +828,27 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .returnResult().responseBody!!
 
         assertThat(locationChanged.localName).isNull()
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1",
+          )
+        }
+      }
+
+      @Test
+      fun `can update details to the same name`() {
+        val locationChanged = webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{  "localName": "${landingZ1.localName}" } """)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(locationChanged.localName).isEqualTo(landingZ1.localName)
 
         getDomainEvents(1).let {
           assertThat(it).hasSize(1)

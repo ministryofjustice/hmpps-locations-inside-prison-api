@@ -25,4 +25,5 @@ enum class ErrorCode(val errorCode: Int) {
   SignedOpCapCannotBeMoreThanMaXCap(116),
   MaxCapacityCannotBeBelowOccupancyLevel(117),
   OtherReasonNotProvidedForDeactivation(118),
+  DuplicateLocalNameInPrison(119),
 }

@@ -368,6 +368,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(DuplicateLocalNameForSamePrisonException::class)
+  fun handleDuplicateLocalNameForSamePrisonException(e: DuplicateLocalNameForSamePrisonException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Duplicate Local name: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.DuplicateLocalNameInPrison,
+          userMessage = "Local name already exists in this prison: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   companion object {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
@@ -392,3 +407,4 @@ class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location 
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
 class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")
 class LocationCannotBeResidentialException(key: String) : Exception("Location AccommodationType $key cannot be converted to residential")
+class DuplicateLocalNameForSamePrisonException(key: String, prisonId: String) : ValidationException("$key already the same local name in prison $prisonId")

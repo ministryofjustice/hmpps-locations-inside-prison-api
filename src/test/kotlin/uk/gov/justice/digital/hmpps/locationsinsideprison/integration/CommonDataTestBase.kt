@@ -89,12 +89,14 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     landingZ1 = repository.save(
       buildResidentialLocation(
         pathHierarchy = "Z-1",
+        localName = "Landing 1",
         locationType = LocationType.LANDING,
       ),
     )
     landingZ2 = repository.save(
       buildResidentialLocation(
         pathHierarchy = "Z-2",
+        localName = "Landing 2",
         locationType = LocationType.LANDING,
       ),
     )
