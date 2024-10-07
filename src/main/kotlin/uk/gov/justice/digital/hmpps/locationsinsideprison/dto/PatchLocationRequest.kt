@@ -65,9 +65,9 @@ data class PatchNonResidentialLocationRequest(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class UpdateLocationLocalNameRequest(
 
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = true)
+  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 30, message = "Description must be less than 31 characters")
-  val localName: String,
+  val localName: String? = null,
 
   @Schema(description = "Username of the staff updating the location", required = false)
   val updatedBy: String? = null,
