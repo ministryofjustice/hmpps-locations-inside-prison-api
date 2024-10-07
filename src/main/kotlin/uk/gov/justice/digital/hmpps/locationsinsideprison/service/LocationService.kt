@@ -48,6 +48,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeacti
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateLocalNameForSamePrisonException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
@@ -451,12 +452,23 @@ class LocationService(
       throw PermanentlyDeactivatedUpdateNotAllowedException(location.getKey())
     }
 
-    location.updateLocalName(
-      localName = updateLocationLocalNameRequest.localName,
-      userOrSystemInContext = updateLocationLocalNameRequest.updatedBy
-        ?: authenticationFacade.getUserOrSystemInContext(),
-      clock = clock,
-    )
+    with(updateLocationLocalNameRequest) {
+      if (localName != null) {
+        if (locationRepository.findAllByPrisonIdAndLocalName(
+            prisonId = location.prisonId,
+            localName = localName,
+          ).any { !it.isPermanentlyDeactivated() && it.id != id }
+        ) {
+          throw DuplicateLocalNameForSamePrisonException(key = location.getKey(), prisonId = location.prisonId)
+        }
+      }
+
+      location.updateLocalName(
+        localName = localName,
+        userOrSystemInContext = updatedBy ?: authenticationFacade.getUserOrSystemInContext(),
+        clock = clock,
+      )
+    }
 
     log.info("Location local name updated [${location.getKey()}")
     trackLocationUpdate(location, "Location local name updated")

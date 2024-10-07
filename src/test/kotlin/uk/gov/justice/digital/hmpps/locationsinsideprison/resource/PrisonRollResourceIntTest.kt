@@ -177,7 +177,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                     "locationType": "LANDING",
                     "locationCode": "1",
                     "fullLocationPath": "Z-1",
-                    "localName": "1",
+                    "localName": "Landing 1",
                     "certified": true,
                     "rollCount": {
                       "bedsInUse": 2,
@@ -329,7 +329,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                       "locationType": "LANDING",
                       "locationCode": "1",
                       "fullLocationPath": "Z-1",
-                      "localName": "1",
+                      "localName": "Landing 1",
                       "certified": true,
                       "rollCount": {
                         "bedsInUse": 2,
@@ -345,7 +345,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                       "locationType": "LANDING",
                       "locationCode": "2",
                       "fullLocationPath": "Z-2",
-                      "localName": "2",
+                      "localName": "Landing 2",
                       "certified": false,
                       "rollCount": {
                         "bedsInUse": 0,
@@ -449,7 +449,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                       "locationType": "LANDING",
                       "locationCode": "1",
                       "fullLocationPath": "Z-1",
-                      "localName": "1",
+                      "localName": "Landing 1",
                       "certified": true,
                       "rollCount": {
                         "bedsInUse": 2,
@@ -515,7 +515,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                       "locationType": "LANDING",
                       "locationCode": "2",
                       "fullLocationPath": "Z-2",
-                      "localName": "2",
+                      "localName": "Landing 2",
                       "certified": false,
                       "rollCount": {
                         "bedsInUse": 0,
