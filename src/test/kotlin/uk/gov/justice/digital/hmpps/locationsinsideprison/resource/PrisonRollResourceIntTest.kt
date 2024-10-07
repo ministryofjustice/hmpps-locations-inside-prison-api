@@ -327,9 +327,9 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                     {
                       "key": "MDI-Z-1",
                       "locationType": "LANDING",
-                      "locationCode": "Landing 1",
+                      "locationCode": "1",
                       "fullLocationPath": "Z-1",
-                      "localName": "1",
+                      "localName": "Landing 1",
                       "certified": true,
                       "rollCount": {
                         "bedsInUse": 2,

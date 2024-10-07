@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialL
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
@@ -854,6 +855,38 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           assertThat(it).hasSize(1)
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1",
+          )
+        }
+      }
+
+      @Test
+      fun `can update details of a local name for a duplicate if perm deactivated`() {
+        prisonerSearchMockServer.stubSearchByLocations(landingZ1.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${landingZ1.id}/deactivate/permanent")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
+          .exchange()
+          .expectStatus().isOk
+
+        val locationChanged = webTestClient.put().uri("/locations/${landingZ2.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{  "localName": "${landingZ1.localName}" } """)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(locationChanged.localName).isEqualTo(landingZ1.localName)
+
+        getDomainEvents(3).let {
+          assertThat(it).hasSize(3)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+            "location.inside.prison.amended" to "MDI-Z-2",
           )
         }
       }
