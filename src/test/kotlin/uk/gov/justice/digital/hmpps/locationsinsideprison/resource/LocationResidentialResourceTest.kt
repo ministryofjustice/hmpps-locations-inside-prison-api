@@ -705,7 +705,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     inner class Security {
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.patch().uri("/locations/${landingZ1.id}/change-local-name")
+        webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
           .exchange()
           .expectStatus().isUnauthorized
       }
@@ -889,6 +889,84 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-Z-2",
           )
         }
+      }
+    }
+  }
+
+  @DisplayName("GET /locations/{prisonId}/local-name/{localName}")
+  @Nested
+  inner class FindLocationByLocalNameTest {
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/${landingZ1.prisonId}/local-name/${landingZ1.localName}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/${landingZ1.prisonId}/local-name/${landingZ1.localName}")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/${landingZ1.prisonId}/local-name/${landingZ1.localName}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad localname data`() {
+        webTestClient.get().uri("/locations/${landingZ1.prisonId}/local-name/1234567890123456789012345678901")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `access client error bad prisonID data`() {
+        webTestClient.get().uri("/locations/XXXXXXXXXX/local-name/${landingZ1.localName}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `Does not return a location when not found`() {
+        webTestClient.get().uri("/locations/${landingZ1.prisonId}/local-name/WIBBLE")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can find a location by local name`() {
+        val foundLocation = webTestClient.get().uri("/locations/${landingZ1.prisonId}/local-name/${landingZ1.localName}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(foundLocation.getKey()).isEqualTo(landingZ1.getKey())
       }
     }
   }
