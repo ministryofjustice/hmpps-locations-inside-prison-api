@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialL
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
@@ -697,6 +698,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
   inner class ChangeLocalNameTest {
     val localNameChange = UpdateLocationLocalNameRequest(
       localName = "Landing Z1 - CHANGED",
+      updatedBy = "TEST_USER_1",
     )
 
     @Nested
@@ -746,13 +748,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue("""{"DUMMY": ""}""")
           .exchange()
           .expectStatus().is4xxClientError
       }
 
       @Test
-      fun `cannot add a localname more that 30 characters`() {
+      fun `cannot add a local name more that 30 characters`() {
         webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -760,12 +761,25 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().is4xxClientError
       }
+
+      @Test
+      fun `cannot set a location to the same local name as another location`() {
+        assertThat(
+          webTestClient.put().uri("/locations/${landingZ2.id}/change-local-name")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(""" { "localName": "Landing 1"} """)
+            .exchange()
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(119)
+      }
     }
 
     @Nested
     inner class HappyPath {
       @Test
-      fun `can update details of a locations code`() {
+      fun `can update details of a local name`() {
         val locationChanged = webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -781,6 +795,98 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           assertThat(it).hasSize(1)
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1",
+          )
+        }
+      }
+
+      @Test
+      fun `can update details of a local name to null`() {
+        val newLocalName = "A New Local Name"
+        webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{  "localName": "$newLocalName" } """)
+          .exchange()
+          .expectStatus().isOk
+
+        val beforeChange = webTestClient.get().uri("/locations/${landingZ1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(beforeChange.localName).isEqualTo(newLocalName)
+
+        val locationChanged = webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("{}")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(locationChanged.localName).isNull()
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1",
+          )
+        }
+      }
+
+      @Test
+      fun `can update details to the same name`() {
+        val locationChanged = webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{  "localName": "${landingZ1.localName}" } """)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(locationChanged.localName).isEqualTo(landingZ1.localName)
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1",
+          )
+        }
+      }
+
+      @Test
+      fun `can update details of a local name for a duplicate if perm deactivated`() {
+        prisonerSearchMockServer.stubSearchByLocations(landingZ1.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${landingZ1.id}/deactivate/permanent")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
+          .exchange()
+          .expectStatus().isOk
+
+        val locationChanged = webTestClient.put().uri("/locations/${landingZ2.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{  "localName": "${landingZ1.localName}" } """)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(locationChanged.localName).isEqualTo(landingZ1.localName)
+
+        getDomainEvents(3).let {
+          assertThat(it).hasSize(3)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+            "location.inside.prison.amended" to "MDI-Z-2",
           )
         }
       }

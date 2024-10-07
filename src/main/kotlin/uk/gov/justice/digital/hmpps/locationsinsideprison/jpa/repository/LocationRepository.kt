@@ -16,6 +16,8 @@ interface LocationRepository : JpaRepository<Location, UUID> {
 
   fun findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId: String, locationType: LocationType): List<Location>
 
+  fun findAllByPrisonIdAndLocalName(prisonId: String, localName: String): List<Location>
+
   @Query("select l from Location l where concat(l.prisonId,'-',l.pathHierarchy) = :key")
   fun findOneByKey(key: String): Location?
 
