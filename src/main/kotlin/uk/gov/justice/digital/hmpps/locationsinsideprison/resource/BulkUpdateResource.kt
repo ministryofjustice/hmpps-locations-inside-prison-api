@@ -7,7 +7,9 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.PositiveOrZero
+import jakarta.validation.constraints.Size
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
@@ -159,6 +161,21 @@ data class UpdateCapacityRequest(
     example = "{\"TCI-A-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"capacityOfCertifiedCell\": 2 }, \"TCI-A-1-002\": { \"maxCapacity\": 3, \"workingCapacity\": 1, \"capacityOfCertifiedCell\": 1 } }",
   )
   val locations: Map<String, CellCapacityUpdateDetail>,
+)
+
+@Schema(description = "Bulk permanent deactivation request")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class BulkPermanentDeactivationRequest(
+  @Schema(description = "Reason for permanent deactivation", example = "Wing demolished", required = true)
+  @field:Size(max = 100, message = "Reason for permanent deactivation cannot be more than 100 characters")
+  val reason: String,
+  @Schema(
+    description = "List of locations to permanently deactivate",
+    required = true,
+    example = "[ \"TCI-A-1-001\", \"TCI-B-1-001\", \"TCI-A-2-001\" ]",
+  )
+  @field:NotEmpty(message = "At least one location must be provided")
+  val locations: List<String>,
 )
 
 @Schema(description = "Deactivation Locations Request")
