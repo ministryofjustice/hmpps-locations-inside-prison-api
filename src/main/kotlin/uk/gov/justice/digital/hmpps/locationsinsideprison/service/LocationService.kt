@@ -870,7 +870,7 @@ class LocationService(
       }
       )
       .filter { !it.isPermanentlyDeactivated() }
-      .filter { it.isCell() || it.isLocationShownOnResidentialSummary() }
+      .filter { it.isLocationShownOnResidentialSummary() }
       .map { it.toDto(countInactiveCells = true, countCells = true) }
       .sortedWith(NaturalOrderComparator())
 
