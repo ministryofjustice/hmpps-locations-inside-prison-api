@@ -885,7 +885,7 @@ class LocationService(
       }
       )
       .filter { !it.isPermanentlyDeactivated() }
-      .filter { it.isCell() || it.isLocationShownOnResidentialSummary() }
+      .filter { it.isLocationShownOnResidentialSummary() }
       .map { it.toDto(countInactiveCells = true, countCells = true) }
       .sortedWith(NaturalOrderComparator())
 
@@ -939,7 +939,7 @@ class LocationService(
     }
 
     return (
-      startLocation?.findAllLeafLocations() ?: cellLocationRepository.findAllByPrisonIdAndActive(prisonId, false)
+      startLocation?.cellLocations() ?: cellLocationRepository.findAllByPrisonIdAndActive(prisonId, false)
       )
       .filter { it.isTemporarilyDeactivated() }
       .map { it.toDto() }

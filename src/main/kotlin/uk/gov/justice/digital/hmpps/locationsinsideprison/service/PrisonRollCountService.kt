@@ -79,7 +79,7 @@ class PrisonRollCountService(
     val locations: List<ResidentialPrisonerLocation> =
       residentialLocations
         .filter { !it.isPermanentlyDeactivated() }
-        .filter { it.isCell() || it.isLocationShownOnResidentialSummary() }
+        .filter { it.isLocationShownOnResidentialSummary() }
         .map { it.toResidentialPrisonerLocation(mapOfPrisoners) }
         .sortedWith(NaturalOrderComparator())
 

@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -1962,6 +1963,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .returnResult().responseBody!!
 
         assertThat(result.findByPathHierarchy("Z-1-001")!!.convertedCellType == ConvertedCellType.OFFICE)
+        Assertions.assertNull(result.findByPathHierarchy("Z-1-001")!!.otherConvertedCellType)
 
         getDomainEvents(1).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(

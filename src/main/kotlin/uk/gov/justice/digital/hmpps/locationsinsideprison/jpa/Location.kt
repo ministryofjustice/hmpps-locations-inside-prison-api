@@ -781,7 +781,7 @@ abstract class Location(
     return getKey()
   }
 
-  fun isCell() = this is Cell
+  fun isCell() = this is Cell && !isConvertedCell()
   fun isStructural() = locationType in ResidentialLocationType.entries.filter { it.structural }.map { it.baseType }
   fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
   fun isArea() = locationType in ResidentialLocationType.entries.filter { it.area }.map { it.baseType }
