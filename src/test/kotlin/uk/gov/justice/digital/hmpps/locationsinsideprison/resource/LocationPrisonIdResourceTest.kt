@@ -6,8 +6,10 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.test.web.reactive.server.expectBodyList
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
@@ -566,6 +568,68 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                 }
               ]
           """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of an inactive cells by specific location and non-cells are ignored`() {
+        prisonerSearchMockServer.stubSearchByLocations(store.prisonId, listOf(store.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${store.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMP)))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to store.getKey(),
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/inactive-cells?parentLocationId=${wingZ.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().jsonPath("$").isEmpty
+      }
+
+      @Test
+      fun `can retrieve details of an inactive cells and non-cells are ignored for whole prison`() {
+        prisonerSearchMockServer.stubSearchByLocations(store.prisonId, listOf(store.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${store.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMP)))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to store.getKey(),
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/inactive-cells")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              [
+                {
+                  "id": "${inactiveCellB3001.id}"
+                }
+              ]
+           """,
             false,
           )
       }
