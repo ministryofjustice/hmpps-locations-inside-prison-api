@@ -2194,6 +2194,14 @@ class LocationResourceIntTest : CommonDataTestBase() {
               """,
             false,
           )
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z-1",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.deactivated" to "MDI-Z-1-002",
+          )
+        }
       }
     }
   }
