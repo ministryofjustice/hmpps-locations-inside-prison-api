@@ -924,7 +924,7 @@ class LocationService(
     }
 
     return (
-      startLocation?.findAllLeafLocations() ?: cellLocationRepository.findAllByPrisonIdAndActive(prisonId, false)
+      startLocation?.cellLocations() ?: cellLocationRepository.findAllByPrisonIdAndActive(prisonId, false)
       )
       .filter { it.isTemporarilyDeactivated() }
       .map { it.toDto() }
