@@ -1001,6 +1001,10 @@ class LocationService(
     val prisonDetails = prisonService.lookupPrisonDetails(prisonId) ?: throw PrisonNotFoundException(prisonId)
     return UsedForType.entries.filter { it.isStandard() || (prisonDetails.female && it.femaleOnly) || (prisonDetails.lthse && it.secureEstateOnly) }
   }
+
+  fun findByPrisonIdAndLocalName(prisonId: String, localName: String): LocationDTO {
+    return locationRepository.findAllByPrisonIdAndLocalName(prisonId, localName).firstOrNull { !it.isPermanentlyDeactivated() }?.toDto() ?: throw LocationNotFoundException("$prisonId-$localName")
+  }
 }
 
 fun buildEventsToPublishOnUpdate(results: UpdateLocationResult): () -> Map<InternalLocationDomainEventType, List<LocationDTO>> {
