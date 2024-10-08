@@ -312,18 +312,16 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           ),
         )
 
-        webTestClient.put().uri("/locations/${testCell.id}/specialist-cell-types")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(emptySet<SpecialistCellType>()))
-          .exchange()
-          .expectStatus().isEqualTo(400)
-          .expectBody().json(
-            """
-              { "errorCode": 106 }
-            """.trimIndent(),
-            false,
-          )
+        assertThat(
+          webTestClient.put().uri("/locations/${testCell.id}/specialist-cell-types")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(emptySet<SpecialistCellType>()))
+            .exchange()
+            .expectStatus().isEqualTo(400)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(106)
       }
     }
 
@@ -424,125 +422,115 @@ class LocationTransformResourceTest : CommonDataTestBase() {
     inner class Validation {
       @Test
       fun `access client error bad data`() {
-        webTestClient.put().uri("/locations/${cell1.id}/capacity")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
-                workingCapacity = -1,
-                maxCapacity = 999,
+        assertThat(
+          webTestClient.put().uri("/locations/${cell1.id}/capacity")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              jsonString(
+                uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                  workingCapacity = -1,
+                  maxCapacity = 999,
+                ),
               ),
-            ),
-          )
-          .exchange()
-          .expectStatus().is4xxClientError
-          .expectBody().json(
-            """
-              { "errorCode": 102 }
-            """.trimIndent(),
-            false,
-          )
+            )
+            .exchange()
+            .expectStatus().is4xxClientError
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(102)
       }
 
       @Test
       fun `cannot reduce max capacity of a cell below number of prisoners in cell`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy(), cell1.getPathHierarchy()), true)
 
-        webTestClient.put().uri("/locations/${cell1.id}/capacity")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
-                workingCapacity = 1,
-                maxCapacity = 1,
+        assertThat(
+          webTestClient.put().uri("/locations/${cell1.id}/capacity")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              jsonString(
+                uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                  workingCapacity = 1,
+                  maxCapacity = 1,
+                ),
               ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isEqualTo(400)
-          .expectBody().json(
-            """
-              { "errorCode": 117 }
-            """.trimIndent(),
-            false,
-          )
+            )
+            .exchange()
+            .expectStatus().isEqualTo(400)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(117)
       }
 
       @Test
       fun `cannot have a max cap below a working cap`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        webTestClient.put().uri("/locations/${cell1.id}/capacity")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
-                workingCapacity = 3,
-                maxCapacity = 2,
+        assertThat(
+          webTestClient.put().uri("/locations/${cell1.id}/capacity")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              jsonString(
+                uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                  workingCapacity = 3,
+                  maxCapacity = 2,
+                ),
               ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isEqualTo(400)
-          .expectBody().json(
-            """
-              { "errorCode": 114 }
-            """.trimIndent(),
-            false,
-          )
+            )
+            .exchange()
+            .expectStatus().isEqualTo(400)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(114)
       }
 
       @Test
       fun `cannot have a max cap of 0`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        webTestClient.put().uri("/locations/${cell1.id}/capacity")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
-                workingCapacity = 0,
-                maxCapacity = 0,
+        assertThat(
+          webTestClient.put().uri("/locations/${cell1.id}/capacity")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              jsonString(
+                uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                  workingCapacity = 0,
+                  maxCapacity = 0,
+                ),
               ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isEqualTo(400)
-          .expectBody().json(
-            """
-              { "errorCode": 115 }
-            """.trimIndent(),
-            false,
-          )
+            )
+            .exchange()
+            .expectStatus().isEqualTo(400)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(115)
       }
 
       @Test
       fun `cannot have a working cap = 0 when accommodation type = normal accommodation and not a specialist cell`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        webTestClient.put().uri("/locations/${cell1.id}/capacity")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
-                workingCapacity = 0,
-                maxCapacity = 2,
+        assertThat(
+          webTestClient.put().uri("/locations/${cell1.id}/capacity")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              jsonString(
+                uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                  workingCapacity = 0,
+                  maxCapacity = 2,
+                ),
               ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isEqualTo(400)
-          .expectBody().json(
-            """
-              { "errorCode": 106 }
-            """.trimIndent(),
-            false,
-          )
+            )
+            .exchange()
+            .expectStatus().isEqualTo(400)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(106)
       }
     }
 

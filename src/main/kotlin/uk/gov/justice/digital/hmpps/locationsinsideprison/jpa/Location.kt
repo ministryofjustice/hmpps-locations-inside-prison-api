@@ -29,6 +29,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationReque
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ActiveLocationCannotBePermanentlyDeactivatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NaturalOrderComparator
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
@@ -458,7 +459,11 @@ abstract class Location(
         LocationStatus.ACTIVE
       }
     } else {
-      LocationStatus.INACTIVE
+      if (isPermanentlyDeactivated()) {
+        LocationStatus.ARCHIVED
+      } else {
+        LocationStatus.INACTIVE
+      }
     }
   }
 
@@ -684,10 +689,14 @@ abstract class Location(
     deactivatedDate: LocalDateTime,
     userOrSystemInContext: String,
     clock: Clock,
-  ) {
+  ): Boolean {
     if (isPermanentlyDeactivated()) {
       log.warn("Location [${getKey()}] is already permanently deactivated")
+      return false
     } else {
+      if (isActiveAndAllParentsActive()) {
+        throw ActiveLocationCannotBePermanentlyDeactivatedException(getKey())
+      }
       val amendedDate = LocalDateTime.now(clock)
       addHistory(LocationAttribute.STATUS, this.getStatus().description, LocationStatus.ARCHIVED.description, userOrSystemInContext, amendedDate)
       addHistory(
@@ -711,12 +720,13 @@ abstract class Location(
       this.whenUpdated = amendedDate
 
       if (this is ResidentialLocation) {
-        this.cellLocations().forEach { cellLocation ->
+        this.cellLocations().filter { !it.isConvertedCell() }.forEach { cellLocation ->
           cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, userOrSystemInContext, clock)
           cellLocation.deCertifyCell(userOrSystemInContext, clock)
         }
       }
       log.info("Permanently Deactivated Location [${getKey()}]")
+      return true
     }
   }
 

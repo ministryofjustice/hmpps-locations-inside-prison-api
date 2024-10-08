@@ -37,7 +37,7 @@ open class SignedOperationCapacityService(
 
     val maxCap = locationService.getResidentialLocations(request.prisonId).prisonSummary?.maxCapacity ?: throw PrisonNotFoundException(request.prisonId)
     if (maxCap < request.signedOperationCapacity) {
-      throw CapacityException(request.prisonId, "Signed operational capacity cannot be more than the establishment's maximum capacity of $maxCap", ErrorCode.SignedOpCapCannotBeMoreThanMaXCap)
+      throw CapacityException(request.prisonId, "Signed operational capacity cannot be more than the establishment's maximum capacity of $maxCap", ErrorCode.SignedOpCapCannotBeMoreThanMaxCap)
     }
     val record =
       prisonSignedOperationalCapacityRepository.findOneByPrisonId(request.prisonId)?.also {

@@ -416,7 +416,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                 "accommodationTypes":[],
                 "permanentlyInactive":true,
                 "capacity":{"maxCapacity":0,"workingCapacity":0},
-                "status":"INACTIVE",
+                "status":"ARCHIVED",
                 "active":false,
                 "deactivatedByParent":false,
                 "deactivatedDate":"2023-12-05T12:34:56",
