@@ -169,6 +169,8 @@ class Cell(
     this.convertedCellType = convertedCellType
     if (convertedCellType == ConvertedCellType.OTHER) {
       this.otherConvertedCellType = otherConvertedCellType
+    } else {
+      this.otherConvertedCellType = null
     }
 
     this.updatedBy = userOrSystemInContext
