@@ -86,7 +86,7 @@ abstract class EventBaseResource {
     return auditAndEmit(InternalLocationDomainEventType.LOCATION_AMENDED, updatedLocations)
   }
 
-  private fun auditAndEmit(eventType: InternalLocationDomainEventType, locations: Map<InternalLocationDomainEventType, List<Location>>): List<Location> {
+  protected fun auditAndEmit(eventType: InternalLocationDomainEventType, locations: Map<InternalLocationDomainEventType, List<Location>>): List<Location> {
     eventPublish { locations }
     locations[eventType]?.forEach {
       audit(it.getKey()) { it.copy(childLocations = null, parentLocation = null) }

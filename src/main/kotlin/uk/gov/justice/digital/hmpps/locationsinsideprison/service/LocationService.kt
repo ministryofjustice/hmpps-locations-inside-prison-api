@@ -45,6 +45,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanentDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
@@ -525,6 +526,28 @@ class LocationService(
   }
 
   @Transactional
+  fun permanentlyDeactivateLocations(permanentDeactivationRequest: BulkPermanentDeactivationRequest): List<LocationDTO> {
+    val deactivatedLocations = mutableSetOf<Location>()
+    permanentDeactivationRequest.locations.forEach { key ->
+      val locationToPermanentlyDeactivate = locationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
+
+      if (locationToPermanentlyDeactivate.permanentlyDeactivate(
+          reason = permanentDeactivationRequest.reason,
+          deactivatedDate = LocalDateTime.now(clock),
+          userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+          clock = clock,
+        )
+      ) {
+        deactivatedLocations.add(locationToPermanentlyDeactivate)
+      }
+    }
+    deactivatedLocations.forEach {
+      trackLocationUpdate(it, "Permanently deactivated location")
+    }
+    return deactivatedLocations.map { it.toDto() }
+  }
+
+  @Transactional
   fun updateDeactivatedDetails(
     id: UUID,
     deactivatedReason: DeactivatedReason,
@@ -569,21 +592,13 @@ class LocationService(
     val locationToArchive = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    if (locationToArchive.isPermanentlyDeactivated()) {
-      throw PermanentlyDeactivatedUpdateNotAllowedException(locationToArchive.getKey())
-    }
-
-    checkForPrisonersInLocation(locationToArchive)
-
-    locationToArchive.permanentlyDeactivate(
-      deactivatedDate = LocalDateTime.now(clock),
-      reason = reasonForPermanentDeactivation,
-      userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
-      clock = clock,
+    permanentlyDeactivateLocations(
+      BulkPermanentDeactivationRequest(
+        reason = reasonForPermanentDeactivation,
+        locations = listOf(locationToArchive.getKey()),
+      ),
     )
-
-    trackLocationUpdate(locationToArchive, "Permanently Deactivated Location")
-    return locationToArchive.toDto(includeChildren = true, includeParent = true)
+    return locationToArchive.toDto()
   }
 
   @Transactional
@@ -733,7 +748,7 @@ class LocationService(
     convertedCellType: ConvertedCellType,
     otherConvertedCellType: String? = null,
   ): LocationDTO {
-    var nonResCellToUpdate = cellLocationRepository.findById(id)
+    val nonResCellToUpdate = cellLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     if (!nonResCellToUpdate.isConvertedCell()) {

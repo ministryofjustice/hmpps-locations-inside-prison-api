@@ -10,12 +10,12 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialL
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
@@ -23,6 +23,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
+import java.util.*
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResidentialResourceTest : CommonDataTestBase() {
@@ -862,14 +863,20 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `can update details of a local name for a duplicate if perm deactivated`() {
-        prisonerSearchMockServer.stubSearchByLocations(landingZ1.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
+        landingZ1.temporarilyDeactivate(
+          deactivatedReason = DeactivatedReason.MOTHBALLED,
+          deactivatedDate = LocalDateTime.now(clock),
+          userOrSystemInContext = EXPECTED_USERNAME,
+          clock = clock,
+        )
 
-        webTestClient.put().uri("/locations/${landingZ1.id}/deactivate/permanent")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
-          .exchange()
-          .expectStatus().isOk
+        landingZ1.permanentlyDeactivate(
+          reason = "Demolished",
+          deactivatedDate = LocalDateTime.now(clock),
+          userOrSystemInContext = EXPECTED_USERNAME,
+          clock = clock,
+        )
+        repository.save(landingZ1)
 
         val locationChanged = webTestClient.put().uri("/locations/${landingZ2.id}/change-local-name")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -882,12 +889,10 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
         assertThat(locationChanged.localName).isEqualTo(landingZ1.localName)
 
-        getDomainEvents(3).let {
-          assertThat(it).hasSize(3)
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.deactivated" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z",
-            "location.inside.prison.amended" to "MDI-Z-2",
+            "location.inside.prison.amended" to landingZ2.getKey(),
           )
         }
       }
@@ -1737,7 +1742,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `cannot update convert to non residential cell as ID is not found`() {
-        webTestClient.put().uri("/locations/${java.util.UUID.randomUUID()}/convert-cell-to-non-res-cell")
+        webTestClient.put().uri("/locations/${UUID.randomUUID()}/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
@@ -1916,7 +1921,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `cannot update non res cell as ID is not found`() {
-        webTestClient.put().uri("/locations/${java.util.UUID.randomUUID()}/update-non-res-cell")
+        webTestClient.put().uri("/locations/${UUID.randomUUID()}/update-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(""" { "convertedCellType": "OFFICE" } """)
@@ -2109,7 +2114,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `cannot update convert to cell as Location ID is not found`() {
-        webTestClient.put().uri("/locations/${java.util.UUID.randomUUID()}/convert-to-cell")
+        webTestClient.put().uri("/locations/${UUID.randomUUID()}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(jsonString(convertToCellRequest))

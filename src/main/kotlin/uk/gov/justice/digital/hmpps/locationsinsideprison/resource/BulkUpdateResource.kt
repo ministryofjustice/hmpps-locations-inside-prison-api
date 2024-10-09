@@ -7,7 +7,10 @@ import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.PositiveOrZero
+import jakarta.validation.constraints.Size
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
@@ -19,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CapacityChanges
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import java.util.*
 
@@ -70,6 +74,43 @@ class BulkUpdateResource(
   ): List<Location> {
     return deactivate(locationService.deactivateLocations(deactivateLocationsRequest))
   }
+
+  @PutMapping("deactivate/permanent")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Bulk permanently deactivate a location, the location must already be temporarily deactivated",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns perm deactivated locations",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun bulkPermanentlyDeactivateLocations(
+    @RequestBody @Validated permanentDeactivationRequest: BulkPermanentDeactivationRequest,
+  ): List<Location> =
+    deactivate(mapOf(InternalLocationDomainEventType.LOCATION_DEACTIVATED to locationService.permanentlyDeactivateLocations(permanentDeactivationRequest)))
 
   @PutMapping("reactivate")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -161,14 +202,30 @@ data class UpdateCapacityRequest(
   val locations: Map<String, CellCapacityUpdateDetail>,
 )
 
-@Schema(description = "Deactivation Locations Request")
+@Schema(description = "Bulk permanent deactivation request")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class BulkPermanentDeactivationRequest(
+  @Schema(description = "Reason for permanent deactivation", example = "Wing demolished", required = true)
+  @field:Size(max = 100, message = "Reason for permanent deactivation cannot be more than 100 characters")
+  @field:NotBlank(message = "Reason for permanent deactivation cannot be blank")
+  val reason: String,
+  @Schema(
+    description = "List of locations to permanently deactivate",
+    required = true,
+    example = "[ \"TCI-A-1-001\", \"TCI-B-1-001\", \"TCI-A-2-001\" ]",
+  )
+  @field:NotEmpty(message = "At least one location must be provided")
+  val locations: List<String>,
+)
+
+@Schema(description = "Deactivate Locations Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class DeactivateLocationsRequest(
   @Schema(description = "List of locations to deactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"deactivationReason\": \"DAMAGED\" } }")
   val locations: Map<UUID, TemporaryDeactivationLocationRequest>,
 )
 
-@Schema(description = "Reactivation Locations Request")
+@Schema(description = "Reactivate Locations Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivateLocationsRequest(
   @Schema(description = "List of locations to reactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")

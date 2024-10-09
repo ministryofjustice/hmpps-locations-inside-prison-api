@@ -293,21 +293,6 @@ class ApiExceptionHandler {
       )
   }
 
-  @ExceptionHandler(LocationAlreadyDeactivatedException::class)
-  fun handleLocationAlreadyDeactivated(e: LocationAlreadyDeactivatedException): ResponseEntity<ErrorResponse?>? {
-    log.debug("Location already deactivated: {}", e.message)
-    return ResponseEntity
-      .status(BAD_REQUEST)
-      .body(
-        ErrorResponse(
-          status = BAD_REQUEST,
-          errorCode = ErrorCode.LocationAlreadyDeactivated,
-          userMessage = "Location already deactivated: ${e.message}",
-          developerMessage = e.message,
-        ),
-      )
-  }
-
   @ExceptionHandler(CapacityException::class)
   fun handleCapacityException(e: CapacityException): ResponseEntity<ErrorResponse?>? {
     log.warn("Capacity Validation: {}", e.message)
@@ -333,6 +318,21 @@ class ApiExceptionHandler {
           status = CONFLICT,
           errorCode = ErrorCode.PermanentlyDeactivatedLocationCannotByUpdated,
           userMessage = "Deactivated Location Exception: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(ActiveLocationCannotBePermanentlyDeactivatedException::class)
+  fun handleActiveLocationCannotBePermanentlyDeactivatedException(e: ActiveLocationCannotBePermanentlyDeactivatedException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Attempt to perm deactivate an active location {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.LocationCannotBePermanentlyDeactivated,
+          userMessage = "Permanent Deactivation Exception: ${e.message}",
           developerMessage = e.message,
         ),
       )
@@ -400,11 +400,11 @@ class SignedOperationCapacityNotFoundException(prisonId: String) :
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class ReasonForDeactivationMustBeProvidedException(key: String) : Exception("De-activating location $key requires a reason when using OTHER reason type")
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
-class LocationAlreadyDeactivatedException(key: String) : ValidationException("$key is already deactivated")
+class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")
 class CapacityException(val key: String, override val message: String, val errorCode: ErrorCode) : ValidationException("$key: [Error Code: $errorCode] - Capacity Exception: $message")
 class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationException("Location $key cannot be updated as permanently deactivated")
 class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as converted cell")
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
-class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")
 class LocationCannotBeResidentialException(key: String) : Exception("Location AccommodationType $key cannot be converted to residential")
 class DuplicateLocalNameForSamePrisonException(key: String, prisonId: String) : ValidationException("$key already the same local name in prison $prisonId")
+class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated less it is already inactive")

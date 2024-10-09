@@ -450,18 +450,16 @@ class LocationResourceIntTest : CommonDataTestBase() {
       fun `cannot deactivated location with other reason without a free text value`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))
-          .exchange()
-          .expectStatus().isBadRequest
-          .expectBody().json(
-            """
-              { "errorCode": 118 }
-            """.trimIndent(),
-            false,
-          )
+        assertThat(
+          webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(118)
       }
 
       @Test
@@ -475,18 +473,16 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))
-          .exchange()
-          .expectStatus().isBadRequest
-          .expectBody().json(
-            """
-              { "errorCode": 118 }
-            """.trimIndent(),
-            false,
-          )
+        assertThat(
+          webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(118)
       }
 
       @Test
@@ -518,7 +514,14 @@ class LocationResourceIntTest : CommonDataTestBase() {
     inner class HappyPath {
       @Test
       fun `can deactivate a location`() {
-        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+        cell1.temporarilyDeactivate(
+          deactivatedReason = DeactivatedReason.MOTHBALLED,
+          deactivatedDate = LocalDateTime.now(clock),
+          userOrSystemInContext = EXPECTED_USERNAME,
+          clock = clock,
+        )
+
+        repository.save(cell1)
 
         val now = LocalDateTime.now(clock)
         val proposedReactivationDate = now.plusMonths(1).toLocalDate()
@@ -529,11 +532,9 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(3).let {
+        getDomainEvents(1).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.deactivated" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z",
+            "location.inside.prison.deactivated" to cell1.getKey(),
           )
         }
 
@@ -1307,7 +1308,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
     }
   }
 
-  @DisplayName("PUT /locations/bulk/deactivate")
+  @DisplayName("PUT /locations/bulk/deactivate/temporary")
   @Nested
   inner class BulkTemporarilyDeactivateLocationTest {
 
@@ -1367,42 +1368,48 @@ class LocationResourceIntTest : CommonDataTestBase() {
       fun `cannot deactivated location with other reason without a free text value`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
-        webTestClient.put().uri("/locations/bulk/deactivate/temporary")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))))
-          .exchange()
-          .expectStatus().isBadRequest
-          .expectBody().json(
-            """
-              { "errorCode": 118 }
-            """.trimIndent(),
-            false,
-          )
+        assertThat(
+          webTestClient.put().uri("/locations/bulk/deactivate/temporary")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))))
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(118)
       }
 
       @Test
       fun `cannot deactivate a location when prisoner is inside the cell`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), true)
 
-        webTestClient.put().uri("/locations/bulk/deactivate/temporary")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))))
-          .exchange()
-          .expectStatus().isEqualTo(409)
+        assertThat(
+          webTestClient.put().uri("/locations/bulk/deactivate/temporary")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))))
+            .exchange()
+            .expectStatus().isEqualTo(409)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(109)
       }
 
       @Test
       fun `cannot deactivate a wing when prisoners are in cells below`() {
         prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), true)
 
-        webTestClient.put().uri("/locations/bulk/deactivate/temporary")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(wingZ.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))))
-          .exchange()
-          .expectStatus().isEqualTo(409)
+        assertThat(
+          webTestClient.put().uri("/locations/bulk/deactivate/temporary")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(wingZ.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))))
+            .exchange()
+            .expectStatus().isEqualTo(409)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(109)
       }
     }
 
@@ -2020,6 +2027,181 @@ class LocationResourceIntTest : CommonDataTestBase() {
              """,
             false,
           )
+      }
+    }
+  }
+
+  @DisplayName("PUT /locations/bulk/deactivate/permanent")
+  @Nested
+  inner class BulkPermanentlyDeactivateLocationTest {
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "reason": "Demolished", "locations": [ "${cell1.getKey()}" ] } """)
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "reason": "Demolished", "locations": [ "${cell1.getKey()}" ] } """)
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "reason": "Demolished", "locations": [ "${cell1.getKey()}" ] } """)
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `cannot deactivated location with missing reason`() {
+        assertThat(
+          webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(""" { "reason": "", "locations": [ "${cell1.getKey()}" ] } """)
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(102)
+      }
+
+      @Test
+      fun `cannot deactivated location which is not already temporarily deactivated`() {
+        assertThat(
+          webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(""" { "reason": "Demolished", "locations": [  ] } """)
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(102)
+      }
+
+      @Test
+      fun `cannot deactivated location with missing locations`() {
+        assertThat(
+          webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(""" { "reason": "Demolished", "locations": [ "${cell1.getKey()}" ] } """)
+            .exchange()
+            .expectStatus().isEqualTo(409)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(105)
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can deactivate a set of locations`() {
+        val now = LocalDateTime.now(clock)
+        val proposedReactivationDate = now.plusMonths(1).toLocalDate()
+
+        landingZ1.temporarilyDeactivate(
+          deactivatedReason = DeactivatedReason.MOTHBALLED,
+          deactivatedDate = LocalDateTime.now(clock),
+          proposedReactivationDate = proposedReactivationDate,
+          userOrSystemInContext = EXPECTED_USERNAME,
+          clock = clock,
+        )
+        repository.save(landingZ1)
+
+        webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              BulkPermanentDeactivationRequest(
+                reason = "Demolished",
+                locations = listOf(
+                  cell1.getKey(),
+                  cell2.getKey(),
+                  landingZ1.getKey(),
+                ),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              [
+                {
+                  "id": "${cell1.id!!}",
+                  "key": "MDI-Z-1-001",
+                  "locationType": "CELL",
+                  "permanentlyInactive": true,
+                  "permanentlyInactiveReason": "Demolished",
+                  "status": "ARCHIVED",
+                  "active": false,
+                  "deactivatedByParent": false,
+                  "deactivatedDate": "$now"
+                },
+                 {
+                  "id": "${cell2.id!!}",
+                  "key": "MDI-Z-1-002",
+                  "locationType": "CELL",
+                  "permanentlyInactive": true,
+                  "permanentlyInactiveReason": "Demolished",
+                  "status": "ARCHIVED",
+                  "active": false,
+                  "deactivatedByParent": false,
+                  "deactivatedDate": "$now"
+                },
+                 {
+                  "id": "${landingZ1.id!!}",
+                  "key": "MDI-Z-1",
+                  "locationType": "LANDING",
+                  "permanentlyInactive": true,
+                  "permanentlyInactiveReason": "Demolished",
+                  "status": "ARCHIVED",
+                  "active": false,
+                  "deactivatedByParent": false,
+                  "deactivatedDate": "$now"
+                }
+              ]
+              """,
+            false,
+          )
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z-1",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.deactivated" to "MDI-Z-1-002",
+          )
+        }
       }
     }
   }
