@@ -754,6 +754,60 @@ class LocationResourceIntTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `can deactivate a location with other reason that is blank`() {
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        val now = LocalDateTime.now(clock)
+        val proposedReactivationDate = now.plusMonths(1).toLocalDate()
+
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, deactivationReasonDescription = "", proposedReactivationDate = proposedReactivationDate)))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "key": "${cell1.getKey()}",
+                "deactivatedReason": "MOTHBALLED",
+                "deactivationReasonDescription": "",
+               "changeHistory": [
+                  {
+                    "attribute": "Deactivation reason",
+                    "newValue": "Mothballed"
+                  },
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Inactive"
+                  },
+                  {
+                    "attribute": "Used for",
+                    "newValue": "Standard accommodation",
+                    "amendedBy": "A_TEST_USER"
+                  }
+                ]
+              }
+            """.trimIndent(),
+          )
+      }
+
+      @Test
       fun `can update a deactivated location`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
@@ -1373,6 +1427,22 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
             .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))))
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(118)
+      }
+
+      @Test
+      fun `cannot deactivated location with other reason with a blank free text value`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        assertThat(
+          webTestClient.put().uri("/locations/bulk/deactivate/temporary")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = " ")))))
             .exchange()
             .expectStatus().isBadRequest
             .expectBody(ErrorResponse::class.java)

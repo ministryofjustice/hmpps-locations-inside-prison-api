@@ -492,7 +492,7 @@ class LocationService(
       checkForPrisonersInLocation(locationToDeactivate)
 
       with(deactivationDetail) {
-        if (deactivationReason == DeactivatedReason.OTHER && deactivationReasonDescription.isNullOrEmpty()) {
+        if (deactivationReason == DeactivatedReason.OTHER && deactivationReasonDescription.isNullOrBlank()) {
           throw ReasonForDeactivationMustBeProvidedException(locationToDeactivate.getKey())
         }
 
@@ -558,7 +558,7 @@ class LocationService(
     val locationToUpdate = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    if (deactivatedReason == DeactivatedReason.OTHER && deactivationReasonDescription.isNullOrEmpty()) {
+    if (deactivatedReason == DeactivatedReason.OTHER && deactivationReasonDescription.isNullOrBlank()) {
       throw ReasonForDeactivationMustBeProvidedException(locationToUpdate.getKey())
     }
     if (locationToUpdate.isTemporarilyDeactivated()) {
