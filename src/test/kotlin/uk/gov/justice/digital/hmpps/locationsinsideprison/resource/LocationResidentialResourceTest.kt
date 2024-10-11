@@ -1799,10 +1799,6 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "oldValue": "2"
                   },
                   {
-                    "attribute": "Used for",
-                    "oldValue": "Standard accommodation"
-                  },
-                  {
                     "attribute": "Converted cell type",
                     "newValue": "Other - Taning room"
                   },
@@ -1993,10 +1989,6 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "attribute": "Certification",
                     "oldValue": "Certified",
                     "newValue": "Uncertified"
-                  },
-                  {
-                    "attribute": "Used for",
-                    "oldValue": "Standard accommodation"
                   },
                   {
                     "attribute": "Max capacity",
@@ -2271,11 +2263,6 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "attribute": "Certification",
                     "oldValue": "Certified",
                     "newValue": "Uncertified"
-                  },
-                  {
-                    "attribute": "Used for",
-                    "oldValue": "Standard accommodation",
-                    "amendedBy": "Aleman"
                   },
                   {
                     "attribute": "Max capacity",
