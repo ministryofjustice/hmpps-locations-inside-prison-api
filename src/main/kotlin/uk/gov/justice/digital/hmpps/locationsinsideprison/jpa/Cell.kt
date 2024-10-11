@@ -132,7 +132,6 @@ class Cell(
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
-    setAccommodationTypeForCell(AccommodationType.OTHER_NON_RESIDENTIAL, userOrSystemInContext, clock)
 
     addHistory(
       LocationAttribute.CAPACITY,
