@@ -239,7 +239,7 @@ abstract class Location(
     return locationSummary.sortedBy { it.level }
   }
 
-  private fun getDeactivationReason() = listOfNotNull(deactivatedReason?.description, deactivationReasonDescription).joinToString(" - ")
+  private fun getDeactivationReason() = listOfNotBlank(deactivatedReason?.description, deactivationReasonDescription).joinToString(" - ")
 
   private fun getLocationSummary(): LocationSummary {
     return LocationSummary(
@@ -570,7 +570,7 @@ abstract class Location(
       addHistory(
         LocationAttribute.DEACTIVATION_REASON,
         this.getDeactivationReason(),
-        listOfNotNull(deactivatedReason.description, deactivationReasonDescription).joinToString(" - "),
+        listOfNotBlank(deactivatedReason.description, deactivationReasonDescription).joinToString(" - "),
         userOrSystemInContext,
         amendedDate,
       )
@@ -641,7 +641,7 @@ abstract class Location(
       addHistory(
         LocationAttribute.DEACTIVATION_REASON,
         this.getDeactivationReason(),
-        listOfNotNull(deactivatedReason.description, deactivationReasonDescription).joinToString(" - "),
+        listOfNotBlank(deactivatedReason.description, deactivationReasonDescription).joinToString(" - "),
         userOrSystemInContext,
         amendedDate,
       )
@@ -828,3 +828,5 @@ data class LocationSummary(
   @Schema(description = "Current Level within hierarchy, starts at 1, e.g Wing = 1", examples = ["1", "2", "3"], required = true)
   val level: Int,
 )
+
+fun listOfNotBlank(vararg elements: String?): List<String> = elements.filterNotNull().filter { it.isNotBlank() }

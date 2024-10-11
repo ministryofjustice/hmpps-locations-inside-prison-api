@@ -121,7 +121,7 @@ class Cell(
 
   override fun isConvertedCell() = convertedCellType != null
 
-  private fun getConvertedCellTypeSummary() = listOfNotNull(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
+  private fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock) {
     updateNonResidentialCellType(convertedCellType, otherConvertedCellType, userOrSystemInContext, clock)
@@ -162,7 +162,7 @@ class Cell(
     addHistory(
       LocationAttribute.CONVERTED_CELL_TYPE,
       this.getConvertedCellTypeSummary(),
-      listOfNotNull(convertedCellType.description, otherConvertedCellType).joinToString(" - "),
+      listOfNotBlank(convertedCellType.description, otherConvertedCellType).joinToString(" - "),
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
