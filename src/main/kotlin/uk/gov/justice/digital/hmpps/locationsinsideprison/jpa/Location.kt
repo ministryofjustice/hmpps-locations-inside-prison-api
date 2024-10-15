@@ -689,12 +689,13 @@ abstract class Location(
     deactivatedDate: LocalDateTime,
     userOrSystemInContext: String,
     clock: Clock,
+    activeLocationCanBePermDeactivated: Boolean = false,
   ): Boolean {
     if (isPermanentlyDeactivated()) {
       log.warn("Location [${getKey()}] is already permanently deactivated")
       return false
     } else {
-      if (isActiveAndAllParentsActive()) {
+      if (isActiveAndAllParentsActive() && !activeLocationCanBePermDeactivated) {
         throw ActiveLocationCannotBePermanentlyDeactivatedException(getKey())
       }
       val amendedDate = LocalDateTime.now(clock)

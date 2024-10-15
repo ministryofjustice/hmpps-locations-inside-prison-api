@@ -526,7 +526,7 @@ class LocationService(
   }
 
   @Transactional
-  fun permanentlyDeactivateLocations(permanentDeactivationRequest: BulkPermanentDeactivationRequest): List<LocationDTO> {
+  fun permanentlyDeactivateLocations(permanentDeactivationRequest: BulkPermanentDeactivationRequest, activeLocationCanBePermDeactivated: Boolean = false): List<LocationDTO> {
     val deactivatedLocations = mutableSetOf<Location>()
     permanentDeactivationRequest.locations.forEach { key ->
       val locationToPermanentlyDeactivate = locationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
@@ -536,6 +536,7 @@ class LocationService(
           deactivatedDate = LocalDateTime.now(clock),
           userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
           clock = clock,
+          activeLocationCanBePermDeactivated = activeLocationCanBePermDeactivated,
         )
       ) {
         deactivatedLocations.add(locationToPermanentlyDeactivate)
@@ -592,13 +593,22 @@ class LocationService(
     val locationToArchive = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
+    if (locationToArchive.isPermanentlyDeactivated()) {
+      throw PermanentlyDeactivatedUpdateNotAllowedException(locationToArchive.getKey())
+    }
+    val wasActiveBefore = locationToArchive.isActiveAndAllParentsActive()
+    if (wasActiveBefore) {
+      checkForPrisonersInLocation(locationToArchive)
+    }
+
     permanentlyDeactivateLocations(
       BulkPermanentDeactivationRequest(
         reason = reasonForPermanentDeactivation,
         locations = listOf(locationToArchive.getKey()),
       ),
+      activeLocationCanBePermDeactivated = wasActiveBefore,
     )
-    return locationToArchive.toDto()
+    return locationToArchive.toDto(includeChildren = wasActiveBefore, includeParent = wasActiveBefore)
   }
 
   @Transactional
