@@ -593,9 +593,6 @@ class LocationService(
     val locationToArchive = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    if (locationToArchive.isPermanentlyDeactivated()) {
-      throw PermanentlyDeactivatedUpdateNotAllowedException(locationToArchive.getKey())
-    }
     val wasActiveBefore = locationToArchive.isActiveAndAllParentsActive()
     if (wasActiveBefore) {
       checkForPrisonersInLocation(locationToArchive)
