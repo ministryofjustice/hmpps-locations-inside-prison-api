@@ -39,4 +39,11 @@ interface LocationRepository : JpaRepository<Location, UUID> {
   @Query("delete from location where id = :id", nativeQuery = true)
   @Modifying
   fun deleteLocationById(id: UUID)
+
+  @Query("call setup_prison_demo_locations(:prisonId, :username)", nativeQuery = true)
+  @Modifying
+  fun setupTrainingPrison(prisonId: String, username: String)
+
+  @Query("select distinct prisonId from Location")
+  fun findDistinctListOfPrisonIds(): List<String>
 }
