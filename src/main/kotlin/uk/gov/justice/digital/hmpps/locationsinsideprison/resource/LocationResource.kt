@@ -317,7 +317,7 @@ class LocationResource(
   @PutMapping("/{id}/deactivate/permanent")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
-    summary = "Permanently deactivate a location, the location must already be temporarily deactivated",
+    summary = "Permanently deactivate a location",
     description = "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(

@@ -407,4 +407,4 @@ class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location 
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
 class LocationCannotBeResidentialException(key: String) : Exception("Location AccommodationType $key cannot be converted to residential")
 class DuplicateLocalNameForSamePrisonException(key: String, prisonId: String) : ValidationException("$key already the same local name in prison $prisonId")
-class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated less it is already inactive")
+class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated as it is active")
