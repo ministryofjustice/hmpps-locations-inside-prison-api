@@ -18,11 +18,13 @@ class TrainingService(
 
   @Transactional
   fun setupTrainingPrisons() {
+    log.info("Reset training database : START")
     val prisonIds = locationRepository.findDistinctListOfPrisonIds()
 
     prisonIds.forEach {
       locationRepository.setupTrainingPrison(prisonId = it, username = authenticationFacade.getUserOrSystemInContext())
       log.info("Reset training database for $it")
     }
+    log.info("Reset training database : END")
   }
 }
