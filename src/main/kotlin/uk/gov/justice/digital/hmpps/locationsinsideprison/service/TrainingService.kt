@@ -22,7 +22,7 @@ class TrainingService(
     val prisonIds = locationRepository.findDistinctListOfPrisonIds()
 
     prisonIds.forEach {
-      locationRepository.setupTrainingPrison(prisonId = it, username = authenticationFacade.getUserOrSystemInContext())
+      locationRepository.setupTrainingPrison(prisonId = it, username = "ZQW42M")
       log.info("Reset training database for $it")
     }
     log.info("Reset training database : END")
