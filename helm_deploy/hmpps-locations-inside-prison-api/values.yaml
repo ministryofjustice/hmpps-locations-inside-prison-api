@@ -51,3 +51,6 @@ generic-service:
 
 generic-prometheus-alerts:
   targetApplication: hmpps-locations-inside-prison-api
+
+cron:
+  training_reset_schedule: ""
