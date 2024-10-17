@@ -50,4 +50,4 @@ generic-prometheus-alerts:
   alertSeverity: digital-prison-service-dev
 
 cron:
-  training_reset_schedule: "0 4 * * MON"
+  training_reset_suspend: false

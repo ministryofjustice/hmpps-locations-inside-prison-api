@@ -53,4 +53,5 @@ generic-prometheus-alerts:
   targetApplication: hmpps-locations-inside-prison-api
 
 cron:
-  training_reset_schedule: ""
+  training_reset_schedule: "0 4 * * MON"
+  training_reset_suspend: true

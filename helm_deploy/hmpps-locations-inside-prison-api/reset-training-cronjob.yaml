@@ -4,6 +4,7 @@ metadata:
   name: hmppps-locations-inside-prison-training-reset
 spec:
   schedule: "{{ .Values.cron.training_reset_schedule }}"
+  suspend: "{{ .Values.cron.training_reset_suspend }}"  # This suspends the CronJob
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 5
   startingDeadlineSeconds: 600
