@@ -1,5 +1,7 @@
 ---
 # Per environment values which override defaults in hmpps-locations-inside-prison-api/values.yaml
+environment:
+  name: train
 
 generic-service:
   replicaCount: 2
@@ -48,6 +50,3 @@ generic-service:
 generic-prometheus-alerts:
   businessHoursOnly: true
   alertSeverity: digital-prison-service-dev
-
-cron:
-  training_reset_suspend: false

@@ -1,5 +1,7 @@
 ---
 # Per environment values which override defaults in hmpps-locations-inside-prison-api/values.yaml
+environment:
+  name: preprod
 
 generic-service:
   replicaCount: 2

@@ -1,10 +1,10 @@
+{{- if (eq .Values.environment.name "train") }}
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: hmppps-locations-inside-prison-training-reset
 spec:
-  schedule: "{{ .Values.cron.training_reset_schedule }}"
-  suspend: "{{ .Values.cron.training_reset_suspend }}"  # This suspends the CronJob
+  schedule: "0 4 * * MON"
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 5
   startingDeadlineSeconds: 600
@@ -30,3 +30,4 @@ spec:
                 seccompProfile:
                   type: RuntimeDefault
           restartPolicy: Never
+{{- end }}
