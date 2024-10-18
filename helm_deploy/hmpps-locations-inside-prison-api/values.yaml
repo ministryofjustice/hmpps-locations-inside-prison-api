@@ -1,3 +1,6 @@
+environment:
+  name: undefined
+
 generic-service:
   nameOverride: hmpps-locations-inside-prison-api
   productId: "DPS039"

@@ -1,0 +1,33 @@
+{{- if (eq .Values.environment.name "train") }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: hmppps-locations-inside-prison-training-reset
+spec:
+  schedule: "0 4 * * MON"
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 5
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 345600
+      template:
+        spec:
+          containers:
+            - name: training-reset
+              image: ghcr.io/ministryofjustice/hmpps-devops-tools
+              args:
+                - /bin/sh
+                - -c
+                - curl --retry 2 -XPUT http://hmpps-locations-inside-prison-api/reset-training
+              securityContext:
+                capabilities:
+                  drop:
+                  - ALL
+                runAsNonRoot: true
+                allowPrivilegeEscalation: false
+                seccompProfile:
+                  type: RuntimeDefault
+          restartPolicy: Never
+{{- end }}

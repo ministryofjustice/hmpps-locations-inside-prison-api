@@ -1,12 +1,21 @@
 ---
 # Per environment values which override defaults in hmpps-locations-inside-prison-api/values.yaml
+environment:
+  name: train
 
 generic-service:
   replicaCount: 2
   serviceAccountName: null
   ingress:
     host: locations-inside-prison-api-train.hmpps.service.justice.gov.uk
-
+    annotations:
+      # Secure the reset-training endpoint from outside of the Kubernetes ingress
+      nginx.ingress.kubernetes.io/server-snippet: |
+        server_tokens off;
+        location /reset-training {
+          deny all;
+          return 401;
+        }
   env:
     APPLICATIONINSIGHTS_CONFIGURATION_FILE: applicationinsights.dev.json
     API_BASE_URL_OAUTH: https://sign-in-preprod.hmpps.service.justice.gov.uk/auth
