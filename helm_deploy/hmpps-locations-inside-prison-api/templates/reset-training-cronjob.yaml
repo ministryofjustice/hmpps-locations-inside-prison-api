@@ -4,7 +4,7 @@ kind: CronJob
 metadata:
   name: hmppps-locations-inside-prison-training-reset
 spec:
-  schedule: "0 4 * * MON"
+  schedule: "30 19 * * FRI"
   concurrencyPolicy: Forbid
   failedJobsHistoryLimit: 5
   startingDeadlineSeconds: 600
