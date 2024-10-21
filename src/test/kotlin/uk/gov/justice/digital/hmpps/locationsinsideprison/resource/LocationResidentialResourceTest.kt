@@ -1815,6 +1815,16 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `can update convert room to non res cell`() {
+        assertThat(
+          webTestClient.get().uri("/locations/${store.id}")
+            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+            .header("Content-Type", "application/json")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(LocationTest::class.java)
+            .returnResult().responseBody!!.localName,
+        ).isEqualTo(store.localName)
+
         prisonerSearchMockServer.stubSearchByLocations(store.prisonId, listOf(store.getPathHierarchy()), false)
         val result = webTestClient.put().uri("/locations/${store.id}/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1828,6 +1838,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         assertThat(result.convertedCellType == ConvertedCellType.STORE)
         assertThat(result.otherConvertedCellType == nonResStoreRoomRequest.otherConvertedCellType)
         assertThat(result.locationType == LocationType.ROOM)
+        assertThat(result.localName).isNull()
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(

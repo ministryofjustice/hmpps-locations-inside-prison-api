@@ -104,8 +104,6 @@ open class ResidentialLocation(
   }
   private fun isCurrentCellOrNotPermanentlyInactive(cell: Cell) = !cell.isPermanentlyDeactivated() || cell == this
 
-  open fun isConvertedCell(): Boolean = false
-
   private fun getInactiveCellCount() = cellLocations().count { it.isTemporarilyDeactivated() }
 
   fun updateCellUsedFor(setOfUsedFor: Set<UsedForType>, userOrSystemInContext: String, clock: Clock) {
