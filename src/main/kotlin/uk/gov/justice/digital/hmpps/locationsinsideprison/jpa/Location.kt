@@ -445,7 +445,7 @@ abstract class Location(
         .sortedWith(NaturalOrderComparator()),
     )
 
-  private fun getDerivedLocalName() = if (!isCell()) {
+  private fun getDerivedLocalName() = if (!isCellOrConvertedCell()) {
     localName?.capitalizeWords()
   } else {
     null
@@ -507,6 +507,8 @@ abstract class Location(
     }
     return this
   }
+
+  open fun isConvertedCell(): Boolean = false
 
   open fun sync(upsert: NomisSyncLocationRequest, clock: Clock): Location {
     addHistory(LocationAttribute.CODE, getCode(), upsert.code, upsert.lastUpdatedBy, LocalDateTime.now(clock))
@@ -782,6 +784,7 @@ abstract class Location(
     return getKey()
   }
 
+  fun isCellOrConvertedCell() = this is Cell || isConvertedCell()
   fun isCell() = this is Cell && !isConvertedCell()
   fun isStructural() = locationType in ResidentialLocationType.entries.filter { it.structural }.map { it.baseType }
   fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
