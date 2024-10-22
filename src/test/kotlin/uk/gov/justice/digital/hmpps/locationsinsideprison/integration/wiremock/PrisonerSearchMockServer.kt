@@ -91,16 +91,33 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
         ),
     )
   }
-<<<<<<< Updated upstream
 
   fun stubAllPrisonersInPrison(
     prisonId: String,
   ) {
     var result = SearchResult(
       content = listOf(
-        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-001", index = 1000, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-002", index = 1001, inOutStatus = "OUT", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-003", index = 1002, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(
+          prisonId = prisonId,
+          cellLocation = "Z-1-001",
+          index = 1000,
+          inOutStatus = "IN",
+          status = "ACTIVE IN"
+        ),
+        createPrisoner(
+          prisonId = prisonId,
+          cellLocation = "Z-1-002",
+          index = 1001,
+          inOutStatus = "OUT",
+          status = "ACTIVE IN"
+        ),
+        createPrisoner(
+          prisonId = prisonId,
+          cellLocation = "Z-1-003",
+          index = 1002,
+          inOutStatus = "IN",
+          status = "ACTIVE IN"
+        ),
       ),
     )
 
@@ -113,26 +130,32 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
             .withStatus(200),
         ),
     )
-=======
+
+  }
+
+  fun createPrisoner(
+    prisonId: String,
+    cellLocation: String,
+    index: Int,
+    status: String = "ACTIVE IN",
+    inOutStatus: String = "IN"
+  ) =
+    Prisoner(
+      prisonerNumber = "A${index.toString().padStart(4, '0')}AA",
+      firstName = "Firstname-$index",
+      lastName = "Surname-$index",
+      prisonId = prisonId,
+      prisonName = prisonId,
+      cellLocation = cellLocation,
+      gender = "MALE",
+      status = status,
+      lastMovementTypeCode = "ADM",
+      inOutStatus = inOutStatus,
+      csra = "High",
+      category = "C",
+      alerts = emptyList(),
+    )
   fun requestReceived(request: Request, response: Response) {
     log.info("WireMock request with headers: {}", request.headers);
->>>>>>> Stashed changes
   }
 }
-
-fun createPrisoner(prisonId: String, cellLocation: String, index: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN") =
-  Prisoner(
-    prisonerNumber = "A${index.toString().padStart(4, '0')}AA",
-    firstName = "Firstname-$index",
-    lastName = "Surname-$index",
-    prisonId = prisonId,
-    prisonName = prisonId,
-    cellLocation = cellLocation,
-    gender = "MALE",
-    status = status,
-    lastMovementTypeCode = "ADM",
-    inOutStatus = inOutStatus,
-    csra = "High",
-    category = "C",
-    alerts = emptyList(),
-  )
