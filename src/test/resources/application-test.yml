@@ -25,6 +25,14 @@ spring:
   jpa:
     show-sql: false
 
+  security:
+    oauth2:
+      client:
+        registration:
+          LOCATIONS_INSIDE_PRISON_API:
+            client-id: LOCATION_ID
+            client-secret: LOCATION_SECRET
+
 hmpps.sqs:
   provider: localstack
   queues:

@@ -9,6 +9,10 @@ import com.github.tomakehurst.wiremock.client.WireMock.post
 import com.github.tomakehurst.wiremock.client.WireMock.urlPathMatching
 import com.github.tomakehurst.wiremock.http.HttpHeader
 import com.github.tomakehurst.wiremock.http.HttpHeaders
+import com.github.tomakehurst.wiremock.http.Request
+import com.github.tomakehurst.wiremock.http.Response
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeQuery
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeSearch
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Matcher
@@ -18,7 +22,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SearchResult
 class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
   companion object {
     private const val WIREMOCK_PORT = 8094
+    val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
+
 
   private val mapper = ObjectMapper().findAndRegisterModules()
 
@@ -85,6 +91,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
         ),
     )
   }
+<<<<<<< Updated upstream
 
   fun stubAllPrisonersInPrison(
     prisonId: String,
@@ -106,6 +113,10 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
             .withStatus(200),
         ),
     )
+=======
+  fun requestReceived(request: Request, response: Response) {
+    log.info("WireMock request with headers: {}", request.headers);
+>>>>>>> Stashed changes
   }
 }
 

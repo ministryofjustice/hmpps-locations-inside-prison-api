@@ -52,6 +52,7 @@ abstract class IntegrationTestBase : TestBase() {
     fun startMocks() {
       hmppsAuthMockServer.start()
       hmppsAuthMockServer.stubGrantToken()
+      prisonerSearchMockServer.addMockServiceRequestListener(prisonerSearchMockServer::requestReceived)
       prisonerSearchMockServer.start()
       prisonRegisterMockServer.start()
       prisonApiMockServer.start()
