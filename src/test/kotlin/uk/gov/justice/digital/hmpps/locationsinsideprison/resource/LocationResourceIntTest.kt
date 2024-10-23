@@ -437,11 +437,21 @@ class LocationResourceIntTest : CommonDataTestBase() {
     @Nested
     inner class Validation {
       @Test
-      fun `access client error bad data`() {
+      fun `bad data causes 400`() {
         webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"deactivationReason": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `does not allow a reason more than 255 characters`() {
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, deactivationReasonDescription = randomString(256))))
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -808,6 +818,20 @@ class LocationResourceIntTest : CommonDataTestBase() {
               }
             """.trimIndent(),
           )
+      }
+
+      @Test
+      fun `can deactivate a location with other reason that is 255 characters`() {
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, deactivationReasonDescription = randomString(255))))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(3)
       }
 
       @Test
@@ -2279,3 +2303,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
     }
   }
 }
+
+val charPool: List<Char> = ('a'..'z') + ('A'..'Z') + ('0'..'9')
+
+fun randomString(length: Int) = List(length) { charPool.random() }.joinToString("")
