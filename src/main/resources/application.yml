@@ -8,6 +8,7 @@ spring:
   codec:
     max-in-memory-size: 20MB
 
+  # TODO: This security section can be removed if your service doesn't call out to other services
   security:
     oauth2:
       resource-server:
