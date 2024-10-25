@@ -791,7 +791,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        assertThat(locationChanged.localName).isEqualTo("Landing Z1 - Changed")
+        assertThat(locationChanged.localName).isEqualTo("Landing Z1 - CHANGED")
 
         getDomainEvents(1).let {
           assertThat(it).hasSize(1)

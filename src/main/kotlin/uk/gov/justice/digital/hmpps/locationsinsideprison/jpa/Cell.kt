@@ -525,6 +525,7 @@ class Cell(
     includeNonResidential: Boolean,
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
+    formatLocalName: Boolean,
   ): LocationDto =
     super.toDto(
       includeChildren = includeChildren,
@@ -534,6 +535,7 @@ class Cell(
       includeNonResidential = includeNonResidential,
       useHistoryForUpdate = useHistoryForUpdate,
       countCells = countCells,
+      formatLocalName = formatLocalName,
     ).copy(
       oldWorkingCapacity = if (isTemporarilyDeactivated()) {
         getWorkingCapacity()
