@@ -81,6 +81,7 @@ class NonResidentialLocation(
     includeNonResidential: Boolean,
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
+    formatLocalName: Boolean,
   ): LocationDto {
     return super.toDto(
       includeChildren = includeChildren,
@@ -90,6 +91,7 @@ class NonResidentialLocation(
       includeNonResidential = includeNonResidential,
       useHistoryForUpdate = useHistoryForUpdate,
       countCells = countCells,
+      formatLocalName = formatLocalName,
     ).copy(
       usage = nonResidentialUsages.map { it.toDto() }.sortedBy { it.usageType.sequence },
     )
