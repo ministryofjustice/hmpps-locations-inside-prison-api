@@ -51,4 +51,14 @@ Run:
 
 Then view output file for coverage report.
 
+### HMPPS-template-kotlin update 
+The project is sync with https://github.com/ministryofjustice/hmpps-template-kotlin  
+Sync date: `25/10/2024` sync commit: `7426643351775e175fc5e77101fd9226fe66ef86`
 
+#### Hw to sync the project with HMPPS-template-kotlin
+Check if remote repository is added by `git remote -v`.
+if repository is not present run `git remote add hmpps-kotlin-tamplate git@github.com:ministryofjustice/hmpps-template-kotlin.git`.
+Fetch the newest changes from hmpps-kotlin-template calling `git fetch hmpps-kotlin-template`.
+Find out missing commits https://github.com/ministryofjustice/hmpps-template-kotlin/commits/main/  following `sync commit` above. 
+Cherry Pick the changes by calling `git cherry-pick <<commit_id>>..<<commit_id>>` if you want to Cherry pick only one commit  call `git cherry-pick <<commit_id>>`
+Resolve the conflict and update **sync date** and **sync commit** in README.md to guide the next person on what was done.  
