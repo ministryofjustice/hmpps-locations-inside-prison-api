@@ -1025,7 +1025,8 @@ class LocationService(
   }
 
   fun findByPrisonIdAndLocalName(prisonId: String, localName: String): LocationDTO {
-    return locationRepository.findAllByPrisonIdAndLocalName(prisonId, localName).firstOrNull { !it.isPermanentlyDeactivated() }?.toDto() ?: throw LocationNotFoundException("$prisonId-$localName")
+    return locationRepository.findAllByPrisonIdAndLocalName(prisonId, localName).firstOrNull { !it.isPermanentlyDeactivated() }?.toDto()
+      ?: throw LocationNotFoundException("$prisonId-$localName")
   }
 }
 

@@ -139,6 +139,7 @@ open class ResidentialLocation(
     includeNonResidential: Boolean,
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
+    formatLocalName: Boolean,
   ): LocationDto {
     return super.toDto(
       includeChildren = includeChildren,
@@ -148,6 +149,7 @@ open class ResidentialLocation(
       includeNonResidential = includeNonResidential,
       useHistoryForUpdate = useHistoryForUpdate,
       countCells = countCells,
+      formatLocalName = formatLocalName,
     ).copy(
 
       capacity = CapacityDto(

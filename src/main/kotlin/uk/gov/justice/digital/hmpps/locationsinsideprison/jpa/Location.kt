@@ -342,6 +342,7 @@ abstract class Location(
     includeNonResidential: Boolean = true,
     useHistoryForUpdate: Boolean = false,
     countCells: Boolean = false,
+    formatLocalName: Boolean = false,
   ): LocationDto {
     val topHistoryEntry = if (useHistoryForUpdate) {
       history.maxByOrNull { it.amendedDate }
@@ -370,7 +371,7 @@ abstract class Location(
       } else {
         updatedBy
       },
-      localName = getDerivedLocalName(),
+      localName = getDerivedLocalName(formatLocalName),
       comments = comments,
       active = isActiveAndAllParentsActive(),
       permanentlyInactive = isPermanentlyDeactivated(),
@@ -413,7 +414,7 @@ abstract class Location(
   fun toLocationGroupDto(): LocationGroupDto {
     return LocationGroupDto(
       key = code,
-      name = getDerivedLocalName() ?: code,
+      name = getDerivedLocalName(formatLocalName = true) ?: code,
       children = getActiveResidentialLocationsBelowThisLevel()
         .filter { it.isStructural() }
         .map { it.toLocationGroupDto() }
@@ -445,8 +446,12 @@ abstract class Location(
         .sortedWith(NaturalOrderComparator()),
     )
 
-  private fun getDerivedLocalName() = if (!isCellOrConvertedCell()) {
-    localName?.capitalizeWords()
+  private fun getDerivedLocalName(formatLocalName: Boolean = false) = if (!isCellOrConvertedCell()) {
+    if (formatLocalName) {
+      localName?.capitalizeWords()
+    } else {
+      localName
+    }
   } else {
     null
   }
@@ -784,7 +789,7 @@ abstract class Location(
     return getKey()
   }
 
-  fun isCellOrConvertedCell() = this is Cell || isConvertedCell()
+  private fun isCellOrConvertedCell() = this is Cell || isConvertedCell()
   fun isCell() = this is Cell && !isConvertedCell()
   fun isStructural() = locationType in ResidentialLocationType.entries.filter { it.structural }.map { it.baseType }
   fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
