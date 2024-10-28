@@ -722,6 +722,7 @@ class LocationService(
         reactivatedLocationsDto,
       ).toList(),
       InternalLocationDomainEventType.LOCATION_REACTIVATED to reactivatedLocationsDto.toList(),
+      InternalLocationDomainEventType.LOCATION_AMENDED to reactivatedLocationsDto.toList(),
     )
   }
 
