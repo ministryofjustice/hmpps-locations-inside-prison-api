@@ -206,7 +206,7 @@ class Cell(
 
     setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock)
     certifyCell(userOrSystemInContext, clock)
-
+    this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
   }

@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -60,6 +61,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         prisonId = "NMI",
+        residentialHousingType = ResidentialHousingType.OTHER_USE,
       ),
     )
     landingN1 = repository.save(
@@ -131,6 +133,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         pathHierarchy = "Z-1-01S",
         locationType = LocationType.STORE,
         localName = "Store Room",
+        residentialHousingType = ResidentialHousingType.OTHER_USE,
       ),
     )
     inactiveCellB3001 = repository.save(

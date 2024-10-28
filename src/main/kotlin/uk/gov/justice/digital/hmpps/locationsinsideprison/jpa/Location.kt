@@ -780,6 +780,11 @@ abstract class Location(
       this.whenUpdated = amendedDate
       this.deactivatedBy = null
 
+      if (this is Cell && !isConvertedCell()) {
+        certifyCell(userOrSystemInContext = userOrSystemInContext, clock = clock)
+        this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
+      }
+
       reactivatedLocations?.add(this)
       amendedLocations?.addAll(this.getParentLocations())
       log.info("Re-activated Location [${getKey()}]")

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
@@ -17,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
@@ -2294,6 +2296,16 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               }
             """.trimIndent(),
           )
+
+        assertThat(
+          webTestClient.get().uri("/sync/id/${cell1.id}")
+            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+            .header("Content-Type", "application/json")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(LegacyLocation::class.java)
+            .returnResult().responseBody!!.residentialHousingType,
+        ).isEqualTo(ResidentialHousingType.NORMAL_ACCOMMODATION)
       }
     }
 
