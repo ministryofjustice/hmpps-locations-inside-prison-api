@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
@@ -21,6 +22,7 @@ fun buildResidentialLocation(
   pathHierarchy: String,
   locationType: LocationType,
   localName: String? = null,
+  residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
 ): ResidentialLocation {
   return ResidentialLocation(
     prisonId = prisonId,
@@ -32,6 +34,7 @@ fun buildResidentialLocation(
     childLocations = mutableListOf(),
     orderWithinParentLocation = 99,
     localName = localName,
+    residentialHousingType = residentialHousingType,
   )
 }
 
@@ -47,6 +50,7 @@ fun buildCell(
   ),
   specialistCellType: SpecialistCellType? = null,
   archived: Boolean = false,
+  residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
 ): Cell {
   val cell = Cell(
     prisonId = prisonId,
@@ -60,6 +64,7 @@ fun buildCell(
     capacity = capacity,
     certification = certification,
     accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+    residentialHousingType = residentialHousingType,
     deactivatedReason = if (!active) {
       DeactivatedReason.DAMAGED
     } else {
