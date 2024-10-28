@@ -1067,7 +1067,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(12).let {
+        getDomainEvents(8).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.reactivated" to "MDI-Z",
             "location.inside.prison.reactivated" to "MDI-Z-1",
@@ -1077,10 +1077,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.reactivated" to "MDI-Z-1-01S",
             "location.inside.prison.amended" to "MDI-Z",
             "location.inside.prison.amended" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z-2",
-            "location.inside.prison.amended" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1-002",
-            "location.inside.prison.amended" to "MDI-Z-1-01S",
           )
         }
 
@@ -1261,12 +1257,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.reactivated" to "MDI-Z-1-001",
             "location.inside.prison.reactivated" to "MDI-Z-1",
             "location.inside.prison.reactivated" to "MDI-Z",
-            "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
           )
