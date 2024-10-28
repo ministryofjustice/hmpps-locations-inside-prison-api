@@ -1728,14 +1728,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(8).let {
+        getDomainEvents(7).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.reactivated" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.reactivated" to "MDI-Z-1-002",
             "location.inside.prison.reactivated" to "MDI-Z-1",
             "location.inside.prison.reactivated" to "MDI-Z",
-            "location.inside.prison.amended" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1-002",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
           )
@@ -1869,16 +1868,133 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(6).let {
+        getDomainEvents(4).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.reactivated" to "MDI-Z-1-01S",
             "location.inside.prison.reactivated" to "MDI-Z-2",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
-            "location.inside.prison.amended" to "MDI-Z-1-01S",
-            "location.inside.prison.amended" to "MDI-Z-2",
           )
         }
+      }
+
+      @Test
+      fun `can reactivate a number of locations and update capacity in cascade locations`() {
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell2.getPathHierarchy(), cell1.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(6).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-Z",
+            "location.inside.prison.deactivated" to "MDI-Z-1",
+            "location.inside.prison.deactivated" to "MDI-Z-2",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.deactivated" to "MDI-Z-1-002",
+            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
+          )
+        }
+
+        webTestClient.put().uri("/locations/bulk/reactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ReactivateLocationsRequest(
+                locations = mapOf(
+                  wingZ.id!! to ReactivationDetail(cascadeReactivation = true),
+                  landingZ2.id!! to ReactivationDetail(),
+                  cell2.id!! to ReactivationDetail(capacity = Capacity(maxCapacity = 5, workingCapacity = 4)),
+                ),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(9).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.reactivated" to store.getKey(),
+            "location.inside.prison.reactivated" to cell1.getKey(),
+            "location.inside.prison.reactivated" to cell2.getKey(),
+            "location.inside.prison.reactivated" to landingZ2.getKey(),
+            "location.inside.prison.reactivated" to landingZ1.getKey(),
+            "location.inside.prison.reactivated" to wingZ.getKey(),
+            "location.inside.prison.amended" to cell2.getKey(),
+            "location.inside.prison.amended" to landingZ1.getKey(),
+            "location.inside.prison.amended" to wingZ.getKey(),
+          )
+        }
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "active": true,
+              "key": "MDI-Z",
+              "capacity": {
+                "maxCapacity": 7,
+                "workingCapacity": 6
+              },
+              "childLocations": [
+                {
+                  "key": "MDI-Z-VISIT"
+                },
+                {
+                  "key": "MDI-Z-ADJUDICATION"
+                },
+                {
+                  "key": "MDI-Z-1",
+                  "capacity": {
+                    "maxCapacity": 7,
+                    "workingCapacity": 6
+                  },
+                  "childLocations": [
+                    {
+                      "key": "MDI-Z-1-001",
+                      "capacity": {
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
+                      }
+                    },
+                    {
+                      "key": "MDI-Z-1-002",
+                      "capacity": {
+                        "maxCapacity": 5,
+                        "workingCapacity": 4
+                      }
+                    },
+                    {
+                      "key": "MDI-Z-1-01S",
+                      "capacity": {
+                        "maxCapacity": 0,
+                        "workingCapacity": 0
+                      }
+                    }
+                  ]
+                },
+                {
+                  "key": "MDI-Z-2",
+                  "capacity": {
+                    "maxCapacity": 0,
+                    "workingCapacity": 0
+                  }
+                }
+              ]
+            }
+          """,
+            false,
+          )
       }
     }
   }

@@ -685,6 +685,7 @@ class LocationService(
   @Transactional
   fun reactivateLocations(locationsToReactivate: ReactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val locationsReactivated = mutableSetOf<Location>()
+    val amendedLocations = mutableSetOf<Location>()
 
     locationsToReactivate.locations.forEach { (id, reactivationDetail) ->
       val locationToUpdate = locationRepository.findById(id)
@@ -698,6 +699,7 @@ class LocationService(
         userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
         clock = clock,
         reactivatedLocations = locationsReactivated,
+        amendedLocations = amendedLocations,
         maxCapacity = reactivationDetail.capacity?.maxCapacity,
         workingCapacity = reactivationDetail.capacity?.workingCapacity,
       )
@@ -708,21 +710,16 @@ class LocationService(
             userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
             clock = clock,
             reactivatedLocations = locationsReactivated,
+            amendedLocations = amendedLocations,
           )
         }
       }
     }
 
-    val reactivatedLocationsDto = locationsReactivated.map { it.toDto() }.toSet()
     locationsReactivated.forEach { trackLocationUpdate(it, "Re-activated Location") }
     return mapOf(
-      InternalLocationDomainEventType.LOCATION_AMENDED to locationsReactivated.flatMap { reactivated ->
-        reactivated.getParentLocations().map { it.toDto() }
-      }.toSet().minus(
-        reactivatedLocationsDto,
-      ).toList(),
-      InternalLocationDomainEventType.LOCATION_REACTIVATED to reactivatedLocationsDto.toList(),
-      InternalLocationDomainEventType.LOCATION_AMENDED to reactivatedLocationsDto.toList(),
+      InternalLocationDomainEventType.LOCATION_AMENDED to amendedLocations.map { it.toDto() }.toList(),
+      InternalLocationDomainEventType.LOCATION_REACTIVATED to locationsReactivated.map { it.toDto() }.toList(),
     )
   }
 
