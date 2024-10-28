@@ -302,7 +302,7 @@ class LocationResource(
     updateDeactivationDetailsRequest: TemporaryDeactivationLocationRequest,
   ): LocationDTO {
     return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_AMENDED,
+      InternalLocationDomainEventType.LOCATION_DEACTIVATED,
     ) {
       locationService.updateDeactivatedDetails(
         id,
