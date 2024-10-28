@@ -738,8 +738,20 @@ abstract class Location(
     }
   }
 
-  open fun reactivate(userOrSystemInContext: String, clock: Clock, maxCapacity: Int? = null, workingCapacity: Int? = null, reactivatedLocations: MutableSet<Location>? = null): Boolean {
-    this.getParent()?.reactivate(userOrSystemInContext = userOrSystemInContext, clock = clock, maxCapacity = maxCapacity, workingCapacity = workingCapacity, reactivatedLocations = reactivatedLocations)
+  open fun reactivate(userOrSystemInContext: String, clock: Clock, maxCapacity: Int? = null, workingCapacity: Int? = null, reactivatedLocations: MutableSet<Location>? = null, amendedLocations: MutableSet<Location>? = null): Boolean {
+    this.getParent()?.reactivate(userOrSystemInContext = userOrSystemInContext, clock = clock, reactivatedLocations = reactivatedLocations, amendedLocations = amendedLocations)
+
+    if (this is Cell && (maxCapacity != null || workingCapacity != null)) {
+      setCapacity(
+        maxCapacity = maxCapacity ?: getMaxCapacity() ?: 0,
+        workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
+        userOrSystemInContext = userOrSystemInContext,
+        clock = clock,
+      )
+      amendedLocations?.add(this)
+      amendedLocations?.addAll(this.getParentLocations())
+    }
+
     if (!isActive() && !isPermanentlyDeactivated()) {
       val amendedDate = LocalDateTime.now(clock)
       addHistory(LocationAttribute.STATUS, this.getStatus().description, LocationStatus.ACTIVE.description, userOrSystemInContext, amendedDate)
@@ -768,16 +780,8 @@ abstract class Location(
       this.whenUpdated = amendedDate
       this.deactivatedBy = null
 
-      if (this is Cell && (maxCapacity != null || workingCapacity != null)) {
-        setCapacity(
-          maxCapacity = maxCapacity ?: getMaxCapacity() ?: 0,
-          workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
-          userOrSystemInContext = userOrSystemInContext,
-          clock = clock,
-        )
-      }
-
       reactivatedLocations?.add(this)
+      amendedLocations?.addAll(this.getParentLocations())
       log.info("Re-activated Location [${getKey()}]")
       return true
     }
