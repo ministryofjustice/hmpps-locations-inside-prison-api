@@ -846,6 +846,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+          )
+        }
         val proposedReactivationDate = now.plusMonths(1).toLocalDate()
         webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -854,12 +861,9 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(4).let {
+        getDomainEvents(1).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1-001",
           )
         }
 
@@ -926,6 +930,14 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+          )
+        }
+
         val proposedReactivationDate = now.plusMonths(1).toLocalDate()
         webTestClient.put().uri("/locations/${cell1.id}/update/temporary-deactivation")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -934,12 +946,9 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(4).let {
+        getDomainEvents(1).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to "MDI-Z-1",
-            "location.inside.prison.amended" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "MDI-Z-1-001",
           )
         }
 
