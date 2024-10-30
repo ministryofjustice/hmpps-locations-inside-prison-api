@@ -85,6 +85,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     wingB = repository.save(
       buildResidentialLocation(
         pathHierarchy = "B",
+        localName = "Wing B",
         locationType = LocationType.WING,
       ),
     )
@@ -105,6 +106,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     landingB3 = repository.save(
       buildResidentialLocation(
         pathHierarchy = "B-A",
+        localName = "Landing 1",
         locationType = LocationType.LANDING,
       ),
     )

@@ -49,7 +49,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateLocalNameForSamePrisonException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateLocalNameForSameHierarchyException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
@@ -455,12 +455,14 @@ class LocationService(
 
     with(updateLocationLocalNameRequest) {
       if (localName != null) {
-        if (locationRepository.findAllByPrisonIdAndLocalName(
+        val topLevelLocation = location.findTopLevelLocation()
+        if (findAllByPrisonIdTopParentAndLocalName(
             prisonId = location.prisonId,
             localName = localName,
-          ).any { !it.isPermanentlyDeactivated() && it.id != id }
+            parentLocationId = location.getParent()?.id,
+          ).any { it.id != id }
         ) {
-          throw DuplicateLocalNameForSamePrisonException(key = location.getKey(), prisonId = location.prisonId)
+          throw DuplicateLocalNameForSameHierarchyException(key = location.getKey(), topLocationKey = topLevelLocation.getKey())
         }
       }
 
@@ -1022,9 +1024,23 @@ class LocationService(
     return UsedForType.entries.filter { it.isStandard() || (prisonDetails.female && it.femaleOnly) || (prisonDetails.lthse && it.secureEstateOnly) }
   }
 
-  fun findByPrisonIdAndLocalName(prisonId: String, localName: String): LocationDTO {
-    return locationRepository.findAllByPrisonIdAndLocalName(prisonId, localName).firstOrNull { !it.isPermanentlyDeactivated() }?.toDto()
-      ?: throw LocationNotFoundException("$prisonId-$localName")
+  fun findAllByPrisonIdTopParentAndLocalName(prisonId: String, localName: String, parentLocationId: UUID? = null): List<LocationDTO> {
+    val foundLocations =
+      parentLocationId?.let {
+        locationRepository.findAllByPrisonIdAndParentIdAndLocalName(prisonId = prisonId, parentId = parentLocationId, localName = localName)
+      } ?: locationRepository.findAllByPrisonIdAndParentIsNullAndLocalName(prisonId = prisonId, localName = localName)
+
+    return foundLocations
+      .filter { !it.isPermanentlyDeactivated() }
+      .map { it.toDto() }
+  }
+
+  fun findByPrisonIdTopParentAndLocalName(prisonId: String, localName: String, parentLocationId: UUID? = null): LocationDTO {
+    return findAllByPrisonIdTopParentAndLocalName(
+      prisonId = prisonId,
+      localName = localName,
+      parentLocationId = parentLocationId,
+    ).firstOrNull() ?: throw LocationNotFoundException("$prisonId-$parentLocationId-$localName")
   }
 }
 
