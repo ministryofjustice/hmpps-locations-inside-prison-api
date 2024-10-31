@@ -279,7 +279,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                   "locationType": "WING",
                   "locationCode": "B",
                   "fullLocationPath": "B",
-                  "localName": "B",
+                  "localName": "Wing B",
                   "certified": true,
                   "rollCount": {
                     "bedsInUse": 0,
@@ -295,7 +295,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                       "locationType": "LANDING",
                       "locationCode": "A",
                       "fullLocationPath": "B-A",
-                      "localName": "A",
+                      "localName": "Landing 1",
                       "certified": true,
                       "rollCount": {
                         "bedsInUse": 0,
@@ -399,7 +399,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                   "locationType": "WING",
                   "locationCode": "B",
                   "fullLocationPath": "B",
-                  "localName": "B",
+                  "localName": "Wing B",
                   "certified": true,
                   "rollCount": {
                     "bedsInUse": 0,
@@ -415,7 +415,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                       "locationType": "LANDING",
                       "locationCode": "A",
                       "fullLocationPath": "B-A",
-                      "localName": "A",
+                      "localName": "Landing 1",
                       "certified": true,
                       "rollCount": {
                         "bedsInUse": 0,

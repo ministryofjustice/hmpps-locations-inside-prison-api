@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
@@ -17,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
@@ -774,7 +776,20 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             .exchange()
             .expectBody(ErrorResponse::class.java)
             .returnResult().responseBody!!.errorCode,
-        ).isEqualTo(119)
+        ).isEqualTo(ErrorCode.DuplicateLocalNameAtSameLevel.errorCode)
+      }
+
+      @Test
+      fun `cannot set a wing to the same local name as another wing`() {
+        assertThat(
+          webTestClient.put().uri("/locations/${wingZ.id}/change-local-name")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(""" { "localName": "Wing B"} """)
+            .exchange()
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.DuplicateLocalNameAtSameLevel.errorCode)
       }
     }
 
@@ -859,6 +874,29 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-Z-1",
           )
         }
+      }
+
+      @Test
+      fun `can set a location to the same local name as another location provided in a different wing`() {
+        landingZ1.localName = "TEMP"
+        repository.save(landingZ1)
+
+        webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "localName": "Landing 1"} """)
+          .exchange()
+          .expectStatus().isOk
+      }
+
+      @Test
+      fun `can set a wing to a unique local name`() {
+        webTestClient.put().uri("/locations/${wingZ.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "localName": "Wing Z"} """)
+          .exchange()
+          .expectStatus().isOk
       }
 
       @Test
@@ -958,13 +996,35 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isEqualTo(404)
       }
+
+      @Test
+      fun `Does not return a location when local name in different wing`() {
+        webTestClient.get().uri("\"/locations/${landingZ1.prisonId}/local-name/${landingZ2.localName}?parentLocationId=${wingB.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
     }
 
     @Nested
     inner class HappyPath {
       @Test
       fun `can find a location by local name`() {
-        val foundLocation = webTestClient.get().uri("/locations/${landingZ1.prisonId}/local-name/${landingZ1.localName}")
+        val foundLocation = webTestClient.get().uri("/locations/${wingB.prisonId}/local-name/${wingB.localName}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(foundLocation.getKey()).isEqualTo(wingB.getKey())
+      }
+
+      @Test
+      fun `can find a location by local name and wing location specified`() {
+        val foundLocation = webTestClient.get().uri("/locations/${landingZ1.prisonId}/local-name/${landingZ1.localName}?parentLocationId=${wingZ.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -2294,6 +2354,16 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               }
             """.trimIndent(),
           )
+
+        assertThat(
+          webTestClient.get().uri("/sync/id/${cell1.id}")
+            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+            .header("Content-Type", "application/json")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(LegacyLocation::class.java)
+            .returnResult().responseBody!!.residentialHousingType,
+        ).isEqualTo(ResidentialHousingType.NORMAL_ACCOMMODATION)
       }
     }
 

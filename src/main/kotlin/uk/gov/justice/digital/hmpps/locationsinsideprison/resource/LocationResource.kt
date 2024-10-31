@@ -215,8 +215,11 @@ class LocationResource(
     @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
     @Size(max = 30, message = "Description must be less than 31 characters")
     @PathVariable localName: String,
+    @Schema(description = "The level above in this hierarchy to look below, empty will check prison level", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = false)
+    @RequestParam(name = "parentLocationId", required = false)
+    parentLocationId: UUID? = null,
   ): LocationDTO =
-    locationService.findByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
+    locationService.findByPrisonIdTopParentAndLocalName(prisonId = prisonId, parentLocationId = parentLocationId, localName = localName)
 
   @PutMapping("/{id}/deactivate/temporary")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")

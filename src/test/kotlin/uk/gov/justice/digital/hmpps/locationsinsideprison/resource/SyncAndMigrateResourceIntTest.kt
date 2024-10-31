@@ -917,7 +917,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `can migrate a location different deactivationReason Mainteance`() {
+      fun `can migrate a location different deactivationReason Maintenance`() {
         migrateRequest = migrateRequestGeneration(NomisDeactivatedReason.LOCAL_WORK)
 
         val result = webTestClient.post().uri("/migrate/location")

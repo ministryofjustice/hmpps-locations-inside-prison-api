@@ -368,16 +368,16 @@ class ApiExceptionHandler {
       )
   }
 
-  @ExceptionHandler(DuplicateLocalNameForSamePrisonException::class)
-  fun handleDuplicateLocalNameForSamePrisonException(e: DuplicateLocalNameForSamePrisonException): ResponseEntity<ErrorResponse?>? {
+  @ExceptionHandler(DuplicateLocalNameForSameHierarchyException::class)
+  fun handleDuplicateLocalNameForSameHierarchyException(e: DuplicateLocalNameForSameHierarchyException): ResponseEntity<ErrorResponse?>? {
     log.debug("Duplicate Local name: {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
       .body(
         ErrorResponse(
           status = CONFLICT,
-          errorCode = ErrorCode.DuplicateLocalNameInPrison,
-          userMessage = "Local name already exists in this prison: ${e.message}",
+          errorCode = ErrorCode.DuplicateLocalNameAtSameLevel,
+          userMessage = "Local name already exists in this prison at this level: ${e.message}",
           developerMessage = e.message,
         ),
       )
@@ -406,5 +406,5 @@ class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationE
 class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as converted cell")
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
 class LocationCannotBeResidentialException(key: String) : Exception("Location AccommodationType $key cannot be converted to residential")
-class DuplicateLocalNameForSamePrisonException(key: String, prisonId: String) : ValidationException("$key already the same local name in prison $prisonId")
+class DuplicateLocalNameForSameHierarchyException(key: String, topLocationKey: String) : ValidationException("$key already the same local name in this hierarchy $topLocationKey")
 class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated as it is active")

@@ -1526,6 +1526,10 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Kitchen / Servery"
                   },
                   {
+                    "key": "LISTENERS_ROOM",
+                    "description": "Listener's room"
+                  },
+                  {
                     "key": "TREATMENT_ROOM",
                     "description": "Treatment room"
                   },
