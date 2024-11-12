@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
@@ -1232,6 +1233,16 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
+        assertThat(
+          webTestClient.get().uri("/locations/${cell1.id}")
+            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(LocationTest::class.java)
+            .returnResult().responseBody!!.deactivatedReason,
+        ).isEqualTo(DeactivatedReason.DAMAGED)
+
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
@@ -1246,19 +1257,31 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, proposedReactivationDate = proposedReactivationDate.plusMonths(1), planetFmReference = "123456")))
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(5).let {
+        getDomainEvents(6).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
             "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
+
+        val cellDetails = webTestClient.get().uri("/locations/${cell1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+        assertThat(cellDetails.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
+        assertThat(cellDetails.proposedReactivationDate).isEqualTo(proposedReactivationDate.plusMonths(1))
+        assertThat(cellDetails.planetFmReference).isEqualTo("123456")
 
         webTestClient.put().uri("/locations/${cell1.id}/reactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1341,6 +1364,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "attribute": "Status",
                           "oldValue": "Inactive",
                           "newValue": "Active"
+                        },
+                        {
+                          "attribute": "Deactivation reason",
+                          "oldValue": "Damage",
+                          "newValue": "Mothballed"
                         },
                         {
                           "attribute": "Deactivation reason",
