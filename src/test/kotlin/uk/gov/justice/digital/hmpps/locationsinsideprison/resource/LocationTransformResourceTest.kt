@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
@@ -491,6 +492,8 @@ class LocationTransformResourceTest : CommonDataTestBase() {
       fun `cannot have a max cap of 0`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
+        cell1.accommodationType = AccommodationType.CARE_AND_SEPARATION
+        repository.save(cell1)
         assertThat(
           webTestClient.put().uri("/locations/${cell1.id}/capacity")
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -507,7 +510,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .expectStatus().isEqualTo(400)
             .expectBody(ErrorResponse::class.java)
             .returnResult().responseBody!!.errorCode,
-        ).isEqualTo(115)
+        ).isEqualTo(ErrorCode.MaxCapacityCannotBeZero.errorCode)
       }
 
       @Test

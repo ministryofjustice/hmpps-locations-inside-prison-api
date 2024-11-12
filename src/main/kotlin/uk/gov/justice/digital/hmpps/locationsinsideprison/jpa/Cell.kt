@@ -211,63 +211,15 @@ class Cell(
     this.whenUpdated = LocalDateTime.now(clock)
   }
 
-  fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
-    if (isCell()) {
-      if (workingCapacity > 99) {
-        throw CapacityException(
-          getKey(),
-          "Working capacity must be less than 100",
-          ErrorCode.WorkingCapacityLimitExceeded,
-        )
-      }
-      if (maxCapacity > 99) {
-        throw CapacityException(getKey(), "Max capacity must be less than 100", ErrorCode.MaxCapacityLimitExceeded)
-      }
-      if (workingCapacity > maxCapacity) {
-        throw CapacityException(
-          getKey(),
-          "Working capacity ($workingCapacity) cannot be more than max capacity ($maxCapacity)",
-          ErrorCode.WorkingCapacityExceedsMaxCapacity,
-        )
-      }
-      if (maxCapacity == 0 && !isPermanentlyDeactivated()) {
-        throw CapacityException(getKey(), "Max capacity cannot be zero", ErrorCode.MaxCapacityCannotBeZero)
-      }
-      if (!(isPermanentlyDeactivated() || isTemporarilyDeactivated()) && workingCapacity == 0 && accommodationType == AccommodationType.NORMAL_ACCOMMODATION && specialistCellTypes.isEmpty()) {
-        throw CapacityException(
-          getKey(),
-          "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
-          ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
-        )
-      }
-
-      addHistory(
-        LocationAttribute.CAPACITY,
-        capacity?.maxCapacity?.toString(),
-        maxCapacity.toString(),
-        userOrSystemInContext,
-        LocalDateTime.now(clock),
+  override fun setCapacity(maxCapacity: Int, workingCapacity: Int, userOrSystemInContext: String, clock: Clock) {
+    if (!(isPermanentlyDeactivated() || isTemporarilyDeactivated()) && workingCapacity == 0 && accommodationType == AccommodationType.NORMAL_ACCOMMODATION && specialistCellTypes.isEmpty()) {
+      throw CapacityException(
+        getKey(),
+        "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
+        ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
       )
-      addHistory(
-        LocationAttribute.OPERATIONAL_CAPACITY,
-        capacity?.workingCapacity?.toString(),
-        workingCapacity.toString(),
-        userOrSystemInContext,
-        LocalDateTime.now(clock),
-      )
-
-      log.info("${getKey()}: Updating max capacity from ${capacity?.maxCapacity ?: 0} to $maxCapacity and working capacity from ${capacity?.workingCapacity ?: 0} to $workingCapacity")
-      if (capacity != null) {
-        capacity?.setCapacity(maxCapacity, workingCapacity)
-      } else {
-        capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
-      }
-
-      this.updatedBy = userOrSystemInContext
-      this.whenUpdated = LocalDateTime.now(clock)
-    } else {
-      log.warn("Capacity cannot be set on a converted cell")
     }
+    super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, clock)
   }
 
   fun certifyCell(userOrSystemInContext: String, clock: Clock) {
@@ -396,7 +348,7 @@ class Cell(
     super.sync(upsert, clock)
 
     setAccommodationTypeForCell(residentialHousingType.mapToAccommodationType(), upsert.lastUpdatedBy, clock)
-    handleNomisCapacitySync(upsert, upsert.lastUpdatedBy, clock)
+    handleNomisCertSync(upsert, upsert.lastUpdatedBy, clock)
 
     if (upsert.attributes != null) {
       recordRemovedAttributes(upsert.attributes, upsert.lastUpdatedBy, clock)
@@ -423,36 +375,11 @@ class Cell(
     }
   }
 
-  private fun handleNomisCapacitySync(
+  private fun handleNomisCertSync(
     upsert: NomisSyncLocationRequest,
     userOrSystemInContext: String,
     clock: Clock,
   ) {
-    upsert.capacity?.let {
-      with(upsert.capacity) {
-        addHistory(
-          LocationAttribute.CAPACITY,
-          capacity?.maxCapacity?.toString(),
-          maxCapacity.toString(),
-          userOrSystemInContext,
-          LocalDateTime.now(clock),
-        )
-        addHistory(
-          LocationAttribute.OPERATIONAL_CAPACITY,
-          capacity?.workingCapacity?.toString(),
-          workingCapacity.toString(),
-          userOrSystemInContext,
-          LocalDateTime.now(clock),
-        )
-
-        if (capacity != null) {
-          capacity?.setCapacity(maxCapacity, workingCapacity)
-        } else {
-          capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
-        }
-      }
-    }
-
     upsert.certification?.let {
       with(it) {
         val oldCertification = if (certified) {
@@ -537,11 +464,6 @@ class Cell(
       countCells = countCells,
       formatLocalName = formatLocalName,
     ).copy(
-      oldWorkingCapacity = if (isTemporarilyDeactivated()) {
-        getWorkingCapacity()
-      } else {
-        null
-      },
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
     )
@@ -549,7 +471,6 @@ class Cell(
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation =
     super.toLegacyDto(includeHistory = includeHistory).copy(
       ignoreWorkingCapacity = false,
-      capacity = capacity?.toDto(),
       certification = certification?.toDto(),
     )
 }
