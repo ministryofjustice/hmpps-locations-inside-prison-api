@@ -979,7 +979,7 @@ class LocationService(
       groupName = groupName,
       cellsToFilter = cellsToFilter,
     )
-      .filter { cell -> cell.isActiveAndAllParentsActive() && cell.isCertified() && !cell.isPermanentlyDeactivated() }
+      .filter { cell -> cell.isActiveAndAllParentsActive() && cell.isCertified() }
       .filter { cell ->
         specialistCellType == null || specialistCellType in cell.specialistCellTypes.map { it.specialistCellType }
       }

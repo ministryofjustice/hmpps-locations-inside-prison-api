@@ -562,13 +562,12 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(5).let {
+        getDomainEvents(4).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
 
@@ -618,11 +617,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "VISIT",
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",
-                  "active": false,
-                  "deactivatedByParent": true,
-                  "proposedReactivationDate": "$proposedReactivationDate",
-                  "deactivatedDate": "$now",
-                  "deactivatedReason": "DAMAGED",
+                  "active": true,
+                  "deactivatedByParent": false,
                   "permanentlyInactive": false,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
@@ -632,11 +628,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "ADJUDICATION",
                   "pathHierarchy": "Z-ADJUDICATION",
                   "locationType": "ADJUDICATION_ROOM",
-                  "active": false,
-                  "deactivatedByParent": true,
-                  "proposedReactivationDate": "$proposedReactivationDate",
-                  "deactivatedDate": "$now",
-                  "deactivatedReason": "DAMAGED",
+                  "active": true,
+                  "deactivatedByParent": false,
                   "permanentlyInactive": false,
                   "isResidential": false,
                   "key": "MDI-Z-ADJUDICATION"
@@ -678,13 +671,9 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "locationType": "STORE",
                       "localName": "Store Room",
                       "permanentlyInactive": false,
-                      "status": "INACTIVE",
-                      "active": false,
+                      "status": "ACTIVE",
+                      "active": true,
                       "deactivatedByParent": false,
-                      "deactivatedDate": "$now",
-                      "deactivatedReason": "DAMAGED",
-                      "deactivationReasonDescription": "Window smashed",
-                      "proposedReactivationDate": "$proposedReactivationDate",
                       "level": 3,
                       "leafLevel": true,
                       "key": "MDI-Z-1-01S",
@@ -1060,14 +1049,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
 
@@ -1077,14 +1065,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(8).let {
+        getDomainEvents(7).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.reactivated" to "MDI-Z",
             "location.inside.prison.reactivated" to "MDI-Z-1",
             "location.inside.prison.reactivated" to "MDI-Z-2",
             "location.inside.prison.reactivated" to "MDI-Z-1-001",
             "location.inside.prison.reactivated" to "MDI-Z-1-002",
-            "location.inside.prison.reactivated" to "MDI-Z-1-01S",
             "location.inside.prison.amended" to "MDI-Z",
             "location.inside.prison.amended" to "MDI-Z-1",
           )
@@ -1261,14 +1248,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
 
@@ -1403,8 +1389,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "01S",
                       "pathHierarchy": "Z-1-01S",
                       "locationType": "STORE",
-                      "active": false,
-                      "deactivatedReason": "MOTHBALLED",
+                      "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-01S"
                     }
@@ -1729,16 +1714,68 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+             "key": "MDI-Z",
+              "active": false,
+              "deactivatedReason": "DAMAGED",
+              "childLocations": [
+                {
+                  "key": "MDI-Z-VISIT",
+                  "active": true
+                },
+                {
+                  "key": "MDI-Z-ADJUDICATION",
+                  "active": true
+                },
+                {
+                  "key": "MDI-Z-1",
+                  "active": false,
+                  "deactivatedReason": "DAMAGED",
+                  "childLocations": [
+                    {
+                      "key": "MDI-Z-1-001",
+                      "active": false,
+                      "deactivatedReason": "DAMAGED"
+                    },
+                    {
+                      "key": "MDI-Z-1-002", 
+                      "active": false,
+                      "deactivatedReason": "DAMAGED"
+                    },
+                    {
+                      "key": "MDI-Z-1-01S",
+                      "active": true
+                    }
+                  ]
+                },
+                {
+                  "key": "MDI-Z-2",
+                  "active": false,
+                  "deactivatedReason": "DAMAGED"
+                }
+              ]
+            }
+          """,
+            false,
+          )
 
         prisonerSearchMockServer.resetAll()
         prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy()), false)
@@ -1856,8 +1893,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "01S",
                       "pathHierarchy": "Z-1-01S",
                       "locationType": "STORE",
-                      "active": false,
-                      "deactivatedReason": "DAMAGED",
+                      "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-01S"
                     }
@@ -1900,11 +1936,57 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(4).let {
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+             "key": "MDI-Z",
+              "active": true,
+              "childLocations": [
+                {
+                  "key": "MDI-Z-VISIT",
+                  "active": true
+                },
+                {
+                  "key": "MDI-Z-ADJUDICATION",
+                  "active": true
+                },
+                {
+                  "key": "MDI-Z-1",
+                  "active": true,
+                  "childLocations": [
+                    {
+                      "key": "MDI-Z-1-001",
+                      "active": true
+                    },
+                    {
+                      "key": "MDI-Z-1-002", 
+                      "active": true
+                    },
+                    {
+                      "key": "MDI-Z-1-01S",
+                      "active": true
+                    }
+                  ]
+                },
+                {
+                  "key": "MDI-Z-2",
+                  "active": true
+                }
+              ]
+            }
+          """,
+            false,
+          )
+
+        getDomainEvents(2).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.reactivated" to "MDI-Z-1-01S",
             "location.inside.prison.reactivated" to "MDI-Z-2",
-            "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
           )
         }
@@ -1921,14 +2003,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
 
@@ -1949,9 +2030,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(9).let {
+        getDomainEvents(8).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.reactivated" to store.getKey(),
             "location.inside.prison.reactivated" to cell1.getKey(),
             "location.inside.prison.reactivated" to cell2.getKey(),
             "location.inside.prison.reactivated" to landingZ2.getKey(),
