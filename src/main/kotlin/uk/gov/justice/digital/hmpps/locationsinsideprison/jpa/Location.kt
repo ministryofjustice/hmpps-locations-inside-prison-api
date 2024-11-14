@@ -141,12 +141,12 @@ abstract class Location(
     return findArchivedLocation(getParent())
   }
 
-  private fun findDeactivatedParent(): Location? {
+  protected fun findDeactivatedParent(): Location? {
     fun findDeactivatedLocation(location: Location?): Location? {
       if (location == null) {
         return null
       }
-      if (location.isActive() && !location.isPermanentlyDeactivated()) {
+      if (location.isActive()) {
         return findDeactivatedLocation(location.getParent())
       }
       return location
@@ -155,30 +155,21 @@ abstract class Location(
     return findDeactivatedLocation(getParent())
   }
 
-  private fun findDeactivatedLocationInHierarchy(): Location? {
-    if (!isActive()) {
-      return this
-    }
-    return findDeactivatedParent()
-  }
-
-  private fun findArchivedLocationInHierarchy(): Location? {
+  protected fun findArchivedLocationInHierarchy(): Location? {
     if (isArchived()) {
       return this
     }
     return findArchivedParent()
   }
 
-  open fun isActive() = active
-
+  abstract fun findDeactivatedLocationInHierarchy(): Location?
+  abstract fun hasDeactivatedParent(): Boolean
+  open fun isActive() = active && !isPermanentlyDeactivated()
   open fun isArchived() = archived
-
-  open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent() && !isPermanentlyDeactivated()
-
+  open fun isResidentialRoomOrConvertedCell() = false
+  open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent()
+  open fun isDeactivatedByParent() = isActive() && hasDeactivatedParent()
   open fun isTemporarilyDeactivated() = !isActiveAndAllParentsActive() && !isPermanentlyDeactivated()
-
-  private fun hasDeactivatedParent() = findDeactivatedParent() != null
-
   open fun isPermanentlyDeactivated() = findArchivedLocationInHierarchy()?.archived == true
 
   fun addChildLocation(childLocation: Location): Location {
@@ -381,7 +372,7 @@ abstract class Location(
       permanentlyInactive = isPermanentlyDeactivated(),
       permanentlyInactiveReason = archivedReason,
       planetFmReference = planetFmReference,
-      deactivatedByParent = isActive() && !isActiveAndAllParentsActive(),
+      deactivatedByParent = isDeactivatedByParent(),
       deactivatedDate = deactivatedLocation?.deactivatedDate,
       deactivatedReason = deactivatedLocation?.deactivatedReason,
       deactivationReasonDescription = deactivatedLocation?.deactivationReasonDescription,
@@ -467,7 +458,7 @@ abstract class Location(
 
   fun getStatus(): LocationStatus {
     return if (isActiveAndAllParentsActive()) {
-      if (isNonResCell()) {
+      if (isConvertedCell()) {
         LocationStatus.NON_RESIDENTIAL
       } else {
         LocationStatus.ACTIVE
@@ -480,8 +471,6 @@ abstract class Location(
       }
     }
   }
-
-  private fun isNonResCell() = this is Cell && convertedCellType != null
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -674,18 +663,20 @@ abstract class Location(
 
       if (this is ResidentialLocation) {
         findSubLocations().filterIsInstance<ResidentialLocation>().forEach { location ->
-          if (location.temporarilyDeactivate(
-              deactivatedReason = deactivatedReason,
-              deactivatedDate = deactivatedDate,
-              deactivationReasonDescription = deactivationReasonDescription,
-              planetFmReference = planetFmReference,
-              proposedReactivationDate = proposedReactivationDate,
-              userOrSystemInContext = userOrSystemInContext,
-              clock = clock,
-              deactivatedLocations = deactivatedLocations,
-            )
-          ) {
-            dataChanged = true
+          if (!location.isResidentialRoomOrConvertedCell()) {
+            if (location.temporarilyDeactivate(
+                deactivatedReason = deactivatedReason,
+                deactivatedDate = deactivatedDate,
+                deactivationReasonDescription = deactivationReasonDescription,
+                planetFmReference = planetFmReference,
+                proposedReactivationDate = proposedReactivationDate,
+                userOrSystemInContext = userOrSystemInContext,
+                clock = clock,
+                deactivatedLocations = deactivatedLocations,
+              )
+            ) {
+              dataChanged = true
+            }
           }
         }
       }
@@ -836,7 +827,7 @@ abstract class Location(
       amendedLocations?.addAll(this.getParentLocations())
     }
 
-    if (!isActive() && !isPermanentlyDeactivated()) {
+    if (isTemporarilyDeactivated()) {
       val amendedDate = LocalDateTime.now(clock)
       addHistory(
         LocationAttribute.STATUS,
@@ -889,12 +880,9 @@ abstract class Location(
   }
 
   private fun isCellOrConvertedCell() = this is Cell || isConvertedCell()
-  fun isCell() = this is Cell && !isConvertedCell()
+  open fun isCell() = false
   fun isStructural() = locationType in ResidentialLocationType.entries.filter { it.structural }.map { it.baseType }
-  fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
   fun isArea() = locationType in ResidentialLocationType.entries.filter { it.area }.map { it.baseType }
-  fun isLocationShownOnResidentialSummary() =
-    locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
 
   open fun toLegacyDto(includeHistory: Boolean = false): LegacyLocation {
     return LegacyLocation(

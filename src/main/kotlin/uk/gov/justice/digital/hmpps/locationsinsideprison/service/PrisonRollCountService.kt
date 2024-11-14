@@ -279,7 +279,7 @@ data class ResidentialLocationRollCount(
 
 fun removeLocations(locations: List<ResidentialPrisonerLocation>, includeCells: Boolean = false): List<ResidentialLocationRollCount> =
   locations
-    .filter { it.status == LocationStatus.ACTIVE && (includeCells || !it.isLeafLevel) }
+    .filter { it.status in listOf(LocationStatus.ACTIVE) && (includeCells || !it.isLeafLevel) }
     .map {
       it.toDto(includeCells)
     }

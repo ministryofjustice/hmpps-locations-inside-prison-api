@@ -59,6 +59,29 @@ open class ResidentialLocation(
   updatedBy = createdBy,
 ) {
 
+  override fun findDeactivatedLocationInHierarchy(): Location? {
+    if (!isActive()) {
+      return this
+    }
+    return if (!isResidentialRoomOrConvertedCell()) {
+      findDeactivatedParent()
+    } else {
+      null
+    }
+  }
+
+  override fun isResidentialRoomOrConvertedCell() = isNonResType() || isConvertedCell()
+
+  override fun hasDeactivatedParent() = if (!isResidentialRoomOrConvertedCell()) {
+    findDeactivatedParent() != null
+  } else {
+    false
+  }
+
+  fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
+  fun isLocationShownOnResidentialSummary() =
+    locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
+
   private fun getWorkingCapacity(): Int {
     return cellLocations().filter { it.isActiveAndAllParentsActive() }
       .sumOf { it.getWorkingCapacity() ?: 0 }
