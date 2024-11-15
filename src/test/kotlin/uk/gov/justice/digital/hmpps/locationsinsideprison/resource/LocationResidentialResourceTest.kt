@@ -735,7 +735,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           )
 
         getDomainEvents(1).let {
-          assertThat(it).hasSize(3)
+          assertThat(it).hasSize(1)
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.created" to "MDI-CSWAP",
           )
