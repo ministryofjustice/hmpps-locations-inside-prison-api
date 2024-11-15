@@ -42,9 +42,7 @@ class Cell(
   whenCreated: LocalDateTime,
   createdBy: String,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-
-  @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
-  private var capacity: Capacity? = null,
+  capacity: Capacity? = null,
 
   @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
   private var certification: Certification? = null,
@@ -87,11 +85,12 @@ class Cell(
   whenCreated = whenCreated,
   createdBy = createdBy,
   residentialHousingType = residentialHousingType,
+  capacity = capacity,
 ) {
 
-  override fun getWorkingCapacity() = capacity?.workingCapacity
+  fun getWorkingCapacity() = capacity?.workingCapacity
 
-  override fun getMaxCapacity() = capacity?.maxCapacity
+  fun getMaxCapacity() = capacity?.maxCapacity
 
   fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
 
@@ -470,6 +469,11 @@ class Cell(
       countCells = countCells,
       formatLocalName = formatLocalName,
     ).copy(
+      oldWorkingCapacity = if (isTemporarilyDeactivated()) {
+        getWorkingCapacity()
+      } else {
+        null
+      },
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
     )
@@ -477,6 +481,7 @@ class Cell(
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation =
     super.toLegacyDto(includeHistory = includeHistory).copy(
       ignoreWorkingCapacity = false,
+      capacity = capacity?.toDto(),
       certification = certification?.toDto(),
     )
 }

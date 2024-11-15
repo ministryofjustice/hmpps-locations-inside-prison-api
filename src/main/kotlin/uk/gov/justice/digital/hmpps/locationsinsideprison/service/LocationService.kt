@@ -44,7 +44,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.VirtualResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanentDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
@@ -81,7 +80,6 @@ class LocationService(
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val signedOperationCapacityRepository: PrisonSignedOperationCapacityRepository,
   private val cellLocationRepository: CellLocationRepository,
-  private val virtualResidentialLocationRepository: VirtualResidentialLocationRepository,
   private val entityManager: EntityManager,
   private val prisonerLocationService: PrisonerLocationService,
   private val prisonService: PrisonService,
@@ -373,7 +371,7 @@ class LocationService(
 
   @Transactional
   fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int): LocationDTO {
-    val locCapChange = virtualResidentialLocationRepository.findById(id)
+    val locCapChange = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     if (locCapChange.isPermanentlyDeactivated()) {

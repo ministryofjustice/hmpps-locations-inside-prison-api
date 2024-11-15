@@ -1,10 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
-import jakarta.persistence.CascadeType
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
-import jakarta.persistence.FetchType
-import jakarta.persistence.OneToOne
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualLocationCode.entries
@@ -12,6 +9,7 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
 enum class VirtualLocationCode {
@@ -21,7 +19,7 @@ enum class VirtualLocationCode {
   CSWAP,
 }
 
-fun getVirtualLocationCodes() = entries.map { it.name }
+fun getVirtualLocationCodes() = entries.map { it.name.toString() }
 
 @Entity
 @DiscriminatorValue("VIRTUAL")
@@ -43,9 +41,7 @@ open class VirtualResidentialLocation(
   createdBy: String,
   locationType: LocationType = LocationType.AREA,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.OTHER_USE,
-
-  @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
-  protected var capacity: Capacity? = null,
+  capacity: Capacity? = null,
 
 ) : ResidentialLocation(
   id = id,
@@ -65,6 +61,7 @@ open class VirtualResidentialLocation(
   createdBy = createdBy,
   locationType = locationType,
   residentialHousingType = residentialHousingType,
+  capacity = capacity,
 ) {
 
   override fun toDto(
@@ -81,23 +78,45 @@ open class VirtualResidentialLocation(
       includeChildren = includeChildren,
       includeParent = includeParent,
       includeHistory = includeHistory,
-      countInactiveCells = countInactiveCells,
+      countInactiveCells = false,
       includeNonResidential = includeNonResidential,
       useHistoryForUpdate = useHistoryForUpdate,
-      countCells = countCells,
+      countCells = false,
       formatLocalName = formatLocalName,
     ).copy(
-      oldWorkingCapacity = if (isTemporarilyDeactivated()) {
-        getWorkingCapacity()
-      } else {
-        null
-      },
+      capacity = CapacityDto(
+        maxCapacity = getMaxCapacity(),
+        workingCapacity = getWorkingCapacity(),
+      ),
+      certification = null,
+      accommodationTypes = null,
+      usedFor = null,
+      specialistCellTypes = null,
     )
+
+  private fun getWorkingCapacity(): Int {
+    return if (isActiveAndAllParentsActive()) {
+      capacity?.workingCapacity ?: 0
+    } else {
+      0
+    }
+  }
+
+  private fun getMaxCapacity(): Int {
+    return if (!isPermanentlyDeactivated()) {
+      capacity?.maxCapacity ?: 0
+    } else {
+      0
+    }
+  }
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation =
     super.toLegacyDto(includeHistory = includeHistory).copy(
       ignoreWorkingCapacity = false,
-      capacity = capacity?.toDto(),
+      capacity = CapacityDto(
+        maxCapacity = getMaxCapacity(),
+        workingCapacity = getWorkingCapacity(),
+      ),
     )
 
   override fun sync(upsert: NomisSyncLocationRequest, clock: Clock): VirtualResidentialLocation {

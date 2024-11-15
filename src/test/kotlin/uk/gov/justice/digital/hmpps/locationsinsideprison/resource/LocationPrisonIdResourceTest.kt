@@ -58,6 +58,23 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
             // language=json
             """
              [
+             
+              {
+                  "prisonId": "MDI",
+                  "code": "CSWAP",
+                  "pathHierarchy": "CSWAP",
+                  "locationType": "AREA",
+                  "localName": "Cell Swap",
+                  "key": "MDI-CSWAP"
+                }, 
+                  {
+                  "prisonId": "MDI",
+                  "code": "TAP",
+                  "pathHierarchy": "TAP",
+                  "locationType": "AREA",
+                  "localName": "Temp Absentee Prisoner",
+                  "key": "MDI-TAP"
+                }, 
                {
                   "prisonId": "MDI",
                   "code": "ADJUDICATION",

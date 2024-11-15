@@ -414,6 +414,7 @@ data class CreateResidentialLocationRequest(
         code = code,
         pathHierarchy = code,
         localName = localName,
+        capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
         createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
         childLocations = mutableListOf(),

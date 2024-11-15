@@ -695,6 +695,52 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           )
         }
       }
+
+      @Test
+      fun `can create CSWAP`() {
+        webTestClient.post().uri("/locations/residential")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              CreateResidentialLocationRequest(
+                prisonId = "ZZGHI",
+                code = "CSWAP",
+                locationType = ResidentialLocationType.RESIDENTIAL_UNIT,
+                capacity = Capacity(maxCapacity = 90, workingCapacity = 90),
+                accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "isResidential": false,
+              "code": "CSWAP",
+              "pathHierarchy": "CSWAP",
+              "locationType": "AREA",
+              "active": true,
+              "key": "ZZGHI-CSWAP",
+              "capacity": {
+                "maxCapacity": 90,
+                "workingCapacity": 90
+              }
+            }
+          """,
+            false,
+          )
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(3)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.created" to "MDI-CSWAP",
+          )
+        }
+      }
     }
   }
 

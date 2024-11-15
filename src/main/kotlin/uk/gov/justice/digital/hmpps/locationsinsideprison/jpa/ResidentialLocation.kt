@@ -1,9 +1,12 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import jakarta.persistence.CascadeType
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
+import jakarta.persistence.FetchType
+import jakarta.persistence.OneToOne
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
@@ -40,6 +43,9 @@ open class ResidentialLocation(
 
   @Enumerated(EnumType.STRING)
   open var residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+
+  @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
+  open var capacity: Capacity? = null,
 
 ) : Location(
   id = id,
@@ -84,12 +90,12 @@ open class ResidentialLocation(
   fun isLocationShownOnResidentialSummary() =
     locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
 
-  open fun getWorkingCapacity(): Int? {
+  private fun getWorkingCapacity(): Int {
     return cellLocations().filter { it.isActiveAndAllParentsActive() }
       .sumOf { it.getWorkingCapacity() ?: 0 }
   }
 
-  open fun getMaxCapacity(): Int? {
+  private fun getMaxCapacity(): Int {
     return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .sumOf { it.getMaxCapacity() ?: 0 }
   }
@@ -153,23 +159,23 @@ open class ResidentialLocation(
       with(upsert.capacity) {
         addHistory(
           LocationAttribute.CAPACITY,
-          getCapacity()?.maxCapacity?.toString(),
+          capacity?.maxCapacity?.toString(),
           maxCapacity.toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
         )
         addHistory(
           LocationAttribute.OPERATIONAL_CAPACITY,
-          getCapacity()?.workingCapacity?.toString(),
+          capacity?.workingCapacity?.toString(),
           workingCapacity.toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
         )
 
-        if (getCapacity() != null) {
-          getCapacity()?.setCapacity(maxCapacity, workingCapacity)
+        if (capacity != null) {
+          capacity?.setCapacity(maxCapacity, workingCapacity)
         } else {
-          setCapacity(Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity))
+          capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
         }
       }
     }
@@ -213,7 +219,10 @@ open class ResidentialLocation(
       formatLocalName = formatLocalName,
     ).copy(
 
-      capacity = toCapacityDto(),
+      capacity = CapacityDto(
+        maxCapacity = getMaxCapacity(),
+        workingCapacity = getWorkingCapacity(),
+      ),
 
       certification = CertificationDto(
         certified = hasCertifiedCells(),
@@ -237,21 +246,15 @@ open class ResidentialLocation(
     )
   }
 
-  private fun toCapacityDto(): CapacityDto? = if (getMaxCapacity() != null || getWorkingCapacity() != null) {
-    CapacityDto(
-      maxCapacity = getMaxCapacity() ?: 0,
-      workingCapacity = getWorkingCapacity() ?: 0,
-    )
-  } else {
-    null
-  }
-
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
     return super.toLegacyDto(includeHistory = includeHistory).copy(
       residentialHousingType = residentialHousingType,
 
       ignoreWorkingCapacity = true,
-      capacity = toCapacityDto(),
+      capacity = CapacityDto(
+        maxCapacity = getMaxCapacity(),
+        workingCapacity = getWorkingCapacity(),
+      ),
 
       certification = CertificationDto(
         certified = hasCertifiedCells(),
@@ -264,17 +267,15 @@ open class ResidentialLocation(
 
   override fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation =
     super.toResidentialPrisonerLocation(mapOfPrisoners).copy(
-      capacity = toCapacityDto(),
+      capacity = CapacityDto(
+        maxCapacity = getMaxCapacity(),
+        workingCapacity = getWorkingCapacity(),
+      ),
       certified = hasCertifiedCells(),
     )
 
-  open fun getCapacity(): Capacity? = null
-
-  open fun setCapacity(capacity: Capacity) {
-  }
-
   open fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
-    if (isCell()) {
+    if (isCell() || isVirtualResidentialLocation()) {
       if (workingCapacity > 99) {
         throw CapacityException(
           getKey(),
@@ -298,30 +299,30 @@ open class ResidentialLocation(
 
       addHistory(
         LocationAttribute.CAPACITY,
-        getCapacity()?.maxCapacity?.toString(),
+        capacity?.maxCapacity?.toString(),
         maxCapacity.toString(),
         userOrSystemInContext,
         LocalDateTime.now(clock),
       )
       addHistory(
         LocationAttribute.OPERATIONAL_CAPACITY,
-        getCapacity()?.workingCapacity?.toString(),
+        capacity?.workingCapacity?.toString(),
         workingCapacity.toString(),
         userOrSystemInContext,
         LocalDateTime.now(clock),
       )
 
-      log.info("${getKey()}: Updating max capacity from ${getCapacity()?.maxCapacity ?: 0} to $maxCapacity and working capacity from ${getCapacity()?.workingCapacity ?: 0} to $workingCapacity")
-      if (getCapacity() != null) {
-        getCapacity()?.setCapacity(maxCapacity, workingCapacity)
+      log.info("${getKey()}: Updating max capacity from ${capacity?.maxCapacity ?: 0} to $maxCapacity and working capacity from ${capacity?.workingCapacity ?: 0} to $workingCapacity")
+      if (capacity != null) {
+        capacity?.setCapacity(maxCapacity, workingCapacity)
       } else {
-        setCapacity(Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity))
+        capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
       }
 
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = LocalDateTime.now(clock)
     } else {
-      log.warn("Capacity cannot be set on a converted cell")
+      log.warn("Capacity cannot be set, not a cell or virtual location")
     }
   }
 }
