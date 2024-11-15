@@ -21,7 +21,7 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springframework.boot:spring-boot-starter-validation")
 
-  implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:5.0.1")
+  implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:5.1.1")
   implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.7.0")
 
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
@@ -30,6 +30,7 @@ dependencies {
   implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
+  implementation("io.netty:netty-common:4.1.115.Final")
 
   developmentOnly("org.springframework.boot:spring-boot-devtools")
 
