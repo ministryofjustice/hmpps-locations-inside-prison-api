@@ -6,6 +6,8 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
 import java.time.Clock
@@ -59,12 +61,12 @@ open class ResidentialLocation(
   updatedBy = createdBy,
 ) {
 
-  private fun getWorkingCapacity(): Int {
+  open fun getWorkingCapacity(): Int? {
     return cellLocations().filter { it.isActiveAndAllParentsActive() }
       .sumOf { it.getWorkingCapacity() ?: 0 }
   }
 
-  private fun getMaxCapacity(): Int {
+  open fun getMaxCapacity(): Int? {
     return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
       .sumOf { it.getMaxCapacity() ?: 0 }
   }
@@ -102,6 +104,7 @@ open class ResidentialLocation(
       .flatMap { it.specialistCellTypes }
       .toSet()
   }
+
   private fun isCurrentCellOrNotPermanentlyInactive(cell: Cell) = !cell.isPermanentlyDeactivated() || cell == this
 
   private fun getInactiveCellCount() = cellLocations().count { it.isTemporarilyDeactivated() }
@@ -110,8 +113,43 @@ open class ResidentialLocation(
     cellLocations().forEach { it.updateUsedFor(setOfUsedFor, userOrSystemInContext, clock) }
   }
 
-  fun updateCellSpecialistCellTypes(specialistCellTypes: Set<SpecialistCellType>, userOrSystemInContext: String, clock: Clock) {
+  fun updateCellSpecialistCellTypes(
+    specialistCellTypes: Set<SpecialistCellType>,
+    userOrSystemInContext: String,
+    clock: Clock,
+  ) {
     cellLocations().forEach { it.updateSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock) }
+  }
+
+  protected fun handleNomisCapacitySync(
+    upsert: NomisSyncLocationRequest,
+    userOrSystemInContext: String,
+    clock: Clock,
+  ) {
+    upsert.capacity?.let {
+      with(upsert.capacity) {
+        addHistory(
+          LocationAttribute.CAPACITY,
+          getCapacity()?.maxCapacity?.toString(),
+          maxCapacity.toString(),
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+        )
+        addHistory(
+          LocationAttribute.OPERATIONAL_CAPACITY,
+          getCapacity()?.workingCapacity?.toString(),
+          workingCapacity.toString(),
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+        )
+
+        if (getCapacity() != null) {
+          getCapacity()?.setCapacity(maxCapacity, workingCapacity)
+        } else {
+          setCapacity(Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity))
+        }
+      }
+    }
   }
 
   override fun sync(upsert: NomisSyncLocationRequest, clock: Clock): ResidentialLocation {
@@ -152,10 +190,7 @@ open class ResidentialLocation(
       formatLocalName = formatLocalName,
     ).copy(
 
-      capacity = CapacityDto(
-        maxCapacity = getMaxCapacity(),
-        workingCapacity = getWorkingCapacity(),
-      ),
+      capacity = toCapacityDto(),
 
       certification = CertificationDto(
         certified = hasCertifiedCells(),
@@ -179,15 +214,21 @@ open class ResidentialLocation(
     )
   }
 
+  private fun toCapacityDto(): CapacityDto? = if (getMaxCapacity() != null || getWorkingCapacity() != null) {
+    CapacityDto(
+      maxCapacity = getMaxCapacity() ?: 0,
+      workingCapacity = getWorkingCapacity() ?: 0,
+    )
+  } else {
+    null
+  }
+
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
     return super.toLegacyDto(includeHistory = includeHistory).copy(
       residentialHousingType = residentialHousingType,
 
       ignoreWorkingCapacity = true,
-      capacity = CapacityDto(
-        maxCapacity = getMaxCapacity(),
-        workingCapacity = getWorkingCapacity(),
-      ),
+      capacity = toCapacityDto(),
 
       certification = CertificationDto(
         certified = hasCertifiedCells(),
@@ -200,12 +241,66 @@ open class ResidentialLocation(
 
   override fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation =
     super.toResidentialPrisonerLocation(mapOfPrisoners).copy(
-      capacity = CapacityDto(
-        maxCapacity = getMaxCapacity(),
-        workingCapacity = getWorkingCapacity(),
-      ),
+      capacity = toCapacityDto(),
       certified = hasCertifiedCells(),
     )
+
+  open fun getCapacity(): Capacity? = null
+
+  open fun setCapacity(capacity: Capacity) {
+  }
+
+  open fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
+    if (isCell()) {
+      if (workingCapacity > 99) {
+        throw CapacityException(
+          getKey(),
+          "Working capacity must be less than 100",
+          ErrorCode.WorkingCapacityLimitExceeded,
+        )
+      }
+      if (maxCapacity > 99) {
+        throw CapacityException(getKey(), "Max capacity must be less than 100", ErrorCode.MaxCapacityLimitExceeded)
+      }
+      if (workingCapacity > maxCapacity) {
+        throw CapacityException(
+          getKey(),
+          "Working capacity ($workingCapacity) cannot be more than max capacity ($maxCapacity)",
+          ErrorCode.WorkingCapacityExceedsMaxCapacity,
+        )
+      }
+      if (maxCapacity == 0 && !isPermanentlyDeactivated()) {
+        throw CapacityException(getKey(), "Max capacity cannot be zero", ErrorCode.MaxCapacityCannotBeZero)
+      }
+
+      addHistory(
+        LocationAttribute.CAPACITY,
+        getCapacity()?.maxCapacity?.toString(),
+        maxCapacity.toString(),
+        userOrSystemInContext,
+        LocalDateTime.now(clock),
+      )
+      addHistory(
+        LocationAttribute.OPERATIONAL_CAPACITY,
+        getCapacity()?.workingCapacity?.toString(),
+        workingCapacity.toString(),
+        userOrSystemInContext,
+        LocalDateTime.now(clock),
+      )
+
+      log.info("${getKey()}: Updating max capacity from ${getCapacity()?.maxCapacity ?: 0} to $maxCapacity and working capacity from ${getCapacity()?.workingCapacity ?: 0} to $workingCapacity")
+      if (getCapacity() != null) {
+        getCapacity()?.setCapacity(maxCapacity, workingCapacity)
+      } else {
+        setCapacity(Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity))
+      }
+
+      this.updatedBy = userOrSystemInContext
+      this.whenUpdated = LocalDateTime.now(clock)
+    } else {
+      log.warn("Capacity cannot be set on a converted cell")
+    }
+  }
 }
 
 enum class ResidentialHousingType(

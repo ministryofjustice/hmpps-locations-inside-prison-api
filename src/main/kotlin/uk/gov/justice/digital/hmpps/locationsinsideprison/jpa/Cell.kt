@@ -89,9 +89,9 @@ class Cell(
   residentialHousingType = residentialHousingType,
 ) {
 
-  fun getWorkingCapacity() = capacity?.workingCapacity
+  override fun getWorkingCapacity() = capacity?.workingCapacity
 
-  fun getMaxCapacity() = capacity?.maxCapacity
+  override fun getMaxCapacity() = capacity?.maxCapacity
 
   fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
 
@@ -348,6 +348,7 @@ class Cell(
     super.sync(upsert, clock)
 
     setAccommodationTypeForCell(residentialHousingType.mapToAccommodationType(), upsert.lastUpdatedBy, clock)
+    handleNomisCapacitySync(upsert, upsert.lastUpdatedBy, clock)
     handleNomisCertSync(upsert, upsert.lastUpdatedBy, clock)
 
     if (upsert.attributes != null) {
