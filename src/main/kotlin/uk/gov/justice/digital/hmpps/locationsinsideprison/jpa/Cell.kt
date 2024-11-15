@@ -119,6 +119,8 @@ class Cell(
     locationType
   }
 
+  override fun isCell() = !isConvertedCell()
+
   override fun isConvertedCell() = convertedCellType != null
 
   private fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
@@ -206,6 +208,9 @@ class Cell(
 
     setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock)
     certifyCell(userOrSystemInContext, clock)
+    if (hasDeactivatedParent()) {
+      reactivate(userOrSystemInContext, clock)
+    }
     this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)

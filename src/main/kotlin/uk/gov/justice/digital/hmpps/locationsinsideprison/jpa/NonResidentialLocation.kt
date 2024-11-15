@@ -59,6 +59,15 @@ class NonResidentialLocation(
   updatedBy = createdBy,
 ) {
 
+  override fun hasDeactivatedParent() = false
+
+  override fun findDeactivatedLocationInHierarchy(): Location? {
+    if (isActive()) {
+      return this
+    }
+    return null
+  }
+
   fun addUsage(usageType: NonResidentialUsageType, capacity: Int? = null, sequence: Int = 99): NonResidentialUsage {
     val existingUsage = nonResidentialUsages.find { it.usageType == usageType }
     if (existingUsage != null) {

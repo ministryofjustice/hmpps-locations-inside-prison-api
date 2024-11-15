@@ -141,12 +141,12 @@ abstract class Location(
     return findArchivedLocation(getParent())
   }
 
-  private fun findDeactivatedParent(): Location? {
+  protected fun findDeactivatedParent(): Location? {
     fun findDeactivatedLocation(location: Location?): Location? {
       if (location == null) {
         return null
       }
-      if (location.isActive() && !location.isPermanentlyDeactivated()) {
+      if (location.isActive()) {
         return findDeactivatedLocation(location.getParent())
       }
       return location
@@ -155,30 +155,21 @@ abstract class Location(
     return findDeactivatedLocation(getParent())
   }
 
-  private fun findDeactivatedLocationInHierarchy(): Location? {
-    if (!isActive()) {
-      return this
-    }
-    return findDeactivatedParent()
-  }
-
-  private fun findArchivedLocationInHierarchy(): Location? {
+  protected fun findArchivedLocationInHierarchy(): Location? {
     if (isArchived()) {
       return this
     }
     return findArchivedParent()
   }
 
-  open fun isActive() = active
-
+  abstract fun findDeactivatedLocationInHierarchy(): Location?
+  abstract fun hasDeactivatedParent(): Boolean
+  open fun isActive() = active && !isPermanentlyDeactivated()
   open fun isArchived() = archived
-
-  open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent() && !isPermanentlyDeactivated()
-
+  open fun isResidentialRoomOrConvertedCell() = false
+  open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent()
+  open fun isDeactivatedByParent() = isActive() && hasDeactivatedParent()
   open fun isTemporarilyDeactivated() = !isActiveAndAllParentsActive() && !isPermanentlyDeactivated()
-
-  private fun hasDeactivatedParent() = findDeactivatedParent() != null
-
   open fun isPermanentlyDeactivated() = findArchivedLocationInHierarchy()?.archived == true
 
   fun addChildLocation(childLocation: Location): Location {
@@ -238,7 +229,8 @@ abstract class Location(
     return locationSummary.sortedBy { it.level }
   }
 
-  private fun getDeactivationReason() = listOfNotBlank(deactivatedReason?.description, deactivationReasonDescription).joinToString(" - ")
+  private fun getDeactivationReason() =
+    listOfNotBlank(deactivatedReason?.description, deactivationReasonDescription).joinToString(" - ")
 
   private fun getLocationSummary(): LocationSummary {
     return LocationSummary(
@@ -267,11 +259,13 @@ abstract class Location(
     }
   }
 
-  private fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
+  private fun getActiveResidentialLocationsBelowThisLevel() =
+    childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
 
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>().filter { !it.isPermanentlyDeactivated() }
 
-  private fun leafResidentialLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>().filter { !it.isPermanentlyDeactivated() && !it.isStructural() && !it.isArea() }
+  private fun leafResidentialLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>()
+    .filter { !it.isPermanentlyDeactivated() && !it.isStructural() && !it.isArea() }
 
   fun findAllLeafLocations(): List<Location> {
     val leafLocations = mutableListOf<Location>()
@@ -315,12 +309,14 @@ abstract class Location(
     amendedBy: String,
     amendedDate: LocalDateTime,
   ): LocationHistory? {
-    return if (oldValue != newValue) {
+    val old = if (oldValue.isNullOrBlank()) null else oldValue
+    val new = if (newValue.isNullOrBlank()) null else newValue
+    return if (old != new) {
       val locationHistory = LocationHistory(
         location = this,
         attributeName = attributeName,
-        oldValue = if (oldValue.isNullOrBlank()) null else oldValue,
-        newValue = if (newValue.isNullOrBlank()) null else newValue,
+        oldValue = old,
+        newValue = new,
         amendedBy = amendedBy,
         amendedDate = amendedDate,
       )
@@ -376,7 +372,7 @@ abstract class Location(
       permanentlyInactive = isPermanentlyDeactivated(),
       permanentlyInactiveReason = archivedReason,
       planetFmReference = planetFmReference,
-      deactivatedByParent = isActive() && !isActiveAndAllParentsActive(),
+      deactivatedByParent = isDeactivatedByParent(),
       deactivatedDate = deactivatedLocation?.deactivatedDate,
       deactivatedReason = deactivatedLocation?.deactivatedReason,
       deactivationReasonDescription = deactivatedLocation?.deactivationReasonDescription,
@@ -403,7 +399,12 @@ abstract class Location(
       } else {
         null
       },
-      changeHistory = if (includeHistory) history.filter { it.attributeName.display }.sortedByDescending { it.amendedDate }.sortedByDescending { it.id }.map { it.toDto() } else null,
+      changeHistory = if (includeHistory) {
+        history.filter { it.attributeName.display }
+          .sortedByDescending { it.amendedDate }.sortedByDescending { it.id }.map { it.toDto() }
+      } else {
+        null
+      },
       deactivatedBy = deactivatedBy,
     )
   }
@@ -457,7 +458,7 @@ abstract class Location(
 
   fun getStatus(): LocationStatus {
     return if (isActiveAndAllParentsActive()) {
-      if (isNonResCell()) {
+      if (isConvertedCell()) {
         LocationStatus.NON_RESIDENTIAL
       } else {
         LocationStatus.ACTIVE
@@ -470,8 +471,6 @@ abstract class Location(
       }
     }
   }
-
-  private fun isNonResCell() = this is Cell && convertedCellType != null
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -488,7 +487,13 @@ abstract class Location(
 
   open fun updateLocalName(localName: String?, userOrSystemInContext: String, clock: Clock) {
     if (!isCell()) {
-      addHistory(LocationAttribute.DESCRIPTION, this.localName, localName, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(
+        LocationAttribute.DESCRIPTION,
+        this.localName,
+        localName,
+        userOrSystemInContext,
+        LocalDateTime.now(clock),
+      )
       this.localName = localName
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = LocalDateTime.now(clock)
@@ -518,16 +523,40 @@ abstract class Location(
     addHistory(LocationAttribute.CODE, getCode(), upsert.code, upsert.lastUpdatedBy, LocalDateTime.now(clock))
     setCode(upsert.code)
 
-    addHistory(LocationAttribute.LOCATION_TYPE, getDerivedLocationType().description, upsert.locationType.description, upsert.lastUpdatedBy, LocalDateTime.now(clock))
+    addHistory(
+      LocationAttribute.LOCATION_TYPE,
+      getDerivedLocationType().description,
+      upsert.locationType.description,
+      upsert.lastUpdatedBy,
+      LocalDateTime.now(clock),
+    )
     this.locationType = upsert.locationType
 
-    addHistory(LocationAttribute.DESCRIPTION, this.localName, upsert.localName, upsert.lastUpdatedBy, LocalDateTime.now(clock))
+    addHistory(
+      LocationAttribute.DESCRIPTION,
+      this.localName,
+      upsert.localName,
+      upsert.lastUpdatedBy,
+      LocalDateTime.now(clock),
+    )
     this.localName = upsert.localName
 
-    addHistory(LocationAttribute.COMMENTS, this.comments, upsert.comments, upsert.lastUpdatedBy, LocalDateTime.now(clock))
+    addHistory(
+      LocationAttribute.COMMENTS,
+      this.comments,
+      upsert.comments,
+      upsert.lastUpdatedBy,
+      LocalDateTime.now(clock),
+    )
     this.comments = upsert.comments
 
-    addHistory(LocationAttribute.ORDER_WITHIN_PARENT_LOCATION, this.orderWithinParentLocation?.toString(), upsert.orderWithinParentLocation?.toString(), upsert.lastUpdatedBy, LocalDateTime.now(clock))
+    addHistory(
+      LocationAttribute.ORDER_WITHIN_PARENT_LOCATION,
+      this.orderWithinParentLocation?.toString(),
+      upsert.orderWithinParentLocation?.toString(),
+      upsert.lastUpdatedBy,
+      LocalDateTime.now(clock),
+    )
     this.orderWithinParentLocation = upsert.orderWithinParentLocation
 
     this.updatedBy = upsert.lastUpdatedBy
@@ -568,63 +597,92 @@ abstract class Location(
     clock: Clock,
     deactivatedLocations: MutableSet<Location>? = null,
   ): Boolean {
-    if (!isActive()) {
-      log.warn("Location [${getKey()}] is already deactivated")
-    } else {
-      val amendedDate = LocalDateTime.now(clock)
-      addHistory(LocationAttribute.STATUS, getStatus().description, LocationStatus.INACTIVE.description, userOrSystemInContext, amendedDate)
-      addHistory(
-        LocationAttribute.DEACTIVATION_REASON,
-        this.getDeactivationReason(),
-        listOfNotBlank(deactivatedReason.description, deactivationReasonDescription).joinToString(" - "),
-        userOrSystemInContext,
-        amendedDate,
-      )
-      addHistory(
-        LocationAttribute.PROPOSED_REACTIVATION_DATE,
-        this.proposedReactivationDate?.toString(),
-        proposedReactivationDate?.toString(),
-        userOrSystemInContext,
-        amendedDate,
-      )
-      addHistory(
-        LocationAttribute.PLANET_FM_NUMBER,
-        this.planetFmReference,
-        planetFmReference,
-        userOrSystemInContext,
-        amendedDate,
-      )
+    var dataChanged = false
 
-      this.active = false
-      this.deactivatedReason = deactivatedReason
-      this.deactivationReasonDescription = deactivationReasonDescription
-      this.deactivatedDate = deactivatedDate
-      this.proposedReactivationDate = proposedReactivationDate
-      this.planetFmReference = planetFmReference
-      this.updatedBy = userOrSystemInContext
-      this.whenUpdated = amendedDate
-      this.deactivatedBy = userOrSystemInContext
+    if (!isPermanentlyDeactivated()) {
+      val amendedDate = LocalDateTime.now(clock)
+
+      if (addHistory(
+          LocationAttribute.STATUS,
+          getStatus().description,
+          LocationStatus.INACTIVE.description,
+          userOrSystemInContext,
+          amendedDate,
+        ) != null
+      ) {
+        dataChanged = true
+      }
+
+      if (addHistory(
+          LocationAttribute.DEACTIVATION_REASON,
+          this.getDeactivationReason(),
+          listOfNotBlank(deactivatedReason.description, deactivationReasonDescription).joinToString(" - "),
+          userOrSystemInContext,
+          amendedDate,
+        ) != null
+      ) {
+        dataChanged = true
+      }
+      if (addHistory(
+          LocationAttribute.PROPOSED_REACTIVATION_DATE,
+          this.proposedReactivationDate?.toString(),
+          proposedReactivationDate?.toString(),
+          userOrSystemInContext,
+          amendedDate,
+        ) != null
+      ) {
+        dataChanged = true
+      }
+      if (addHistory(
+          LocationAttribute.PLANET_FM_NUMBER,
+          this.planetFmReference,
+          planetFmReference,
+          userOrSystemInContext,
+          amendedDate,
+        ) != null
+      ) {
+        dataChanged = true
+      }
+
+      if (isActive()) {
+        this.active = false
+        this.deactivatedDate = deactivatedDate
+        this.deactivatedBy = userOrSystemInContext
+        log.info("Temporarily Deactivated Location [${getKey()}]")
+      }
+
+      if (dataChanged) {
+        this.deactivatedReason = deactivatedReason
+        this.deactivationReasonDescription = deactivationReasonDescription
+        this.proposedReactivationDate = proposedReactivationDate
+        this.planetFmReference = planetFmReference
+        this.updatedBy = userOrSystemInContext
+        this.whenUpdated = amendedDate
+        deactivatedLocations?.add(this)
+      }
 
       if (this is ResidentialLocation) {
         findSubLocations().filterIsInstance<ResidentialLocation>().forEach { location ->
-          location.temporarilyDeactivate(
-            deactivatedReason = deactivatedReason,
-            deactivatedDate = deactivatedDate,
-            deactivationReasonDescription = deactivationReasonDescription,
-            planetFmReference = planetFmReference,
-            proposedReactivationDate = proposedReactivationDate,
-            userOrSystemInContext = userOrSystemInContext,
-            clock = clock,
-            deactivatedLocations = deactivatedLocations,
-          )
+          if (!location.isResidentialRoomOrConvertedCell()) {
+            if (location.temporarilyDeactivate(
+                deactivatedReason = deactivatedReason,
+                deactivatedDate = deactivatedDate,
+                deactivationReasonDescription = deactivationReasonDescription,
+                planetFmReference = planetFmReference,
+                proposedReactivationDate = proposedReactivationDate,
+                userOrSystemInContext = userOrSystemInContext,
+                clock = clock,
+                deactivatedLocations = deactivatedLocations,
+              )
+            ) {
+              dataChanged = true
+            }
+          }
         }
       }
-      deactivatedLocations?.add(this)
-
-      log.info("Temporarily Deactivated Location [${getKey()}]")
-      return true
     }
-    return false
+
+    return dataChanged
   }
 
   open fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock): Location {
@@ -705,7 +763,13 @@ abstract class Location(
         throw ActiveLocationCannotBePermanentlyDeactivatedException(getKey())
       }
       val amendedDate = LocalDateTime.now(clock)
-      addHistory(LocationAttribute.STATUS, this.getStatus().description, LocationStatus.ARCHIVED.description, userOrSystemInContext, amendedDate)
+      addHistory(
+        LocationAttribute.STATUS,
+        this.getStatus().description,
+        LocationStatus.ARCHIVED.description,
+        userOrSystemInContext,
+        amendedDate,
+      )
       addHistory(
         LocationAttribute.PERMANENT_DEACTIVATION,
         null,
@@ -737,8 +801,20 @@ abstract class Location(
     }
   }
 
-  open fun reactivate(userOrSystemInContext: String, clock: Clock, maxCapacity: Int? = null, workingCapacity: Int? = null, reactivatedLocations: MutableSet<Location>? = null, amendedLocations: MutableSet<Location>? = null): Boolean {
-    this.getParent()?.reactivate(userOrSystemInContext = userOrSystemInContext, clock = clock, reactivatedLocations = reactivatedLocations, amendedLocations = amendedLocations)
+  open fun reactivate(
+    userOrSystemInContext: String,
+    clock: Clock,
+    maxCapacity: Int? = null,
+    workingCapacity: Int? = null,
+    reactivatedLocations: MutableSet<Location>? = null,
+    amendedLocations: MutableSet<Location>? = null,
+  ): Boolean {
+    this.getParent()?.reactivate(
+      userOrSystemInContext = userOrSystemInContext,
+      clock = clock,
+      reactivatedLocations = reactivatedLocations,
+      amendedLocations = amendedLocations,
+    )
 
     if (this is Cell && (maxCapacity != null || workingCapacity != null)) {
       setCapacity(
@@ -751,9 +827,15 @@ abstract class Location(
       amendedLocations?.addAll(this.getParentLocations())
     }
 
-    if (!isActive() && !isPermanentlyDeactivated()) {
+    if (isTemporarilyDeactivated()) {
       val amendedDate = LocalDateTime.now(clock)
-      addHistory(LocationAttribute.STATUS, this.getStatus().description, LocationStatus.ACTIVE.description, userOrSystemInContext, amendedDate)
+      addHistory(
+        LocationAttribute.STATUS,
+        this.getStatus().description,
+        LocationStatus.ACTIVE.description,
+        userOrSystemInContext,
+        amendedDate,
+      )
       addHistory(
         LocationAttribute.PROPOSED_REACTIVATION_DATE,
         proposedReactivationDate?.toString(),
@@ -798,11 +880,9 @@ abstract class Location(
   }
 
   private fun isCellOrConvertedCell() = this is Cell || isConvertedCell()
-  fun isCell() = this is Cell && !isConvertedCell()
+  open fun isCell() = false
   fun isStructural() = locationType in ResidentialLocationType.entries.filter { it.structural }.map { it.baseType }
-  fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
   fun isArea() = locationType in ResidentialLocationType.entries.filter { it.area }.map { it.baseType }
-  fun isLocationShownOnResidentialSummary() = locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
 
   open fun toLegacyDto(includeHistory: Boolean = false): LegacyLocation {
     return LegacyLocation(
@@ -832,7 +912,14 @@ abstract class Location(
 data class LocationSummary(
   @Schema(description = "ID of location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   val id: UUID? = null,
-  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  @Schema(
+    description = "Prison ID where the location is situated",
+    required = true,
+    example = "MDI",
+    minLength = 3,
+    maxLength = 5,
+    pattern = "^[A-Z]{2}I|ZZGHI$",
+  )
   val prisonId: String,
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   val code: String,
@@ -842,7 +929,11 @@ data class LocationSummary(
   val localName: String? = null,
   @Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
   val pathHierarchy: String? = null,
-  @Schema(description = "Current Level within hierarchy, starts at 1, e.g Wing = 1", examples = ["1", "2", "3"], required = true)
+  @Schema(
+    description = "Current Level within hierarchy, starts at 1, e.g Wing = 1",
+    examples = ["1", "2", "3"],
+    required = true,
+  )
   val level: Int,
 )
 

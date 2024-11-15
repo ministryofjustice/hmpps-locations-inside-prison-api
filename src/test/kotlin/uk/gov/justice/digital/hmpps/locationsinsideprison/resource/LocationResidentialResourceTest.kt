@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
@@ -1739,7 +1740,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     var convertCellToNonResidentialLocationRequest =
       LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(
         convertedCellType = ConvertedCellType.OTHER,
-        otherConvertedCellType = "Taning room",
+        otherConvertedCellType = "Tanning room",
       )
 
     var nonResStoreRoomRequest =
@@ -1826,7 +1827,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        assertThat(result.findByPathHierarchy("Z-1-001")!!.convertedCellType == ConvertedCellType.OTHER)
+        assertThat(result.convertedCellType).isEqualTo(ConvertedCellType.OTHER)
+        assertThat(result.status).isEqualTo(LocationStatus.NON_RESIDENTIAL)
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -1860,7 +1862,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   {
                     "attribute": "Converted cell type",
-                    "newValue": "Other - Taning room"
+                    "newValue": "Other - Tanning room"
                   },
                   {
                     "attribute": "Used for",
@@ -1899,6 +1901,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         assertThat(result.otherConvertedCellType == nonResStoreRoomRequest.otherConvertedCellType)
         assertThat(result.locationType == LocationType.ROOM)
         assertThat(result.localName).isNull()
+        assertThat(result.status).isEqualTo(LocationStatus.NON_RESIDENTIAL)
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2272,11 +2275,11 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        val cellZ1001 = result.findByPathHierarchy("Z-1-001")
-        assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
-        assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
-        assertThat(cellZ1001?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL, SpecialistCellType.ISOLATION_DISEASES)
-        assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
+        assertThat(cellZ1001.capacity?.maxCapacity).isEqualTo(2)
+        assertThat(cellZ1001.capacity?.workingCapacity).isEqualTo(2)
+        assertThat(cellZ1001.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL, SpecialistCellType.ISOLATION_DISEASES)
+        assertThat(cellZ1001.convertedCellType).isNotEqualTo("OTHER")
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2294,6 +2297,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             """
               {
                 "key": "${cell1.getKey()}",
+                "status": "${LocationStatus.ACTIVE}",
                 "changeHistory": [
                   {
                     "attribute": "Converted cell type",
@@ -2385,11 +2389,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         .expectBody(LocationTest::class.java)
         .returnResult().responseBody!!
 
-      val cellZ1001 = result.findByPathHierarchy("Z-1-001")
-      assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
-      assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
-      assertThat(cellZ1001?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
-      assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
+      val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
+      assertThat(cellZ1001.capacity?.maxCapacity).isEqualTo(2)
+      assertThat(cellZ1001.capacity?.workingCapacity).isEqualTo(2)
+      assertThat(cellZ1001.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
+      assertThat(cellZ1001.convertedCellType).isNotEqualTo("OTHER")
+      assertThat(cellZ1001.status == LocationStatus.ACTIVE)
 
       getDomainEvents(3).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2418,11 +2423,11 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         .expectBody(LocationTest::class.java)
         .returnResult().responseBody!!
 
-      val cellZ1001 = result.findByPathHierarchy("Z-1-001")
-      assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
-      assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
-      assertThat(cellZ1001?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
-      assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
+      val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
+      assertThat(cellZ1001.capacity?.maxCapacity).isEqualTo(2)
+      assertThat(cellZ1001.capacity?.workingCapacity).isEqualTo(2)
+      assertThat(cellZ1001.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
+      assertThat(cellZ1001.convertedCellType).isNotEqualTo("OTHER")
 
       getDomainEvents(3).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
