@@ -7,12 +7,14 @@ import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationTransformResourceTest : CommonDataTestBase() {
@@ -392,7 +394,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${cell1.id}/capacity")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity()))
+          .bodyValue(jsonString(CapacityDto()))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -402,7 +404,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${cell1.id}/capacity")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity()))
+          .bodyValue(jsonString(CapacityDto()))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -412,7 +414,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${cell1.id}/capacity")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity()))
+          .bodyValue(jsonString(CapacityDto()))
           .exchange()
           .expectStatus().isForbidden
       }
@@ -428,7 +430,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .header("Content-Type", "application/json")
             .bodyValue(
               jsonString(
-                uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                CapacityDto(
                   workingCapacity = -1,
                   maxCapacity = 999,
                 ),
@@ -451,7 +453,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .header("Content-Type", "application/json")
             .bodyValue(
               jsonString(
-                uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                CapacityDto(
                   workingCapacity = 1,
                   maxCapacity = 1,
                 ),
@@ -474,7 +476,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .header("Content-Type", "application/json")
             .bodyValue(
               jsonString(
-                uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                CapacityDto(
                   workingCapacity = 3,
                   maxCapacity = 2,
                 ),
@@ -491,13 +493,15 @@ class LocationTransformResourceTest : CommonDataTestBase() {
       fun `cannot have a max cap of 0`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
 
+        cell1.accommodationType = AccommodationType.CARE_AND_SEPARATION
+        repository.save(cell1)
         assertThat(
           webTestClient.put().uri("/locations/${cell1.id}/capacity")
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
             .bodyValue(
               jsonString(
-                uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                CapacityDto(
                   workingCapacity = 0,
                   maxCapacity = 0,
                 ),
@@ -507,7 +511,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .expectStatus().isEqualTo(400)
             .expectBody(ErrorResponse::class.java)
             .returnResult().responseBody!!.errorCode,
-        ).isEqualTo(115)
+        ).isEqualTo(ErrorCode.MaxCapacityCannotBeZero.errorCode)
       }
 
       @Test
@@ -520,7 +524,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .header("Content-Type", "application/json")
             .bodyValue(
               jsonString(
-                uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                CapacityDto(
                   workingCapacity = 0,
                   maxCapacity = 2,
                 ),
@@ -585,6 +589,51 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
+      @Test
+      fun `can change the capacity of CSWAP`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cswap.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cswap.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              CapacityDto(
+                workingCapacity = 90,
+                maxCapacity = 95,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "id": "${cswap.id}",
+                "prisonId": "MDI",
+                "code": "CSWAP",
+                "pathHierarchy": "CSWAP",
+                "locationType": "AREA",
+                "capacity": {
+                  "maxCapacity": 95,
+                  "workingCapacity": 90
+                },
+                "active": true,
+                "isResidential": false,
+                "key": "MDI-CSWAP"
+              }
+          """,
+            false,
+          )
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-CSWAP",
           )
         }
       }

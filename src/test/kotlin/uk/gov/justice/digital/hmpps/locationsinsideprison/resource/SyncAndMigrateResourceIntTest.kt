@@ -650,6 +650,51 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             false,
           )
       }
+
+      @Test
+      fun `can sync a new CSWAP location`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              NomisSyncLocationRequest(
+                prisonId = "ZZGHI",
+                code = "CSWAP",
+                locationType = LocationType.HOLDING_AREA,
+                residentialHousingType = ResidentialHousingType.OTHER_USE,
+                localName = "Cell Swap",
+                comments = "Dummy Cell Swap",
+                orderWithinParentLocation = 1,
+                lastUpdatedBy = "user",
+                capacity = CapacityDTO(99, 99),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "CSWAP",
+              "pathHierarchy": "CSWAP",
+              "locationType": "HOLDING_AREA",
+              "active": true,
+              "key": "ZZGHI-CSWAP",
+              "comments": "Dummy Cell Swap",
+              "localName": "Cell Swap",
+              "orderWithinParentLocation": 1,
+              "capacity": {
+                "workingCapacity": 99,
+                "maxCapacity": 99
+              }
+            }
+          """,
+            false,
+          )
+      }
     }
   }
 

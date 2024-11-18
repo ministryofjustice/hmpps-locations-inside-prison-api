@@ -371,7 +371,7 @@ class LocationService(
 
   @Transactional
   fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int): LocationDTO {
-    val locCapChange = cellLocationRepository.findById(id)
+    val locCapChange = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     if (locCapChange.isPermanentlyDeactivated()) {

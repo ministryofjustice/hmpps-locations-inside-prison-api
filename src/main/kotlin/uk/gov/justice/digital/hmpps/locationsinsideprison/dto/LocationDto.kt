@@ -17,6 +17,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousing
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getVirtualLocationCodes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SortAttribute
 import java.time.Clock
 import java.time.LocalDate
@@ -46,10 +48,18 @@ data class Location(
   @Schema(description = "Location Type", example = "CELL", required = true)
   val locationType: LocationType,
 
-  @Schema(description = "Alternative description to display for location, (Not Cells)", example = "Wing A", required = false)
+  @Schema(
+    description = "Alternative description to display for location, (Not Cells)",
+    example = "Wing A",
+    required = false,
+  )
   val localName: String? = null,
 
-  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
+  @Schema(
+    description = "Additional comments that can be made about this location",
+    example = "Not to be used",
+    required = false,
+  )
   val comments: String? = null,
 
   @Schema(description = "Indicates if the location is permanently inactive", example = "false", required = true)
@@ -91,7 +101,11 @@ data class Location(
   @Schema(description = "Indicates the location is enabled", example = "true", required = true)
   val active: Boolean = true,
 
-  @Schema(description = "Indicates the location in inactive as a parent is deactivated", example = "false", required = true)
+  @Schema(
+    description = "Indicates the location in inactive as a parent is deactivated",
+    example = "false",
+    required = true,
+  )
   val deactivatedByParent: Boolean = false,
 
   @Schema(description = "Date the location was deactivated", example = "2023-01-23T12:23:00", required = false)
@@ -100,7 +114,11 @@ data class Location(
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
 
-  @Schema(description = "For OTHER deactivation reason, a free text comment is provided", example = "Window damage", required = false)
+  @Schema(
+    description = "For OTHER deactivation reason, a free text comment is provided",
+    example = "Window damage",
+    required = false,
+  )
   val deactivationReasonDescription: String? = null,
 
   @Schema(description = "Staff username who deactivated the location", required = false)
@@ -115,7 +133,11 @@ data class Location(
   @Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
   val topLevelId: UUID,
 
-  @Schema(description = "Current Level within hierarchy, starts at 1, e.g Wing = 1", examples = ["1", "2", "3"], required = true)
+  @Schema(
+    description = "Current Level within hierarchy, starts at 1, e.g Wing = 1",
+    examples = ["1", "2", "3"],
+    required = true,
+  )
   val level: Int,
 
   @Schema(description = "Indicates this is the lowest level, often a cell", example = "false", required = true)
@@ -277,7 +299,11 @@ data class ChangeHistory(
 @Schema(description = "Certification")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Certification(
-  @Schema(description = "Indicates that this location is certified for use as a residential location", example = "true", required = false)
+  @Schema(
+    description = "Indicates that this location is certified for use as a residential location",
+    example = "true",
+    required = false,
+  )
   val certified: Boolean = false,
   @Schema(description = "Indicates the capacity of the certified location (cell)", example = "1", required = false)
   val capacityOfCertifiedCell: Int = 0,
@@ -308,7 +334,14 @@ data class Certification(
 @Schema(description = "Request to create a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateResidentialLocationRequest(
-  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  @Schema(
+    description = "Prison ID where the location is situated",
+    required = true,
+    example = "MDI",
+    minLength = 3,
+    maxLength = 5,
+    pattern = "^[A-Z]{2}I|ZZGHI$",
+  )
   @field:Size(min = 3, message = "Prison ID cannot be blank")
   @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
@@ -375,9 +408,19 @@ data class CreateResidentialLocationRequest(
           location.addSpecialistCellType(it, createdBy, clock)
         }
       return location
+    } else if (code in getVirtualLocationCodes()) {
+      VirtualResidentialLocation(
+        prisonId = prisonId,
+        code = code,
+        pathHierarchy = code,
+        localName = localName,
+        capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
+        createdBy = createdBy,
+        whenCreated = LocalDateTime.now(clock),
+        childLocations = mutableListOf(),
+      )
     } else {
       ResidentialLocationJPA(
-        id = null,
         prisonId = prisonId,
         code = code,
         locationType = locationType.baseType,
@@ -397,7 +440,14 @@ data class CreateResidentialLocationRequest(
 @Schema(description = "Request to create a non-residential location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateNonResidentialLocationRequest(
-  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  @Schema(
+    description = "Prison ID where the location is situated",
+    required = true,
+    example = "MDI",
+    minLength = 3,
+    maxLength = 5,
+    pattern = "^[A-Z]{2}I|ZZGHI$",
+  )
   @field:Size(min = 3, message = "Prison ID cannot be blank")
   @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
@@ -449,7 +499,11 @@ data class CreateNonResidentialLocationRequest(
 data class TemporaryDeactivationLocationRequest(
   @Schema(description = "Reason for temporary deactivation", example = "MOTHBALLED", required = true)
   val deactivationReason: DeactivatedReason,
-  @Schema(description = "Additional information on deactivation, for OTHER DeactivatedReason must be provided", example = "Window broken", required = false)
+  @Schema(
+    description = "Additional information on deactivation, for OTHER DeactivatedReason must be provided",
+    example = "Window broken",
+    required = false,
+  )
   @field:Size(max = 255, message = "Other deactivation reason cannot be more than 255 characters")
   val deactivationReasonDescription: String? = null,
   @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
