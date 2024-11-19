@@ -76,13 +76,13 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             """ 
           {
             "prisonId": "NMI",
-            "numUnlockRollToday": 1,
-            "numCurrentPopulation": 2,
+            "numUnlockRollToday": 4,
+            "numCurrentPopulation": 5,
             "numArrivedToday": 2,
-            "numInReception": 0,
+            "numInReception": 2,
             "numStillToArrive": 1,
             "numOutToday": 1,
-            "numNoCellAllocated": 0,
+            "numNoCellAllocated": 1,
             "totals": {
               "bedsInUse": 0,
               "currentlyInCell": 0,
@@ -258,13 +258,13 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             """ 
             {
               "prisonId": "MDI",
-              "numUnlockRollToday": 3,
-              "numCurrentPopulation": 2,
+              "numUnlockRollToday": 6,
+              "numCurrentPopulation": 5,
               "numArrivedToday": 1,
-              "numInReception": 0,
+              "numInReception": 2,
               "numStillToArrive": 2,
               "numOutToday": 2,
-              "numNoCellAllocated": 0,
+              "numNoCellAllocated": 1,
               "totals": {
                 "bedsInUse": 2,
                 "currentlyInCell": 1,
@@ -378,13 +378,13 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             """ 
             {
               "prisonId": "MDI",
-              "numUnlockRollToday": 3,
-              "numCurrentPopulation": 2,
+              "numUnlockRollToday": 6,
+              "numCurrentPopulation": 5,
               "numArrivedToday": 1,
-              "numInReception": 0,
+              "numInReception": 2,
               "numStillToArrive": 2,
               "numOutToday": 2,
-              "numNoCellAllocated": 0,
+              "numNoCellAllocated": 1,
               "totals": {
                 "bedsInUse": 2,
                 "currentlyInCell": 1,

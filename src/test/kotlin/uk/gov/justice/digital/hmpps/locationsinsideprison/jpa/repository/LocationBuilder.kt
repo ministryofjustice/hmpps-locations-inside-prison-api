@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousing
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
 import java.time.LocalDateTime
 
 fun buildResidentialLocation(
@@ -35,6 +36,25 @@ fun buildResidentialLocation(
     orderWithinParentLocation = 99,
     localName = localName,
     residentialHousingType = residentialHousingType,
+  )
+}
+
+fun buildVirtualResidentialLocation(
+  prisonId: String = "MDI",
+  pathHierarchy: String,
+  capacity: Capacity? = null,
+  localName: String? = null,
+): VirtualResidentialLocation {
+  return VirtualResidentialLocation(
+    prisonId = prisonId,
+    code = pathHierarchy.split("-").last(),
+    pathHierarchy = pathHierarchy,
+    createdBy = EXPECTED_USERNAME,
+    whenCreated = LocalDateTime.now(clock),
+    childLocations = mutableListOf(),
+    orderWithinParentLocation = 99,
+    localName = localName,
+    capacity = capacity,
   )
 }
 

@@ -75,7 +75,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             """
               {
                 "totalPages": 2,
-                "totalElements": 15,
+                "totalElements": 17,
                 "first": true,
                 "last": false,
                 "size": 14,
@@ -102,13 +102,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "pathHierarchy": "A-1-001",
                     "locationType": "CELL",
                     "key": "NMI-A-1-001"
-                  }, 
-                  {
-                    "prisonId": "MDI",
-                    "code": "ADJUDICATION",
-                    "pathHierarchy": "Z-ADJUDICATION",
-                    "locationType": "ADJUDICATION_ROOM",
-                    "key": "MDI-Z-ADJUDICATION"
                   },
                   {
                     "prisonId": "MDI",
@@ -130,6 +123,22 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "locationType": "CELL",
                     "key": "MDI-B-A-001"
                    },
+                    {
+                    "prisonId": "MDI",
+                    "code": "CSWAP",
+                    "pathHierarchy": "CSWAP",
+                    "locationType": "AREA",
+                    "localName": "Cell Swap",
+                    "key": "MDI-CSWAP"
+                  }, 
+                    {
+                    "prisonId": "MDI",
+                    "code": "TAP",
+                    "pathHierarchy": "TAP",
+                    "locationType": "AREA",
+                    "localName": "Temp Absentee Prisoner",
+                    "key": "MDI-TAP"
+                  }, 
                    {
                     "prisonId": "MDI",
                     "code": "Z",
@@ -171,13 +180,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "pathHierarchy": "Z-1-01S",
                     "locationType": "STORE",
                     "key": "MDI-Z-1-01S"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "2",
-                    "pathHierarchy": "Z-2",
-                    "locationType": "LANDING",
-                    "key": "MDI-Z-2"
                   }
                 ],
                 "number": 0,
@@ -383,6 +385,32 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "key": "MDI-Z-2"
                 }
               ]
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of a CSWAP location`() {
+        webTestClient.get().uri("/locations/${cswap.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "MDI",
+              "code": "CSWAP",
+              "pathHierarchy": "CSWAP",
+              "locationType": "AREA",
+              "active": true,
+              "key": "MDI-CSWAP",
+              "capacity": {
+                "maxCapacity": 99,
+                "workingCapacity": 0
+              }
             }
           """,
             false,
@@ -699,6 +727,53 @@ class LocationResourceIntTest : CommonDataTestBase() {
             }
           """,
             false,
+          )
+      }
+
+      @Test
+      fun `can deactivate CSWAP location`() {
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cswap.getPathHierarchy()), false)
+        webTestClient.put().uri("/locations/${cswap.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = "Not Needed")))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-CSWAP",
+          )
+        }
+
+        webTestClient.get().uri("/locations/${cswap.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "key": "${cswap.getKey()}",
+                "deactivatedReason": "OTHER",
+                "deactivationReasonDescription": "Not Needed",
+                "capacity" : {
+                  "workingCapacity": 0,
+                  "maxCapacity": 99
+                },
+                "changeHistory": [
+                  {
+                    "attribute": "Deactivation reason",
+                    "newValue": "Other - Not Needed"
+                  },
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Inactive"
+                  }
+                ]
+              }
+            """.trimIndent(),
           )
       }
 
@@ -1408,6 +1483,78 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
             }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can reactivate CSWAP`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cswap.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cswap.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-CSWAP",
+          )
+        }
+
+        webTestClient.put().uri("/locations/${cswap.id}/reactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.reactivated" to "MDI-CSWAP",
+          )
+        }
+
+        webTestClient.get().uri("/locations/${cswap.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "key": "MDI-CSWAP",
+                "locationType": "AREA",
+                "permanentlyInactive": false,
+                "capacity": {
+                  "maxCapacity": 99,
+                  "workingCapacity": 0
+                },
+                "status": "ACTIVE",
+                "active": true,
+                "level": 1,
+                "leafLevel": false,
+                "changeHistory": [
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Inactive",
+                    "newValue": "Active"
+                  },
+                  {
+                    "attribute": "Deactivation reason",
+                    "newValue": "Damage"
+                  },
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Inactive"
+                  }
+                ],
+                "isResidential": false
+              }
           """,
             false,
           )

@@ -83,7 +83,7 @@ class PrisonRollCountService(
         .map { it.toResidentialPrisonerLocation(mapOfPrisoners) }
         .sortedWith(NaturalOrderComparator())
 
-    val currentRoll = listOfPrisoners.filter { it.inOutStatus == "IN" }.size
+    val currentRoll = listOfPrisoners.count { it.inOutStatus == "IN" }
 
     val prisonRollCount = PrisonRollCount(
       prisonId = prisonId,
@@ -91,9 +91,9 @@ class PrisonRollCountService(
       numCurrentPopulation = currentRoll,
       numOutToday = movements.inOutMovementsToday.out,
       numArrivedToday = movements.inOutMovementsToday.`in`,
-      numInReception = mapOfPrisoners["RECP"]?.size ?: 0,
+      numInReception = mapOfPrisoners["RECP"]?.count { it.inOutStatus == "IN" } ?: 0,
       numStillToArrive = movements.enRouteToday,
-      numNoCellAllocated = mapOfPrisoners["CSWAP"]?.size ?: 0,
+      numNoCellAllocated = mapOfPrisoners["CSWAP"]?.count { it.inOutStatus == "IN" } ?: 0,
       totals = locationRollCount(locations),
       locations = removeLocations(locations, includeCells = includeCells),
     )
