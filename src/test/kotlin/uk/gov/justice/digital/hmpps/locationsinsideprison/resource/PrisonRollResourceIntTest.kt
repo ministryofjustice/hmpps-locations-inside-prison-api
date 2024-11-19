@@ -76,7 +76,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             """ 
           {
             "prisonId": "NMI",
-            "numUnlockRollToday": 8,
+            "numUnlockRollToday": 6,
             "numCurrentPopulation": 7,
             "numArrivedToday": 2,
             "numInReception": 4,
@@ -379,7 +379,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             {
               "prisonId": "MDI",
               "numUnlockRollToday": 8,
-              "numCurrentPopulation": 7
+              "numCurrentPopulation": 7,
               "numArrivedToday": 1,
               "numInReception": 4,
               "numStillToArrive": 2,
