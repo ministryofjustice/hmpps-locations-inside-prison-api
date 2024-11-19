@@ -95,10 +95,13 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
         createPrisoner(prisonId = prisonId, cellLocation = "Z-1-002", index = 1001, inOutStatus = "OUT", status = "ACTIVE OUT"),
         createPrisoner(prisonId = prisonId, cellLocation = "Z-1-003", index = 1002, inOutStatus = "IN", status = "ACTIVE IN"),
         createPrisoner(prisonId = prisonId, cellLocation = "RECP", index = 1003, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "RECP", index = 1004, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "RECP", index = 1005, inOutStatus = "OUT", status = "ACTIVE OUT"),
-        createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", index = 1006, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", index = 1007, inOutStatus = "OUT", status = "ACTIVE OUT"),
+        createPrisoner(prisonId = prisonId, cellLocation = "TAP", index = 1004, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "COURT", index = 1005, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "COURT", index = 1006, inOutStatus = "OUT", status = "ACTIVE OUT"),
+        createPrisoner(prisonId = prisonId, cellLocation = "RECP", index = 1007, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "RECP", index = 1008, inOutStatus = "OUT", status = "ACTIVE OUT"),
+        createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", index = 1009, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", index = 1010, inOutStatus = "OUT", status = "ACTIVE OUT"),
       ),
     )
 

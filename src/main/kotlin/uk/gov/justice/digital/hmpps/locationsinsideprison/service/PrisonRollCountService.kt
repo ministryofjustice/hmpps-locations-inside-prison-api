@@ -13,6 +13,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getCSwapLocationCode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getReceptionLocationCodes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import java.util.*
@@ -84,6 +86,8 @@ class PrisonRollCountService(
         .sortedWith(NaturalOrderComparator())
 
     val currentRoll = listOfPrisoners.count { it.inOutStatus == "IN" }
+    val numInReception = listOfPrisoners.count { it.cellLocation in getReceptionLocationCodes() && it.inOutStatus == "IN" }
+    val numNoCellAllocated = listOfPrisoners.count { it.cellLocation == getCSwapLocationCode() && it.inOutStatus == "IN" }
 
     val prisonRollCount = PrisonRollCount(
       prisonId = prisonId,
@@ -91,9 +95,9 @@ class PrisonRollCountService(
       numCurrentPopulation = currentRoll,
       numOutToday = movements.inOutMovementsToday.out,
       numArrivedToday = movements.inOutMovementsToday.`in`,
-      numInReception = mapOfPrisoners["RECP"]?.count { it.inOutStatus == "IN" } ?: 0,
+      numInReception = numInReception,
       numStillToArrive = movements.enRouteToday,
-      numNoCellAllocated = mapOfPrisoners["CSWAP"]?.count { it.inOutStatus == "IN" } ?: 0,
+      numNoCellAllocated = numNoCellAllocated,
       totals = locationRollCount(locations),
       locations = removeLocations(locations, includeCells = includeCells),
     )
