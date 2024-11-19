@@ -12,14 +12,20 @@ import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
-enum class VirtualLocationCode {
+enum class VirtualLocationCode(
+  val receptionLocation: Boolean = true,
+) {
   RECP,
   COURT,
   TAP,
-  CSWAP,
+  CSWAP(false),
 }
 
-fun getVirtualLocationCodes() = entries.map { it.name.toString() }
+fun getReceptionLocationCodes() = entries.filter { it.receptionLocation }.map { it.name }
+
+fun getVirtualLocationCodes() = entries.map { it.name }
+
+fun getCSwapLocationCode() = VirtualLocationCode.CSWAP.name
 
 @Entity
 @DiscriminatorValue("VIRTUAL")
