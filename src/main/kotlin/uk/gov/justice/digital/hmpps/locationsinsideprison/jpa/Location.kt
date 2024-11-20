@@ -26,6 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ActiveLocationCannotBePermanentlyDeactivatedException
@@ -410,6 +411,22 @@ abstract class Location(
   }
 
   private fun isLeafLevel() = findSubLocations().isEmpty() && !isStructural() && !isArea()
+
+  fun toPrisonHierarchyDto(): PrisonHierarchyDto {
+    val subLocations: List<PrisonHierarchyDto> = childLocations
+      .filter { it.isActiveAndAllParentsActive() && (it.isStructural() || it.isCell()) }
+      .map { it.toPrisonHierarchyDto() }
+
+    return PrisonHierarchyDto(
+      locationId = id!!,
+      locationType = locationType,
+      locationCode = getCode(),
+      fullLocationPath = getPathHierarchy(),
+      localName = getDerivedLocalName(true),
+      level = getLevel(),
+      subLocations = subLocations.ifEmpty { null },
+    )
+  }
 
   fun toLocationGroupDto(): LocationGroupDto {
     return LocationGroupDto(

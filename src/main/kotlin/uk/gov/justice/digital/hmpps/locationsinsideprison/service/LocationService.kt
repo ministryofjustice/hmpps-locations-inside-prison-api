@@ -24,6 +24,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationPrefixDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -119,6 +120,15 @@ class LocationService(
         }
         .sortedWith(NaturalOrderComparator())
     }
+  }
+
+  fun getPrisonResidentialHierarchy(prisonId: String): List<PrisonHierarchyDto> {
+    return residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+      .filter { it.isActiveAndAllParentsActive() && it.isStructural() }
+      .map {
+        it.toPrisonHierarchyDto()
+      }
+      .sortedWith(NaturalOrderComparator())
   }
 
   fun getLocationPrefixFromGroup(prisonId: String, group: String): LocationPrefixDto {

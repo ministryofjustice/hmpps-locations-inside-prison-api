@@ -316,6 +316,110 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
     }
   }
 
+  @DisplayName("GET /locations/prison/{prisonId}/residential-hierarchy")
+  @Nested
+  inner class ViewPrisonHierarchyTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve full hierarchy for a prison`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+          [
+            {
+              "locationType": "WING",
+              "locationCode": "B",
+              "fullLocationPath": "B",
+              "localName": "Wing B",
+              "level": 1,
+              "subLocations": [
+                {
+                  "locationType": "LANDING",
+                  "locationCode": "A",
+                  "fullLocationPath": "B-A",
+                  "localName": "Landing 1",
+                  "level": 2
+                }
+              ]
+            },
+            {
+              "locationType": "WING",
+              "locationCode": "Z",
+              "fullLocationPath": "Z",
+              "level": 1,
+              "subLocations": [
+                {
+                  "locationType": "LANDING",
+                  "locationCode": "1",
+                  "fullLocationPath": "Z-1",
+                  "localName": "Landing 1",
+                  "level": 2,
+                  "subLocations": [
+                    {
+                      "locationType": "CELL",
+                      "locationCode": "001",
+                      "fullLocationPath": "Z-1-001",
+                      "level": 3
+                    },
+                    {
+                      "locationType": "CELL",
+                      "locationCode": "002",
+                      "fullLocationPath": "Z-1-002",
+                      "level": 3
+                    }
+                  ]
+                },
+                {
+                  "locationType": "LANDING",
+                  "locationCode": "2",
+                  "fullLocationPath": "Z-2",
+                  "localName": "Landing 2",
+                  "level": 2
+                }
+              ]
+            }
+          ]
+            """,
+            false,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /locations/prison/{prisonId}/group/{group}/location-prefix")
   @Nested
   inner class ViewLocationPrefixInPropertiesByPrisonAndGroupTest {
