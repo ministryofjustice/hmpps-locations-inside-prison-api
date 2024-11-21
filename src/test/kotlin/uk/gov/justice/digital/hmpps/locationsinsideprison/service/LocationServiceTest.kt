@@ -14,6 +14,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -25,7 +27,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
 import java.time.Clock
 import java.time.LocalDateTime
-import java.util.*
+import java.util.Optional
+import java.util.Properties
+import java.util.UUID
 
 class LocationServiceTest {
   private val locationRepository: LocationRepository = mock()
@@ -142,6 +146,173 @@ class LocationServiceTest {
     Assertions.assertThat(locationPrefixDto.locationPrefix).isEqualTo("MDI-2-")
   }
 
+  // getLocationById
+  @Test
+  fun `should format local name correctly for a prison`() {
+    val prisonLocation = buildLocation("BULLINGDON (HMP)")
+    whenever(locationRepository.findById(any())).thenReturn(
+      Optional.of(prisonLocation),
+    )
+
+    val loc = service.getLocationById(UUID.randomUUID(), formatLocalName = true)
+    Assertions.assertThat(loc?.localName).isEqualTo("Bullingdon (HMP)")
+  }
+
+  @Test
+  fun `should format local name correctly for a room`() {
+    val cellLocation = buildLocation("ROOM ONE")
+    whenever(locationRepository.findById(any())).thenReturn(Optional.of(cellLocation))
+
+    val loc = service.getLocationById(UUID.randomUUID(), formatLocalName = true)
+    Assertions.assertThat(loc?.localName).isEqualTo("Room One")
+  }
+
+  @Test
+  fun `should not format local name`() {
+    val cellLocation = buildLocation("CeLL a")
+    whenever(locationRepository.findById(any())).thenReturn(Optional.of(cellLocation))
+
+    val loc = service.getLocationById(UUID.randomUUID())
+    Assertions.assertThat(loc?.localName).isEqualTo("CeLL a")
+  }
+
+  // findAllByPrisonIdAndNonResidentialUsages
+  @Test
+  fun `should format local name`() {
+    val prisonLocation = buildLocation("BULLINGDON (HMP)")
+    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
+      listOf(prisonLocation),
+    )
+
+    val nonResLoc =
+      service.getLocationsByPrisonAndNonResidentialUsageType(
+        "prisonId",
+        NonResidentialUsageType.OCCURRENCE,
+        false,
+        true,
+      )
+    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("Bullingdon (HMP)")
+  }
+
+  private var location1 = buildLocation("A")
+  private var location2 = buildLocation("B")
+  private var location3 = buildLocation("CC")
+
+  @Test
+  fun `should sort by localName`() {
+    var locations = listOf(location3, location1, location2)
+
+    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
+      locations,
+    )
+
+    val nonResLoc =
+      service.getLocationsByPrisonAndNonResidentialUsageType(
+        "prisonId",
+        NonResidentialUsageType.OCCURRENCE,
+        true,
+        false,
+      )
+    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("A")
+    Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
+    Assertions.assertThat(nonResLoc[2].localName).isEqualTo("CC")
+  }
+
+  @Test
+  fun `should not sort by localName`() {
+    var locations = listOf(location3, location2, location1)
+
+    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
+      locations,
+    )
+
+    val nonResLoc =
+      service.getLocationsByPrisonAndNonResidentialUsageType("prisonId", NonResidentialUsageType.OCCURRENCE)
+    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("CC")
+    Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
+    Assertions.assertThat(nonResLoc[2].localName).isEqualTo("A")
+  }
+
+  @Test
+  fun `should sort by localName and format localName`() {
+    var locations = listOf(location3, location2, location1)
+
+    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
+      locations,
+    )
+
+    val nonResLoc =
+      service.getLocationsByPrisonAndNonResidentialUsageType("prisonId", NonResidentialUsageType.OCCURRENCE, true, true)
+    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("A")
+    Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
+    Assertions.assertThat(nonResLoc[2].localName).isEqualTo("Cc")
+  }
+
+
+  // getLocationByPrisonAndLocationType
+  private val adjRoom1 = buildLocation("A-ADJ-1")
+  private val adjRoom2 = buildLocation("A-ADJ-2")
+  private val adjRoom3 = buildLocation("A-ADJ-3")
+
+  @Test
+  fun `should sort rooms by localName and also format localName`() {
+    whenever(locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(any(), any())).thenReturn(
+      listOf(adjRoom3, adjRoom1, adjRoom2),
+    )
+
+    val nonResLoc =
+      service.getLocationByPrisonAndLocationType(
+        "MDI",
+        LocationType.ADJUDICATION_ROOM,
+        sortByLocalName = true,
+        formatLocalName = true,
+      )
+
+    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("A-adj-1")
+    Assertions.assertThat(nonResLoc[1].localName).isEqualTo("A-adj-2")
+    Assertions.assertThat(nonResLoc[2].localName).isEqualTo("A-adj-3")
+  }
+
+  @Test
+  fun `should sort rooms by localName but not format localName`() {
+    whenever(locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(any(), any())).thenReturn(
+      listOf(adjRoom3, adjRoom1, adjRoom2),
+    )
+
+    val nonResLoc =
+      service.getLocationByPrisonAndLocationType(
+        "MDI",
+        LocationType.ADJUDICATION_ROOM,
+        sortByLocalName = true,
+        formatLocalName = false,
+      )
+
+    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("A-ADJ-1")
+    Assertions.assertThat(nonResLoc[1].localName).isEqualTo("A-ADJ-2")
+    Assertions.assertThat(nonResLoc[2].localName).isEqualTo("A-ADJ-3")
+  }
+
+  @Test
+  fun `should not sort rooms by localName or format localName`() {
+    whenever(locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(any(), any())).thenReturn(
+      listOf(adjRoom3, adjRoom1, adjRoom2),
+    )
+
+    val nonResLoc =
+      service.getLocationByPrisonAndLocationType(
+        "MDI",
+        LocationType.ADJUDICATION_ROOM,
+        sortByLocalName = false,
+        formatLocalName = false,
+      )
+
+    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("A-ADJ-3")
+    Assertions.assertThat(nonResLoc[1].localName).isEqualTo("A-ADJ-1")
+    Assertions.assertThat(nonResLoc[2].localName).isEqualTo("A-ADJ-2")
+  }
+
+
+  // getLocationPrefixFromGroup
   @Test
   fun `should throw correct exception when location prefix not found`() {
     whenever(groupsProperties.getProperty(ArgumentMatchers.anyString())).thenReturn(null)
@@ -149,5 +320,20 @@ class LocationServiceTest {
     Assertions.assertThatExceptionOfType(LocationPrefixNotFoundException::class.java).isThrownBy {
       service.getLocationPrefixFromGroup("XXX", "1")
     }
+  }
+
+  private fun buildLocation(localName: String): NonResidentialLocation{
+    return NonResidentialLocation(
+      id = UUID.randomUUID(),
+      localName = localName,
+      code = "code",
+      pathHierarchy = "path-a",
+      locationType = LocationType.LOCATION,
+      prisonId = "prisonId",
+      active = true,
+      whenCreated = LocalDateTime.now(),
+      childLocations = mutableListOf(),
+      createdBy = "createdBy",
+    )
   }
 }

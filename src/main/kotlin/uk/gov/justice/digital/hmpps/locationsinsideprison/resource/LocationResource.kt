@@ -79,8 +79,8 @@ class LocationResource(
     id: UUID,
     @RequestParam(name = "includeChildren", required = false, defaultValue = "false") includeChildren: Boolean = false,
     @RequestParam(name = "includeHistory", required = false, defaultValue = "false") includeHistory: Boolean = false,
-  ) =
-    locationService.getLocationById(id = id, includeChildren = includeChildren, includeHistory = includeHistory)
+    @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
+  ) = locationService.getLocationById(id = id, includeChildren = includeChildren, includeHistory = includeHistory, formatLocalName = formatLocalName)
       ?: throw LocationNotFoundException(id.toString())
 
   @GetMapping("")

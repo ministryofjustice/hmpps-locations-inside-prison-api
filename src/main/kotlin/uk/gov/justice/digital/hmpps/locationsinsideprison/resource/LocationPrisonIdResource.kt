@@ -26,7 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
-import java.util.*
+import java.util.UUID
 
 @RestController
 @Validated
@@ -353,7 +353,10 @@ class LocationPrisonIdResource(
     @Schema(description = "Usage type", example = "APPOINTMENTS", required = true)
     @PathVariable
     usageType: NonResidentialUsageType,
-  ): List<Location> = locationService.getLocationsByPrisonAndNonResidentialUsageType(prisonId, usageType)
+    @RequestParam(name = "sortByLocalName", required = false, defaultValue = "false") sortByLocalName: Boolean = false,
+    @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
+
+    ): List<Location> = locationService.getLocationsByPrisonAndNonResidentialUsageType(prisonId, usageType, sortByLocalName, formatLocalName)
 
   @GetMapping("/prison/{prisonId}/location-type/{locationType}")
   @ResponseStatus(HttpStatus.OK)
@@ -394,5 +397,7 @@ class LocationPrisonIdResource(
     @Schema(description = "Location type", example = "CELL", required = true)
     @PathVariable
     locationType: LocationType,
-  ): List<Location> = locationService.getLocationByPrisonAndLocationType(prisonId, locationType)
+    @RequestParam(name = "sortByLocalName", required = false, defaultValue = "false") sortByLocalName: Boolean = false,
+    @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
+    ): List<Location> = locationService.getLocationByPrisonAndLocationType(prisonId, locationType, sortByLocalName, formatLocalName)
 }
