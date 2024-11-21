@@ -100,10 +100,10 @@ class LocationService(
     includeHistory: Boolean = false,
     formatLocalName: Boolean = false,
   ): LocationDTO? = locationRepository.findById(id).getOrNull()?.toDto(
-      includeChildren = includeChildren,
-      includeHistory = includeHistory,
-      formatLocalName = formatLocalName,
-    )
+    includeChildren = includeChildren,
+    includeHistory = includeHistory,
+    formatLocalName = formatLocalName,
+  )
 
   fun getLocationByPrison(prisonId: String): List<LocationDTO> =
     locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
@@ -187,10 +187,11 @@ class LocationService(
     val rawResult = nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
       .map { it.toDto(formatLocalName = formatLocalName) }
 
-    return if (sortByLocalName)
+    return if (sortByLocalName) {
       rawResult.sortedBy { it.localName }
-    else
+    } else {
       rawResult
+    }
   }
 
   fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
@@ -209,21 +210,22 @@ class LocationService(
     return locationRepository.findAll(pageable).map(Location::toLegacyDto)
   }
 
-fun getLocationByPrisonAndLocationType(
-  prisonId: String,
-  locationType: LocationType,
-  sortByLocalName: Boolean = false,
-  formatLocalName: Boolean = false,
-): List<LocationDTO> {
-  val rawResult = locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId, locationType)
+  fun getLocationByPrisonAndLocationType(
+    prisonId: String,
+    locationType: LocationType,
+    sortByLocalName: Boolean = false,
+    formatLocalName: Boolean = false,
+  ): List<LocationDTO> {
+    val rawResult = locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId, locationType)
       .filter { it.isActive() }
-    .map { it.toDto(formatLocalName = formatLocalName) }
+      .map { it.toDto(formatLocalName = formatLocalName) }
 
-  return if (sortByLocalName)
-    rawResult.sortedBy { it.localName }
-  else
-    rawResult.sortedBy { it.getKey() }
-}
+    return if (sortByLocalName) {
+      rawResult.sortedBy { it.localName }
+    } else {
+      rawResult.sortedBy { it.getKey() }
+    }
+  }
 
   @Transactional
   fun createResidentialLocation(request: CreateResidentialLocationRequest): LocationDTO {

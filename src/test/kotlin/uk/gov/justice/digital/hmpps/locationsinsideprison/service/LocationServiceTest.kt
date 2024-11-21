@@ -248,7 +248,6 @@ class LocationServiceTest {
     Assertions.assertThat(nonResLoc[2].localName).isEqualTo("Cc")
   }
 
-
   // getLocationByPrisonAndLocationType
   private val adjRoom1 = buildLocation("A-ADJ-1")
   private val adjRoom2 = buildLocation("A-ADJ-2")
@@ -311,7 +310,6 @@ class LocationServiceTest {
     Assertions.assertThat(nonResLoc[2].localName).isEqualTo("A-ADJ-2")
   }
 
-
   // getLocationPrefixFromGroup
   @Test
   fun `should throw correct exception when location prefix not found`() {
@@ -322,7 +320,7 @@ class LocationServiceTest {
     }
   }
 
-  private fun buildLocation(localName: String): NonResidentialLocation{
+  private fun buildLocation(localName: String): NonResidentialLocation {
     return NonResidentialLocation(
       id = UUID.randomUUID(),
       localName = localName,

@@ -355,8 +355,7 @@ class LocationPrisonIdResource(
     usageType: NonResidentialUsageType,
     @RequestParam(name = "sortByLocalName", required = false, defaultValue = "false") sortByLocalName: Boolean = false,
     @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
-
-    ): List<Location> = locationService.getLocationsByPrisonAndNonResidentialUsageType(prisonId, usageType, sortByLocalName, formatLocalName)
+  ): List<Location> = locationService.getLocationsByPrisonAndNonResidentialUsageType(prisonId, usageType, sortByLocalName, formatLocalName)
 
   @GetMapping("/prison/{prisonId}/location-type/{locationType}")
   @ResponseStatus(HttpStatus.OK)
@@ -399,5 +398,5 @@ class LocationPrisonIdResource(
     locationType: LocationType,
     @RequestParam(name = "sortByLocalName", required = false, defaultValue = "false") sortByLocalName: Boolean = false,
     @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
-    ): List<Location> = locationService.getLocationByPrisonAndLocationType(prisonId, locationType, sortByLocalName, formatLocalName)
+  ): List<Location> = locationService.getLocationByPrisonAndLocationType(prisonId, locationType, sortByLocalName, formatLocalName)
 }

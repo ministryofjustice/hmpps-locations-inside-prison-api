@@ -81,7 +81,7 @@ class LocationResource(
     @RequestParam(name = "includeHistory", required = false, defaultValue = "false") includeHistory: Boolean = false,
     @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
   ) = locationService.getLocationById(id = id, includeChildren = includeChildren, includeHistory = includeHistory, formatLocalName = formatLocalName)
-      ?: throw LocationNotFoundException(id.toString())
+    ?: throw LocationNotFoundException(id.toString())
 
   @GetMapping("")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
