@@ -184,13 +184,16 @@ class LocationService(
     sortByLocalName: Boolean = false,
     formatLocalName: Boolean = false,
   ): List<LocationDTO> {
-    val rawResult = nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
+    val filteredByUsage = nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
+
+    val filteredResults = filteredByUsage
+      .filter { it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
       .map { it.toDto(formatLocalName = formatLocalName) }
 
     return if (sortByLocalName) {
-      rawResult.sortedBy { it.localName }
+      filteredResults.sortedBy { it.localName }
     } else {
-      rawResult
+      filteredResults
     }
   }
 

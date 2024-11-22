@@ -9,6 +9,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivat
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
@@ -857,6 +860,46 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                               "usageType": "VISIT"
                             }],
                             "key": "MDI-Z-VISIT"
+                          }]
+                         """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve locations from usage type filter our parents`() {
+        val videoLinkParent = buildNonResidentialLocation(
+          pathHierarchy = "RES",
+          locationType = LocationType.CLASSROOM,
+          nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+        )
+
+        videoLinkParent.addChildLocation(
+          buildNonResidentialLocation(
+            pathHierarchy = "VIDEOR1",
+            locationType = LocationType.VIDEO_LINK,
+            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          ),
+        )
+        repository.save(videoLinkParent)
+
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/PROGRAMMES_ACTIVITIES")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                          [{
+                            "prisonId": "MDI",
+                            "code": "VIDEOR1",
+                            "pathHierarchy": "RES-VIDEOR1",
+                            "locationType": "VIDEO_LINK",
+                            "usage": [{
+                              "usageType": "PROGRAMMES_ACTIVITIES"
+                            }],
+                            "key": "MDI-RES-VIDEOR1"
                           }]
                          """,
             false,
