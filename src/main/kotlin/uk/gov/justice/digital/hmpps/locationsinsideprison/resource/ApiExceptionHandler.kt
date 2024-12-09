@@ -23,21 +23,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 @RestControllerAdvice
 class ApiExceptionHandler {
 
-  @ExceptionHandler(LocationCannotBeResidentialException::class)
-  fun handleLocationAccomodationTypeOtherNonResidential(e: LocationCannotBeResidentialException): ResponseEntity<ErrorResponse?>? {
-    log.debug("Location acommodation type other non residential exception caught: {}", e.message)
-    return ResponseEntity
-      .status(HttpStatus.CONFLICT)
-      .body(
-        ErrorResponse(
-          status = HttpStatus.CONFLICT,
-          errorCode = ErrorCode.LocationAlreadyExists,
-          userMessage = "Location acommodation type other non residential : ${e.message}",
-          developerMessage = e.message,
-        ),
-      )
-  }
-
   @ExceptionHandler(ValidationException::class)
   fun handleValidationException(e: ValidationException): ResponseEntity<ErrorResponse> {
     log.info("Validation exception: {}", e.message)
@@ -252,10 +237,10 @@ class ApiExceptionHandler {
   fun handleLocationAlreadyExists(e: LocationAlreadyExistsException): ResponseEntity<ErrorResponse?>? {
     log.debug("Location already exists exception caught: {}", e.message)
     return ResponseEntity
-      .status(HttpStatus.CONFLICT)
+      .status(CONFLICT)
       .body(
         ErrorResponse(
-          status = HttpStatus.CONFLICT,
+          status = CONFLICT,
           errorCode = ErrorCode.LocationAlreadyExists,
           userMessage = "Location already exists: ${e.message}",
           developerMessage = e.message,
@@ -338,21 +323,6 @@ class ApiExceptionHandler {
       )
   }
 
-  @ExceptionHandler(ConvertedCellUpdateNotAllowedException::class)
-  fun handleConvertedCellUpdateNotAllowedException(e: ConvertedCellUpdateNotAllowedException): ResponseEntity<ErrorResponse?>? {
-    log.debug("Converted Cell Exception: {}", e.message)
-    return ResponseEntity
-      .status(CONFLICT)
-      .body(
-        ErrorResponse(
-          status = CONFLICT,
-          errorCode = ErrorCode.ConvertedCellLocationCannotByUpdated,
-          userMessage = "Converted Cell Exception: ${e.message}",
-          developerMessage = e.message,
-        ),
-      )
-  }
-
   @ExceptionHandler(LocationContainsPrisonersException::class)
   fun handleLocationContainsPrisonersException(e: LocationContainsPrisonersException): ResponseEntity<ErrorResponse?>? {
     log.debug("Cannot deactivate: {}", e.message)
@@ -403,8 +373,6 @@ class LocationCannotBeReactivatedException(key: String) : Exception("Location ca
 class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")
 class CapacityException(val key: String, override val message: String, val errorCode: ErrorCode) : ValidationException("$key: [Error Code: $errorCode] - Capacity Exception: $message")
 class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationException("Location $key cannot be updated as permanently deactivated")
-class ConvertedCellUpdateNotAllowedException(key: String) : Exception("Location $key cannot be updated as converted cell")
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
-class LocationCannotBeResidentialException(key: String) : Exception("Location AccommodationType $key cannot be converted to residential")
 class DuplicateLocalNameForSameHierarchyException(key: String, topLocationKey: String) : ValidationException("$key already the same local name in this hierarchy $topLocationKey")
 class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated as it is active")
