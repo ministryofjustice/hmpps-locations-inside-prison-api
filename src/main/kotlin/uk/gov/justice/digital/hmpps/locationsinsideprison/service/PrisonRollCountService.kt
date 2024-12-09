@@ -110,7 +110,7 @@ class PrisonRollCountService(
       currentlyInCell = locations.sumOf { it.getCurrentlyInCell() },
       currentlyOut = locations.sumOf { it.getCurrentlyOut() },
       workingCapacity = locations.sumOf { it.getWorkingCapacity() },
-      netVacancies = locations.sumOf { it.getWorkingCapacity() - it.getCurrentlyInCell() },
+      netVacancies = locations.sumOf { it.getWorkingCapacity() - it.getCurrentlyInCell() - it.getCurrentlyOut() },
       outOfOrder = locations.sumOf { it.getOutOfOrder() },
     )
 }

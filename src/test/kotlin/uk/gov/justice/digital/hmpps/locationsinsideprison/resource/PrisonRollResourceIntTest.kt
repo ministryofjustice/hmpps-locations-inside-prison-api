@@ -270,7 +270,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                 "currentlyInCell": 1,
                 "currentlyOut": 1,
                 "workingCapacity": 4,
-                "netVacancies": 3,
+                "netVacancies": 2,
                 "outOfOrder": 1
               },
               "locations": [
@@ -390,7 +390,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                 "currentlyInCell": 1,
                 "currentlyOut": 1,
                 "workingCapacity": 4,
-                "netVacancies": 3,
+                "netVacancies": 2,
                 "outOfOrder": 1
               },
               "locations": [
