@@ -455,6 +455,7 @@ abstract class Location(
       deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
       status = getStatus(),
       isLeafLevel = isLeafLevel(),
+      accommodationType = (this as? Cell)?.accommodationType,
       subLocations = this.childLocations.filter { !it.isPermanentlyDeactivated() }
         .filterIsInstance<ResidentialLocation>()
         .map {
