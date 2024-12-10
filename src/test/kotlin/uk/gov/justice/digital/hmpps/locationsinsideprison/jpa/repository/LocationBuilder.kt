@@ -71,6 +71,7 @@ fun buildCell(
   specialistCellType: SpecialistCellType? = null,
   archived: Boolean = false,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+  accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 ): Cell {
   val cell = Cell(
     prisonId = prisonId,
@@ -83,7 +84,7 @@ fun buildCell(
     orderWithinParentLocation = 99,
     capacity = capacity,
     certification = certification,
-    accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+    accommodationType = accommodationType,
     residentialHousingType = residentialHousingType,
     deactivatedReason = if (!active) {
       DeactivatedReason.DAMAGED
