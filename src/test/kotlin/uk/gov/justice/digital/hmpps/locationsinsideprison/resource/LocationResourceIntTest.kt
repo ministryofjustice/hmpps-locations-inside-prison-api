@@ -281,7 +281,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "capacityOfCertifiedCell": 4
               },
               "accommodationTypes": [
-                "NORMAL_ACCOMMODATION"
+                "NORMAL_ACCOMMODATION",
+                "CARE_AND_SEPARATION"
               ],
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
@@ -616,7 +617,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "deactivatedByParent": false,
               "key": "MDI-Z",
               "deactivatedReason": "DAMAGED",
-              "accommodationTypes":["NORMAL_ACCOMMODATION"],
+              "accommodationTypes":["CARE_AND_SEPARATION"],
               "permanentlyInactive": false,
               "proposedReactivationDate": "$proposedReactivationDate",
               "deactivatedDate": "$now",
@@ -667,7 +668,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["CARE_AND_SEPARATION"],
                   "active": false,
                   "deactivatedByParent": false,
                   "proposedReactivationDate": "$proposedReactivationDate",
@@ -682,7 +683,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "accommodationTypes":["CARE_AND_SEPARATION"],
                       "active": false,
                       "deactivatedByParent": false,
                       "oldWorkingCapacity": 2,
@@ -1214,7 +1215,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-1",
@@ -1250,7 +1251,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "accommodationTypes":["CARE_AND_SEPARATION"],
                       "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-002"
@@ -1406,7 +1407,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-1",
@@ -1452,7 +1453,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "accommodationTypes":["CARE_AND_SEPARATION"],
                       "active": false,
                       "oldWorkingCapacity": 2,
                       "deactivatedReason": "MOTHBALLED",
@@ -1764,7 +1765,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "capacityOfCertifiedCell": 2
                   },
                   "accommodationTypes": [
-                    "NORMAL_ACCOMMODATION"
+                    "CARE_AND_SEPARATION"
                   ],
                   "specialistCellTypes": [
                     "ACCESSIBLE_CELL"
@@ -2002,7 +2003,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-1",
@@ -2026,7 +2027,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "accommodationTypes":["CARE_AND_SEPARATION"],
                       "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-002",

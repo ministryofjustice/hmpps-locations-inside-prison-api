@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -110,7 +111,7 @@ class PrisonRollCountService(
       currentlyInCell = locations.sumOf { it.getCurrentlyInCell() },
       currentlyOut = locations.sumOf { it.getCurrentlyOut() },
       workingCapacity = locations.sumOf { it.getWorkingCapacity() },
-      netVacancies = locations.sumOf { it.getWorkingCapacity() - it.getCurrentlyInCell() - it.getCurrentlyOut() },
+      netVacancies = locations.sumOf { it.getWorkingCapacity() - it.getCurrentlyInCell(true) - it.getCurrentlyOut(true) },
       outOfOrder = locations.sumOf { it.getOutOfOrder() },
     )
 }
@@ -129,6 +130,7 @@ data class ResidentialPrisonerLocation(
   val capacity: Capacity? = null,
   val prisoners: List<Prisoner>? = null,
   val isLeafLevel: Boolean = false,
+  val accommodationType: AccommodationType? = null,
 ) : SortAttribute {
 
   fun toDto(includeCells: Boolean = false) =
@@ -157,17 +159,24 @@ data class ResidentialPrisonerLocation(
 
   fun getWorkingCapacity() = capacity?.workingCapacity ?: 0
 
-  private fun getNetVacancies() = getWorkingCapacity() - getNumOfOccupants()
-
-  private fun getNumOfOccupants(): Int = getCells().sumOf { it.prisoners?.size ?: 0 }
-
   fun getBedsInUse(): Int = getNumOfOccupants()
 
-  fun getCurrentlyInCell(): Int = getCells().sumOf { it.prisoners?.filter { p -> p.inOutStatus == "IN" }?.size ?: 0 }
+  fun getCurrentlyInCell(filterSeg: Boolean = false): Int = getCells(filterSeg)
+    .sumOf { it.prisoners?.filter { p -> p.inOutStatus == "IN" }?.size ?: 0 }
 
-  fun getCurrentlyOut(): Int = getCells().sumOf { it.prisoners?.filter { p -> p.inOutStatus == "OUT" }?.size ?: 0 }
+  fun getCurrentlyOut(filterSeg: Boolean = false): Int = getCells(filterSeg).sumOf { it.prisoners?.filter { p -> p.inOutStatus == "OUT" }?.size ?: 0 }
 
   fun getOutOfOrder(): Int = getCells().filter { it.status == LocationStatus.INACTIVE }.size
+
+  private fun getNetVacancies() = getWorkingCapacity() - getNumOfOccupants(true)
+
+  private fun getNumOfOccupants(filterSeg: Boolean = false): Int = getCells(filterSeg).sumOf { it.prisoners?.size ?: 0 }
+
+  private fun getCells(filterCareAndSeparation: Boolean) =
+    if (filterCareAndSeparation) getNonCareAndSeparationCells() else getCells()
+
+  private fun getNonCareAndSeparationCells() =
+    getCells().filter { it.accommodationType != AccommodationType.CARE_AND_SEPARATION }
 
   private fun getCells(): List<ResidentialPrisonerLocation> {
     val leafLocations = mutableListOf<ResidentialPrisonerLocation>()

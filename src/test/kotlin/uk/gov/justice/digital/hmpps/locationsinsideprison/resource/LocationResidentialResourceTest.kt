@@ -103,7 +103,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "capacityOfCertifiedCell": 4
               },
               "accommodationTypes": [
-                "NORMAL_ACCOMMODATION"
+                "NORMAL_ACCOMMODATION",
+                "CARE_AND_SEPARATION"
               ],
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
@@ -162,7 +163,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "certified": true
                 },
                 "accommodationTypes": [
-                  "NORMAL_ACCOMMODATION"
+                  "NORMAL_ACCOMMODATION",
+                  "CARE_AND_SEPARATION"
                 ],
                 "specialistCellTypes": [
                   "ACCESSIBLE_CELL"
@@ -209,7 +211,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "capacityOfCertifiedCell": 4
                 },
                 "accommodationTypes": [
-                  "NORMAL_ACCOMMODATION"
+                  "NORMAL_ACCOMMODATION",
+                  "CARE_AND_SEPARATION"
                 ],
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
@@ -272,7 +275,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "certified": true
                 },
                 "accommodationTypes": [
-                  "NORMAL_ACCOMMODATION"
+                  "NORMAL_ACCOMMODATION",
+                  "CARE_AND_SEPARATION"
                 ],
                 "specialistCellTypes": [
                   "ACCESSIBLE_CELL"
@@ -344,7 +348,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       "capacityOfCertifiedCell": 2
                     },
                     "accommodationTypes": [
-                      "NORMAL_ACCOMMODATION"
+                      "CARE_AND_SEPARATION"
                     ],
                     "specialistCellTypes": [
                       "ACCESSIBLE_CELL"
@@ -1221,7 +1225,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "code": "1",
                 "pathHierarchy": "B-1",
                 "locationType": "LANDING",
-                "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
+                "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
                 "capacity": {
                   "maxCapacity": 4,
                   "workingCapacity": 4
@@ -1570,7 +1574,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "code": "1",
                 "pathHierarchy": "B-1",
                 "locationType": "LANDING",
-                "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
+                "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
                 "capacity": {
                   "maxCapacity": 4,
                   "workingCapacity": 4
