@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
@@ -132,6 +133,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
           ResidentialAttributeValue.DOUBLE_OCCUPANCY,
         ),
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+        accommodationType = AccommodationType.CARE_AND_SEPARATION,
       ),
     )
     store = repository.save(

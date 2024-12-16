@@ -168,7 +168,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                   "currentlyInCell": 2,
                   "currentlyOut": 0,
                   "workingCapacity": 4,
-                  "netVacancies": 2,
+                  "netVacancies": 3,
                   "outOfOrder": 0
                 },
                 "locations": [
@@ -184,7 +184,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                       "currentlyInCell": 2,
                       "currentlyOut": 0,
                       "workingCapacity": 4,
-                      "netVacancies": 2,
+                      "netVacancies": 3,
                       "outOfOrder": 0
                     },
                     "subLocations": [
@@ -216,7 +216,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                           "currentlyInCell": 1,
                           "currentlyOut": 0,
                           "workingCapacity": 2,
-                          "netVacancies": 1,
+                          "netVacancies": 2,
                           "outOfOrder": 0
                         }
                       },
@@ -270,7 +270,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                 "currentlyInCell": 1,
                 "currentlyOut": 1,
                 "workingCapacity": 4,
-                "netVacancies": 2,
+                "netVacancies": 3,
                 "outOfOrder": 1
               },
               "locations": [
@@ -320,7 +320,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                     "currentlyInCell": 1,
                     "currentlyOut": 1,
                     "workingCapacity": 4,
-                    "netVacancies": 2,
+                    "netVacancies": 3,
                     "outOfOrder": 0
                   },
                   "subLocations": [
@@ -336,7 +336,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                         "currentlyInCell": 1,
                         "currentlyOut": 1,
                         "workingCapacity": 4,
-                        "netVacancies": 2,
+                        "netVacancies": 3,
                         "outOfOrder": 0
                       }
                     },
@@ -390,7 +390,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                 "currentlyInCell": 1,
                 "currentlyOut": 1,
                 "workingCapacity": 4,
-                "netVacancies": 2,
+                "netVacancies": 3,
                 "outOfOrder": 1
               },
               "locations": [
@@ -440,7 +440,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                     "currentlyInCell": 1,
                     "currentlyOut": 1,
                     "workingCapacity": 4,
-                    "netVacancies": 2,
+                    "netVacancies": 3,
                     "outOfOrder": 0
                   },
                   "subLocations": [
@@ -456,7 +456,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                         "currentlyInCell": 1,
                         "currentlyOut": 1,
                         "workingCapacity": 4,
-                        "netVacancies": 2,
+                        "netVacancies": 3,
                         "outOfOrder": 0
                       },
                       "subLocations": [
@@ -488,7 +488,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                             "currentlyInCell": 0,
                             "currentlyOut": 1,
                             "workingCapacity": 2,
-                            "netVacancies": 1,
+                            "netVacancies": 2,
                             "outOfOrder": 0
                           }
                         },

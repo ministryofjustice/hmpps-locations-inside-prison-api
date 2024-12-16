@@ -100,7 +100,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "pathHierarchy": "Z",
                   "locationType": "WING",
                   "active": true,
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                   "isResidential": true,
                   "key": "MDI-Z"
                 },
@@ -144,7 +144,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
                   "active": true,
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                   "isResidential": true,
                   "key": "MDI-Z-1"
                 },
@@ -176,7 +176,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "locationType": "CELL",
                   
                   "active": true,
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["CARE_AND_SEPARATION"],
                   "isResidential": true,
                   "key": "MDI-Z-1-002"
                 },

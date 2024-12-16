@@ -139,7 +139,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                               "locationType": "CELL",
                               
                               "active": true,
-                              "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                              "accommodationTypes":["CARE_AND_SEPARATION"],
                               "capacity": {
                                 "maxCapacity": 2,
                                 "workingCapacity": 2
@@ -165,7 +165,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                           ],
                           
                           "active": true,
-                          "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                          "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                           "capacity": {
                             "maxCapacity": 4,
                             "workingCapacity": 4
@@ -199,7 +199,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                       ],
                       
                       "active": true,
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                       "capacity": {
                         "maxCapacity": 4,
                         "workingCapacity": 4
