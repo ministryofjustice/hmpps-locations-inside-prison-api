@@ -874,6 +874,14 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
           nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
         )
 
+        repository.save(
+          buildNonResidentialLocation(
+            pathHierarchy = "RTU",
+            locationType = LocationType.RESIDENTIAL_UNIT,
+            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          ),
+        )
+
         videoLinkParent.addChildLocation(
           buildNonResidentialLocation(
             pathHierarchy = "VIDEOR1",
