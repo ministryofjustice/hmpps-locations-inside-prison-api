@@ -24,6 +24,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationPrefixDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -93,13 +94,16 @@ class LocationService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun getLocationById(id: UUID, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
-    val toDto = locationRepository.findById(id).getOrNull()?.toDto(
-      includeChildren = includeChildren,
-      includeHistory = includeHistory,
-    )
-    return toDto
-  }
+  fun getLocationById(
+    id: UUID,
+    includeChildren: Boolean = false,
+    includeHistory: Boolean = false,
+    formatLocalName: Boolean = false,
+  ): LocationDTO? = locationRepository.findById(id).getOrNull()?.toDto(
+    includeChildren = includeChildren,
+    includeHistory = includeHistory,
+    formatLocalName = formatLocalName,
+  )
 
   fun getLocationByPrison(prisonId: String): List<LocationDTO> =
     locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
@@ -119,6 +123,15 @@ class LocationService(
         }
         .sortedWith(NaturalOrderComparator())
     }
+  }
+
+  fun getPrisonResidentialHierarchy(prisonId: String): List<PrisonHierarchyDto> {
+    return residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+      .filter { it.isActiveAndAllParentsActive() && it.isStructural() }
+      .map {
+        it.toPrisonHierarchyDto()
+      }
+      .sortedWith(NaturalOrderComparator())
   }
 
   fun getLocationPrefixFromGroup(prisonId: String, group: String): LocationPrefixDto {
@@ -168,11 +181,22 @@ class LocationService(
   fun getLocationsByPrisonAndNonResidentialUsageType(
     prisonId: String,
     usageType: NonResidentialUsageType,
-  ): List<LocationDTO> =
-    nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
-      .map {
-        it.toDto()
-      }
+    sortByLocalName: Boolean = false,
+    formatLocalName: Boolean = false,
+  ): List<LocationDTO> {
+    val filteredByUsage = nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
+
+    val filteredResults = filteredByUsage
+      .filter { it.getCode() != "RTU" }
+      .filter { it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
+      .map { it.toDto(formatLocalName = formatLocalName) }
+
+    return if (sortByLocalName) {
+      filteredResults.sortedBy { it.localName }
+    } else {
+      filteredResults
+    }
+  }
 
   fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
     return locationRepository.findOneByKey(key)?.toDto(
@@ -190,13 +214,22 @@ class LocationService(
     return locationRepository.findAll(pageable).map(Location::toLegacyDto)
   }
 
-  fun getLocationByPrisonAndLocationType(prisonId: String, locationType: LocationType): List<LocationDTO> =
-    locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId, locationType)
+  fun getLocationByPrisonAndLocationType(
+    prisonId: String,
+    locationType: LocationType,
+    sortByLocalName: Boolean = false,
+    formatLocalName: Boolean = false,
+  ): List<LocationDTO> {
+    val rawResult = locationRepository.findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId, locationType)
       .filter { it.isActive() }
-      .map {
-        it.toDto()
-      }
-      .sortedBy { it.getKey() }
+      .map { it.toDto(formatLocalName = formatLocalName) }
+
+    return if (sortByLocalName) {
+      rawResult.sortedBy { it.localName }
+    } else {
+      rawResult.sortedBy { it.getKey() }
+    }
+  }
 
   @Transactional
   fun createResidentialLocation(request: CreateResidentialLocationRequest): LocationDTO {
@@ -371,7 +404,7 @@ class LocationService(
 
   @Transactional
   fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int): LocationDTO {
-    val locCapChange = cellLocationRepository.findById(id)
+    val locCapChange = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
     if (locCapChange.isPermanentlyDeactivated()) {
@@ -979,7 +1012,7 @@ class LocationService(
       groupName = groupName,
       cellsToFilter = cellsToFilter,
     )
-      .filter { cell -> cell.isActiveAndAllParentsActive() && cell.isCertified() && !cell.isPermanentlyDeactivated() }
+      .filter { cell -> cell.isActiveAndAllParentsActive() && cell.isCertified() }
       .filter { cell ->
         specialistCellType == null || specialistCellType in cell.specialistCellTypes.map { it.specialistCellType }
       }

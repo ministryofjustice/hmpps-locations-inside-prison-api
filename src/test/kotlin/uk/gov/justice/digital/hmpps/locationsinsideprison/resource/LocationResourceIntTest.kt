@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
@@ -74,7 +75,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             """
               {
                 "totalPages": 2,
-                "totalElements": 15,
+                "totalElements": 17,
                 "first": true,
                 "last": false,
                 "size": 14,
@@ -101,13 +102,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "pathHierarchy": "A-1-001",
                     "locationType": "CELL",
                     "key": "NMI-A-1-001"
-                  }, 
-                  {
-                    "prisonId": "MDI",
-                    "code": "ADJUDICATION",
-                    "pathHierarchy": "Z-ADJUDICATION",
-                    "locationType": "ADJUDICATION_ROOM",
-                    "key": "MDI-Z-ADJUDICATION"
                   },
                   {
                     "prisonId": "MDI",
@@ -129,6 +123,22 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "locationType": "CELL",
                     "key": "MDI-B-A-001"
                    },
+                    {
+                    "prisonId": "MDI",
+                    "code": "CSWAP",
+                    "pathHierarchy": "CSWAP",
+                    "locationType": "AREA",
+                    "localName": "Cell Swap",
+                    "key": "MDI-CSWAP"
+                  }, 
+                    {
+                    "prisonId": "MDI",
+                    "code": "TAP",
+                    "pathHierarchy": "TAP",
+                    "locationType": "AREA",
+                    "localName": "Temp Absentee Prisoner",
+                    "key": "MDI-TAP"
+                  }, 
                    {
                     "prisonId": "MDI",
                     "code": "Z",
@@ -170,13 +180,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "pathHierarchy": "Z-1-01S",
                     "locationType": "STORE",
                     "key": "MDI-Z-1-01S"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "2",
-                    "pathHierarchy": "Z-2",
-                    "locationType": "LANDING",
-                    "key": "MDI-Z-2"
                   }
                 ],
                 "number": 0,
@@ -278,7 +281,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "capacityOfCertifiedCell": 4
               },
               "accommodationTypes": [
-                "NORMAL_ACCOMMODATION"
+                "NORMAL_ACCOMMODATION",
+                "CARE_AND_SEPARATION"
               ],
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
@@ -382,6 +386,32 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "key": "MDI-Z-2"
                 }
               ]
+            }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of a CSWAP location`() {
+        webTestClient.get().uri("/locations/${cswap.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "prisonId": "MDI",
+              "code": "CSWAP",
+              "pathHierarchy": "CSWAP",
+              "locationType": "AREA",
+              "active": true,
+              "key": "MDI-CSWAP",
+              "capacity": {
+                "maxCapacity": 99,
+                "workingCapacity": 0
+              }
             }
           """,
             false,
@@ -561,13 +591,12 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(5).let {
+        getDomainEvents(4).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
 
@@ -588,7 +617,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "deactivatedByParent": false,
               "key": "MDI-Z",
               "deactivatedReason": "DAMAGED",
-              "accommodationTypes":["NORMAL_ACCOMMODATION"],
+              "accommodationTypes":["CARE_AND_SEPARATION"],
               "permanentlyInactive": false,
               "proposedReactivationDate": "$proposedReactivationDate",
               "deactivatedDate": "$now",
@@ -617,11 +646,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "VISIT",
                   "pathHierarchy": "Z-VISIT",
                   "locationType": "VISITS",
-                  "active": false,
-                  "deactivatedByParent": true,
-                  "proposedReactivationDate": "$proposedReactivationDate",
-                  "deactivatedDate": "$now",
-                  "deactivatedReason": "DAMAGED",
+                  "active": true,
+                  "deactivatedByParent": false,
                   "permanentlyInactive": false,
                   "isResidential": false,
                   "key": "MDI-Z-VISIT"
@@ -631,11 +657,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "ADJUDICATION",
                   "pathHierarchy": "Z-ADJUDICATION",
                   "locationType": "ADJUDICATION_ROOM",
-                  "active": false,
-                  "deactivatedByParent": true,
-                  "proposedReactivationDate": "$proposedReactivationDate",
-                  "deactivatedDate": "$now",
-                  "deactivatedReason": "DAMAGED",
+                  "active": true,
+                  "deactivatedByParent": false,
                   "permanentlyInactive": false,
                   "isResidential": false,
                   "key": "MDI-Z-ADJUDICATION"
@@ -645,7 +668,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["CARE_AND_SEPARATION"],
                   "active": false,
                   "deactivatedByParent": false,
                   "proposedReactivationDate": "$proposedReactivationDate",
@@ -660,7 +683,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "accommodationTypes":["CARE_AND_SEPARATION"],
                       "active": false,
                       "deactivatedByParent": false,
                       "oldWorkingCapacity": 2,
@@ -677,13 +700,9 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "locationType": "STORE",
                       "localName": "Store Room",
                       "permanentlyInactive": false,
-                      "status": "INACTIVE",
-                      "active": false,
+                      "status": "ACTIVE",
+                      "active": true,
                       "deactivatedByParent": false,
-                      "deactivatedDate": "$now",
-                      "deactivatedReason": "DAMAGED",
-                      "deactivationReasonDescription": "Window smashed",
-                      "proposedReactivationDate": "$proposedReactivationDate",
                       "level": 3,
                       "leafLevel": true,
                       "key": "MDI-Z-1-01S",
@@ -709,6 +728,53 @@ class LocationResourceIntTest : CommonDataTestBase() {
             }
           """,
             false,
+          )
+      }
+
+      @Test
+      fun `can deactivate CSWAP location`() {
+        prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cswap.getPathHierarchy()), false)
+        webTestClient.put().uri("/locations/${cswap.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = "Not Needed")))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-CSWAP",
+          )
+        }
+
+        webTestClient.get().uri("/locations/${cswap.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "key": "${cswap.getKey()}",
+                "deactivatedReason": "OTHER",
+                "deactivationReasonDescription": "Not Needed",
+                "capacity" : {
+                  "workingCapacity": 0,
+                  "maxCapacity": 99
+                },
+                "changeHistory": [
+                  {
+                    "attribute": "Deactivation reason",
+                    "newValue": "Other - Not Needed"
+                  },
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Inactive"
+                  }
+                ]
+              }
+            """.trimIndent(),
           )
       }
 
@@ -1059,14 +1125,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
 
@@ -1076,14 +1141,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(8).let {
+        getDomainEvents(7).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.reactivated" to "MDI-Z",
             "location.inside.prison.reactivated" to "MDI-Z-1",
             "location.inside.prison.reactivated" to "MDI-Z-2",
             "location.inside.prison.reactivated" to "MDI-Z-1-001",
             "location.inside.prison.reactivated" to "MDI-Z-1-002",
-            "location.inside.prison.reactivated" to "MDI-Z-1-01S",
             "location.inside.prison.amended" to "MDI-Z",
             "location.inside.prison.amended" to "MDI-Z-1",
           )
@@ -1151,7 +1215,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-1",
@@ -1187,7 +1251,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "accommodationTypes":["CARE_AND_SEPARATION"],
                       "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-002"
@@ -1232,6 +1296,16 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
+        assertThat(
+          webTestClient.get().uri("/locations/${cell1.id}")
+            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(LocationTest::class.java)
+            .returnResult().responseBody!!.deactivatedReason,
+        ).isEqualTo(DeactivatedReason.DAMAGED)
+
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
@@ -1246,7 +1320,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, proposedReactivationDate = proposedReactivationDate.plusMonths(1), planetFmReference = "123456")))
           .exchange()
           .expectStatus().isOk
 
@@ -1255,10 +1329,21 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
+            "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
+
+        val cellDetails = webTestClient.get().uri("/locations/${cell1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+        assertThat(cellDetails.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
+        assertThat(cellDetails.proposedReactivationDate).isEqualTo(proposedReactivationDate.plusMonths(1))
+        assertThat(cellDetails.planetFmReference).isEqualTo("123456")
 
         webTestClient.put().uri("/locations/${cell1.id}/reactivate")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1322,7 +1407,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-1",
@@ -1341,6 +1426,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "attribute": "Status",
                           "oldValue": "Inactive",
                           "newValue": "Active"
+                        },
+                        {
+                          "attribute": "Deactivation reason",
+                          "oldValue": "Damage",
+                          "newValue": "Mothballed"
                         },
                         {
                           "attribute": "Deactivation reason",
@@ -1363,7 +1453,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "accommodationTypes":["CARE_AND_SEPARATION"],
                       "active": false,
                       "oldWorkingCapacity": 2,
                       "deactivatedReason": "MOTHBALLED",
@@ -1375,8 +1465,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "01S",
                       "pathHierarchy": "Z-1-01S",
                       "locationType": "STORE",
-                      "active": false,
-                      "deactivatedReason": "MOTHBALLED",
+                      "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-01S"
                     }
@@ -1395,6 +1484,78 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
             }
+          """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can reactivate CSWAP`() {
+        prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cswap.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cswap.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to "MDI-CSWAP",
+          )
+        }
+
+        webTestClient.put().uri("/locations/${cswap.id}/reactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.reactivated" to "MDI-CSWAP",
+          )
+        }
+
+        webTestClient.get().uri("/locations/${cswap.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "key": "MDI-CSWAP",
+                "locationType": "AREA",
+                "permanentlyInactive": false,
+                "capacity": {
+                  "maxCapacity": 99,
+                  "workingCapacity": 0
+                },
+                "status": "ACTIVE",
+                "active": true,
+                "level": 1,
+                "leafLevel": false,
+                "changeHistory": [
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Inactive",
+                    "newValue": "Active"
+                  },
+                  {
+                    "attribute": "Deactivation reason",
+                    "newValue": "Damage"
+                  },
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Inactive"
+                  }
+                ],
+                "isResidential": false
+              }
           """,
             false,
           )
@@ -1604,7 +1765,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "capacityOfCertifiedCell": 2
                   },
                   "accommodationTypes": [
-                    "NORMAL_ACCOMMODATION"
+                    "CARE_AND_SEPARATION"
                   ],
                   "specialistCellTypes": [
                     "ACCESSIBLE_CELL"
@@ -1701,16 +1862,68 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+             "key": "MDI-Z",
+              "active": false,
+              "deactivatedReason": "DAMAGED",
+              "childLocations": [
+                {
+                  "key": "MDI-Z-VISIT",
+                  "active": true
+                },
+                {
+                  "key": "MDI-Z-ADJUDICATION",
+                  "active": true
+                },
+                {
+                  "key": "MDI-Z-1",
+                  "active": false,
+                  "deactivatedReason": "DAMAGED",
+                  "childLocations": [
+                    {
+                      "key": "MDI-Z-1-001",
+                      "active": false,
+                      "deactivatedReason": "DAMAGED"
+                    },
+                    {
+                      "key": "MDI-Z-1-002", 
+                      "active": false,
+                      "deactivatedReason": "DAMAGED"
+                    },
+                    {
+                      "key": "MDI-Z-1-01S",
+                      "active": true
+                    }
+                  ]
+                },
+                {
+                  "key": "MDI-Z-2",
+                  "active": false,
+                  "deactivatedReason": "DAMAGED"
+                }
+              ]
+            }
+          """,
+            false,
+          )
 
         prisonerSearchMockServer.resetAll()
         prisonerSearchMockServer.stubSearchByLocations(wingZ.prisonId, listOf(cell1.getPathHierarchy()), false)
@@ -1790,7 +2003,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "code": "1",
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-1",
@@ -1814,7 +2027,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "002",
                       "pathHierarchy": "Z-1-002",
                       "locationType": "CELL",
-                      "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                      "accommodationTypes":["CARE_AND_SEPARATION"],
                       "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-002",
@@ -1828,8 +2041,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "code": "01S",
                       "pathHierarchy": "Z-1-01S",
                       "locationType": "STORE",
-                      "active": false,
-                      "deactivatedReason": "DAMAGED",
+                      "active": true,
                       "isResidential": true,
                       "key": "MDI-Z-1-01S"
                     }
@@ -1872,11 +2084,57 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(4).let {
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+             "key": "MDI-Z",
+              "active": true,
+              "childLocations": [
+                {
+                  "key": "MDI-Z-VISIT",
+                  "active": true
+                },
+                {
+                  "key": "MDI-Z-ADJUDICATION",
+                  "active": true
+                },
+                {
+                  "key": "MDI-Z-1",
+                  "active": true,
+                  "childLocations": [
+                    {
+                      "key": "MDI-Z-1-001",
+                      "active": true
+                    },
+                    {
+                      "key": "MDI-Z-1-002", 
+                      "active": true
+                    },
+                    {
+                      "key": "MDI-Z-1-01S",
+                      "active": true
+                    }
+                  ]
+                },
+                {
+                  "key": "MDI-Z-2",
+                  "active": true
+                }
+              ]
+            }
+          """,
+            false,
+          )
+
+        getDomainEvents(2).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.reactivated" to "MDI-Z-1-01S",
             "location.inside.prison.reactivated" to "MDI-Z-2",
-            "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
           )
         }
@@ -1893,14 +2151,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(6).let {
+        getDomainEvents(5).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
             "location.inside.prison.deactivated" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
-            "location.inside.prison.deactivated" to "MDI-Z-1-01S",
           )
         }
 
@@ -1921,9 +2178,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(9).let {
+        getDomainEvents(8).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.reactivated" to store.getKey(),
             "location.inside.prison.reactivated" to cell1.getKey(),
             "location.inside.prison.reactivated" to cell2.getKey(),
             "location.inside.prison.reactivated" to landingZ2.getKey(),

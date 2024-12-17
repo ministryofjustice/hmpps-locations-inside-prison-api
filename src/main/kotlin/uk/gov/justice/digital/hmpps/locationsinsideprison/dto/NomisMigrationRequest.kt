@@ -12,6 +12,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousing
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType.HOLDING_CELL
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getVirtualLocationCodes
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -89,6 +91,27 @@ interface NomisMigrationRequest {
           location.convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = lastUpdatedBy, clock = clock)
         }
         location
+      } else if (code in getVirtualLocationCodes()) {
+        VirtualResidentialLocation(
+          prisonId = prisonId,
+          code = code,
+          locationType = locationType,
+          pathHierarchy = code,
+          active = !isDeactivated(),
+          localName = localName,
+          residentialHousingType = residentialHousingType!!,
+          comments = comments,
+          orderWithinParentLocation = orderWithinParentLocation,
+          createdBy = lastUpdatedBy,
+          whenCreated = createDate ?: LocalDateTime.now(clock),
+          capacity = capacity?.let {
+            CapacityJPA(
+              maxCapacity = it.maxCapacity,
+              workingCapacity = it.workingCapacity,
+            )
+          },
+          childLocations = mutableListOf(),
+        )
       } else {
         ResidentialLocation(
           prisonId = prisonId,

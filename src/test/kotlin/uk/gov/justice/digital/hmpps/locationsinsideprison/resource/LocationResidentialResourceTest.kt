@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
@@ -102,7 +103,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "capacityOfCertifiedCell": 4
               },
               "accommodationTypes": [
-                "NORMAL_ACCOMMODATION"
+                "NORMAL_ACCOMMODATION",
+                "CARE_AND_SEPARATION"
               ],
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
@@ -161,7 +163,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "certified": true
                 },
                 "accommodationTypes": [
-                  "NORMAL_ACCOMMODATION"
+                  "NORMAL_ACCOMMODATION",
+                  "CARE_AND_SEPARATION"
                 ],
                 "specialistCellTypes": [
                   "ACCESSIBLE_CELL"
@@ -208,7 +211,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "capacityOfCertifiedCell": 4
                 },
                 "accommodationTypes": [
-                  "NORMAL_ACCOMMODATION"
+                  "NORMAL_ACCOMMODATION",
+                  "CARE_AND_SEPARATION"
                 ],
                 "usedFor": [
                   "STANDARD_ACCOMMODATION"
@@ -271,7 +275,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "certified": true
                 },
                 "accommodationTypes": [
-                  "NORMAL_ACCOMMODATION"
+                  "NORMAL_ACCOMMODATION",
+                  "CARE_AND_SEPARATION"
                 ],
                 "specialistCellTypes": [
                   "ACCESSIBLE_CELL"
@@ -343,7 +348,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       "capacityOfCertifiedCell": 2
                     },
                     "accommodationTypes": [
-                      "NORMAL_ACCOMMODATION"
+                      "CARE_AND_SEPARATION"
                     ],
                     "specialistCellTypes": [
                       "ACCESSIBLE_CELL"
@@ -691,6 +696,52 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             "location.inside.prison.created" to "MDI-Z-1-004",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
+      @Test
+      fun `can create CSWAP`() {
+        webTestClient.post().uri("/locations/residential")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              CreateResidentialLocationRequest(
+                prisonId = "ZZGHI",
+                code = "CSWAP",
+                locationType = ResidentialLocationType.RESIDENTIAL_UNIT,
+                capacity = Capacity(maxCapacity = 90, workingCapacity = 90),
+                accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "isResidential": false,
+              "code": "CSWAP",
+              "pathHierarchy": "CSWAP",
+              "locationType": "AREA",
+              "active": true,
+              "key": "ZZGHI-CSWAP",
+              "capacity": {
+                "maxCapacity": 90,
+                "workingCapacity": 90
+              }
+            }
+          """,
+            false,
+          )
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.created" to "ZZGHI-CSWAP",
           )
         }
       }
@@ -1174,7 +1225,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "code": "1",
                 "pathHierarchy": "B-1",
                 "locationType": "LANDING",
-                "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
+                "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
                 "capacity": {
                   "maxCapacity": 4,
                   "workingCapacity": 4
@@ -1523,7 +1574,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "code": "1",
                 "pathHierarchy": "B-1",
                 "locationType": "LANDING",
-                "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
+                "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
                 "capacity": {
                   "maxCapacity": 4,
                   "workingCapacity": 4
@@ -1739,7 +1790,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     var convertCellToNonResidentialLocationRequest =
       LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(
         convertedCellType = ConvertedCellType.OTHER,
-        otherConvertedCellType = "Taning room",
+        otherConvertedCellType = "Tanning room",
       )
 
     var nonResStoreRoomRequest =
@@ -1826,7 +1877,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        assertThat(result.findByPathHierarchy("Z-1-001")!!.convertedCellType == ConvertedCellType.OTHER)
+        assertThat(result.convertedCellType).isEqualTo(ConvertedCellType.OTHER)
+        assertThat(result.status).isEqualTo(LocationStatus.NON_RESIDENTIAL)
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -1860,7 +1912,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   {
                     "attribute": "Converted cell type",
-                    "newValue": "Other - Taning room"
+                    "newValue": "Other - Tanning room"
                   },
                   {
                     "attribute": "Used for",
@@ -1899,6 +1951,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         assertThat(result.otherConvertedCellType == nonResStoreRoomRequest.otherConvertedCellType)
         assertThat(result.locationType == LocationType.ROOM)
         assertThat(result.localName).isNull()
+        assertThat(result.status).isEqualTo(LocationStatus.NON_RESIDENTIAL)
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2272,11 +2325,11 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .expectBody(LocationTest::class.java)
           .returnResult().responseBody!!
 
-        val cellZ1001 = result.findByPathHierarchy("Z-1-001")
-        assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
-        assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
-        assertThat(cellZ1001?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL, SpecialistCellType.ISOLATION_DISEASES)
-        assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
+        assertThat(cellZ1001.capacity?.maxCapacity).isEqualTo(2)
+        assertThat(cellZ1001.capacity?.workingCapacity).isEqualTo(2)
+        assertThat(cellZ1001.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL, SpecialistCellType.ISOLATION_DISEASES)
+        assertThat(cellZ1001.convertedCellType).isNotEqualTo("OTHER")
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2294,6 +2347,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             """
               {
                 "key": "${cell1.getKey()}",
+                "status": "${LocationStatus.ACTIVE}",
                 "changeHistory": [
                   {
                     "attribute": "Converted cell type",
@@ -2385,11 +2439,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         .expectBody(LocationTest::class.java)
         .returnResult().responseBody!!
 
-      val cellZ1001 = result.findByPathHierarchy("Z-1-001")
-      assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
-      assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
-      assertThat(cellZ1001?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
-      assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
+      val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
+      assertThat(cellZ1001.capacity?.maxCapacity).isEqualTo(2)
+      assertThat(cellZ1001.capacity?.workingCapacity).isEqualTo(2)
+      assertThat(cellZ1001.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
+      assertThat(cellZ1001.convertedCellType).isNotEqualTo("OTHER")
+      assertThat(cellZ1001.status == LocationStatus.ACTIVE)
 
       getDomainEvents(3).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2418,11 +2473,11 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         .expectBody(LocationTest::class.java)
         .returnResult().responseBody!!
 
-      val cellZ1001 = result.findByPathHierarchy("Z-1-001")
-      assertThat(cellZ1001?.capacity?.maxCapacity).isEqualTo(2)
-      assertThat(cellZ1001?.capacity?.workingCapacity).isEqualTo(2)
-      assertThat(cellZ1001?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
-      assertThat(cellZ1001?.convertedCellType).isNotEqualTo("OTHER")
+      val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
+      assertThat(cellZ1001.capacity?.maxCapacity).isEqualTo(2)
+      assertThat(cellZ1001.capacity?.workingCapacity).isEqualTo(2)
+      assertThat(cellZ1001.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
+      assertThat(cellZ1001.convertedCellType).isNotEqualTo("OTHER")
 
       getDomainEvents(3).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(

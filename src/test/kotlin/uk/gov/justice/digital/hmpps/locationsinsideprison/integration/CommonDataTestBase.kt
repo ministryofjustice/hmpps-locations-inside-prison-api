@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
@@ -12,10 +13,12 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildVirtualResidentialLocation
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
 const val EXPECTED_USERNAME = "A_TEST_USER"
@@ -40,6 +43,8 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
   lateinit var visitRoom: NonResidentialLocation
   lateinit var adjRoom: NonResidentialLocation
   lateinit var store: ResidentialLocation
+  lateinit var cswap: VirtualResidentialLocation
+  lateinit var tap: VirtualResidentialLocation
 
   @BeforeEach
   fun setUp() {
@@ -128,6 +133,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
           ResidentialAttributeValue.DOUBLE_OCCUPANCY,
         ),
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+        accommodationType = AccommodationType.CARE_AND_SEPARATION,
       ),
     )
     store = repository.save(
@@ -192,5 +198,21 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     wingB.addChildLocation(landingB3.addChildLocation(inactiveCellB3001))
     repository.save(wingZ)
     repository.save(wingB)
+
+    tap = repository.save(
+      buildVirtualResidentialLocation(
+        pathHierarchy = "TAP",
+        localName = "Temp Absentee Prisoner",
+        capacity = Capacity(maxCapacity = 99, workingCapacity = 0),
+      ),
+    )
+
+    cswap = repository.save(
+      buildVirtualResidentialLocation(
+        pathHierarchy = "CSWAP",
+        localName = "Cell Swap",
+        capacity = Capacity(maxCapacity = 99, workingCapacity = 0),
+      ),
+    )
   }
 }

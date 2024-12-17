@@ -9,6 +9,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivat
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
@@ -58,6 +61,23 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
             // language=json
             """
              [
+             
+              {
+                  "prisonId": "MDI",
+                  "code": "CSWAP",
+                  "pathHierarchy": "CSWAP",
+                  "locationType": "AREA",
+                  "localName": "Cell Swap",
+                  "key": "MDI-CSWAP"
+                }, 
+                  {
+                  "prisonId": "MDI",
+                  "code": "TAP",
+                  "pathHierarchy": "TAP",
+                  "locationType": "AREA",
+                  "localName": "Temp Absentee Prisoner",
+                  "key": "MDI-TAP"
+                }, 
                {
                   "prisonId": "MDI",
                   "code": "ADJUDICATION",
@@ -80,7 +100,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "pathHierarchy": "Z",
                   "locationType": "WING",
                   "active": true,
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                   "isResidential": true,
                   "key": "MDI-Z"
                 },
@@ -124,7 +144,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "pathHierarchy": "Z-1",
                   "locationType": "LANDING",
                   "active": true,
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                   "isResidential": true,
                   "key": "MDI-Z-1"
                 },
@@ -156,7 +176,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "locationType": "CELL",
                   
                   "active": true,
-                  "accommodationTypes":["NORMAL_ACCOMMODATION"],
+                  "accommodationTypes":["CARE_AND_SEPARATION"],
                   "isResidential": true,
                   "key": "MDI-Z-1-002"
                 },
@@ -293,6 +313,110 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                 }
               ]
                         """,
+            false,
+          )
+      }
+    }
+  }
+
+  @DisplayName("GET /locations/prison/{prisonId}/residential-hierarchy")
+  @Nested
+  inner class ViewPrisonHierarchyTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve full hierarchy for a prison`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+          [
+            {
+              "locationType": "WING",
+              "locationCode": "B",
+              "fullLocationPath": "B",
+              "localName": "Wing B",
+              "level": 1,
+              "subLocations": [
+                {
+                  "locationType": "LANDING",
+                  "locationCode": "A",
+                  "fullLocationPath": "B-A",
+                  "localName": "Landing 1",
+                  "level": 2
+                }
+              ]
+            },
+            {
+              "locationType": "WING",
+              "locationCode": "Z",
+              "fullLocationPath": "Z",
+              "level": 1,
+              "subLocations": [
+                {
+                  "locationType": "LANDING",
+                  "locationCode": "1",
+                  "fullLocationPath": "Z-1",
+                  "localName": "Landing 1",
+                  "level": 2,
+                  "subLocations": [
+                    {
+                      "locationType": "CELL",
+                      "locationCode": "001",
+                      "fullLocationPath": "Z-1-001",
+                      "level": 3
+                    },
+                    {
+                      "locationType": "CELL",
+                      "locationCode": "002",
+                      "fullLocationPath": "Z-1-002",
+                      "level": 3
+                    }
+                  ]
+                },
+                {
+                  "locationType": "LANDING",
+                  "locationCode": "2",
+                  "fullLocationPath": "Z-2",
+                  "localName": "Landing 2",
+                  "level": 2
+                }
+              ]
+            }
+          ]
+            """,
             false,
           )
       }
@@ -736,6 +860,54 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                               "usageType": "VISIT"
                             }],
                             "key": "MDI-Z-VISIT"
+                          }]
+                         """,
+            false,
+          )
+      }
+
+      @Test
+      fun `can retrieve locations from usage type filter our parents`() {
+        val videoLinkParent = buildNonResidentialLocation(
+          pathHierarchy = "RES",
+          locationType = LocationType.CLASSROOM,
+          nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+        )
+
+        repository.save(
+          buildNonResidentialLocation(
+            pathHierarchy = "RTU",
+            locationType = LocationType.RESIDENTIAL_UNIT,
+            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          ),
+        )
+
+        videoLinkParent.addChildLocation(
+          buildNonResidentialLocation(
+            pathHierarchy = "VIDEOR1",
+            locationType = LocationType.VIDEO_LINK,
+            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          ),
+        )
+        repository.save(videoLinkParent)
+
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/PROGRAMMES_ACTIVITIES")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                          [{
+                            "prisonId": "MDI",
+                            "code": "VIDEOR1",
+                            "pathHierarchy": "RES-VIDEOR1",
+                            "locationType": "VIDEO_LINK",
+                            "usage": [{
+                              "usageType": "PROGRAMMES_ACTIVITIES"
+                            }],
+                            "key": "MDI-RES-VIDEOR1"
                           }]
                          """,
             false,

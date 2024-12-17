@@ -76,13 +76,13 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             """ 
           {
             "prisonId": "NMI",
-            "numUnlockRollToday": 1,
-            "numCurrentPopulation": 2,
+            "numUnlockRollToday": 6,
+            "numCurrentPopulation": 7,
             "numArrivedToday": 2,
-            "numInReception": 0,
+            "numInReception": 4,
             "numStillToArrive": 1,
             "numOutToday": 1,
-            "numNoCellAllocated": 0,
+            "numNoCellAllocated": 1,
             "totals": {
               "bedsInUse": 0,
               "currentlyInCell": 0,
@@ -168,7 +168,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                   "currentlyInCell": 2,
                   "currentlyOut": 0,
                   "workingCapacity": 4,
-                  "netVacancies": 2,
+                  "netVacancies": 3,
                   "outOfOrder": 0
                 },
                 "locations": [
@@ -184,7 +184,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                       "currentlyInCell": 2,
                       "currentlyOut": 0,
                       "workingCapacity": 4,
-                      "netVacancies": 2,
+                      "netVacancies": 3,
                       "outOfOrder": 0
                     },
                     "subLocations": [
@@ -216,7 +216,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                           "currentlyInCell": 1,
                           "currentlyOut": 0,
                           "workingCapacity": 2,
-                          "netVacancies": 1,
+                          "netVacancies": 2,
                           "outOfOrder": 0
                         }
                       },
@@ -258,13 +258,13 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             """ 
             {
               "prisonId": "MDI",
-              "numUnlockRollToday": 3,
-              "numCurrentPopulation": 2,
+              "numUnlockRollToday": 8,
+              "numCurrentPopulation": 7,
               "numArrivedToday": 1,
-              "numInReception": 0,
+              "numInReception": 4,
               "numStillToArrive": 2,
               "numOutToday": 2,
-              "numNoCellAllocated": 0,
+              "numNoCellAllocated": 1,
               "totals": {
                 "bedsInUse": 2,
                 "currentlyInCell": 1,
@@ -320,7 +320,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                     "currentlyInCell": 1,
                     "currentlyOut": 1,
                     "workingCapacity": 4,
-                    "netVacancies": 2,
+                    "netVacancies": 3,
                     "outOfOrder": 0
                   },
                   "subLocations": [
@@ -336,7 +336,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                         "currentlyInCell": 1,
                         "currentlyOut": 1,
                         "workingCapacity": 4,
-                        "netVacancies": 2,
+                        "netVacancies": 3,
                         "outOfOrder": 0
                       }
                     },
@@ -378,13 +378,13 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             """ 
             {
               "prisonId": "MDI",
-              "numUnlockRollToday": 3,
-              "numCurrentPopulation": 2,
+              "numUnlockRollToday": 8,
+              "numCurrentPopulation": 7,
               "numArrivedToday": 1,
-              "numInReception": 0,
+              "numInReception": 4,
               "numStillToArrive": 2,
               "numOutToday": 2,
-              "numNoCellAllocated": 0,
+              "numNoCellAllocated": 1,
               "totals": {
                 "bedsInUse": 2,
                 "currentlyInCell": 1,
@@ -440,7 +440,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                     "currentlyInCell": 1,
                     "currentlyOut": 1,
                     "workingCapacity": 4,
-                    "netVacancies": 2,
+                    "netVacancies": 3,
                     "outOfOrder": 0
                   },
                   "subLocations": [
@@ -456,7 +456,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                         "currentlyInCell": 1,
                         "currentlyOut": 1,
                         "workingCapacity": 4,
-                        "netVacancies": 2,
+                        "netVacancies": 3,
                         "outOfOrder": 0
                       },
                       "subLocations": [
@@ -488,7 +488,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                             "currentlyInCell": 0,
                             "currentlyOut": 1,
                             "workingCapacity": 2,
-                            "netVacancies": 1,
+                            "netVacancies": 2,
                             "outOfOrder": 0
                           }
                         },

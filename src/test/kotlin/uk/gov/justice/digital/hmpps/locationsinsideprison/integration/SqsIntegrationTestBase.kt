@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 
-import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
 import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilCallTo
@@ -26,8 +25,8 @@ class SqsIntegrationTestBase : IntegrationTestBase() {
   @Autowired
   private lateinit var hmppsQueueService: HmppsQueueService
 
-  protected val auditQueue by lazy { hmppsQueueService.findByQueueId("audit") as HmppsQueue }
-  protected val testDomainEventQueue by lazy { hmppsQueueService.findByQueueId("test") as HmppsQueue }
+  private val auditQueue by lazy { hmppsQueueService.findByQueueId("audit") as HmppsQueue }
+  private val testDomainEventQueue by lazy { hmppsQueueService.findByQueueId("test") as HmppsQueue }
 
   @BeforeEach
   fun cleanQueue() {
@@ -48,9 +47,6 @@ class SqsIntegrationTestBase : IntegrationTestBase() {
     }
   }
 
-  fun getNumberOfMessagesCurrentlyOnSubscriptionQueue(): Int? =
-    testDomainEventQueue.sqsClient.countMessagesOnQueue(testDomainEventQueue.queueUrl).get()
-
   fun getDomainEvents(messageCount: Int = 1): List<HMPPSDomainEvent> {
     val sqsClient = testDomainEventQueue.sqsClient
 
@@ -66,17 +62,6 @@ class SqsIntegrationTestBase : IntegrationTestBase() {
     } matches { messages.size == messageCount }
 
     return messages
-  }
-
-  fun assertDomainEventSent(eventType: String): HMPPSDomainEvent {
-    val sqsClient = testDomainEventQueue.sqsClient
-    val body = sqsClient.receiveMessage(ReceiveMessageRequest.builder().queueUrl(testDomainEventQueue.queueUrl).build()).get().messages()[0].body()
-    val (message, attributes) = objectMapper.readValue(body, HMPPSMessage::class.java)
-    assertThat(attributes.eventType.Value).isEqualTo(eventType)
-    val domainEvent = objectMapper.readValue(message, HMPPSDomainEvent::class.java)
-    assertThat(domainEvent.eventType).isEqualTo(eventType)
-
-    return domainEvent
   }
 }
 
