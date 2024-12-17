@@ -365,6 +365,9 @@ data class CreateResidentialLocationRequest(
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   val parentId: UUID? = null,
 
+  @Schema(description = "Key of parent location (can be used instead of parentId)", example = "MDI-B-1", required = false)
+  val parentLocationKey: String? = null,
+
   @Schema(description = "Capacity of the residential location", required = false)
   val capacity: Capacity? = null,
 

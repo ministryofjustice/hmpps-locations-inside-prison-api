@@ -12,6 +12,8 @@ interface PatchLocationRequest {
   val code: String?
   val parentId: UUID?
   val parentLocationKey: String?
+  val removeParent: Boolean?
+  val localName: String?
 }
 
 /**
@@ -30,13 +32,21 @@ data class PatchResidentialLocationRequest(
   override val parentId: UUID? = null,
 
   @Schema(description = "Key of parent location", example = "MDI-B-1", required = false)
+  @field:Size(max = 80, message = "Description must be less than 81 characters")
   override val parentLocationKey: String? = null,
+
+  @Schema(description = "Indicates this location should move to the top of the hierarchy", example = "false", required = false)
+  override val removeParent: Boolean? = false,
 
   @Schema(description = "Accommodation type", example = "NORMAL_ACCOMMODATION", required = false)
   val accommodationType: AccommodationType? = null,
 
   @Schema(description = "used For types", required = false)
   val usedFor: Set<UsedForType>? = null,
+
+  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @field:Size(max = 30, message = "Description must be less than 31 characters")
+  override val localName: String? = null,
 ) : PatchLocationRequest
 
 @Schema(description = "Request to update a non-res location")
@@ -57,8 +67,15 @@ data class PatchNonResidentialLocationRequest(
   @Schema(description = "Key of parent location", example = "MDI-B-1", required = false)
   override val parentLocationKey: String? = null,
 
+  @Schema(description = "Indicates this location should move to the top of the hierarchy", example = "false", required = false)
+  override val removeParent: Boolean? = false,
+
   @Schema(description = "Non-residential usage", required = false)
   val usage: Set<NonResidentialUsageDto>? = null,
+
+  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @field:Size(max = 30, message = "Description must be less than 31 characters")
+  override val localName: String? = null,
 ) : PatchLocationRequest
 
 @Schema(description = "Request to update the local name of a location")
