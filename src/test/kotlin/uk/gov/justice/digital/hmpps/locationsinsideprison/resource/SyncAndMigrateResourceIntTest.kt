@@ -894,7 +894,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "amendedBy": "user"
                 },
                 {
-                  "attribute": "Max capacity",
+                  "attribute": "Maximum capacity",
                   "oldValue": "1",
                   "amendedBy": "user"
                 },
