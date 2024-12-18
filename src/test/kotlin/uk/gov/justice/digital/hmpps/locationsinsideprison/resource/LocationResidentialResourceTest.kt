@@ -1907,7 +1907,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "oldValue": "2"
                   },
                   {
-                    "attribute": "Max capacity",
+                    "attribute": "Maximum capacity",
                     "oldValue": "2"
                   },
                   {
@@ -2115,7 +2115,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "newValue": "Uncertified"
                   },
                   {
-                    "attribute": "Max capacity",
+                    "attribute": "Maximum capacity",
                     "oldValue": "2"
                   },
                   {
@@ -2364,7 +2364,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "newValue": "2"
                   },
                   {
-                    "attribute": "Max capacity",
+                    "attribute": "Maximum capacity",
                     "newValue": "2"
                   },
                   {
@@ -2390,7 +2390,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "newValue": "Uncertified"
                   },
                   {
-                    "attribute": "Max capacity",
+                    "attribute": "Maximum capacity",
                     "oldValue": "2",
                     "amendedBy": "Aleman"
                   },
