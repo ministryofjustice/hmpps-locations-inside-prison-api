@@ -1722,7 +1722,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         webTestClient.patch().uri("/locations/residential/key/$landingZ1")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(PatchResidentialLocationRequest(removeParent = true, code = "Y", localName = "Wing Y")))
+          .bodyValue(jsonString(PatchResidentialLocationRequest(removeParent = true, code = "Y", localName = "Wing Y", locationType = ResidentialLocationType.WING)))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -1733,7 +1733,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "code": "Y",
                 "pathHierarchy": "Y",
                 "localName": "Wing Y",
-                "locationType": "LANDING",
+                "locationType": "WING",
                 "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
                 "capacity": {
                   "maxCapacity": 4,
@@ -1828,7 +1828,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             """
              {
               "pathHierarchy": "Y",
-              "locationType": "LANDING",
+              "locationType": "WING",
               "key": "MDI-Y",
               "localName": "Wing Y",
               "capacity": {

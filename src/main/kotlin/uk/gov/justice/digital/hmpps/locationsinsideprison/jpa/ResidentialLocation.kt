@@ -9,6 +9,8 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.OneToOne
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
@@ -263,6 +265,26 @@ open class ResidentialLocation(
 
       attributes = getAttributes().map { it.attributeValue }.distinct().sortedBy { it.name },
     )
+  }
+
+  override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
+    super.update(upsert, userOrSystemInContext, clock)
+
+    if (upsert is PatchResidentialLocationRequest) {
+      upsert.locationType?.let {
+        this.locationType = it.baseType
+
+        addHistory(
+          LocationAttribute.LOCATION_TYPE,
+          this.locationType.description,
+          it.description,
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+        )
+      }
+    }
+
+    return this
   }
 
   override fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation =

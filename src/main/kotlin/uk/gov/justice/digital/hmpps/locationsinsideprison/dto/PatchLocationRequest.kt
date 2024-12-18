@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.util.*
 
@@ -47,6 +48,10 @@ data class PatchResidentialLocationRequest(
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 30, message = "Description must be less than 31 characters")
   override val localName: String? = null,
+
+  @Schema(description = "Location Type", example = "CELL", required = false)
+  val locationType: ResidentialLocationType? = null,
+
 ) : PatchLocationRequest
 
 @Schema(description = "Request to update a non-res location")
