@@ -233,7 +233,11 @@ class LocationService(
 
   @Transactional
   fun createResidentialLocation(request: CreateResidentialLocationRequest): LocationDTO {
-    val parentLocation = getParentLocation(request.parentId)
+    val parentLocation = request.parentId?.let {
+      locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
+    } ?: request.parentLocationKey?.let {
+      locationRepository.findOneByKey(it) ?: throw LocationNotFoundException(it)
+    }
 
     checkParentValid(
       parentLocation = parentLocation,
@@ -374,20 +378,32 @@ class LocationService(
 
     val codeChanged = patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode()
     val oldParent = locationToUpdate.getParent()
-    val parentChanged = (patchLocationRequest.parentId != null && patchLocationRequest.parentId != oldParent?.id) ||
-      (patchLocationRequest.parentLocationKey != null && patchLocationRequest.parentLocationKey != oldParent?.getKey())
+    val parentChanged = when {
+      patchLocationRequest.removeParent == true ->
+        patchLocationRequest.parentId == null && patchLocationRequest.parentLocationKey == null
+      patchLocationRequest.parentId != null ->
+        patchLocationRequest.parentId != oldParent?.id
+      patchLocationRequest.parentLocationKey != null ->
+        patchLocationRequest.parentLocationKey != oldParent?.getKey()
+      else -> false
+    }
 
     if (codeChanged || parentChanged) {
       val newCode = patchLocationRequest.code ?: locationToUpdate.getCode()
-      val theParent = patchLocationRequest.parentId?.let {
-        locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
-      } ?: patchLocationRequest.parentLocationKey?.let {
-        locationRepository.findOneByKey(it) ?: throw LocationNotFoundException(it)
-      } ?: oldParent
+
+      val theParent = when {
+        patchLocationRequest.removeParent == true -> null
+        patchLocationRequest.parentId != null -> locationRepository.findById(patchLocationRequest.parentId!!)
+          .getOrNull() ?: throw LocationNotFoundException(patchLocationRequest.parentId.toString())
+        patchLocationRequest.parentLocationKey != null -> locationRepository.findOneByKey(patchLocationRequest.parentLocationKey!!)
+          ?: throw LocationNotFoundException(patchLocationRequest.parentLocationKey!!)
+        else -> oldParent
+      }
+
       checkParentValid(theParent, newCode, locationToUpdate.prisonId)
 
       if (parentChanged && theParent?.id == locationToUpdate.id) throw ValidationException("Cannot set parent to self")
-      theParent?.let { locationToUpdate.setParent(it) }
+      locationToUpdate.setParent(theParent)
 
       if (parentChanged) {
         locationToUpdate.addHistory(

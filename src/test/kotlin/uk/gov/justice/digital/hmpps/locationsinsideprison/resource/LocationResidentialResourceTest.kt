@@ -701,6 +701,51 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `can create details of a location with a parent key reference`() {
+        webTestClient.post().uri("/locations/residential")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createResidentialLocationRequest.copy(parentLocationKey = landingZ1.getKey())))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "MDI",
+              "code": "004",
+              "pathHierarchy": "Z-1-004",
+              "locationType": "CELL",
+              "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
+              "active": true,
+              "key": "MDI-Z-1-004",
+              "capacity": {
+                "maxCapacity": 2,
+                "workingCapacity": 2
+              },
+              "certification": {
+                "certified": true,
+                "capacityOfCertifiedCell": 0
+              },
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ]
+            }
+          """,
+            false,
+          )
+
+        getDomainEvents(3).let {
+          assertThat(it).hasSize(3)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.created" to "MDI-Z-1-004",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
+          )
+        }
+      }
+
+      @Test
       fun `can create CSWAP`() {
         webTestClient.post().uri("/locations/residential")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1433,6 +1478,417 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           """,
             false,
           )
+      }
+
+      @Test
+      fun `can update parent of a location by key`() {
+        webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(PatchResidentialLocationRequest(parentLocationKey = wingB.getKey())))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+               {
+                "prisonId": "MDI",
+                "code": "1",
+                "pathHierarchy": "B-1",
+                "locationType": "LANDING",
+                "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
+                "capacity": {
+                  "maxCapacity": 4,
+                  "workingCapacity": 4
+                },
+                "certification": {
+                  "certified": true,
+                  "capacityOfCertifiedCell": 4
+                },
+                "isResidential": true,
+                "key": "MDI-B-1"
+              }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "pathHierarchy": "Z",
+              "locationType": "WING",
+              "key": "MDI-Z",
+              "capacity": {
+                "maxCapacity": 0,
+                "workingCapacity": 0
+              },
+              "certification": {
+                "certified": false,
+                "capacityOfCertifiedCell": 0
+              },
+              "childLocations": [
+                 {
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "usage": [
+                    {
+                      "usageType": "VISIT",
+                      "capacity": 15,
+                      "sequence": 1
+                    }
+                  ],
+                  
+                  "active": true,
+                  "isResidential": false,
+                  "key": "MDI-Z-VISIT"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "status": "ACTIVE",
+                  "level": 2,
+                  "leafLevel": true,
+                  "key": "MDI-Z-ADJUDICATION",
+                  "isResidential": false
+                },
+                {
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "key": "MDI-Z-2",
+                  "capacity": {
+                    "maxCapacity": 0,
+                    "workingCapacity": 0
+                  },
+                  "certification": {
+                    "certified": false,
+                    "capacityOfCertifiedCell": 0
+                  },
+                  "childLocations": []
+                }
+              ]
+            }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/${wingB.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "pathHierarchy": "B",
+              "locationType": "WING",
+              "key": "MDI-B",
+              "capacity": {
+                "maxCapacity": 6,
+                "workingCapacity": 4
+              },
+              "certification": {
+                "certified": true,
+                "capacityOfCertifiedCell": 6
+              },
+              "childLocations": [
+                {
+                  "prisonId": "MDI",
+                  "code": "A",
+                  "pathHierarchy": "B-A",
+                  "locationType": "LANDING",
+                  "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
+                  "permanentlyInactive": false,
+                  "capacity": {
+                    "maxCapacity": 2,
+                    "workingCapacity": 0
+                  },
+                  "certification": {
+                    "certified": true,
+                    "capacityOfCertifiedCell": 2
+                  },
+                  "active": true,
+                  "deactivatedByParent": false,
+                  "childLocations": [
+                    {
+                      "prisonId": "MDI",
+                      "code": "001",
+                      "pathHierarchy": "B-A-001",
+                      "locationType": "CELL",
+                      "accommodationTypes": [ "NORMAL_ACCOMMODATION" ],
+                      "permanentlyInactive": false,
+                      "capacity": {
+                        "maxCapacity": 2,
+                        "workingCapacity": 0
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      },
+                      "active": false,
+                      "deactivatedByParent": false,
+                      "deactivatedDate": "2023-12-05T12:34:56",
+                      "deactivatedReason": "DAMAGED",
+                      "childLocations": [],
+                      "isResidential": true,
+                      "key": "MDI-B-A-001"
+                    }
+                  ],
+                  "isResidential": true,
+                  "key": "MDI-B-A"
+                },              
+                {
+                  "code": "1",
+                  "pathHierarchy": "B-1",
+                  "locationType": "LANDING",
+                  "key": "MDI-B-1",
+                  "capacity": {
+                    "maxCapacity": 4,
+                    "workingCapacity": 4
+                  },
+                  "certification": {
+                    "certified": true,
+                    "capacityOfCertifiedCell": 4
+                  },
+                  "childLocations": [
+                    {
+                      "pathHierarchy": "B-1-001",
+                      "locationType": "CELL",
+                      "key": "MDI-B-1-001",
+                      "capacity": {
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
+                    },
+                    {
+                      "pathHierarchy": "B-1-002",
+                      "locationType": "CELL",
+                      "key": "MDI-B-1-002",
+                      "capacity": {
+                        "maxCapacity": 2,
+                        "workingCapacity": 2
+                      },
+                      "certification": {
+                        "certified": true,
+                        "capacityOfCertifiedCell": 2
+                      }
+                    },
+                  {
+                  "prisonId": "MDI",
+                  "code": "01S",
+                  "pathHierarchy": "B-1-01S",
+                  "locationType": "STORE",
+                  "leafLevel": true,
+                  "localName": "Store Room",
+                  "active": true,
+                  "isResidential": true,
+                  "key": "MDI-B-1-01S"
+                }
+                  ]
+                }
+              ]
+            }
+          """,
+            false,
+          )
+
+        getDomainEvents(6).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z",
+            "location.inside.prison.amended" to "MDI-B",
+            "location.inside.prison.amended" to "MDI-B-1",
+            "location.inside.prison.amended" to "MDI-B-1-001",
+            "location.inside.prison.amended" to "MDI-B-1-002",
+            "location.inside.prison.amended" to "MDI-B-1-01S",
+          )
+        }
+      }
+
+      @Test
+      fun `can update location to make top level location`() {
+        webTestClient.patch().uri("/locations/residential/key/$landingZ1")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(PatchResidentialLocationRequest(removeParent = true, code = "Y", localName = "Wing Y", locationType = ResidentialLocationType.WING)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+               {
+                "prisonId": "MDI",
+                "code": "Y",
+                "pathHierarchy": "Y",
+                "localName": "Wing Y",
+                "locationType": "WING",
+                "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
+                "capacity": {
+                  "maxCapacity": 4,
+                  "workingCapacity": 4
+                },
+                "certification": {
+                  "certified": true,
+                  "capacityOfCertifiedCell": 4
+                },
+                "isResidential": true,
+                "key": "MDI-Y"
+              }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "pathHierarchy": "Z",
+              "locationType": "WING",
+              "key": "MDI-Z",
+              "capacity": {
+                "maxCapacity": 0,
+                "workingCapacity": 0
+              },
+              "certification": {
+                "certified": false,
+                "capacityOfCertifiedCell": 0
+              },
+              "childLocations": [
+                 {
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "usage": [
+                    {
+                      "usageType": "VISIT",
+                      "capacity": 15,
+                      "sequence": 1
+                    }
+                  ],
+                  
+                  "active": true,
+                  "isResidential": false,
+                  "key": "MDI-Z-VISIT"
+                },
+                {
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "status": "ACTIVE",
+                  "level": 2,
+                  "leafLevel": true,
+                  "key": "MDI-Z-ADJUDICATION",
+                  "isResidential": false
+                },
+                {
+                  "code": "2",
+                  "pathHierarchy": "Z-2",
+                  "locationType": "LANDING",
+                  "key": "MDI-Z-2",
+                  "capacity": {
+                    "maxCapacity": 0,
+                    "workingCapacity": 0
+                  },
+                  "certification": {
+                    "certified": false,
+                    "capacityOfCertifiedCell": 0
+                  },
+                  "childLocations": []
+                }
+              ]
+            }
+          """,
+            false,
+          )
+
+        webTestClient.get().uri("/locations/key/MDI-Y?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "pathHierarchy": "Y",
+              "locationType": "WING",
+              "key": "MDI-Y",
+              "localName": "Wing Y",
+              "capacity": {
+                "maxCapacity": 4,
+                "workingCapacity": 4
+              },
+              "certification": {
+                "certified": true,
+                "capacityOfCertifiedCell": 4
+              },
+              "childLocations": [
+                {
+                  "key": "MDI-Y-001",
+                  "pathHierarchy": "Y-001",
+                  "locationType": "CELL",
+                  "permanentlyInactive": false,
+                  "status": "ACTIVE",
+                  "active": true,
+                  "deactivatedByParent": false,
+                  "level": 2,
+                  "leafLevel": true
+                },
+                {
+                  "key": "MDI-Y-002",
+                  "pathHierarchy": "Y-002",
+                  "locationType": "CELL",
+                  "permanentlyInactive": false,
+                  "status": "ACTIVE",
+                  "active": true,
+                  "deactivatedByParent": false,
+                  "level": 2,
+                  "leafLevel": true
+                },
+                {
+                  "key": "MDI-Y-01S",
+                  "pathHierarchy": "Y-01S",
+                  "locationType": "STORE",
+                  "localName": "Store Room",
+                  "permanentlyInactive": false,
+                  "status": "ACTIVE",
+                  "active": true,
+                  "deactivatedByParent": false,
+                  "level": 2,
+                  "leafLevel": true
+                }
+              ]
+            }
+          """,
+            false,
+          )
+
+        getDomainEvents(5).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z",
+            "location.inside.prison.amended" to "MDI-Y",
+            "location.inside.prison.amended" to "MDI-Y-001",
+            "location.inside.prison.amended" to "MDI-Y-002",
+            "location.inside.prison.amended" to "MDI-Y-01S",
+          )
+        }
       }
     }
   }
