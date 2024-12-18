@@ -441,7 +441,7 @@ class LocationResidentialResource(
     val accommodationType: AllowedAccommodationTypeForConversion,
     @Schema(description = "Specialist cell types", example = "[ \"BIOHAZARD_DIRTY_PROTEST\", \"ACCESSIBLE_CELL\" ]", required = false)
     val specialistCellTypes: Set<SpecialistCellType>? = null,
-    @Schema(description = "Max capacity", example = "2", required = true)
+    @Schema(description = "Maximum capacity", example = "2", required = true)
     @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
     @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
     val maxCapacity: Int = 0,

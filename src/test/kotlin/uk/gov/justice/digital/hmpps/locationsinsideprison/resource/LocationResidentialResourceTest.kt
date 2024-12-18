@@ -1907,11 +1907,11 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "oldValue": "2"
                   },
                   {
-                    "attribute": "Max capacity",
+                    "attribute": "Maximum capacity",
                     "oldValue": "2"
                   },
                   {
-                    "attribute": "Converted cell type",
+                    "attribute": "Non-residential room",
                     "newValue": "Other - Tanning room"
                   },
                   {
@@ -1972,7 +1972,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "key": "${store.getKey()}",
                 "changeHistory": [
                   {
-                    "attribute": "Converted cell type",
+                    "attribute": "Non-residential room",
                     "newValue": "Store room - Store Room"
                   }
                 ]
@@ -2101,12 +2101,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "key": "${cell1.getKey()}",
                 "changeHistory": [
                   {
-                    "attribute": "Converted cell type",
+                    "attribute": "Non-residential room",
                     "oldValue": "Other - Playroom",
                     "newValue": "Office"
                   },
                   {
-                    "attribute": "Converted cell type",
+                    "attribute": "Non-residential room",
                     "newValue": "Other - Playroom"
                   },
                   {
@@ -2115,7 +2115,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "newValue": "Uncertified"
                   },
                   {
-                    "attribute": "Max capacity",
+                    "attribute": "Maximum capacity",
                     "oldValue": "2"
                   },
                   {
@@ -2350,7 +2350,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "status": "${LocationStatus.ACTIVE}",
                 "changeHistory": [
                   {
-                    "attribute": "Converted cell type",
+                    "attribute": "Non-residential room",
                     "oldValue": "Other",
                     "newValue": "Cell"
                   },
@@ -2364,7 +2364,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "newValue": "2"
                   },
                   {
-                    "attribute": "Max capacity",
+                    "attribute": "Maximum capacity",
                     "newValue": "2"
                   },
                   {
@@ -2380,7 +2380,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "newValue": "Standard accommodation"
                   },
                   {
-                    "attribute": "Converted cell type",
+                    "attribute": "Non-residential room",
                     "newValue": "Other",
                     "amendedBy": "Aleman"
                   },
@@ -2390,7 +2390,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "newValue": "Uncertified"
                   },
                   {
-                    "attribute": "Max capacity",
+                    "attribute": "Maximum capacity",
                     "oldValue": "2",
                     "amendedBy": "Aleman"
                   },
