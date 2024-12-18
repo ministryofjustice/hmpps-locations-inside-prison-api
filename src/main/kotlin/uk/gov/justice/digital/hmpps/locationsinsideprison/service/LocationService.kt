@@ -187,6 +187,7 @@ class LocationService(
     val filteredByUsage = nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
 
     val filteredResults = filteredByUsage
+      .filter { it.getCode() != "RTU" }
       .filter { it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
       .map { it.toDto(formatLocalName = formatLocalName) }
 
