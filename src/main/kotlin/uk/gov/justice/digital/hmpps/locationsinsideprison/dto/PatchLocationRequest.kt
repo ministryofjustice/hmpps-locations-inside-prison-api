@@ -32,7 +32,7 @@ data class PatchResidentialLocationRequest(
   override val parentId: UUID? = null,
 
   @Schema(description = "Key of parent location", example = "MDI-B-1", required = false)
-  @field:Size(max = 80, message = "Description must be less than 81 characters")
+  @field:Size(max = 80, message = "Key must be less than 81 characters")
   override val parentLocationKey: String? = null,
 
   @Schema(description = "Indicates this location should move to the top of the hierarchy", example = "false", required = false)

@@ -359,7 +359,7 @@ data class CreateResidentialLocationRequest(
   val locationType: ResidentialLocationType,
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
-  @field:Size(max = 80, message = "Description must be less than 81 characters")
+  @field:Size(max = 80, message = "Local name must be less than 81 characters")
   val localName: String? = null,
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
@@ -465,7 +465,7 @@ data class CreateNonResidentialLocationRequest(
   val locationType: NonResidentialLocationType,
 
   @Schema(description = "Alternative description to display for location", example = "Adj Room", required = false)
-  @field:Size(max = 80, message = "Description must be less than 81 characters")
+  @field:Size(max = 80, message = "Local name must be less than 81 characters")
   val localName: String? = null,
 
   @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
