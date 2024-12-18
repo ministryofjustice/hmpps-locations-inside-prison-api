@@ -110,9 +110,9 @@ abstract class Location(
     return pathHierarchy
   }
 
-  open fun setParent(parent: Location) {
+  open fun setParent(parent: Location?) {
     removeParent()
-    parent.addChildLocation(this)
+    parent?.addChildLocation(this)
   }
 
   private fun removeParent() {

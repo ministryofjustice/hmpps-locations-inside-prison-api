@@ -402,7 +402,7 @@ class LocationService(
       checkParentValid(theParent, newCode, locationToUpdate.prisonId)
 
       if (parentChanged && theParent?.id == locationToUpdate.id) throw ValidationException("Cannot set parent to self")
-      theParent?.let { locationToUpdate.setParent(it) }
+      locationToUpdate.setParent(theParent)
 
       if (parentChanged) {
         locationToUpdate.addHistory(
