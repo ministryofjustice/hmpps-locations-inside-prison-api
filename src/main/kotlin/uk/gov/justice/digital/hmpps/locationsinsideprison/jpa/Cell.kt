@@ -294,8 +294,11 @@ class Cell(
 
   private fun addSpecialistCellTypes(specialistCellTypes: Set<SpecialistCellType>): Set<SpecialistCell> {
     val addedSpecialistCellTypes = specialistCellTypes.filter {
-      specialistCellType -> this.specialistCellTypes.add(SpecialistCell(location = this, specialistCellType = specialistCellType)) }
-      .map { SpecialistCell(location = this, specialistCellType = it) }
+        specialistCellType ->
+      this.specialistCellTypes.add(SpecialistCell(location = this, specialistCellType = specialistCellType))
+    }.map {
+      SpecialistCell(location = this, specialistCellType = it)
+    }
       .toSet()
 
     return addedSpecialistCellTypes
