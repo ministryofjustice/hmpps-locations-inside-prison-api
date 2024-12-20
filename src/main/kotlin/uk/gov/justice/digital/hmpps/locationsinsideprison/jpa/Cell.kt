@@ -292,6 +292,15 @@ class Cell(
     return specialistCell
   }
 
+  private fun addSpecialistCellTypes(specialistCellTypes: Set<SpecialistCellType>): Set<SpecialistCell> {
+    val addedSpecialistCellTypes = specialistCellTypes.filter {
+      specialistCellType -> this.specialistCellTypes.add(SpecialistCell(location = this, specialistCellType = specialistCellType)) }
+      .map { SpecialistCell(location = this, specialistCellType = it) }
+      .toSet()
+
+    return addedSpecialistCellTypes
+  }
+
   fun addUsedFor(usedForType: UsedForType, userOrSystemInContext: String, clock: Clock): CellUsedFor {
     val cellUsedFor = CellUsedFor(location = this, usedFor = usedForType)
     if (this.usedFor.add(cellUsedFor)) {
@@ -328,15 +337,8 @@ class Cell(
     clock: Clock,
   ) {
     recordRemovedSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock)
-    this.specialistCellTypes.retainAll(
-      specialistCellTypes.map {
-        addSpecialistCellType(
-          it,
-          userOrSystemInContext,
-          clock,
-        )
-      }.toSet(),
-    )
+
+    this.specialistCellTypes.retainAll(addSpecialistCellTypes(specialistCellTypes))
   }
 
   fun updateUsedFor(
@@ -427,14 +429,17 @@ class Cell(
     }
   }
 
-  private fun recordRemovedSpecialistCellTypes(
-    specialistCellTypes: Set<SpecialistCellType>,
-    userOrSystemInContext: String,
-    clock: Clock,
-  ) {
-    val oldSpecialistCellTypes = this.specialistCellTypes.map { it.specialistCellType }.toSet()
-    oldSpecialistCellTypes.subtract(specialistCellTypes).forEach { removedSpecialistCellType ->
-      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, removedSpecialistCellType.description, null, userOrSystemInContext, LocalDateTime.now(clock))
+  private fun recordRemovedSpecialistCellTypes(specialistCellTypes: Set<SpecialistCellType>, userOrSystemInContext: String, clock: Clock) {
+    val oldSpecialistCellTypes = this.specialistCellTypes.map { it.specialistCellType.description }.toSet()
+    val oldSpecialistCellTypesExist = oldSpecialistCellTypes.subtract(specialistCellTypes).isNotEmpty()
+
+    val newValue = specialistCellTypes.sorted().joinToString(", ") { it.description }
+    val oldValue = oldSpecialistCellTypes.sorted().joinToString(", ")
+
+    if (oldSpecialistCellTypesExist) {
+      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, oldValue, newValue, userOrSystemInContext, LocalDateTime.now(clock))
+    } else {
+      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, null, newValue, userOrSystemInContext, LocalDateTime.now(clock))
     }
   }
 
