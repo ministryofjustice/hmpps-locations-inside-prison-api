@@ -939,7 +939,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "amendedBy": "user"
                 },
                 {
-                  "attribute": "Max capacity",
+                  "attribute": "Maximum capacity",
                   "oldValue": "1",
                   "amendedBy": "user"
                 },
@@ -950,7 +950,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "amendedBy": "user"
                 },
                 {
-                  "attribute": "Converted cell type",
+                  "attribute": "Non-residential room",
                   "newValue": "Holding room",
                   "amendedBy": "user"
                 }

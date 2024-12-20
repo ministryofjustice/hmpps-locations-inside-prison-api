@@ -82,14 +82,14 @@ enum class LocationAttribute(
   val notUsed: Boolean = false,
 ) {
   OPERATIONAL_CAPACITY(description = "Working capacity", display = true),
-  CAPACITY(description = "Max capacity", display = true),
+  CAPACITY(description = "Maximum capacity", display = true),
   SPECIALIST_CELL_TYPE(description = "Cell type", display = true),
   USED_FOR(description = "Used for", display = true),
   DESCRIPTION(description = "Local name", display = true),
   CERTIFIED(description = "Certification", display = true),
   STATUS(description = "Status", display = true),
   DEACTIVATION_REASON(description = "Deactivation reason", display = true),
-  CONVERTED_CELL_TYPE(description = "Converted cell type", display = true),
+  CONVERTED_CELL_TYPE(description = "Non-residential room", display = true),
 
   CODE(description = "Code"),
   LOCATION_TYPE(description = "Location type"),

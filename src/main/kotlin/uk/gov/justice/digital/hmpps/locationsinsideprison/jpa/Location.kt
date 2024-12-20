@@ -110,9 +110,9 @@ abstract class Location(
     return pathHierarchy
   }
 
-  open fun setParent(parent: Location) {
+  open fun setParent(parent: Location?) {
     removeParent()
-    parent.addChildLocation(this)
+    parent?.addChildLocation(this)
   }
 
   private fun removeParent() {
@@ -705,6 +705,9 @@ abstract class Location(
 
   open fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock): Location {
     updateCode(upsert.code, userOrSystemInContext, clock)
+    if (upsert.localName != null && this.localName != upsert.localName) {
+      updateLocalName(upsert.localName, userOrSystemInContext, clock)
+    }
     return this
   }
 
