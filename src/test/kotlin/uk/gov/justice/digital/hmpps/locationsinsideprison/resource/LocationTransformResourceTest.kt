@@ -373,6 +373,55 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           )
         }
       }
+
+      @Test
+      fun `can update specialist cell types and record history with changes as a list`() {
+        webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST, SpecialistCellType.SAFE_CELL, SpecialistCellType.CONSTANT_SUPERVISION)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!
+
+        webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.MEDICAL)))
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.DRY, SpecialistCellType.SAFE_CELL)))
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(emptySet<SpecialistCellType>()))
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .consumeWith(System.out::println)
+          .jsonPath("$.changeHistory[0].oldValue").isEqualTo("Dry cell, Safe cell")
+          .jsonPath("$.changeHistory[0].newValue").doesNotExist()
+          .jsonPath("$.changeHistory[1].oldValue").isEqualTo("Medical cell")
+          .jsonPath("$.changeHistory[1].newValue").isEqualTo("Dry cell, Safe cell")
+          .jsonPath("$.changeHistory[2].oldValue").isEqualTo("Biohazard / dirty protest cell, Constant supervision cell, Safe cell")
+          .jsonPath("$.changeHistory[2].newValue").isEqualTo("Medical cell")
+          .jsonPath("$.changeHistory[3].newValue").isEqualTo("Biohazard / dirty protest cell, Constant supervision cell, Safe cell")
+          .jsonPath("$.changeHistory[3].oldValue").doesNotExist()
+      }
     }
   }
 
