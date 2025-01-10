@@ -161,14 +161,14 @@ open class ResidentialLocation(
       with(upsert.capacity) {
         addHistory(
           LocationAttribute.CAPACITY,
-          capacity?.maxCapacity?.toString(),
+          capacity?.maxCapacity?.toString() ?: "None",
           maxCapacity.toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
         )
         addHistory(
           LocationAttribute.OPERATIONAL_CAPACITY,
-          capacity?.workingCapacity?.toString(),
+          capacity?.workingCapacity?.toString() ?: "None",
           workingCapacity.toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
@@ -321,14 +321,14 @@ open class ResidentialLocation(
 
       addHistory(
         LocationAttribute.CAPACITY,
-        capacity?.maxCapacity?.toString(),
+        capacity?.maxCapacity?.toString() ?: "None",
         maxCapacity.toString(),
         userOrSystemInContext,
         LocalDateTime.now(clock),
       )
       addHistory(
         LocationAttribute.OPERATIONAL_CAPACITY,
-        capacity?.workingCapacity?.toString(),
+        capacity?.workingCapacity?.toString() ?: "None",
         workingCapacity.toString(),
         userOrSystemInContext,
         LocalDateTime.now(clock),

@@ -936,11 +936,13 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Working capacity",
                   "oldValue": "1",
+                  "newValue": "None",
                   "amendedBy": "user"
                 },
                 {
                   "attribute": "Maximum capacity",
                   "oldValue": "1",
+                  "newValue": "None",
                   "amendedBy": "user"
                 },
                 {

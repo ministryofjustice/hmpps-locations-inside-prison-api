@@ -10,6 +10,7 @@ import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import org.hibernate.annotations.BatchSize
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -125,6 +126,13 @@ class Cell(
   private fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock) {
+    addHistory(
+      LocationAttribute.STATUS,
+      this.getStatus().description,
+      LocationStatus.NON_RESIDENTIAL.description,
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+    )
     updateNonResidentialCellType(convertedCellType, otherConvertedCellType, userOrSystemInContext, clock)
     addHistory(
       LocationAttribute.LOCATION_TYPE,
@@ -136,15 +144,15 @@ class Cell(
 
     addHistory(
       LocationAttribute.CAPACITY,
-      capacity?.maxCapacity?.toString(),
-      null,
+      capacity?.maxCapacity?.toString() ?: "None",
+      "None",
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
     addHistory(
       LocationAttribute.OPERATIONAL_CAPACITY,
-      capacity?.workingCapacity?.toString(),
-      null,
+      capacity?.workingCapacity?.toString() ?: "None",
+      "None",
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
@@ -187,15 +195,15 @@ class Cell(
 
   fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
     addHistory(
-      LocationAttribute.CONVERTED_CELL_TYPE,
-      this.getConvertedCellTypeSummary(),
-      "Cell",
+      LocationAttribute.STATUS,
+      this.getStatus().description,
+      LocationStatus.ACTIVE.description,
       userOrSystemInContext,
       LocalDateTime.now(clock),
     )
-
     convertedCellType = null
     otherConvertedCellType = null
+    certifyCell(userOrSystemInContext, clock)
 
     setAccommodationTypeForCell(accommodationType.mapsTo, userOrSystemInContext, clock)
 
@@ -206,7 +214,6 @@ class Cell(
     specialistCellTypes?.let { updateSpecialistCellTypes(specialistCellTypes = it, clock = clock, userOrSystemInContext = userOrSystemInContext) }
 
     setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock)
-    certifyCell(userOrSystemInContext, clock)
     if (hasDeactivatedParent()) {
       reactivate(userOrSystemInContext, clock)
     }
