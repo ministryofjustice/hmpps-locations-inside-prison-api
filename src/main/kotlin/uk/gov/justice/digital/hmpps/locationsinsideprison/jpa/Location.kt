@@ -853,7 +853,8 @@ abstract class Location(
       null
     }
 
-    if (this is Cell && (maxCapacity != null || workingCapacity != null)) {
+    val capacityAdjusted = maxCapacity != null || workingCapacity != null
+    if (this is Cell && capacityAdjusted) {
       setCapacity(
         maxCapacity = maxCapacity ?: getMaxCapacity() ?: 0,
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
@@ -903,7 +904,7 @@ abstract class Location(
         this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
       }
 
-      if (this is Cell) {
+      if (this is Cell && !capacityAdjusted) {
         addHistory(
           LocationAttribute.OPERATIONAL_CAPACITY,
           previousWorkingCapacity.toString(),
