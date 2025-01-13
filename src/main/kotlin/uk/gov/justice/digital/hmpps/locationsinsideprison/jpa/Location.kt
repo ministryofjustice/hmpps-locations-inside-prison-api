@@ -474,8 +474,8 @@ abstract class Location(
     null
   }
 
-  fun getStatus(): LocationStatus {
-    return if (isActiveAndAllParentsActive()) {
+  fun getStatus(ignoreParentStatus: Boolean = false): LocationStatus {
+    return if ((ignoreParentStatus && isActive()) || isActiveAndAllParentsActive()) {
       if (isConvertedCell()) {
         LocationStatus.NON_RESIDENTIAL
       } else {
@@ -622,13 +622,23 @@ abstract class Location(
 
       if (addHistory(
           LocationAttribute.STATUS,
-          getStatus().description,
+          getStatus(ignoreParentStatus = true).description,
           LocationStatus.INACTIVE.description,
           userOrSystemInContext,
           amendedDate,
         ) != null
       ) {
         dataChanged = true
+      }
+
+      if (this is Cell) {
+        addHistory(
+          LocationAttribute.OPERATIONAL_CAPACITY,
+          getWorkingCapacityIgnoreParent().toString(),
+          "0",
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+        )
       }
 
       if (addHistory(
@@ -825,6 +835,7 @@ abstract class Location(
   open fun reactivate(
     userOrSystemInContext: String,
     clock: Clock,
+    locationsReactivated: MutableSet<Location>? = null,
     maxCapacity: Int? = null,
     workingCapacity: Int? = null,
     reactivatedLocations: MutableSet<Location>? = null,
@@ -836,6 +847,11 @@ abstract class Location(
       reactivatedLocations = reactivatedLocations,
       amendedLocations = amendedLocations,
     )
+    val previousWorkingCapacity = if (this is ResidentialLocation) {
+      calcWorkingCapacity()
+    } else {
+      null
+    }
 
     if (this is Cell && (maxCapacity != null || workingCapacity != null)) {
       setCapacity(
@@ -887,6 +903,15 @@ abstract class Location(
         this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
       }
 
+      if (this is Cell) {
+        addHistory(
+          LocationAttribute.OPERATIONAL_CAPACITY,
+          previousWorkingCapacity.toString(),
+          getWorkingCapacityIgnoreParent().toString(),
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+        )
+      }
       reactivatedLocations?.add(this)
       amendedLocations?.addAll(this.getParentLocations())
       log.info("Re-activated Location [${getKey()}]")

@@ -2432,13 +2432,13 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .expectBody().json(
             """
               {
-                "attribute": "Status",
-                "oldValue": "Active",
-                "newValue": "Non-residential"
-              },
-              {
                 "key": "${store.getKey()}",
                 "changeHistory": [
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Non-residential"
+                  },
                   {
                     "attribute": "Non-residential room",
                     "newValue": "Store room - Store Room"
@@ -2854,6 +2854,11 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "attribute": "Non-residential room",
                     "newValue": "Other",
                     "amendedBy": "Aleman"
+                  },
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Non-residential"
                   },
                   {
                     "attribute": "Certification",

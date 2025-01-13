@@ -677,6 +677,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "permanentlyInactive": false,
                   "isResidential": true,
                   "key": "MDI-Z-1",
+                  "changeHistory": [
+                    {
+                      "attribute": "Status",
+                      "oldValue": "Active",
+                      "newValue": "Inactive"
+                    },
+                    {
+                      "attribute": "Deactivation reason",
+                      "newValue": "Damage - Window smashed"
+                    }
+                  ],
                   "childLocations": [
                     {
                       "prisonId": "MDI",
@@ -691,7 +702,31 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "deactivatedDate": "$now",
                       "deactivatedReason": "DAMAGED",
                       "isResidential": true,
-                      "key": "MDI-Z-1-002"
+                      "key": "MDI-Z-1-002",
+                          "changeHistory": [
+                          {
+                            "attribute": "Deactivation reason",
+                            "newValue": "Damage - Window smashed"
+                          },
+                          {
+                            "attribute": "Status",
+                            "oldValue": "Active",
+                            "newValue": "Inactive"
+                          },
+                          {
+                            "attribute": "Working capacity",
+                            "oldValue": "2",
+                            "newValue": "0"
+                          },
+                          {
+                            "attribute": "Used for",
+                            "newValue": "Standard accommodation"
+                          },
+                          {
+                            "attribute": "Cell type",
+                            "newValue": "Accessible cell"
+                          }
+                       ]
                     },
                     {
                       "prisonId": "MDI",
@@ -822,6 +857,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "newValue": "Inactive"
                   },
                   {
+                    "attribute": "Working capacity",
+                    "oldValue": "2",
+                    "newValue": "0"
+                  },
+                  {
                     "attribute": "Used for",
                     "newValue": "Standard accommodation",
                     "amendedBy": "A_TEST_USER"
@@ -874,6 +914,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "attribute": "Status",
                     "oldValue": "Active",
                     "newValue": "Inactive"
+                  },
+                  {
+                    "attribute": "Working capacity",
+                    "oldValue": "2",
+                    "newValue": "0"
                   },
                   {
                     "attribute": "Used for",
@@ -973,6 +1018,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "newValue": "Inactive"
                     },
                     {
+                      "attribute": "Working capacity",
+                      "oldValue": "2",
+                      "newValue": "0"
+                    },
+                    {
                       "attribute": "Used for",
                       "newValue": "Standard accommodation",
                       "amendedBy": "A_TEST_USER"
@@ -1056,6 +1106,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "attribute": "Status",
                   "oldValue": "Active",
                   "newValue": "Inactive"
+                },
+                {
+                  "attribute": "Working capacity",
+                  "oldValue": "2",
+                  "newValue": "0"
                 },
                 {
                   "attribute": "Used for",
@@ -1236,8 +1291,23 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "newValue": "Active"
                         },
                         {
+                          "attribute": "Working capacity",
+                          "oldValue": "0",
+                          "newValue": "2"
+                        },
+                        {
                           "attribute": "Deactivation reason",
                           "newValue": "Mothballed"
+                        },
+                        {
+                          "attribute": "Status",
+                          "oldValue": "Active",
+                          "newValue": "Inactive"
+                        },
+                        {
+                          "attribute": "Working capacity",
+                          "oldValue": "2",
+                          "newValue": "0"
                         },
                         {
                           "attribute": "Used for",
@@ -1428,6 +1498,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "newValue": "Active"
                         },
                         {
+                          "attribute": "Working capacity",
+                          "oldValue": "0",
+                          "newValue": "2"
+                        },
+                        {
                           "attribute": "Deactivation reason",
                           "oldValue": "Damage",
                           "newValue": "Mothballed"
@@ -1440,6 +1515,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "attribute": "Status",
                           "oldValue": "Active",
                           "newValue": "Inactive"
+                        },
+                        {
+                          "attribute": "Working capacity",
+                          "oldValue": "2",
+                          "newValue": "0"
                         },
                         {
                           "attribute": "Used for",

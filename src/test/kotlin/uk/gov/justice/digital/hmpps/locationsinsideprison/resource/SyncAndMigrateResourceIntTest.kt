@@ -928,6 +928,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
               "changeHistory": [
                 {
+                  "attribute": "Status",
+                  "oldValue": "Inactive",
+                  "newValue": "Non-residential"
+                },
+                {
                   "attribute": "Local name",
                   "newValue": "A New Cell",
                   "amendedBy": "user2",
