@@ -100,7 +100,7 @@ enum class LocationAttribute(
   COMMENTS(description = "Comments"),
   ATTRIBUTES(description = "Attributes"),
   PROPOSED_REACTIVATION_DATE(description = "Proposed reactivation date"),
-  ACCOMMODATION_TYPE(description = "Accommodation type"),
+  ACCOMMODATION_TYPE(description = "Accommodation type", display = true),
   PLANET_FM_NUMBER(description = "Planet FM number"),
   PERMANENT_DEACTIVATION(description = "Permanent deactivation"),
 

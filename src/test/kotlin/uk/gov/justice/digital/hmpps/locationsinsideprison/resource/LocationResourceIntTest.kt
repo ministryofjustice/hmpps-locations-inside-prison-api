@@ -677,6 +677,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "permanentlyInactive": false,
                   "isResidential": true,
                   "key": "MDI-Z-1",
+                  "changeHistory": [
+                    {
+                      "attribute": "Status",
+                      "oldValue": "Active",
+                      "newValue": "Inactive"
+                    },
+                    {
+                      "attribute": "Deactivation reason",
+                      "newValue": "Damage - Window smashed"
+                    }
+                  ],
                   "childLocations": [
                     {
                       "prisonId": "MDI",
@@ -691,7 +702,31 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "deactivatedDate": "$now",
                       "deactivatedReason": "DAMAGED",
                       "isResidential": true,
-                      "key": "MDI-Z-1-002"
+                      "key": "MDI-Z-1-002",
+                          "changeHistory": [
+                          {
+                            "attribute": "Deactivation reason",
+                            "newValue": "Damage - Window smashed"
+                          },
+                          {
+                            "attribute": "Status",
+                            "oldValue": "Active",
+                            "newValue": "Inactive"
+                          },
+                          {
+                            "attribute": "Working capacity",
+                            "oldValue": "2",
+                            "newValue": "0"
+                          },
+                          {
+                            "attribute": "Used for",
+                            "newValue": "Standard accommodation"
+                          },
+                          {
+                            "attribute": "Cell type",
+                            "newValue": "Accessible cell"
+                          }
+                       ]
                     },
                     {
                       "prisonId": "MDI",
@@ -822,6 +857,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "newValue": "Inactive"
                   },
                   {
+                    "attribute": "Working capacity",
+                    "oldValue": "2",
+                    "newValue": "0"
+                  },
+                  {
                     "attribute": "Used for",
                     "newValue": "Standard accommodation",
                     "amendedBy": "A_TEST_USER"
@@ -874,6 +914,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "attribute": "Status",
                     "oldValue": "Active",
                     "newValue": "Inactive"
+                  },
+                  {
+                    "attribute": "Working capacity",
+                    "oldValue": "2",
+                    "newValue": "0"
                   },
                   {
                     "attribute": "Used for",
@@ -973,6 +1018,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "newValue": "Inactive"
                     },
                     {
+                      "attribute": "Working capacity",
+                      "oldValue": "2",
+                      "newValue": "0"
+                    },
+                    {
                       "attribute": "Used for",
                       "newValue": "Standard accommodation",
                       "amendedBy": "A_TEST_USER"
@@ -1056,6 +1106,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "attribute": "Status",
                   "oldValue": "Active",
                   "newValue": "Inactive"
+                },
+                {
+                  "attribute": "Working capacity",
+                  "oldValue": "2",
+                  "newValue": "0"
                 },
                 {
                   "attribute": "Used for",
@@ -1236,8 +1291,23 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "newValue": "Active"
                         },
                         {
+                          "attribute": "Working capacity",
+                          "oldValue": "0",
+                          "newValue": "2"
+                        },
+                        {
                           "attribute": "Deactivation reason",
                           "newValue": "Mothballed"
+                        },
+                        {
+                          "attribute": "Status",
+                          "oldValue": "Active",
+                          "newValue": "Inactive"
+                        },
+                        {
+                          "attribute": "Working capacity",
+                          "oldValue": "2",
+                          "newValue": "0"
                         },
                         {
                           "attribute": "Used for",
@@ -1428,6 +1498,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "newValue": "Active"
                         },
                         {
+                          "attribute": "Working capacity",
+                          "oldValue": "0",
+                          "newValue": "2"
+                        },
+                        {
                           "attribute": "Deactivation reason",
                           "oldValue": "Damage",
                           "newValue": "Mothballed"
@@ -1440,6 +1515,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "attribute": "Status",
                           "oldValue": "Active",
                           "newValue": "Inactive"
+                        },
+                        {
+                          "attribute": "Working capacity",
+                          "oldValue": "2",
+                          "newValue": "0"
                         },
                         {
                           "attribute": "Used for",
@@ -1872,7 +1952,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           )
         }
 
-        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true&includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -1884,6 +1964,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
              "key": "MDI-Z",
               "active": false,
               "deactivatedReason": "DAMAGED",
+              "changeHistory": [
+                {
+                  "attribute": "Deactivation reason",
+                  "newValue": "Damage"
+                },
+                {
+                  "attribute": "Status",
+                  "oldValue": "Active",
+                  "newValue": "Inactive"
+                }
+              ],
               "childLocations": [
                 {
                   "key": "MDI-Z-VISIT",
@@ -1901,12 +1992,56 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     {
                       "key": "MDI-Z-1-001",
                       "active": false,
-                      "deactivatedReason": "DAMAGED"
+                      "deactivatedReason": "DAMAGED",
+                      "changeHistory": [
+                        {
+                          "attribute": "Deactivation reason",
+                          "newValue": "Damage"
+                        },
+                        {
+                          "attribute": "Status",
+                          "oldValue": "Active",
+                          "newValue": "Inactive"
+                        },
+                        {
+                          "attribute": "Working capacity",
+                          "oldValue": "2",
+                          "newValue": "0"
+                        },
+                        {
+                          "attribute": "Used for",
+                          "newValue": "Standard accommodation"
+                        }
+                      ]
                     },
                     {
                       "key": "MDI-Z-1-002", 
                       "active": false,
-                      "deactivatedReason": "DAMAGED"
+                      "deactivatedReason": "DAMAGED",
+                      "changeHistory": [
+                       {
+                          "attribute": "Deactivation reason",
+                          "newValue": "Damage"
+                        },
+                        {
+                          "attribute": "Status",
+                          "oldValue": "Active",
+                          "newValue": "Inactive"
+                        },
+                        {
+                          "attribute": "Working capacity",
+                          "oldValue": "2",
+                          "newValue": "0"
+                        },
+                        {
+                          "attribute": "Used for",
+                          "newValue": "Standard accommodation"
+                        },
+                        {
+                          "attribute": "Cell type",
+                          "newValue": "Accessible cell"
+                        }
+                      ]
                     },
                     {
                       "key": "MDI-Z-1-01S",
@@ -1957,7 +2092,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           )
         }
 
-        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
+        webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true&includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -1979,6 +2114,22 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "certification": {
                 "capacityOfCertifiedCell": 4
               },
+              "changeHistory": [
+                {
+                  "attribute": "Status",
+                  "oldValue": "Inactive",
+                  "newValue": "Active"
+                },
+                {
+                  "attribute": "Deactivation reason",
+                  "newValue": "Damage"
+                },
+                {
+                  "attribute": "Status",
+                  "oldValue": "Active",
+                  "newValue": "Inactive"
+                }
+              ],
               "childLocations": [
                 {
                   "prisonId": "MDI",
@@ -2020,7 +2171,42 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "capacity": {
                         "maxCapacity": 3,
                         "workingCapacity": 3
-                      }
+                      },
+                      "changeHistory": [
+                        {
+                          "attribute": "Status",
+                          "oldValue": "Inactive",
+                          "newValue": "Active"
+                        },
+                        {
+                          "attribute": "Maximum capacity",
+                          "oldValue": "2",
+                          "newValue": "3"
+                        },
+                        {
+                          "attribute": "Working capacity",
+                          "oldValue": "0",
+                          "newValue": "3"
+                        },
+                        {
+                          "attribute": "Deactivation reason",
+                          "newValue": "Damage"
+                        },
+                        {
+                          "attribute": "Status",
+                          "oldValue": "Active",
+                          "newValue": "Inactive"
+                        },
+                        {
+                          "attribute": "Working capacity",
+                          "oldValue": "2",
+                          "newValue": "0"
+                        },
+                        {
+                          "attribute": "Used for",
+                          "newValue": "Standard accommodation"
+                        }
+                      ]
                     },
                     {
                       "prisonId": "MDI",
@@ -2034,7 +2220,41 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "capacity": {
                         "maxCapacity": 2,
                         "workingCapacity": 2
-                      }
+                      },
+                      "changeHistory": [
+                          {
+                          "attribute": "Status",
+                          "oldValue": "Inactive",
+                          "newValue": "Active"
+                        },
+                        {
+                          "attribute": "Working capacity",
+                          "oldValue": "0",
+                          "newValue": "2"
+                        },
+                       {
+                          "attribute": "Deactivation reason",
+                          "newValue": "Damage"
+                        },
+                        {
+                          "attribute": "Status",
+                          "oldValue": "Active",
+                          "newValue": "Inactive"
+                        },
+                        {
+                          "attribute": "Working capacity",
+                          "oldValue": "2",
+                          "newValue": "0"
+                        },
+                        {
+                          "attribute": "Used for",
+                          "newValue": "Standard accommodation"
+                        },
+                        {
+                          "attribute": "Cell type",
+                          "newValue": "Accessible cell"
+                        }
+                      ]
                     },
                     {
                       "prisonId": "MDI",

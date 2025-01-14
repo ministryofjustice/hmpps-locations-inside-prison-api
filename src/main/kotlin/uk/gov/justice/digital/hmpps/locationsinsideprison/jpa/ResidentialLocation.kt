@@ -92,7 +92,12 @@ open class ResidentialLocation(
   fun isLocationShownOnResidentialSummary() =
     locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
 
-  private fun getWorkingCapacity(): Int {
+  fun getWorkingCapacityIgnoreParent(): Int {
+    return cellLocations().filter { it.isActive() }
+      .sumOf { it.getWorkingCapacity() ?: 0 }
+  }
+
+  fun calcWorkingCapacity(): Int {
     return cellLocations().filter { it.isActiveAndAllParentsActive() }
       .sumOf { it.getWorkingCapacity() ?: 0 }
   }
@@ -161,14 +166,14 @@ open class ResidentialLocation(
       with(upsert.capacity) {
         addHistory(
           LocationAttribute.CAPACITY,
-          capacity?.maxCapacity?.toString(),
+          capacity?.maxCapacity?.toString() ?: "None",
           maxCapacity.toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
         )
         addHistory(
           LocationAttribute.OPERATIONAL_CAPACITY,
-          capacity?.workingCapacity?.toString(),
+          capacity?.workingCapacity?.toString() ?: "None",
           workingCapacity.toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
@@ -223,7 +228,7 @@ open class ResidentialLocation(
 
       capacity = CapacityDto(
         maxCapacity = getMaxCapacity(),
-        workingCapacity = getWorkingCapacity(),
+        workingCapacity = calcWorkingCapacity(),
       ),
 
       certification = CertificationDto(
@@ -255,7 +260,7 @@ open class ResidentialLocation(
       ignoreWorkingCapacity = true,
       capacity = CapacityDto(
         maxCapacity = getMaxCapacity(),
-        workingCapacity = getWorkingCapacity(),
+        workingCapacity = calcWorkingCapacity(),
       ),
 
       certification = CertificationDto(
@@ -291,7 +296,7 @@ open class ResidentialLocation(
     super.toResidentialPrisonerLocation(mapOfPrisoners).copy(
       capacity = CapacityDto(
         maxCapacity = getMaxCapacity(),
-        workingCapacity = getWorkingCapacity(),
+        workingCapacity = calcWorkingCapacity(),
       ),
       certified = hasCertifiedCells(),
     )
@@ -321,14 +326,14 @@ open class ResidentialLocation(
 
       addHistory(
         LocationAttribute.CAPACITY,
-        capacity?.maxCapacity?.toString(),
+        capacity?.maxCapacity?.toString() ?: "None",
         maxCapacity.toString(),
         userOrSystemInContext,
         LocalDateTime.now(clock),
       )
       addHistory(
         LocationAttribute.OPERATIONAL_CAPACITY,
-        capacity?.workingCapacity?.toString(),
+        capacity?.workingCapacity?.let { calcWorkingCapacity().toString() } ?: "None",
         workingCapacity.toString(),
         userOrSystemInContext,
         LocalDateTime.now(clock),

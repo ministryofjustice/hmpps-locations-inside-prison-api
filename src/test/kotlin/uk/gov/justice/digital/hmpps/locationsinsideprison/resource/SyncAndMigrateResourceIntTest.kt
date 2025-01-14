@@ -928,6 +928,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}",
               "changeHistory": [
                 {
+                  "attribute": "Status",
+                  "oldValue": "Inactive",
+                  "newValue": "Non-residential"
+                },
+                {
                   "attribute": "Local name",
                   "newValue": "A New Cell",
                   "amendedBy": "user2",
@@ -936,11 +941,13 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 {
                   "attribute": "Working capacity",
                   "oldValue": "1",
+                  "newValue": "None",
                   "amendedBy": "user"
                 },
                 {
                   "attribute": "Maximum capacity",
                   "oldValue": "1",
+                  "newValue": "None",
                   "amendedBy": "user"
                 },
                 {

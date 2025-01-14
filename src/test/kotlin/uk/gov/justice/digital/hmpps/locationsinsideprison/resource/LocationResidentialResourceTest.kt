@@ -2353,6 +2353,11 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               {
                 "key": "${cell1.getKey()}",
                 "changeHistory": [
+                   {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Non-residential"
+                  },
                   {
                     "attribute": "Certification",
                     "oldValue": "Certified",
@@ -2360,11 +2365,13 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   {
                     "attribute": "Working capacity",
-                    "oldValue": "2"
+                    "oldValue": "2",
+                    "newValue": "None"
                   },
                   {
                     "attribute": "Maximum capacity",
-                    "oldValue": "2"
+                    "oldValue": "2",
+                    "newValue": "None"
                   },
                   {
                     "attribute": "Non-residential room",
@@ -2427,6 +2434,11 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               {
                 "key": "${store.getKey()}",
                 "changeHistory": [
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Non-residential"
+                  },
                   {
                     "attribute": "Non-residential room",
                     "newValue": "Store room - Store Room"
@@ -2556,6 +2568,11 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               {
                 "key": "${cell1.getKey()}",
                 "changeHistory": [
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Non-residential"
+                  },
                   {
                     "attribute": "Non-residential room",
                     "oldValue": "Other - Playroom",
@@ -2806,9 +2823,9 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "status": "${LocationStatus.ACTIVE}",
                 "changeHistory": [
                   {
-                    "attribute": "Non-residential room",
-                    "oldValue": "Other",
-                    "newValue": "Cell"
+                    "attribute": "Status",
+                    "oldValue": "Non-residential",
+                    "newValue": "Active"
                   },
                   {
                     "attribute": "Certification",
@@ -2817,10 +2834,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   {
                     "attribute": "Working capacity",
+                    "oldValue": "None",
                     "newValue": "2"
                   },
                   {
                     "attribute": "Maximum capacity",
+                    "oldValue": "None",
                     "newValue": "2"
                   },
                   {
@@ -2835,6 +2854,11 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "attribute": "Non-residential room",
                     "newValue": "Other",
                     "amendedBy": "Aleman"
+                  },
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Non-residential"
                   },
                   {
                     "attribute": "Certification",
