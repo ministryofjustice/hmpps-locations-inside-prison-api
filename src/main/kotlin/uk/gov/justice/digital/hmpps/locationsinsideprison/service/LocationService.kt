@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
@@ -1176,6 +1177,34 @@ class LocationService(
     }.sortedBy { it.pathHierarchy }
   }
 
+  fun getCellAttributes(id: UUID): List<CellAttributes> {
+    val cell = cellLocationRepository.findById(id).getOrNull()
+      ?: throw LocationNotFoundException(id.toString())
+
+    val specialistCellTypes = cell.specialistCellTypes
+      .map {
+        CellAttributes(
+          it.specialistCellType,
+          it.specialistCellType.description,
+        )
+      }
+
+    val legacyAttributes = cell.attributes.filter { it.attributeType == ResidentialAttributeType.LOCATION_ATTRIBUTE }
+      .map {
+        CellAttributes(
+          it.attributeValue,
+          it.attributeValue.description,
+        )
+      }
+
+    if (specialistCellTypes.size > 0) {
+      return specialistCellTypes
+    } else if (legacyAttributes.size > 0){
+      return legacyAttributes
+    } else {
+      return listOf(CellAttributes("",""))
+    }
+  }
   fun getUsedForTypesForPrison(prisonId: String): List<UsedForType> {
     val prisonDetails = prisonService.lookupPrisonDetails(prisonId) ?: throw PrisonNotFoundException(prisonId)
     return UsedForType.entries.filter { it.isStandard() || (prisonDetails.female && it.femaleOnly) || (prisonDetails.lthse && it.secureEstateOnly) }

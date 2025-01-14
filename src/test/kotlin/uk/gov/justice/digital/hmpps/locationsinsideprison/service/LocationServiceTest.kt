@@ -10,6 +10,7 @@ import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -17,7 +18,12 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribute
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -343,5 +349,61 @@ class LocationServiceTest {
       childLocations = mutableListOf(),
       createdBy = "createdBy",
     )
+  }
+
+
+  // getCellAttributes
+  @Test
+  fun `should return no cell attributes`() {
+    var mockCell: Cell = mock()
+
+    whenever(mockCell.specialistCellTypes).thenReturn(mutableSetOf())
+    whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
+
+    val attributes = service.getCellAttributes(UUID.randomUUID())
+    Assertions.assertThat(attributes).isEqualTo(listOf(CellAttributes(code= "", description = "")) )
+  }
+
+  @Test
+  fun `should return specialist type attributes for cell when only specialist types present`() {
+    val location: Location = mock()
+    val specialistCellType: SpecialistCellType = SpecialistCellType.CAT_A
+    val mockCell: Cell = mock()
+
+    whenever(mockCell.specialistCellTypes).thenReturn(mutableSetOf(SpecialistCell(1, location, specialistCellType)))
+    whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
+
+    val attributes = service.getCellAttributes(UUID.randomUUID())
+    Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code= SpecialistCellType.CAT_A, description = SpecialistCellType.CAT_A.description)) )
+  }
+
+  @Test
+  fun `should return legacy type attributes for cell when only legacy types present`() {
+    val location: Location = mock()
+    val legacyCellType: ResidentialAttributeType = ResidentialAttributeType.LOCATION_ATTRIBUTE
+    val legacyCellValue: ResidentialAttributeValue = ResidentialAttributeValue.CAT_A_CELL
+    val mockCell: Cell = mock()
+
+    whenever(mockCell.attributes).thenReturn(mutableSetOf(ResidentialAttribute(1, location, legacyCellType, legacyCellValue)))
+    whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
+
+    val attributes = service.getCellAttributes(UUID.randomUUID())
+    Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code= legacyCellValue, description = legacyCellValue.description)) )
+  }
+
+  @Test
+  fun `should return specialist type attributes for cell when both specialist and legacy types present`() {
+    val location: Location = mock()
+    val specialistCellType: SpecialistCellType = SpecialistCellType.CAT_A
+    val legacyCellType: ResidentialAttributeType = ResidentialAttributeType.LOCATION_ATTRIBUTE
+    val legacyCellValue: ResidentialAttributeValue = ResidentialAttributeValue.CAT_A_CELL
+    val mockCell: Cell = mock()
+
+    whenever(mockCell.specialistCellTypes).thenReturn(mutableSetOf(SpecialistCell(1, location, specialistCellType)))
+    whenever(mockCell.attributes).thenReturn(mutableSetOf(ResidentialAttribute(1, location, legacyCellType, legacyCellValue)))
+    whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
+
+    val attributes = service.getCellAttributes(UUID.randomUUID())
+    Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code= SpecialistCellType.CAT_A, description = SpecialistCellType.CAT_A.description)) )
   }
 }
