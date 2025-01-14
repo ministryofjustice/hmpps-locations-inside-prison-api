@@ -351,7 +351,6 @@ class LocationServiceTest {
     )
   }
 
-
   // getCellAttributes
   @Test
   fun `should return no cell attributes`() {
@@ -361,7 +360,7 @@ class LocationServiceTest {
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
 
     val attributes = service.getCellAttributes(UUID.randomUUID())
-    Assertions.assertThat(attributes).isEqualTo(listOf(CellAttributes(code= "", description = "")) )
+    Assertions.assertThat(attributes).isEqualTo(listOf(CellAttributes(code = "", description = "")))
   }
 
   @Test
@@ -374,7 +373,7 @@ class LocationServiceTest {
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
 
     val attributes = service.getCellAttributes(UUID.randomUUID())
-    Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code= SpecialistCellType.CAT_A, description = SpecialistCellType.CAT_A.description)) )
+    Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code = SpecialistCellType.CAT_A, description = SpecialistCellType.CAT_A.description)))
   }
 
   @Test
@@ -388,7 +387,7 @@ class LocationServiceTest {
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
 
     val attributes = service.getCellAttributes(UUID.randomUUID())
-    Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code= legacyCellValue, description = legacyCellValue.description)) )
+    Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code = legacyCellValue, description = legacyCellValue.description)))
   }
 
   @Test
@@ -404,6 +403,6 @@ class LocationServiceTest {
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
 
     val attributes = service.getCellAttributes(UUID.randomUUID())
-    Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code= SpecialistCellType.CAT_A, description = SpecialistCellType.CAT_A.description)) )
+    Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code = SpecialistCellType.CAT_A, description = SpecialistCellType.CAT_A.description)))
   }
 }

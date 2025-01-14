@@ -1199,10 +1199,10 @@ class LocationService(
 
     if (specialistCellTypes.size > 0) {
       return specialistCellTypes
-    } else if (legacyAttributes.size > 0){
+    } else if (legacyAttributes.size > 0) {
       return legacyAttributes
     } else {
-      return listOf(CellAttributes("",""))
+      return listOf(CellAttributes("", ""))
     }
   }
   fun getUsedForTypesForPrison(prisonId: String): List<UsedForType> {

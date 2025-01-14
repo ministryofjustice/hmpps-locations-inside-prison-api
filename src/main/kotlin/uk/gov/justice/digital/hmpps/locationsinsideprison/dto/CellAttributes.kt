@@ -11,4 +11,4 @@ data class CellAttributes(
 
   @Schema(description = "Attribute description", example = "Cat A cell", required = true)
   val description: String,
-  )
+)
