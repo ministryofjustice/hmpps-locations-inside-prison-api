@@ -40,9 +40,12 @@ class LocationHistory(
   fun toDto() =
     ChangeHistory(
       transactionId = linkedTransaction?.transactionId,
+      transactionType = linkedTransaction?.transactionType,
       attribute = attributeName.description,
       oldValue = oldValue,
       newValue = newValue,
+      oldValues = oldValue?.let { listOf(it) },
+      newValues = newValue?.let { listOf(it) },
       amendedBy = amendedBy,
       amendedDate = amendedDate,
     )
@@ -53,6 +56,7 @@ class LocationHistory(
 
     other as LocationHistory
 
+    if (linkedTransaction != other.linkedTransaction) return false
     if (location != other.location) return false
     if (amendedDate != other.amendedDate) return false
     if (attributeName != other.attributeName) return false
@@ -64,7 +68,8 @@ class LocationHistory(
   }
 
   override fun hashCode(): Int {
-    var result = location.hashCode()
+    var result = linkedTransaction.hashCode()
+    result = 31 * result + location.hashCode()
     result = 31 * result + amendedDate.hashCode()
     result = 31 * result + attributeName.hashCode()
     result = 31 * result + (oldValue?.hashCode() ?: 0)
@@ -74,10 +79,10 @@ class LocationHistory(
   }
 
   override fun compareTo(other: LocationHistory) =
-    compareValuesBy(this, other, { it.location.id }, { it.amendedDate }, { it.attributeName }, { it.oldValue }, { it.newValue }, { it.amendedBy })
+    compareValuesBy(this, other, { it.linkedTransaction?.transactionId }, { it.location.id }, { it.amendedDate }, { it.attributeName }, { it.oldValue }, { it.newValue }, { it.amendedBy })
 
   override fun toString(): String {
-    return "Changed $attributeName from $oldValue --> $newValue, on $amendedDate)"
+    return "${linkedTransaction?.transactionId ?: "NONE"}: Changed $attributeName from $oldValue --> $newValue, on $amendedDate)"
   }
 }
 enum class LocationAttribute(

@@ -2851,7 +2851,10 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   {
                     "attribute": "Cell type",
-                    "newValue": "Accessible cell, Isolation cell for communicable diseases"
+                    "newValues": [
+                        "Accessible cell",
+                        "Isolation cell for communicable diseases"
+                    ]
                   },
                   {
                     "attribute": "Used for",

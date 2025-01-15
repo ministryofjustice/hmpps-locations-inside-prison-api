@@ -20,6 +20,7 @@ import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
@@ -403,9 +404,7 @@ abstract class Location(
         null
       },
       changeHistory = if (includeHistory) {
-        history.sortedByDescending { it.linkedTransaction?.txStartTime ?: it.amendedDate }.sortedByDescending { it.id }
-          .filter { it.attributeName.display }
-          .map { it.toDto() }
+        createHistory()
       } else {
         null
       },
@@ -422,6 +421,50 @@ abstract class Location(
       },
       deactivatedBy = deactivatedBy,
     )
+  }
+
+  private fun createHistory(): List<ChangeHistory> {
+    val withTx = history.asSequence()
+      .filter { it.linkedTransaction != null }
+      .sortedByDescending { it.linkedTransaction!!.txStartTime }.sortedBy { it.linkedTransaction!!.transactionId }.sortedByDescending { it.id }
+      .groupBy { it.linkedTransaction!! }
+      .map { (transaction, changes) ->
+        changes.groupBy { it.attributeName }
+          .filter { it.key.display }
+          .mapNotNull { (attribute, history) -> toChangeHistory(attribute, transaction, history) }
+      }.flatten().toList()
+
+    val withoutTx = history.asSequence().filter { it.linkedTransaction == null }
+      .sortedByDescending { it.amendedDate }.sortedByDescending { it.id }
+      .filter { it.attributeName.display }
+      .map { it.toDto() }.toList()
+
+    return withTx.plus(withoutTx)
+  }
+
+  private fun toChangeHistory(
+    attribute: LocationAttribute,
+    transaction: LinkedTransaction,
+    history: List<LocationHistory>,
+  ) = if (history.size > 1) {
+    val oldValues = history.mapNotNull { it.oldValue }
+    val newValues = history.mapNotNull { it.newValue }
+    val multipleValues = oldValues.size > 1 || newValues.size > 1
+
+    ChangeHistory(
+      transactionId = transaction.transactionId!!,
+      transactionType = transaction.transactionType,
+      attribute = attribute.description,
+      multipleValues = multipleValues,
+      oldValue = if (multipleValues) null else oldValues.firstOrNull(),
+      oldValues = oldValues.ifEmpty { null },
+      newValue = if (multipleValues) null else newValues.firstOrNull(),
+      newValues = newValues.ifEmpty { null },
+      amendedBy = transaction.transactionInvokedBy,
+      amendedDate = transaction.txStartTime,
+    )
+  } else {
+    history.firstOrNull()?.toDto()
   }
 
   private fun isLeafLevel() = findSubLocations().isEmpty() && !isStructural() && !isArea()

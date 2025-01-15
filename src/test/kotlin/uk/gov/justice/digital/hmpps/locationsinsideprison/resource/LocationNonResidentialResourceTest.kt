@@ -270,10 +270,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                  "changeHistory": [
                     {
                       "attribute": "Usage",
-                      "oldValue": "Visit"
-                    },
-                    {
-                      "attribute": "Usage",
+                      "oldValue": "Visit",
                       "newValue": "Appointment"
                     },
                     {
@@ -474,10 +471,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                  "changeHistory": [
                     {
                       "attribute": "Usage",
-                      "oldValue": "Visit"
-                    },
-                    {
-                      "attribute": "Usage",
+                      "oldValue": "Visit",
                       "newValue": "Appointment"
                     },
                     {

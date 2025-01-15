@@ -286,23 +286,35 @@ data class Capacity(
 @Schema(description = "Change History")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ChangeHistory(
+  @Schema(description = "Transaction ID", example = "019464e9-05da-77b3-810b-887e199d8190", required = false)
+  val transactionId: UUID? = null,
+
+  @Schema(description = "Transaction type", example = "CAPACITY_CHANGE", required = false)
+  val transactionType: TransactionType? = null,
+
   @Schema(description = "Location Attribute", example = "Location Type", required = true)
   val attribute: String,
 
-  @Schema(description = "Previous value of this attribute", example = "CELL", required = false)
+  @Schema(description = "Indicates the values are lists", example = "false", defaultValue = "false", required = true)
+  val multipleValues: Boolean = false,
+
+  @Schema(description = "Previous value of this attribute", example = "Safe cell", required = false)
   val oldValue: String? = null,
 
-  @Schema(description = "New value of this attribute", example = "WING", required = false)
+  @Schema(description = "Previous values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
+  val oldValues: List<String>? = null,
+
+  @Schema(description = "New value of this attribute", example = "Dry cell", required = false)
   val newValue: String? = null,
+
+  @Schema(description = "New values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
+  val newValues: List<String>? = null,
 
   @Schema(description = "User who made the change", example = "user", required = true)
   val amendedBy: String,
 
   @Schema(description = "Date the change was made", example = "2023-01-23T10:15:30", required = true)
   val amendedDate: LocalDateTime,
-
-  @Schema(description = "Transaction ID", example = "019464e9-05da-77b3-810b-887e199d8190", required = false)
-  val transactionId: UUID? = null,
 )
 
 @Schema(description = "Transaction history for location")

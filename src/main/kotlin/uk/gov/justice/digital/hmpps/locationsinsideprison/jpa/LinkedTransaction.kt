@@ -53,6 +53,7 @@ class LinkedTransaction(
 
     other as LinkedTransaction
 
+    if (transactionId != other.transactionId) return false
     if (transactionType != other.transactionType) return false
     if (transactionInvokedBy != other.transactionInvokedBy) return false
     if (txStartTime != other.txStartTime) return false
@@ -61,10 +62,14 @@ class LinkedTransaction(
   }
 
   override fun hashCode(): Int {
-    var result = transactionType.hashCode()
+    var result = transactionId.hashCode()
+    result = 31 * result + transactionType.hashCode()
     result = 31 * result + transactionInvokedBy.hashCode()
     result = 31 * result + txStartTime.hashCode()
     return result
+  }
+  override fun toString(): String {
+    return "$transactionId: $transactionType ($transactionDetail) between $txStartTime --> $txEndTime, by $transactionInvokedBy)"
   }
 }
 
