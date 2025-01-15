@@ -69,7 +69,7 @@ class LinkedTransaction(
     return result
   }
   override fun toString(): String {
-    return "$transactionId: $transactionType ($transactionDetail) between $txStartTime --> $txEndTime, by $transactionInvokedBy)"
+    return "$transactionId: $transactionType at $txStartTime by $transactionInvokedBy, ($transactionDetail) )"
   }
 }
 
@@ -77,6 +77,7 @@ enum class TransactionType {
   LOCATION_CREATE,
   LOCATION_UPDATE,
   SYNC,
+  DELETE,
   MIGRATE,
   CAPACITY_CHANGE,
   CELL_TYPE_CHANGES,
@@ -85,4 +86,5 @@ enum class TransactionType {
   REACTIVATION,
   CELL_CONVERTION_TO_ROOM,
   ROOM_CONVERTION_TO_CELL,
+  SIGNED_OP_CAP,
 }

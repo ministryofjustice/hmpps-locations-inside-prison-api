@@ -7,7 +7,10 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonSignedOperationCapacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
@@ -20,6 +23,7 @@ import java.time.LocalDateTime
 class SignedOperationCapacityService(
   private val locationService: LocationService,
   private val prisonSignedOperationalCapacityRepository: PrisonSignedOperationCapacityRepository,
+  private val linkedTransactionRepository: LinkedTransactionRepository,
   private val telemetryClient: TelemetryClient,
   private val clock: Clock,
 ) {
@@ -34,6 +38,8 @@ class SignedOperationCapacityService(
   @Transactional
   fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignOpCapResult {
     var newRecord = true
+
+    val tx = createLinkedTransaction(TransactionType.SIGNED_OP_CAP, "Signed op cap for prison ${request.prisonId} set to ${request.signedOperationCapacity}", request.updatedBy)
 
     val maxCap = locationService.getResidentialLocations(request.prisonId).prisonSummary?.maxCapacity ?: throw PrisonNotFoundException(request.prisonId)
     if (maxCap < request.signedOperationCapacity) {
@@ -69,7 +75,21 @@ class SignedOperationCapacityService(
       ),
       null,
     )
-    return SignOpCapResult(signedOperationCapacityDto = record.toDto(), newRecord = newRecord)
+    return SignOpCapResult(signedOperationCapacityDto = record.toDto(), newRecord = newRecord).also {
+      tx.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  private fun createLinkedTransaction(type: TransactionType, detail: String, transactionInvokedBy: String): LinkedTransaction {
+    val linkedTransaction = LinkedTransaction(
+      transactionType = type,
+      transactionDetail = detail,
+      transactionInvokedBy = transactionInvokedBy,
+      txStartTime = LocalDateTime.now(clock),
+    )
+    return linkedTransactionRepository.save(linkedTransaction).also {
+      LocationService.log.info("Created linked transaction: $it")
+    }
   }
 }
 

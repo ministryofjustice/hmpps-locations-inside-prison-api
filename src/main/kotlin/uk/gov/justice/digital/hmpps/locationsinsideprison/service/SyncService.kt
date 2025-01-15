@@ -184,6 +184,8 @@ open class SyncService(
         throw ValidationException("Cannot delete location with sub-locations")
       }
 
+      val tx = createLinkedTransaction(TransactionType.DELETE, "NOMIS delete location ${it.getKey()}", "NOMIS")
+
       locationRepository.deleteLocationById(id)
       log.info("Deleted Location: $id (${it.getKey()})")
       telemetryClient.trackEvent(
@@ -195,6 +197,7 @@ open class SyncService(
         ),
         null,
       )
+      tx.txEndTime = LocalDateTime.now(clock)
     }?.toLegacyDto()
       ?: throw LocationNotFoundException(id.toString())
   }
@@ -206,6 +209,8 @@ open class SyncService(
       transactionInvokedBy = transactionInvokedBy,
       txStartTime = LocalDateTime.now(clock),
     )
-    return linkedTransactionRepository.save(linkedTransaction)
+    return linkedTransactionRepository.save(linkedTransaction).also {
+      LocationService.log.info("Created linked transaction: $it")
+    }
   }
 }
