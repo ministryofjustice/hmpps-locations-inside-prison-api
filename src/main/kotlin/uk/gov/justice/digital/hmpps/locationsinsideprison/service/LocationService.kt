@@ -273,7 +273,9 @@ class LocationService(
       transactionInvokedBy = authenticationFacade.getUserOrSystemInContext(),
       txStartTime = LocalDateTime.now(clock),
     )
-    return linkedTransactionRepository.save(linkedTransaction)
+    return linkedTransactionRepository.save(linkedTransaction).also {
+      log.info("Created linked transaction: $it")
+    }
   }
 
   @Transactional
