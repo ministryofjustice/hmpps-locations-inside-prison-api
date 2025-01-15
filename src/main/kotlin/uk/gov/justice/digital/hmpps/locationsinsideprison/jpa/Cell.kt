@@ -95,13 +95,14 @@ class Cell(
 
   fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
 
-  fun setCapacityOfCertifiedCell(capacityOfCertifiedCell: Int, userOrSystemInContext: String, clock: Clock): Boolean {
+  fun setCapacityOfCertifiedCell(capacityOfCertifiedCell: Int, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Boolean {
     addHistory(
       LocationAttribute.CERTIFIED_CAPACITY,
       certification?.capacityOfCertifiedCell?.toString(),
       capacityOfCertifiedCell.toString(),
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
 
     if (certification != null) {
@@ -125,21 +126,23 @@ class Cell(
 
   private fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
 
-  fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock) {
+  fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.STATUS,
       this.getStatus().description,
       LocationStatus.NON_RESIDENTIAL.description,
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
-    updateNonResidentialCellType(convertedCellType, otherConvertedCellType, userOrSystemInContext, clock)
+    updateNonResidentialCellType(convertedCellType, otherConvertedCellType, userOrSystemInContext, clock, linkedTransaction)
     addHistory(
       LocationAttribute.LOCATION_TYPE,
       locationType.name,
       getDerivedLocationType().name,
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
 
     addHistory(
@@ -148,6 +151,7 @@ class Cell(
       "None",
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
     addHistory(
       LocationAttribute.OPERATIONAL_CAPACITY,
@@ -155,24 +159,26 @@ class Cell(
       "None",
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
 
     capacity = null
-    deCertifyCell(userOrSystemInContext, clock)
-    recordRemovedSpecialistCellTypes(specialistCellTypes.map { it.specialistCellType }.toSet(), userOrSystemInContext, clock)
+    deCertifyCell(userOrSystemInContext, clock, linkedTransaction)
+    recordRemovedSpecialistCellTypes(specialistCellTypes.map { it.specialistCellType }.toSet(), userOrSystemInContext, clock, linkedTransaction)
     specialistCellTypes.clear()
 
-    recordRemovedUsedForTypes(usedFor.map { it.usedFor }.toSet(), userOrSystemInContext, clock)
+    recordRemovedUsedForTypes(usedFor.map { it.usedFor }.toSet(), userOrSystemInContext, clock, linkedTransaction)
     usedFor.clear()
   }
 
-  fun updateNonResidentialCellType(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock) {
+  fun updateNonResidentialCellType(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.CONVERTED_CELL_TYPE,
       this.getConvertedCellTypeSummary(),
       listOfNotBlank(convertedCellType.description, otherConvertedCellType).joinToString(" - "),
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
     this.convertedCellType = convertedCellType
     if (convertedCellType == ConvertedCellType.OTHER) {
@@ -193,36 +199,37 @@ class Cell(
     certification = null
   }
 
-  fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
+  fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.STATUS,
       this.getStatus().description,
       LocationStatus.ACTIVE.description,
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
     convertedCellType = null
     otherConvertedCellType = null
-    certifyCell(userOrSystemInContext, clock)
+    certifyCell(userOrSystemInContext, clock, linkedTransaction)
 
-    setAccommodationTypeForCell(accommodationType.mapsTo, userOrSystemInContext, clock)
+    setAccommodationTypeForCell(accommodationType.mapsTo, userOrSystemInContext, clock, linkedTransaction)
 
     usedForTypes?.forEach {
-      addUsedFor(it, userOrSystemInContext, clock)
+      addUsedFor(it, userOrSystemInContext, clock, linkedTransaction)
     }
 
-    specialistCellTypes?.let { updateSpecialistCellTypes(specialistCellTypes = it, clock = clock, userOrSystemInContext = userOrSystemInContext) }
+    specialistCellTypes?.let { updateSpecialistCellTypes(specialistCellTypes = it, clock = clock, userOrSystemInContext = userOrSystemInContext, linkedTransaction = linkedTransaction) }
 
-    setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock)
+    setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock, linkedTransaction)
     if (hasDeactivatedParent()) {
-      reactivate(userOrSystemInContext, clock)
+      reactivate(userOrSystemInContext, clock, linkedTransaction)
     }
     this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
   }
 
-  override fun setCapacity(maxCapacity: Int, workingCapacity: Int, userOrSystemInContext: String, clock: Clock) {
+  override fun setCapacity(maxCapacity: Int, workingCapacity: Int, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (!(isPermanentlyDeactivated() || isTemporarilyDeactivated()) && workingCapacity == 0 && accommodationType == AccommodationType.NORMAL_ACCOMMODATION && specialistCellTypes.isEmpty()) {
       throw CapacityException(
         getKey(),
@@ -230,10 +237,10 @@ class Cell(
         ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
       )
     }
-    super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, clock)
+    super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, clock, linkedTransaction)
   }
 
-  fun certifyCell(userOrSystemInContext: String, clock: Clock) {
+  fun certifyCell(userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     val oldCertification = getCertifiedSummary(this.certification)
     if (certification != null) {
       certification?.setCertification(true, certification?.capacityOfCertifiedCell ?: 0)
@@ -247,19 +254,21 @@ class Cell(
       getCertifiedSummary(this.certification),
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
 
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
   }
 
-  fun deCertifyCell(userOrSystemInContext: String, clock: Clock) {
+  fun deCertifyCell(userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.CERTIFIED,
       getCertifiedSummary(this.certification),
       "Uncertified",
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
     addHistory(
       LocationAttribute.CERTIFIED_CAPACITY,
@@ -267,6 +276,7 @@ class Cell(
       (certification?.capacityOfCertifiedCell ?: 0).toString(),
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
 
     if (certification != null) {
@@ -279,10 +289,12 @@ class Cell(
     this.whenUpdated = LocalDateTime.now(clock)
   }
 
-  fun addAttribute(attribute: ResidentialAttributeValue, userOrSystemInContext: String? = null, clock: Clock? = null): ResidentialAttribute {
+  fun addAttribute(attribute: ResidentialAttributeValue, linkedTransaction: LinkedTransaction? = null, userOrSystemInContext: String? = null, clock: Clock? = null): ResidentialAttribute {
     val residentialAttribute = ResidentialAttribute(location = this, attributeType = attribute.type, attributeValue = attribute)
     if (attributes.add(residentialAttribute)) {
-      userOrSystemInContext?.let { addHistory(LocationAttribute.ATTRIBUTES, null, attribute.description, userOrSystemInContext, LocalDateTime.now(clock)) }
+      if (userOrSystemInContext != null && linkedTransaction != null && clock != null) {
+        addHistory(LocationAttribute.ATTRIBUTES, null, attribute.description, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
+      }
     }
     return residentialAttribute
   }
@@ -291,10 +303,10 @@ class Cell(
     return attributes.map { addAttribute(it) }.toSet()
   }
 
-  fun addSpecialistCellType(specialistCellType: SpecialistCellType, userOrSystemInContext: String? = null, clock: Clock? = null): SpecialistCell {
+  fun addSpecialistCellType(specialistCellType: SpecialistCellType, linkedTransaction: LinkedTransaction? = null, userOrSystemInContext: String? = null, clock: Clock? = null): SpecialistCell {
     val specialistCell = SpecialistCell(location = this, specialistCellType = specialistCellType)
     if (this.specialistCellTypes.add(specialistCell)) {
-      userOrSystemInContext?.let { addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, null, specialistCellType.description, userOrSystemInContext, LocalDateTime.now(clock)) }
+      userOrSystemInContext?.let { addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, null, specialistCellType.description, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction!!) }
     }
     return specialistCell
   }
@@ -311,30 +323,30 @@ class Cell(
     return addedSpecialistCellTypes
   }
 
-  fun addUsedFor(usedForType: UsedForType, userOrSystemInContext: String, clock: Clock): CellUsedFor {
+  fun addUsedFor(usedForType: UsedForType, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): CellUsedFor {
     val cellUsedFor = CellUsedFor(location = this, usedFor = usedForType)
     if (this.usedFor.add(cellUsedFor)) {
-      addHistory(LocationAttribute.USED_FOR, null, usedForType.description, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.USED_FOR, null, usedForType.description, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
     }
     return cellUsedFor
   }
 
-  private fun removeUsedFor(typeToRemove: UsedForType = UsedForType.STANDARD_ACCOMMODATION, userOrSystemInContext: String, clock: Clock) {
+  private fun removeUsedFor(typeToRemove: UsedForType = UsedForType.STANDARD_ACCOMMODATION, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     val usedForToRemove = usedFor.find { it.usedFor == typeToRemove }
     if (usedForToRemove != null) {
-      addHistory(LocationAttribute.USED_FOR, typeToRemove.description, null, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.USED_FOR, typeToRemove.description, null, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
       usedFor.remove(usedForToRemove)
     }
   }
 
-  override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock): Cell {
-    super.update(upsert, userOrSystemInContext, clock)
+  override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Cell {
+    super.update(upsert, userOrSystemInContext, clock, linkedTransaction)
 
     if (upsert is PatchResidentialLocationRequest) {
-      setAccommodationTypeForCell(upsert.accommodationType ?: this.accommodationType, userOrSystemInContext, clock)
+      setAccommodationTypeForCell(upsert.accommodationType ?: this.accommodationType, userOrSystemInContext, clock, linkedTransaction)
 
       if (upsert.usedFor != null) {
-        updateUsedFor(upsert.usedFor, userOrSystemInContext, clock)
+        updateUsedFor(upsert.usedFor, userOrSystemInContext, clock, linkedTransaction)
       }
     }
 
@@ -345,8 +357,9 @@ class Cell(
     specialistCellTypes: Set<SpecialistCellType>,
     userOrSystemInContext: String,
     clock: Clock,
+    linkedTransaction: LinkedTransaction,
   ) {
-    recordRemovedSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock)
+    recordRemovedSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction)
 
     this.specialistCellTypes.retainAll(addSpecialistCellTypes(specialistCellTypes))
   }
@@ -355,40 +368,42 @@ class Cell(
     usedFor: Set<UsedForType>,
     userOrSystemInContext: String,
     clock: Clock,
+    linkedTransaction: LinkedTransaction,
   ) {
-    recordRemovedUsedForTypes(usedFor, userOrSystemInContext, clock)
-    this.usedFor.retainAll(usedFor.map { addUsedFor(it, userOrSystemInContext, clock) }.toSet())
+    recordRemovedUsedForTypes(usedFor, userOrSystemInContext, clock, linkedTransaction)
+    this.usedFor.retainAll(usedFor.map { addUsedFor(it, userOrSystemInContext, clock, linkedTransaction) }.toSet())
   }
 
-  override fun sync(upsert: NomisSyncLocationRequest, clock: Clock): Cell {
-    super.sync(upsert, clock)
+  override fun sync(upsert: NomisSyncLocationRequest, clock: Clock, linkedTransaction: LinkedTransaction): Cell {
+    super.sync(upsert, clock, linkedTransaction)
 
-    setAccommodationTypeForCell(residentialHousingType.mapToAccommodationType(), upsert.lastUpdatedBy, clock)
-    handleNomisCapacitySync(upsert, upsert.lastUpdatedBy, clock)
-    handleNomisCertSync(upsert, upsert.lastUpdatedBy, clock)
+    setAccommodationTypeForCell(residentialHousingType.mapToAccommodationType(), upsert.lastUpdatedBy, clock, linkedTransaction)
+    handleNomisCapacitySync(upsert, upsert.lastUpdatedBy, clock, linkedTransaction)
+    handleNomisCertSync(upsert, upsert.lastUpdatedBy, clock, linkedTransaction)
 
     if (upsert.attributes != null) {
-      recordRemovedAttributes(upsert.attributes, upsert.lastUpdatedBy, clock)
-      attributes.retainAll(upsert.attributes.map { addAttribute(it, upsert.lastUpdatedBy, clock) }.toSet())
+      recordRemovedAttributes(upsert.attributes, upsert.lastUpdatedBy, clock, linkedTransaction)
+      attributes.retainAll(upsert.attributes.map { addAttribute(it, userOrSystemInContext = upsert.lastUpdatedBy, clock = clock, linkedTransaction = linkedTransaction) }.toSet())
     }
 
     return this
   }
 
-  private fun setAccommodationTypeForCell(accommodationType: AccommodationType, userOrSystemInContext: String, clock: Clock) {
+  private fun setAccommodationTypeForCell(accommodationType: AccommodationType, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.ACCOMMODATION_TYPE,
       this.accommodationType.description,
       accommodationType.description,
       userOrSystemInContext,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
     this.accommodationType = accommodationType
 
     if (this.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
-      addUsedFor(UsedForType.STANDARD_ACCOMMODATION, userOrSystemInContext, clock)
+      addUsedFor(UsedForType.STANDARD_ACCOMMODATION, userOrSystemInContext, clock, linkedTransaction)
     } else {
-      removeUsedFor(userOrSystemInContext = userOrSystemInContext, clock = clock)
+      removeUsedFor(userOrSystemInContext = userOrSystemInContext, clock = clock, linkedTransaction = linkedTransaction)
     }
   }
 
@@ -396,6 +411,7 @@ class Cell(
     upsert: NomisSyncLocationRequest,
     userOrSystemInContext: String,
     clock: Clock,
+    linkedTransaction: LinkedTransaction,
   ) {
     upsert.certification?.let {
       with(it) {
@@ -410,6 +426,7 @@ class Cell(
           capacityOfCertifiedCell.toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
+          linkedTransaction,
         )
         if (certification != null) {
           certification?.setCertification(certified, capacityOfCertifiedCell)
@@ -423,6 +440,7 @@ class Cell(
           getCertifiedSummary(certification),
           userOrSystemInContext,
           LocalDateTime.now(clock),
+          linkedTransaction,
         )
       }
     }
@@ -432,14 +450,15 @@ class Cell(
     attributes: Set<ResidentialAttributeValue>,
     userOrSystemInContext: String,
     clock: Clock,
+    linkedTransaction: LinkedTransaction,
   ) {
     val oldAttributes = this.attributes.map { it.attributeValue }.toSet()
     oldAttributes.subtract(attributes).forEach { removedAttribute ->
-      addHistory(LocationAttribute.ATTRIBUTES, removedAttribute.description, null, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.ATTRIBUTES, removedAttribute.description, null, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
     }
   }
 
-  private fun recordRemovedSpecialistCellTypes(specialistCellTypes: Set<SpecialistCellType>, userOrSystemInContext: String, clock: Clock) {
+  private fun recordRemovedSpecialistCellTypes(specialistCellTypes: Set<SpecialistCellType>, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     val oldSpecialistCellTypes = this.specialistCellTypes.map { it.specialistCellType.description }.toSet()
     val oldSpecialistCellTypesExist = oldSpecialistCellTypes.subtract(specialistCellTypes).isNotEmpty()
 
@@ -447,9 +466,9 @@ class Cell(
     val oldValue = oldSpecialistCellTypes.sorted().joinToString(", ")
 
     if (oldSpecialistCellTypesExist) {
-      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, oldValue, newValue, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, oldValue, newValue, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
     } else {
-      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, null, newValue, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, null, newValue, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
     }
   }
 
@@ -457,10 +476,11 @@ class Cell(
     usedFor: Set<UsedForType>,
     userOrSystemInContext: String,
     clock: Clock,
+    linkedTransaction: LinkedTransaction,
   ) {
     val oldUsedFor = this.usedFor.map { it.usedFor }.toSet()
     oldUsedFor.subtract(usedFor).forEach { removedUsedFor ->
-      addHistory(LocationAttribute.USED_FOR, removedUsedFor.description, null, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.USED_FOR, removedUsedFor.description, null, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
     }
   }
 

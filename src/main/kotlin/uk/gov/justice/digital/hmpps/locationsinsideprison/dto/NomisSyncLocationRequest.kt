@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
@@ -89,5 +90,5 @@ data class NomisSyncLocationRequest(
 
 ) : NomisMigrationRequest {
 
-  override fun toNewEntity(clock: Clock): LocationJPA = createLocation(clock)
+  override fun toNewEntity(clock: Clock, linkedTransaction: LinkedTransaction): LocationJPA = createLocation(clock, linkedTransaction)
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
@@ -90,8 +91,8 @@ data class NomisMigrateLocationRequest(
 
 ) : NomisMigrationRequest {
 
-  override fun toNewEntity(clock: Clock): LocationJPA {
-    val location = createLocation(clock)
+  override fun toNewEntity(clock: Clock, linkedTransaction: LinkedTransaction): LocationJPA {
+    val location = createLocation(clock, linkedTransaction)
     history?.map {
       location.addHistory(
         attributeName = LocationAttribute.valueOf(it.attribute),
@@ -99,6 +100,7 @@ data class NomisMigrateLocationRequest(
         newValue = it.newValue,
         amendedBy = it.amendedBy,
         amendedDate = it.amendedDate,
+        linkedTransaction = linkedTransaction,
       )
     }
     return location

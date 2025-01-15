@@ -4,6 +4,7 @@ import com.microsoft.applicationinsights.TelemetryClient
 import jakarta.persistence.EntityManager
 import jakarta.validation.ValidationException
 import org.assertj.core.api.Assertions
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.mock
@@ -18,6 +19,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLoca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
@@ -37,6 +39,7 @@ class LocationServiceTest {
   private val residentialLocationRepository: ResidentialLocationRepository = mock()
   private val signedOperationCapacityRepository: PrisonSignedOperationCapacityRepository = mock()
   private val cellLocationRepository: CellLocationRepository = mock()
+  private val linkedTransactionRepository: LinkedTransactionRepository = mock()
   private val prisonerLocationService: PrisonerLocationService = mock()
   private val prisonService: PrisonService = mock()
   private val entityManager: EntityManager = mock()
@@ -52,6 +55,7 @@ class LocationServiceTest {
     residentialLocationRepository,
     signedOperationCapacityRepository,
     cellLocationRepository,
+    linkedTransactionRepository,
     entityManager,
     prisonerLocationService,
     prisonService,
@@ -61,6 +65,12 @@ class LocationServiceTest {
     locationGroupFromPropertiesService,
     groupsProperties,
   )
+
+  @BeforeEach
+  fun setUp() {
+    whenever(authenticationFacade.getUserOrSystemInContext()).thenReturn("User 1")
+    whenever(linkedTransactionRepository.save(any())).thenReturn(mock())
+  }
 
   @Test
   fun `when update location and location not found throw LocationNotFoundException`() {

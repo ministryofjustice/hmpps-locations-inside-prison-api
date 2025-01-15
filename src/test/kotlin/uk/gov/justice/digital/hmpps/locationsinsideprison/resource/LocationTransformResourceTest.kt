@@ -311,6 +311,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
             certification = Certification(certified = true, capacityOfCertifiedCell = 2),
             specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+            linkedTransaction = linkedTransaction,
           ),
         )
 

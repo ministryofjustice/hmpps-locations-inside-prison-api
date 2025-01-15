@@ -6,6 +6,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
@@ -13,13 +14,16 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildVirtualResidentialLocation
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
+import java.time.LocalDateTime
 
 const val EXPECTED_USERNAME = "A_TEST_USER"
 
@@ -28,6 +32,9 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: LocationRepository
+
+  @Autowired
+  lateinit var linkedTransactionRepository: LinkedTransactionRepository
   lateinit var cell1: Cell
   lateinit var cell2: Cell
   lateinit var cell1N: Cell
@@ -45,12 +52,22 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
   lateinit var store: ResidentialLocation
   lateinit var cswap: VirtualResidentialLocation
   lateinit var tap: VirtualResidentialLocation
+  lateinit var linkedTransaction: LinkedTransaction
 
   @BeforeEach
   fun setUp() {
     prisonerSearchMockServer.resetAll()
     prisonRegisterMockServer.resetAll()
     repository.deleteAll()
+
+    linkedTransaction = linkedTransactionRepository.saveAndFlush(
+      LinkedTransaction(
+        transactionType = TransactionType.LOCATION_CREATE,
+        transactionDetail = "Initial Data Load",
+        transactionInvokedBy = EXPECTED_USERNAME,
+        txStartTime = LocalDateTime.now(clock),
+      ),
+    )
 
     wingN = repository.save(
       buildResidentialLocation(
@@ -67,6 +84,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         prisonId = "NMI",
         residentialHousingType = ResidentialHousingType.OTHER_USE,
+        linkedTransaction = linkedTransaction,
       ),
     )
     landingN1 = repository.save(
@@ -120,6 +138,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         pathHierarchy = "Z-1-001",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        linkedTransaction = linkedTransaction,
       ),
     )
     cell2 = repository.save(
@@ -134,6 +153,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         ),
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
         accommodationType = AccommodationType.CARE_AND_SEPARATION,
+        linkedTransaction = linkedTransaction,
       ),
     )
     store = repository.save(
@@ -151,6 +171,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+        linkedTransaction = linkedTransaction,
       ),
     )
 
@@ -161,6 +182,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         active = false,
         archived = true,
+        linkedTransaction = linkedTransaction,
       ),
     )
 
@@ -193,6 +215,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       "A New Comment",
       EXPECTED_USERNAME,
       clock,
+      linkedTransaction,
     )
 
     wingB.addChildLocation(landingB3.addChildLocation(inactiveCellB3001))

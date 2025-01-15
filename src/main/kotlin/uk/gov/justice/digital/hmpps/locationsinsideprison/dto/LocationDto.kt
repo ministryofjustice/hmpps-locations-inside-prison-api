@@ -10,12 +10,15 @@ import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getVirtualLocationCodes
@@ -161,6 +164,9 @@ data class Location(
   @Schema(description = "History of changes", required = false)
   val changeHistory: List<ChangeHistory>? = null,
 
+  @Schema(description = "A list of transactions applied to this location", required = false)
+  val transactionHistory: List<TransactionHistory>? = null,
+
   @Schema(description = "Staff username who last changed the location", required = true)
   val lastModifiedBy: String,
 
@@ -294,6 +300,35 @@ data class ChangeHistory(
 
   @Schema(description = "Date the change was made", example = "2023-01-23T10:15:30", required = true)
   val amendedDate: LocalDateTime,
+
+  @Schema(description = "Transaction ID", example = "019464e9-05da-77b3-810b-887e199d8190", required = false)
+  val transactionId: UUID? = null,
+)
+
+@Schema(description = "Transaction history for location")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class TransactionHistory(
+
+  @Schema(description = "Unique transaction ID", example = "019464e9-05da-77b3-810b-887e199d8190", required = true)
+  val transactionId: UUID,
+
+  @Schema(description = "Type of transaction", example = "CAPACITY_CHANGE", required = true)
+  val transactionType: TransactionType,
+
+  @Schema(description = "Description of the transaction", example = "Working capacity changed from 0 to 1", required = true)
+  val transactionDetail: String,
+
+  @Schema(description = "User who invoked the change", example = "STAFF_USER1", required = true)
+  val transactionInvokedBy: String,
+
+  @Schema(description = "Date and time the transaction started", required = true)
+  val txStartTime: LocalDateTime,
+
+  @Schema(description = "Date and time the transaction ended", required = true)
+  var txEndTime: LocalDateTime? = null,
+
+  @Schema(description = "The list of changes that were made in the transaction", required = true)
+  val changesToLocation: List<ChangeHistory>,
 )
 
 @Schema(description = "Certification")
@@ -381,8 +416,8 @@ data class CreateResidentialLocationRequest(
   val specialistCellTypes: Set<SpecialistCellType>? = null,
 ) {
 
-  fun toNewEntity(createdBy: String, clock: Clock): ResidentialLocationJPA {
-    return if (isCell()) {
+  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction): ResidentialLocationJPA {
+    val newLocation = if (isCell()) {
       val location = CellJPA(
         prisonId = prisonId,
         code = code,
@@ -402,14 +437,15 @@ data class CreateResidentialLocationRequest(
         ),
       )
       if (location.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
-        location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock)
+        location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction)
       }
       usedFor?.forEach {
-        location.addUsedFor(it, createdBy, clock)
+        location.addUsedFor(it, createdBy, clock, linkedTransaction)
       }
         ?: specialistCellTypes?.forEach {
-          location.addSpecialistCellType(it, createdBy, clock)
+          location.addSpecialistCellType(it, userOrSystemInContext = createdBy, clock = clock, linkedTransaction = linkedTransaction)
         }
+
       return location
     } else if (code in getVirtualLocationCodes()) {
       VirtualResidentialLocation(
@@ -435,6 +471,15 @@ data class CreateResidentialLocationRequest(
         childLocations = mutableListOf(),
       )
     }
+    newLocation.addHistory(
+      LocationAttribute.CODE,
+      null,
+      code,
+      createdBy,
+      LocalDateTime.now(clock),
+      linkedTransaction,
+    )
+    return newLocation
   }
 
   fun isCell() = locationType == ResidentialLocationType.CELL
@@ -475,7 +520,7 @@ data class CreateNonResidentialLocationRequest(
   val usage: Set<NonResidentialUsageDto>? = null,
 ) {
 
-  fun toNewEntity(createdBy: String, clock: Clock): NonResidentialLocationJPA {
+  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction): NonResidentialLocationJPA {
     val location = NonResidentialLocationJPA(
       id = null,
       prisonId = prisonId,
@@ -490,6 +535,16 @@ data class CreateNonResidentialLocationRequest(
     usage?.forEach { usage ->
       location.addUsage(usage.usageType, usage.capacity, usage.sequence)
     }
+
+    location.addHistory(
+      LocationAttribute.CODE,
+      null,
+      code,
+      createdBy,
+      LocalDateTime.now(clock),
+      linkedTransaction,
+    )
+
     return location
   }
 }

@@ -21,6 +21,9 @@ class LocationHistory(
   @ManyToOne(fetch = FetchType.LAZY)
   val location: Location,
 
+  @ManyToOne(fetch = FetchType.LAZY, optional = true)
+  val linkedTransaction: LinkedTransaction? = null,
+
   @Enumerated(EnumType.STRING)
   val attributeName: LocationAttribute,
 
@@ -36,6 +39,7 @@ class LocationHistory(
 
   fun toDto() =
     ChangeHistory(
+      transactionId = linkedTransaction?.transactionId,
       attribute = attributeName.description,
       oldValue = oldValue,
       newValue = newValue,

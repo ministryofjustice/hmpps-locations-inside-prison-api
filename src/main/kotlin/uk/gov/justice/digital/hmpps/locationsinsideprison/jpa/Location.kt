@@ -309,6 +309,7 @@ abstract class Location(
     newValue: String?,
     amendedBy: String,
     amendedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
   ): LocationHistory? {
     val old = if (oldValue.isNullOrBlank()) null else oldValue
     val new = if (newValue.isNullOrBlank()) null else newValue
@@ -320,6 +321,7 @@ abstract class Location(
         newValue = new,
         amendedBy = amendedBy,
         amendedDate = amendedDate,
+        linkedTransaction = linkedTransaction,
       )
       history.add(locationHistory)
       return locationHistory
@@ -401,8 +403,20 @@ abstract class Location(
         null
       },
       changeHistory = if (includeHistory) {
-        history.filter { it.attributeName.display }
-          .sortedByDescending { it.amendedDate }.sortedByDescending { it.id }.map { it.toDto() }
+        history.sortedByDescending { it.linkedTransaction?.txStartTime ?: it.amendedDate }.sortedByDescending { it.id }
+          .filter { it.attributeName.display }
+          .map { it.toDto() }
+      } else {
+        null
+      },
+      transactionHistory = if (includeHistory) {
+        history
+          .asSequence()
+          .filter { it.linkedTransaction != null }
+          .groupBy { it.linkedTransaction!! }
+          .map { (transaction, _) -> transaction.toDto(this) }
+          .sortedByDescending { it.txStartTime }
+          .toList()
       } else {
         null
       },
@@ -503,7 +517,7 @@ abstract class Location(
     return getKey().hashCode()
   }
 
-  open fun updateLocalName(localName: String?, userOrSystemInContext: String, clock: Clock) {
+  open fun updateLocalName(localName: String?, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (!isCell()) {
       addHistory(
         LocationAttribute.DESCRIPTION,
@@ -511,6 +525,7 @@ abstract class Location(
         localName,
         userOrSystemInContext,
         LocalDateTime.now(clock),
+        linkedTransaction,
       )
       this.localName = localName
       this.updatedBy = userOrSystemInContext
@@ -518,16 +533,16 @@ abstract class Location(
     }
   }
 
-  open fun updateComments(comments: String?, userOrSystemInContext: String, clock: Clock) {
-    addHistory(LocationAttribute.COMMENTS, this.comments, comments, userOrSystemInContext, LocalDateTime.now(clock))
+  open fun updateComments(comments: String?, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+    addHistory(LocationAttribute.COMMENTS, this.comments, comments, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
     this.comments = comments
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
   }
 
-  open fun updateCode(code: String?, userOrSystemInContext: String, clock: Clock): Location {
+  open fun updateCode(code: String?, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Location {
     if (code != null && this.getCode() != code) {
-      addHistory(LocationAttribute.CODE, getCode(), code, userOrSystemInContext, LocalDateTime.now(clock))
+      addHistory(LocationAttribute.CODE, getCode(), code, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
       setCode(code)
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = LocalDateTime.now(clock)
@@ -537,8 +552,8 @@ abstract class Location(
 
   open fun isConvertedCell(): Boolean = false
 
-  open fun sync(upsert: NomisSyncLocationRequest, clock: Clock): Location {
-    addHistory(LocationAttribute.CODE, getCode(), upsert.code, upsert.lastUpdatedBy, LocalDateTime.now(clock))
+  open fun sync(upsert: NomisSyncLocationRequest, clock: Clock, linkedTransaction: LinkedTransaction): Location {
+    addHistory(LocationAttribute.CODE, getCode(), upsert.code, upsert.lastUpdatedBy, LocalDateTime.now(clock), linkedTransaction)
     setCode(upsert.code)
 
     addHistory(
@@ -547,6 +562,7 @@ abstract class Location(
       upsert.locationType.description,
       upsert.lastUpdatedBy,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
     this.locationType = upsert.locationType
 
@@ -556,6 +572,7 @@ abstract class Location(
       upsert.localName,
       upsert.lastUpdatedBy,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
     this.localName = upsert.localName
 
@@ -565,6 +582,7 @@ abstract class Location(
       upsert.comments,
       upsert.lastUpdatedBy,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
     this.comments = upsert.comments
 
@@ -574,13 +592,14 @@ abstract class Location(
       upsert.orderWithinParentLocation?.toString(),
       upsert.lastUpdatedBy,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
     this.orderWithinParentLocation = upsert.orderWithinParentLocation
 
     this.updatedBy = upsert.lastUpdatedBy
     this.whenUpdated = LocalDateTime.now(clock)
 
-    updateActiveStatusSyncOnly(upsert, clock, upsert.lastUpdatedBy)
+    updateActiveStatusSyncOnly(upsert, clock, upsert.lastUpdatedBy, linkedTransaction)
     return this
   }
 
@@ -588,6 +607,7 @@ abstract class Location(
     upsert: NomisMigrationRequest,
     clock: Clock,
     updatedBy: String,
+    linkedTransaction: LinkedTransaction,
   ) {
     if (upsert.deactivationReason?.mapsTo() != this.deactivatedReason) {
       if (upsert.isDeactivated()) {
@@ -598,9 +618,10 @@ abstract class Location(
           proposedReactivationDate = upsert.proposedReactivationDate,
           userOrSystemInContext = updatedBy,
           clock = clock,
+          linkedTransaction = linkedTransaction,
         )
       } else {
-        reactivate(updatedBy, clock)
+        reactivate(updatedBy, clock, linkedTransaction)
       }
     }
   }
@@ -608,6 +629,7 @@ abstract class Location(
   open fun temporarilyDeactivate(
     deactivatedReason: DeactivatedReason,
     deactivatedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
     deactivationReasonDescription: String? = null,
     planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
@@ -626,6 +648,7 @@ abstract class Location(
           LocationStatus.INACTIVE.description,
           userOrSystemInContext,
           amendedDate,
+          linkedTransaction,
         ) != null
       ) {
         dataChanged = true
@@ -638,6 +661,7 @@ abstract class Location(
           "0",
           userOrSystemInContext,
           LocalDateTime.now(clock),
+          linkedTransaction,
         )
       }
 
@@ -647,6 +671,7 @@ abstract class Location(
           listOfNotBlank(deactivatedReason.description, deactivationReasonDescription).joinToString(" - "),
           userOrSystemInContext,
           amendedDate,
+          linkedTransaction,
         ) != null
       ) {
         dataChanged = true
@@ -657,6 +682,7 @@ abstract class Location(
           proposedReactivationDate?.toString(),
           userOrSystemInContext,
           amendedDate,
+          linkedTransaction,
         ) != null
       ) {
         dataChanged = true
@@ -667,6 +693,7 @@ abstract class Location(
           planetFmReference,
           userOrSystemInContext,
           amendedDate,
+          linkedTransaction,
         ) != null
       ) {
         dataChanged = true
@@ -696,6 +723,7 @@ abstract class Location(
                 deactivatedReason = deactivatedReason,
                 deactivatedDate = deactivatedDate,
                 deactivationReasonDescription = deactivationReasonDescription,
+                linkedTransaction = linkedTransaction,
                 planetFmReference = planetFmReference,
                 proposedReactivationDate = proposedReactivationDate,
                 userOrSystemInContext = userOrSystemInContext,
@@ -713,10 +741,10 @@ abstract class Location(
     return dataChanged
   }
 
-  open fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock): Location {
-    updateCode(upsert.code, userOrSystemInContext, clock)
+  open fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Location {
+    updateCode(upsert.code, userOrSystemInContext, clock, linkedTransaction)
     if (upsert.localName != null && this.localName != upsert.localName) {
-      updateLocalName(upsert.localName, userOrSystemInContext, clock)
+      updateLocalName(upsert.localName, userOrSystemInContext, clock, linkedTransaction)
     }
     return this
   }
@@ -728,6 +756,7 @@ abstract class Location(
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
     clock: Clock,
+    linkedTransaction: LinkedTransaction,
   ) {
     if (!isTemporarilyDeactivated()) {
       log.warn("Location [${getKey()}] is not deactivated")
@@ -739,6 +768,7 @@ abstract class Location(
         listOfNotBlank(deactivatedReason.description, deactivationReasonDescription).joinToString(" - "),
         userOrSystemInContext,
         amendedDate,
+        linkedTransaction,
       )
       addHistory(
         LocationAttribute.PROPOSED_REACTIVATION_DATE,
@@ -746,6 +776,7 @@ abstract class Location(
         proposedReactivationDate?.toString(),
         userOrSystemInContext,
         amendedDate,
+        linkedTransaction,
       )
       addHistory(
         LocationAttribute.PLANET_FM_NUMBER,
@@ -753,6 +784,7 @@ abstract class Location(
         planetFmReference,
         userOrSystemInContext,
         amendedDate,
+        linkedTransaction,
       )
 
       this.deactivatedReason = deactivatedReason
@@ -771,6 +803,7 @@ abstract class Location(
             proposedReactivationDate = proposedReactivationDate,
             userOrSystemInContext = userOrSystemInContext,
             clock = clock,
+            linkedTransaction = linkedTransaction,
           )
         }
       }
@@ -784,6 +817,7 @@ abstract class Location(
     deactivatedDate: LocalDateTime,
     userOrSystemInContext: String,
     clock: Clock,
+    linkedTransaction: LinkedTransaction,
     activeLocationCanBePermDeactivated: Boolean = false,
   ): Boolean {
     if (isPermanentlyDeactivated()) {
@@ -800,6 +834,7 @@ abstract class Location(
         LocationStatus.ARCHIVED.description,
         userOrSystemInContext,
         amendedDate,
+        linkedTransaction,
       )
       addHistory(
         LocationAttribute.PERMANENT_DEACTIVATION,
@@ -807,6 +842,7 @@ abstract class Location(
         reason,
         userOrSystemInContext,
         amendedDate,
+        linkedTransaction,
       )
 
       this.archived = true
@@ -823,8 +859,8 @@ abstract class Location(
 
       if (this is ResidentialLocation) {
         this.cellLocations().filter { !it.isConvertedCell() }.forEach { cellLocation ->
-          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, userOrSystemInContext, clock)
-          cellLocation.deCertifyCell(userOrSystemInContext, clock)
+          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, userOrSystemInContext, clock, linkedTransaction)
+          cellLocation.deCertifyCell(userOrSystemInContext, clock, linkedTransaction)
         }
       }
       log.info("Permanently Deactivated Location [${getKey()}]")
@@ -835,6 +871,7 @@ abstract class Location(
   open fun reactivate(
     userOrSystemInContext: String,
     clock: Clock,
+    linkedTransaction: LinkedTransaction,
     locationsReactivated: MutableSet<Location>? = null,
     maxCapacity: Int? = null,
     workingCapacity: Int? = null,
@@ -844,6 +881,8 @@ abstract class Location(
     this.getParent()?.reactivate(
       userOrSystemInContext = userOrSystemInContext,
       clock = clock,
+      linkedTransaction = linkedTransaction,
+      locationsReactivated = locationsReactivated,
       reactivatedLocations = reactivatedLocations,
       amendedLocations = amendedLocations,
     )
@@ -860,6 +899,7 @@ abstract class Location(
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
         userOrSystemInContext = userOrSystemInContext,
         clock = clock,
+        linkedTransaction = linkedTransaction,
       )
       amendedLocations?.add(this)
       amendedLocations?.addAll(this.getParentLocations())
@@ -873,6 +913,7 @@ abstract class Location(
         LocationStatus.ACTIVE.description,
         userOrSystemInContext,
         amendedDate,
+        linkedTransaction,
       )
       addHistory(
         LocationAttribute.PROPOSED_REACTIVATION_DATE,
@@ -880,6 +921,7 @@ abstract class Location(
         null,
         userOrSystemInContext,
         amendedDate,
+        linkedTransaction,
       )
       addHistory(
         LocationAttribute.PLANET_FM_NUMBER,
@@ -887,6 +929,7 @@ abstract class Location(
         null,
         userOrSystemInContext,
         amendedDate,
+        linkedTransaction,
       )
 
       this.active = true
@@ -900,7 +943,7 @@ abstract class Location(
       this.deactivatedBy = null
 
       if (this is Cell && !isConvertedCell()) {
-        certifyCell(userOrSystemInContext = userOrSystemInContext, clock = clock)
+        certifyCell(userOrSystemInContext = userOrSystemInContext, clock = clock, linkedTransaction = linkedTransaction)
         this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
       }
 
@@ -911,6 +954,7 @@ abstract class Location(
           getWorkingCapacityIgnoreParent().toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
+          linkedTransaction,
         )
       }
       reactivatedLocations?.add(this)

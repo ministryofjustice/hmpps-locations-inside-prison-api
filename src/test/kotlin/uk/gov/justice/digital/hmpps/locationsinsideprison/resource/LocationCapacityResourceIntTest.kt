@@ -13,13 +13,17 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegra
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.Clock
+import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
@@ -34,6 +38,9 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: LocationRepository
+
+  @Autowired
+  lateinit var linkedTransactionRepository: LinkedTransactionRepository
   lateinit var cell1: Cell
   lateinit var cell2: Cell
   lateinit var cell3: Cell
@@ -41,12 +48,21 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
   lateinit var landingZ1: ResidentialLocationJPA
   lateinit var landingZ2: ResidentialLocationJPA
   lateinit var wingZ: ResidentialLocationJPA
+  lateinit var linkedTransaction: LinkedTransaction
 
   @BeforeEach
   fun setUp() {
     prisonerSearchMockServer.resetAll()
     repository.deleteAll()
 
+    linkedTransaction = linkedTransactionRepository.saveAndFlush(
+      LinkedTransaction(
+        transactionType = TransactionType.LOCATION_CREATE,
+        transactionDetail = "Initial Data Load",
+        transactionInvokedBy = EXPECTED_USERNAME,
+        txStartTime = LocalDateTime.now(clock),
+      ),
+    )
     wingZ = repository.save(
       buildResidentialLocation(
         pathHierarchy = "Z",
@@ -71,6 +87,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
         capacity = Capacity(maxCapacity = 2, workingCapacity = 1),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         specialistCellType = SpecialistCellType.LOCATE_FLAT_CELL,
+        linkedTransaction = linkedTransaction,
       ),
     )
     cell2 = repository.save(
@@ -79,6 +96,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         specialistCellType = SpecialistCellType.LISTENER_CRISIS,
+        linkedTransaction = linkedTransaction,
       ),
     )
     cell3 = repository.save(
@@ -87,6 +105,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
         capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
         certification = Certification(certified = true, capacityOfCertifiedCell = 1),
         specialistCellType = SpecialistCellType.SAFE_CELL,
+        linkedTransaction = linkedTransaction,
       ),
     )
     cell4 = repository.save(
@@ -94,6 +113,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
         pathHierarchy = "Z-2-002",
         capacity = Capacity(maxCapacity = 1, workingCapacity = 0),
         certification = Certification(certified = false, capacityOfCertifiedCell = 0),
+        linkedTransaction = linkedTransaction,
       ),
     )
     wingZ.addChildLocation(

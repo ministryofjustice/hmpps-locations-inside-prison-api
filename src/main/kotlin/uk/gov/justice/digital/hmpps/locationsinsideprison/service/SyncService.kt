@@ -11,14 +11,18 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import java.time.Clock
+import java.time.LocalDateTime
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 
@@ -26,6 +30,7 @@ import kotlin.jvm.optionals.getOrNull
 @Transactional
 open class SyncService(
   private val locationRepository: LocationRepository,
+  private val linkedTransactionRepository: LinkedTransactionRepository,
   private val entityManager: EntityManager,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
@@ -40,10 +45,12 @@ open class SyncService(
   }
 
   fun sync(upsert: NomisSyncLocationRequest): LegacyLocation {
+    val linkedTransaction = createLinkedTransaction(TransactionType.SYNC, "NOMIS Sync ${upsert.code} in prison ${upsert.prisonId}", upsert.lastUpdatedBy)
+
     val location = if (upsert.id != null) {
-      updateLocation(upsert.id, upsert)
+      updateLocation(upsert.id, upsert, linkedTransaction)
     } else {
-      createLocation(upsert)
+      createLocation(upsert, linkedTransaction)
     }
 
     log.info("Synchronised Location: ${location.id} (created: ${upsert.id == null}, updated: ${upsert.id != null})")
@@ -58,11 +65,15 @@ open class SyncService(
       ),
       null,
     )
-    return location
+    return location.also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   fun migrate(upsert: NomisMigrationRequest): LegacyLocation {
-    val location = createLocation(upsert)
+    val linkedTransaction = createLinkedTransaction(TransactionType.MIGRATE, "NOMIS Migration ${upsert.code} in prison ${upsert.prisonId}", upsert.lastUpdatedBy)
+
+    val location = createLocation(upsert, linkedTransaction)
 
     log.info("Migrated Location: ${location.id}")
     telemetryClient.trackEvent(
@@ -74,10 +85,12 @@ open class SyncService(
       ),
       null,
     )
-    return location
+    return location.also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
-  private fun updateLocation(id: UUID, upsert: NomisSyncLocationRequest): LegacyLocation {
+  private fun updateLocation(id: UUID, upsert: NomisSyncLocationRequest, linkedTransaction: LinkedTransaction): LegacyLocation {
     var locationToUpdate = locationRepository.findById(id).getOrNull()
       ?: throw LocationNotFoundException(id.toString())
 
@@ -89,21 +102,24 @@ open class SyncService(
       throw PermanentlyDeactivatedUpdateNotAllowedException("Location ${locationToUpdate.getKey()} cannot be updated as has been converted to non-res cell")
     }
 
-    locationToUpdate = handleChangeOfType(id, locationToUpdate, upsert)
+    locationToUpdate = handleChangeOfType(id, locationToUpdate, upsert, linkedTransaction)
 
     findParent(upsert)?.let { parent ->
       if (parent.id == id) throw ValidationException("Cannot set parent to self")
       locationToUpdate.setParent(parent)
     }
-    locationToUpdate.sync(upsert, clock)
+    locationToUpdate.sync(upsert, clock, linkedTransaction)
 
-    return locationToUpdate.toLegacyDto()
+    return locationToUpdate.toLegacyDto().also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   private fun handleChangeOfType(
     id: UUID,
     location: Location,
     upsert: NomisSyncLocationRequest,
+    linkedTransaction: LinkedTransaction,
   ): Location {
     var clearSessionRequired = false
     if (upsert.residentialHousingType == null) {
@@ -116,7 +132,7 @@ open class SyncService(
       }
     } else {
       if (location is NonResidentialLocation) {
-        location.updateUsage(emptySet(), upsert.lastUpdatedBy, clock)
+        location.updateUsage(emptySet(), upsert.lastUpdatedBy, clock, linkedTransaction)
         locationRepository.updateResidentialHousingType(id, upsert.residentialHousingType.name, upsert.residentialHousingType.mapToAccommodationType().name)
         clearSessionRequired = true
       }
@@ -145,8 +161,8 @@ open class SyncService(
     return locationRepository.findById(id).getOrNull() ?: throw LocationNotFoundException(id.toString())
   }
 
-  private fun createLocation(upsert: NomisMigrationRequest): LegacyLocation {
-    val locationToCreate = upsert.toNewEntity(clock)
+  private fun createLocation(upsert: NomisMigrationRequest, linkedTransaction: LinkedTransaction): LegacyLocation {
+    val locationToCreate = upsert.toNewEntity(clock, linkedTransaction)
     findParent(upsert)?.let { locationToCreate.setParent(it) }
     return locationRepository.save(locationToCreate).toLegacyDto()
   }
@@ -181,5 +197,15 @@ open class SyncService(
       )
     }?.toLegacyDto()
       ?: throw LocationNotFoundException(id.toString())
+  }
+
+  private fun createLinkedTransaction(type: TransactionType, detail: String, transactionInvokedBy: String): LinkedTransaction {
+    val linkedTransaction = LinkedTransaction(
+      transactionType = type,
+      transactionDetail = detail,
+      transactionInvokedBy = transactionInvokedBy,
+      txStartTime = LocalDateTime.now(clock),
+    )
+    return linkedTransactionRepository.save(linkedTransaction)
   }
 }
