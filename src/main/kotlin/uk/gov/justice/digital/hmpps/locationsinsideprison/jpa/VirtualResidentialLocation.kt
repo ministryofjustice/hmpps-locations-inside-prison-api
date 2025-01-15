@@ -125,9 +125,9 @@ open class VirtualResidentialLocation(
       ),
     )
 
-  override fun sync(upsert: NomisSyncLocationRequest, clock: Clock): VirtualResidentialLocation {
-    super.sync(upsert, clock)
-    handleNomisCapacitySync(upsert, upsert.lastUpdatedBy, clock)
+  override fun sync(upsert: NomisSyncLocationRequest, clock: Clock, linkedTransaction: LinkedTransaction): VirtualResidentialLocation {
+    super.sync(upsert, clock, linkedTransaction)
+    handleNomisCapacitySync(upsert, upsert.lastUpdatedBy, clock, linkedTransaction)
     return this
   }
 }

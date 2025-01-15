@@ -311,6 +311,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
             certification = Certification(certified = true, capacityOfCertifiedCell = 2),
             specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+            linkedTransaction = linkedTransaction,
           ),
         )
 
@@ -411,16 +412,66 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody()
-          .consumeWith(System.out::println)
-          .jsonPath("$.changeHistory[0].oldValue").isEqualTo("Dry cell, Safe cell")
-          .jsonPath("$.changeHistory[0].newValue").doesNotExist()
-          .jsonPath("$.changeHistory[1].oldValue").isEqualTo("Medical cell")
-          .jsonPath("$.changeHistory[1].newValue").isEqualTo("Dry cell, Safe cell")
-          .jsonPath("$.changeHistory[2].oldValue").isEqualTo("Biohazard / dirty protest cell, Constant supervision cell, Safe cell")
-          .jsonPath("$.changeHistory[2].newValue").isEqualTo("Medical cell")
-          .jsonPath("$.changeHistory[3].newValue").isEqualTo("Biohazard / dirty protest cell, Constant supervision cell, Safe cell")
-          .jsonPath("$.changeHistory[3].oldValue").doesNotExist()
+          .expectBody().json(
+            """
+              {
+              "key": "MDI-Z-1-001",
+              "changeHistory": [
+                {
+                  "attribute": "Cell type",
+                  "multipleValues": true,
+                  "oldValues": [
+                    "Safe cell",
+                    "Dry cell"
+                  ],
+                  "transactionType": "CELL_TYPE_CHANGES"
+                },
+                {
+                  "attribute": "Cell type",
+                  "multipleValues": true,
+                  "oldValues": [
+                    "Medical cell"
+                  ],
+                  "newValues": [
+                    "Safe cell",
+                    "Dry cell"
+                  ],
+                  "transactionType": "CELL_TYPE_CHANGES"
+                },
+                {
+                  "attribute": "Cell type",
+                  "multipleValues": true,
+                  "oldValues": [
+                    "Constant supervision cell",
+                    "Safe cell",
+                    "Biohazard / dirty protest cell"
+                  ],
+                  "newValues": [
+                    "Medical cell"
+                  ],
+                  "transactionType": "CELL_TYPE_CHANGES"
+                },
+                {
+                  "attribute": "Cell type",
+                  "multipleValues": true,
+                  "newValues": [
+                    "Safe cell",
+                    "Constant supervision cell",
+                    "Biohazard / dirty protest cell"
+                  ],
+                  "transactionType": "CELL_TYPE_CHANGES"
+                },
+                {
+                  "attribute": "Used for",
+                  "multipleValues": false,
+                  "newValue": "Standard accommodation",
+                  "transactionType": "LOCATION_CREATE"
+                }
+              ]
+            }
+            """.trimIndent(),
+            false,
+          )
       }
     }
   }

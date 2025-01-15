@@ -7,6 +7,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
@@ -17,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
 import java.time.LocalDateTime
+import java.util.*
 
 fun buildResidentialLocation(
   prisonId: String = "MDI",
@@ -72,6 +74,7 @@ fun buildCell(
   archived: Boolean = false,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
   accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+  linkedTransaction: LinkedTransaction,
 ): Cell {
   val cell = Cell(
     prisonId = prisonId,
@@ -98,13 +101,15 @@ fun buildCell(
     },
   )
   cell.addAttributes(residentialAttributeValues)
-  specialistCellType?.let { cell.updateCellSpecialistCellTypes(setOf(it), EXPECTED_USERNAME, clock) }
-  cell.updateCellUsedFor(setOf(UsedForType.STANDARD_ACCOMMODATION), EXPECTED_USERNAME, clock)
+
+  specialistCellType?.let { cell.updateCellSpecialistCellTypes(setOf(it), EXPECTED_USERNAME, clock, linkedTransaction) }
+  cell.updateCellUsedFor(setOf(UsedForType.STANDARD_ACCOMMODATION), EXPECTED_USERNAME, clock, linkedTransaction)
   if (archived) {
-    cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), EXPECTED_USERNAME, clock)
+    cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), EXPECTED_USERNAME, clock, linkedTransaction)
   }
   return cell
 }
+
 fun buildNonResidentialLocation(
   prisonId: String = "MDI",
   pathHierarchy: String,

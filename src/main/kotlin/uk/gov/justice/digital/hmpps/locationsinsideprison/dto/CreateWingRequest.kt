@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
@@ -44,7 +45,7 @@ data class CreateWingRequest(
   val defaultCellCapacity: Int = 1,
 ) {
 
-  fun toEntity(createdBy: String, clock: Clock): ResidentialLocation {
+  fun toEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction): ResidentialLocation {
     val wing = ResidentialLocation(
       prisonId = prisonId,
       code = wingCode,
@@ -118,7 +119,7 @@ data class CreateWingRequest(
             capacityOfCertifiedCell = defaultCellCapacity,
           ),
         )
-        cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock)
+        cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction = linkedTransaction)
         leaf.addChildLocation(cell)
         LocationService.log.info("Created Cell [${cell.getKey()}]")
       }

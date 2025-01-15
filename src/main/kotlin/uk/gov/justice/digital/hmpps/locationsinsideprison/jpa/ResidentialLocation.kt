@@ -145,22 +145,24 @@ open class ResidentialLocation(
 
   private fun getInactiveCellCount() = cellLocations().count { it.isTemporarilyDeactivated() }
 
-  fun updateCellUsedFor(setOfUsedFor: Set<UsedForType>, userOrSystemInContext: String, clock: Clock) {
-    cellLocations().forEach { it.updateUsedFor(setOfUsedFor, userOrSystemInContext, clock) }
+  fun updateCellUsedFor(setOfUsedFor: Set<UsedForType>, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+    cellLocations().forEach { it.updateUsedFor(setOfUsedFor, userOrSystemInContext, clock, linkedTransaction) }
   }
 
   fun updateCellSpecialistCellTypes(
     specialistCellTypes: Set<SpecialistCellType>,
     userOrSystemInContext: String,
     clock: Clock,
+    linkedTransaction: LinkedTransaction,
   ) {
-    cellLocations().forEach { it.updateSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock) }
+    cellLocations().forEach { it.updateSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction) }
   }
 
   protected fun handleNomisCapacitySync(
     upsert: NomisSyncLocationRequest,
     userOrSystemInContext: String,
     clock: Clock,
+    linkedTransaction: LinkedTransaction,
   ) {
     upsert.capacity?.let {
       with(upsert.capacity) {
@@ -170,6 +172,7 @@ open class ResidentialLocation(
           maxCapacity.toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
+          linkedTransaction,
         )
         addHistory(
           LocationAttribute.OPERATIONAL_CAPACITY,
@@ -177,6 +180,7 @@ open class ResidentialLocation(
           workingCapacity.toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
+          linkedTransaction,
         )
 
         if (capacity != null) {
@@ -188,8 +192,8 @@ open class ResidentialLocation(
     }
   }
 
-  override fun sync(upsert: NomisSyncLocationRequest, clock: Clock): ResidentialLocation {
-    super.sync(upsert, clock)
+  override fun sync(upsert: NomisSyncLocationRequest, clock: Clock, linkedTransaction: LinkedTransaction): ResidentialLocation {
+    super.sync(upsert, clock, linkedTransaction)
 
     addHistory(
       LocationAttribute.RESIDENTIAL_HOUSING_TYPE,
@@ -197,6 +201,7 @@ open class ResidentialLocation(
       upsert.residentialHousingType?.description,
       upsert.lastUpdatedBy,
       LocalDateTime.now(clock),
+      linkedTransaction,
     )
     upsert.residentialHousingType?.let {
       this.residentialHousingType = it
@@ -272,8 +277,8 @@ open class ResidentialLocation(
     )
   }
 
-  override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock): ResidentialLocation {
-    super.update(upsert, userOrSystemInContext, clock)
+  override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): ResidentialLocation {
+    super.update(upsert, userOrSystemInContext, clock, linkedTransaction)
 
     if (upsert is PatchResidentialLocationRequest) {
       upsert.locationType?.let {
@@ -285,6 +290,7 @@ open class ResidentialLocation(
           it.description,
           userOrSystemInContext,
           LocalDateTime.now(clock),
+          linkedTransaction,
         )
       }
     }
@@ -301,7 +307,7 @@ open class ResidentialLocation(
       certified = hasCertifiedCells(),
     )
 
-  open fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock) {
+  open fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (isCell() || isVirtualResidentialLocation()) {
       if (workingCapacity > 99) {
         throw CapacityException(
@@ -330,6 +336,7 @@ open class ResidentialLocation(
         maxCapacity.toString(),
         userOrSystemInContext,
         LocalDateTime.now(clock),
+        linkedTransaction,
       )
       addHistory(
         LocationAttribute.OPERATIONAL_CAPACITY,
@@ -337,6 +344,7 @@ open class ResidentialLocation(
         workingCapacity.toString(),
         userOrSystemInContext,
         LocalDateTime.now(clock),
+        linkedTransaction,
       )
 
       log.info("${getKey()}: Updating max capacity from ${capacity?.maxCapacity ?: 0} to $maxCapacity and working capacity from ${capacity?.workingCapacity ?: 0} to $workingCapacity")

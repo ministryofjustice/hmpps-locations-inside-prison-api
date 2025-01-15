@@ -17,12 +17,14 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisDeactivatedRe
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrateLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -32,6 +34,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationHistoryRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
@@ -58,6 +62,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var locationHistoryRepository: LocationHistoryRepository
+
+  @Autowired
+  lateinit var linkedTransactionRepository: LinkedTransactionRepository
+
   lateinit var wingB: ResidentialLocation
   lateinit var landing1: ResidentialLocation
 
@@ -66,6 +74,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var room: ResidentialLocation
   lateinit var nonRes: NonResidentialLocation
   lateinit var locationHistory: LocationHistory
+  lateinit var linkedTransaction: LinkedTransaction
 
   fun migrateRequestGeneration(deactivationReason: NomisDeactivatedReason, code: String? = null): NomisMigrateLocationRequest {
     var migrateRequest = NomisMigrateLocationRequest(
@@ -108,6 +117,15 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     locationHistoryRepository.deleteAll()
     repository.deleteAll()
 
+    linkedTransaction = linkedTransactionRepository.save(
+      LinkedTransaction(
+        transactionType = TransactionType.LOCATION_CREATE,
+        transactionDetail = "Initial Data Load",
+        transactionInvokedBy = EXPECTED_USERNAME,
+        txStartTime = LocalDateTime.now(clock),
+      ),
+    )
+
     wingB = repository.save(
       buildResidentialLocation(
         prisonId = "ZZGHI",
@@ -131,6 +149,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       certification = Certification(certified = true, capacityOfCertifiedCell = 1),
       residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+      linkedTransaction = linkedTransaction,
     )
     nonRes = repository.save(
       buildNonResidentialLocation(
@@ -154,6 +173,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         pathHierarchy = "B-1-013",
         archived = true,
         active = false,
+        linkedTransaction = linkedTransaction,
       ),
     )
     locationHistory = cell.addHistory(
@@ -162,6 +182,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       newValue = "1",
       amendedBy = "user",
       amendedDate = LocalDateTime.now(clock).minusYears(2),
+      linkedTransaction = linkedTransaction,
     )!!
     cell = repository.save(cell)
 

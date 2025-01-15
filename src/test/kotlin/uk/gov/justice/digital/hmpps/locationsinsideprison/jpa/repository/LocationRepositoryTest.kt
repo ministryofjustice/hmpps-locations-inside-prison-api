@@ -10,12 +10,14 @@ import org.springframework.test.context.transaction.TestTransaction
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
@@ -24,10 +26,12 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.*
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -37,6 +41,9 @@ class LocationRepositoryTest : TestBase() {
   @Autowired
   lateinit var repository: LocationRepository
 
+  @Autowired
+  lateinit var linkedTransactionRepository: LinkedTransactionRepository
+
   @BeforeEach
   fun setUp() {
     repository.deleteAll()
@@ -44,6 +51,16 @@ class LocationRepositoryTest : TestBase() {
 
   @Test
   fun findCellsOnAWingTest() {
+    val linkedTransaction = linkedTransactionRepository.saveAndFlush(
+      LinkedTransaction(
+        transactionInvokedBy = EXPECTED_USERNAME,
+        transactionType = TransactionType.LOCATION_CREATE,
+        transactionDetail = "TEST",
+        txStartTime = LocalDateTime.now(clock),
+        txEndTime = LocalDateTime.now(clock),
+      ),
+    )
+
     val wing = buildResLocation("A", locationType = LocationType.WING)
     val landing1 = buildResLocation("A-1", locationType = LocationType.LANDING)
     val landing2 = buildResLocation("A-2", locationType = LocationType.LANDING)
@@ -84,8 +101,8 @@ class LocationRepositoryTest : TestBase() {
     assertThat(location.findAllLeafLocations()).containsExactlyInAnyOrder(cell001L1, cell002L1, cell002L2, adjRoom)
     location.findAllLeafLocations().forEach {
       if (it is Cell) {
-        it.setCapacity(workingCapacity = 2, maxCapacity = 2, userOrSystemInContext = "test", clock = clock)
-        it.certifyCell(userOrSystemInContext = "test", clock = clock)
+        it.setCapacity(workingCapacity = 2, maxCapacity = 2, userOrSystemInContext = "test", clock = clock, linkedTransaction = linkedTransaction)
+        it.certifyCell(userOrSystemInContext = "test", clock = clock, linkedTransaction = linkedTransaction)
       }
     }
 
@@ -125,7 +142,7 @@ class LocationRepositoryTest : TestBase() {
     val cell3Renamed = repository.findOneByPrisonIdAndPathHierarchy(cell3.prisonId, cell3.getPathHierarchy()) ?: throw Exception("Location not found")
     assertThat(cell3Renamed.getPathHierarchy()).isEqualTo("T-1-003")
 
-    (cell3Renamed as Cell).convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = "test", clock = clock)
+    (cell3Renamed as Cell).convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = "test", clock = clock, linkedTransaction = linkedTransaction)
 
     TestTransaction.flagForCommit()
     TestTransaction.end()
@@ -144,6 +161,7 @@ class LocationRepositoryTest : TestBase() {
       workingCapacity = 1,
       userOrSystemInContext = "test",
       clock = clock,
+      linkedTransaction = linkedTransaction,
     )
 
     TestTransaction.flagForCommit()

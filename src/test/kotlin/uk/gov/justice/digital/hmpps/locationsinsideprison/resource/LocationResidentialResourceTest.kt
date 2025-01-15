@@ -1002,6 +1002,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           deactivatedDate = LocalDateTime.now(clock),
           userOrSystemInContext = EXPECTED_USERNAME,
           clock = clock,
+          linkedTransaction = linkedTransaction,
         )
 
         landingZ1.permanentlyDeactivate(
@@ -1009,6 +1010,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           deactivatedDate = LocalDateTime.now(clock),
           userOrSystemInContext = EXPECTED_USERNAME,
           clock = clock,
+          linkedTransaction = linkedTransaction,
         )
         repository.save(landingZ1)
 
@@ -2538,6 +2540,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           otherConvertedCellType = "Playroom",
           userOrSystemInContext = EXPECTED_USERNAME,
           clock = clock,
+          linkedTransaction = linkedTransaction,
         )
         repository.save(cell1)
 
@@ -2717,6 +2720,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           convertedCellType = ConvertedCellType.OTHER,
           userOrSystemInContext = "Aleman",
           clock = clock,
+          linkedTransaction = linkedTransaction,
         )
         repository.save(cell1)
         // request has not valid data
@@ -2734,6 +2738,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           convertedCellType = ConvertedCellType.OTHER,
           userOrSystemInContext = "Aleman",
           clock = clock,
+          linkedTransaction = linkedTransaction,
         )
         repository.save(cell1)
 
@@ -2765,6 +2770,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           convertedCellType = ConvertedCellType.OTHER,
           userOrSystemInContext = "Aleman",
           clock = clock,
+          linkedTransaction = linkedTransaction,
         )
         repository.save(cell1)
 
@@ -2786,6 +2792,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           convertedCellType = ConvertedCellType.OTHER,
           userOrSystemInContext = "Aleman",
           clock = clock,
+          linkedTransaction = linkedTransaction,
         )
         repository.save(cell1)
 
@@ -2844,7 +2851,10 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   {
                     "attribute": "Cell type",
-                    "newValue": "Accessible cell, Isolation cell for communicable diseases"
+                    "newValues": [
+                        "Accessible cell",
+                        "Isolation cell for communicable diseases"
+                    ]
                   },
                   {
                     "attribute": "Used for",
@@ -2903,6 +2913,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         convertedCellType = ConvertedCellType.OTHER,
         userOrSystemInContext = "Aleman",
         clock = clock,
+        linkedTransaction = linkedTransaction,
       )
       repository.save(cell1)
 
@@ -2937,6 +2948,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         convertedCellType = ConvertedCellType.OTHER,
         userOrSystemInContext = "Aleman",
         clock = clock,
+        linkedTransaction = linkedTransaction,
       )
       repository.save(cell1)
 

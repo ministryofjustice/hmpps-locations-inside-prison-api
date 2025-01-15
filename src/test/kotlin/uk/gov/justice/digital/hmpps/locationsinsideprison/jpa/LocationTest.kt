@@ -3,10 +3,13 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.*
 
 class LocationTest {
 
@@ -19,9 +22,18 @@ class LocationTest {
   fun `location history filters out duplicates`() {
     val location = generateCellLocation()
 
+    val linkedTransaction = LinkedTransaction(
+      transactionId = UUID.randomUUID(),
+      transactionInvokedBy = EXPECTED_USERNAME,
+      transactionType = TransactionType.LOCATION_CREATE,
+      transactionDetail = "TEST",
+      txStartTime = LocalDateTime.now(TestBase.clock),
+      txEndTime = LocalDateTime.now(TestBase.clock),
+    )
+
     val now = LocalDateTime.now(clock)
-    val history1 = location.addHistory(LocationAttribute.ATTRIBUTES, null, "new", "user", now)
-    val history2 = location.addHistory(LocationAttribute.ATTRIBUTES, null, "new", "user", now)
+    val history1 = location.addHistory(LocationAttribute.ATTRIBUTES, null, "new", "user", now, linkedTransaction)
+    val history2 = location.addHistory(LocationAttribute.ATTRIBUTES, null, "new", "user", now, linkedTransaction)
 
     assertThat(history1).isEqualTo(history2)
     assertThat(location.getHistoryAsList()).hasSize(1)

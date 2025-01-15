@@ -17,7 +17,7 @@ import java.time.LocalDateTime
 
 @Service
 @Transactional(readOnly = true)
-open class SignedOperationCapacityService(
+class SignedOperationCapacityService(
   private val locationService: LocationService,
   private val prisonSignedOperationalCapacityRepository: PrisonSignedOperationCapacityRepository,
   private val telemetryClient: TelemetryClient,
@@ -32,7 +32,7 @@ open class SignedOperationCapacityService(
   }
 
   @Transactional
-  open fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignOpCapResult {
+  fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignOpCapResult {
     var newRecord = true
 
     val maxCap = locationService.getResidentialLocations(request.prisonId).prisonSummary?.maxCapacity ?: throw PrisonNotFoundException(request.prisonId)

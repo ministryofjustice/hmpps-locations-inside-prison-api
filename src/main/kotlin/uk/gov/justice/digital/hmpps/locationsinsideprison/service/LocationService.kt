@@ -30,6 +30,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
@@ -39,8 +40,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
@@ -81,6 +84,7 @@ class LocationService(
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val signedOperationCapacityRepository: PrisonSignedOperationCapacityRepository,
   private val cellLocationRepository: CellLocationRepository,
+  private val linkedTransactionRepository: LinkedTransactionRepository,
   private val entityManager: EntityManager,
   private val prisonerLocationService: PrisonerLocationService,
   private val prisonService: PrisonService,
@@ -245,7 +249,9 @@ class LocationService(
       prisonId = request.prisonId,
     ) // check that code doesn't clash with existing location
 
-    val locationToCreate = request.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_CREATE, "Create residential location ${request.code} in prison ${request.prisonId} under ${parentLocation?.getKey() ?: "top level"}")
+
+    val locationToCreate = request.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock, linkedTransaction = linkedTransaction)
     parentLocation?.let { locationToCreate.setParent(it) }
 
     val capacityChanged = request.isCell() && request.capacity != null
@@ -255,7 +261,19 @@ class LocationService(
     log.info("Created Residential Location [${createdLocation.getKey()}]")
     trackLocationUpdate(createdLocation, "Created Residential Location")
 
-    return createdLocation.toDto(includeParent = capacityChanged)
+    return createdLocation.toDto(includeParent = capacityChanged).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  private fun createLinkedTransaction(type: TransactionType, detail: String): LinkedTransaction {
+    val linkedTransaction = LinkedTransaction(
+      transactionType = type,
+      transactionDetail = detail,
+      transactionInvokedBy = authenticationFacade.getUserOrSystemInContext(),
+      txStartTime = LocalDateTime.now(clock),
+    )
+    return linkedTransactionRepository.save(linkedTransaction)
   }
 
   @Transactional
@@ -268,7 +286,9 @@ class LocationService(
       prisonId = request.prisonId,
     ) // check that code doesn't clash with existing location
 
-    val locationToCreate = request.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock)
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_CREATE, "Create non-residential location ${request.code} in prison ${request.prisonId} under ${parentLocation?.getKey() ?: "top level"}")
+
+    val locationToCreate = request.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock, linkedTransaction)
     parentLocation?.let { locationToCreate.setParent(it) }
 
     val usageChanged = request.usage != null
@@ -278,7 +298,9 @@ class LocationService(
     log.info("Created Non-Residential Location [${createdLocation.getKey()}]")
     trackLocationUpdate(createdLocation, "Created Non-Residential Location")
 
-    return createdLocation.toDto(includeParent = usageChanged)
+    return createdLocation.toDto(includeParent = usageChanged).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
@@ -286,16 +308,24 @@ class LocationService(
     locationRepository.findOneByPrisonIdAndPathHierarchy(createWingRequest.prisonId, createWingRequest.wingCode)
       ?.let { throw LocationAlreadyExistsException("${createWingRequest.prisonId}-${createWingRequest.wingCode}") }
 
-    val wing = createWingRequest.toEntity(authenticationFacade.getUserOrSystemInContext(), clock)
-    return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false)
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_CREATE, "Create wing ${createWingRequest.wingCode} in prison ${createWingRequest.prisonId}")
+
+    val wing = createWingRequest.toEntity(authenticationFacade.getUserOrSystemInContext(), clock, linkedTransaction)
+    return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
   fun updateResidentialLocation(id: UUID, patchLocationRequest: PatchResidentialLocationRequest): UpdateLocationResult {
     val residentialLocation =
       residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
-    return patchLocation(residentialLocation, patchLocationRequest).also {
+
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_UPDATE, "Update residential location ${residentialLocation.getKey()}")
+
+    return patchLocation(residentialLocation, patchLocationRequest, linkedTransaction).also {
       trackLocationUpdate(it.location)
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }
 
@@ -305,8 +335,12 @@ class LocationService(
     patchLocationRequest: PatchResidentialLocationRequest,
   ): UpdateLocationResult {
     val residentialLocation = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
-    return patchLocation(residentialLocation, patchLocationRequest).also {
+
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_UPDATE, "Update residential location ${residentialLocation.getKey()}")
+
+    return patchLocation(residentialLocation, patchLocationRequest, linkedTransaction).also {
       trackLocationUpdate(it.location)
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }
 
@@ -317,8 +351,12 @@ class LocationService(
   ): UpdateLocationResult {
     val nonResLocation =
       nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
-    return patchLocation(nonResLocation, patchLocationRequest).also {
+
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_UPDATE, "Update non-residential location ${nonResLocation.getKey()}")
+
+    return patchLocation(nonResLocation, patchLocationRequest, linkedTransaction).also {
       trackLocationUpdate(it.location)
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }
 
@@ -328,18 +366,22 @@ class LocationService(
     patchLocationRequest: PatchNonResidentialLocationRequest,
   ): UpdateLocationResult {
     val nonResLocation = nonResidentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
-    return patchLocation(nonResLocation, patchLocationRequest).also {
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_UPDATE, "Update non-residential location ${nonResLocation.getKey()}")
+
+    return patchLocation(nonResLocation, patchLocationRequest, linkedTransaction).also {
       trackLocationUpdate(it.location)
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }
 
   private fun patchLocation(
     location: Location,
     patchLocationRequest: PatchLocationRequest,
+    linkedTransaction: LinkedTransaction,
   ): UpdateLocationResult {
-    val (codeChanged, oldParent, parentChanged) = updateCoreLocationDetails(location, patchLocationRequest)
+    val (codeChanged, oldParent, parentChanged) = updateCoreLocationDetails(location, patchLocationRequest, linkedTransaction)
 
-    location.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock)
+    location.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock, linkedTransaction)
 
     return UpdateLocationResult(
       location.toDto(
@@ -356,21 +398,27 @@ class LocationService(
     val residentialLocation = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_UPDATE, "Updated Used for types for below location ${residentialLocation.getKey()}")
+
     residentialLocation.updateCellUsedFor(
       usedFor,
       authenticationFacade.getUserOrSystemInContext(),
       clock,
+      linkedTransaction,
     )
 
     log.info("Updated Used for types for below Location [$residentialLocation.getKey()]")
     trackLocationUpdate(residentialLocation, "Updated Used For Type below Residential Location")
 
-    return residentialLocation.toDto(includeChildren = true, includeNonResidential = false)
+    return residentialLocation.toDto(includeChildren = true, includeNonResidential = false).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   private fun updateCoreLocationDetails(
     locationToUpdate: Location,
     patchLocationRequest: PatchLocationRequest,
+    linkedTransaction: LinkedTransaction,
   ): UpdatedSummary {
     if (locationToUpdate.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(locationToUpdate.getKey())
@@ -412,6 +460,7 @@ class LocationService(
           theParent?.id?.toString(),
           authenticationFacade.getUserOrSystemInContext(),
           LocalDateTime.now(clock),
+          linkedTransaction,
         )
       }
     }
@@ -427,6 +476,8 @@ class LocationService(
       throw PermanentlyDeactivatedUpdateNotAllowedException(locCapChange.getKey())
     }
 
+    val linkedTransaction = createLinkedTransaction(TransactionType.CAPACITY_CHANGE, "Capacity of ${locCapChange.getKey()} changed from ${locCapChange.calcWorkingCapacity()} to $workingCapacity")
+
     val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
     if (maxCapacity < prisoners.size) {
       throw CapacityException(
@@ -441,6 +492,7 @@ class LocationService(
       workingCapacity = workingCapacity,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
+      linkedTransaction = linkedTransaction,
     )
 
     telemetryClient.trackEvent(
@@ -453,7 +505,9 @@ class LocationService(
       ),
       null,
     )
-    return locCapChange.toDto(includeParent = true, includeNonResidential = false)
+    return locCapChange.toDto(includeParent = true, includeNonResidential = false).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
@@ -474,10 +528,13 @@ class LocationService(
       )
     }
 
+    val linkedTransaction = createLinkedTransaction(TransactionType.CELL_TYPE_CHANGES, "Update cell types for ${cell.getKey()}")
+
     cell.updateSpecialistCellTypes(
       specialistCellTypes,
       authenticationFacade.getUserOrSystemInContext(),
       clock,
+      linkedTransaction,
     )
     log.info("Updated specialist cell types = $specialistCellTypes")
 
@@ -490,7 +547,9 @@ class LocationService(
       ),
       null,
     )
-    return cell.toDto(includeParent = false, includeNonResidential = false)
+    return cell.toDto(includeParent = false, includeNonResidential = false).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
@@ -501,6 +560,8 @@ class LocationService(
     if (location.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(location.getKey())
     }
+
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_UPDATE, "Updated local name for ${location.getKey()}")
 
     with(updateLocationLocalNameRequest) {
       if (localName != null) {
@@ -519,18 +580,23 @@ class LocationService(
         localName = localName,
         userOrSystemInContext = updatedBy ?: authenticationFacade.getUserOrSystemInContext(),
         clock = clock,
+        linkedTransaction,
       )
     }
 
     log.info("Location local name updated [${location.getKey()}")
     trackLocationUpdate(location, "Location local name updated")
 
-    return location.toDto()
+    return location.toDto().also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
   fun deactivateLocations(locationsToDeactivate: DeactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val deactivatedLocations = mutableSetOf<Location>()
+
+    val linkedTransaction = createLinkedTransaction(TransactionType.DEACTIVATION, "Deactivating locations")
 
     locationsToDeactivate.locations.forEach { (id, deactivationDetail) ->
       val locationToDeactivate = locationRepository.findById(id)
@@ -556,6 +622,7 @@ class LocationService(
             userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
             clock = clock,
             deactivatedLocations = deactivatedLocations,
+            linkedTransaction = linkedTransaction,
           )
         ) {
           deactivatedLocations.forEach {
@@ -573,12 +640,16 @@ class LocationService(
         deactivatedLocationsDto,
       ).toList(),
       InternalLocationDomainEventType.LOCATION_DEACTIVATED to deactivatedLocationsDto.toList(),
-    )
+    ).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
   fun permanentlyDeactivateLocations(permanentDeactivationRequest: BulkPermanentDeactivationRequest, activeLocationCanBePermDeactivated: Boolean = false): List<LocationDTO> {
     val deactivatedLocations = mutableSetOf<Location>()
+    val linkedTransaction = createLinkedTransaction(TransactionType.PERMANENT_DEACTIVATION, "Permanently deactivating locations")
+
     permanentDeactivationRequest.locations.forEach { key ->
       val locationToPermanentlyDeactivate = locationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
 
@@ -588,6 +659,7 @@ class LocationService(
           userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
           clock = clock,
           activeLocationCanBePermDeactivated = activeLocationCanBePermDeactivated,
+          linkedTransaction = linkedTransaction,
         )
       ) {
         deactivatedLocations.add(locationToPermanentlyDeactivate)
@@ -596,7 +668,9 @@ class LocationService(
     deactivatedLocations.forEach {
       trackLocationUpdate(it, "Permanently deactivated location")
     }
-    return deactivatedLocations.map { it.toDto() }
+    return deactivatedLocations.map { it.toDto() }.also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
@@ -613,6 +687,9 @@ class LocationService(
     if (deactivatedReason == DeactivatedReason.OTHER && deactivationReasonDescription.isNullOrBlank()) {
       throw ReasonForDeactivationMustBeProvidedException(locationToUpdate.getKey())
     }
+
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_UPDATE, "Temporarily deactivated location details updated for ${locationToUpdate.getKey()}")
+
     if (locationToUpdate.isTemporarilyDeactivated()) {
       locationToUpdate.updateDeactivatedDetails(
         deactivatedReason = deactivatedReason,
@@ -621,6 +698,7 @@ class LocationService(
         proposedReactivationDate = proposedReactivationDate,
         userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
         clock = clock,
+        linkedTransaction = linkedTransaction,
       )
 
       telemetryClient.trackEvent(
@@ -633,7 +711,9 @@ class LocationService(
         null,
       )
     }
-    return locationToUpdate.toDto()
+    return locationToUpdate.toDto().also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
@@ -663,6 +743,8 @@ class LocationService(
   fun updateCapacityOfCellLocations(capacitiesToUpdate: UpdateCapacityRequest): CapacityUpdateResult {
     val updatedCapacities = mutableSetOf<ResidentialLocation>()
     val audit = mutableMapOf<String, List<CapacityChanges>>()
+
+    val linkedTransaction = createLinkedTransaction(TransactionType.CAPACITY_CHANGE, "Updating cell capacities")
 
     capacitiesToUpdate.locations.forEach { (key, capacityChange) ->
       val changes = mutableListOf<CapacityChanges>()
@@ -699,6 +781,7 @@ class LocationService(
                   capacityOfCertifiedCell,
                   authenticationFacade.getUserOrSystemInContext(),
                   clock,
+                  linkedTransaction,
                 )
                 changes.add(CapacityChanges(key, message = "Baseline CNA from $oldCapacityOfCertifiedCell ==> $capacityOfCertifiedCell", type = "CNA", previousValue = oldCapacityOfCertifiedCell, newValue = capacityOfCertifiedCell))
                 updatedCapacities.add(location)
@@ -730,13 +813,17 @@ class LocationService(
         }.toSet().plus(updatedLocationsDto).toList(),
       ),
       audit = audit,
-    )
+    ).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
   fun reactivateLocations(locationsToReactivate: ReactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val locationsReactivated = mutableSetOf<Location>()
     val amendedLocations = mutableSetOf<Location>()
+
+    val linkedTransaction = createLinkedTransaction(TransactionType.REACTIVATION, "Reactivating locations")
 
     locationsToReactivate.locations.forEach { (id, reactivationDetail) ->
       val locationToUpdate = locationRepository.findById(id)
@@ -753,6 +840,7 @@ class LocationService(
         amendedLocations = amendedLocations,
         maxCapacity = reactivationDetail.capacity?.maxCapacity,
         workingCapacity = reactivationDetail.capacity?.workingCapacity,
+        linkedTransaction = linkedTransaction,
       )
 
       if (reactivationDetail.cascadeReactivation) {
@@ -762,6 +850,7 @@ class LocationService(
             clock = clock,
             reactivatedLocations = locationsReactivated,
             amendedLocations = amendedLocations,
+            linkedTransaction = linkedTransaction,
           )
         }
       }
@@ -771,7 +860,9 @@ class LocationService(
     return mapOf(
       InternalLocationDomainEventType.LOCATION_AMENDED to amendedLocations.map { it.toDto() }.toList(),
       InternalLocationDomainEventType.LOCATION_REACTIVATED to locationsReactivated.map { it.toDto() }.toList(),
-    )
+    ).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   private fun trackLocationUpdate(location: Location, trackDescription: String) {
@@ -811,15 +902,20 @@ class LocationService(
       throw LocationNotFoundException("${nonResCellToUpdate.getKey()} is not a non-residential cell")
     }
 
+    val linkedTransaction = createLinkedTransaction(TransactionType.LOCATION_UPDATE, "Update cell type for ${nonResCellToUpdate.getKey()}")
+
     nonResCellToUpdate.updateNonResidentialCellType(
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
+      linkedTransaction = linkedTransaction,
     )
 
     trackLocationUpdate(nonResCellToUpdate, "Updated non-residential cell type")
-    return nonResCellToUpdate.toDto()
+    return nonResCellToUpdate.toDto().also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
@@ -830,6 +926,8 @@ class LocationService(
   ): LocationDTO {
     var locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    val linkedTransaction = createLinkedTransaction(TransactionType.CELL_CONVERTION_TO_ROOM, "Converted Location to room ${locationToConvert.getKey()}")
 
     if (locationToConvert.isNonResType()) {
       locationRepository.updateLocationType(locationToConvert.id!!, LocationType.CELL.name)
@@ -852,13 +950,16 @@ class LocationService(
         otherConvertedCellType = otherConvertedCellType,
         userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
         clock = clock,
+        linkedTransaction = linkedTransaction,
       )
     } else {
       throw LocationNotFoundException(id.toString())
     }
 
     trackLocationUpdate(locationToConvert, "Converted Location to non-residential cell")
-    return locationToConvert.toDto(includeParent = true)
+    return locationToConvert.toDto(includeParent = true).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   @Transactional
@@ -873,6 +974,8 @@ class LocationService(
     val locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
+    val linkedTransaction = createLinkedTransaction(TransactionType.ROOM_CONVERTION_TO_CELL, "Converted non-residential cell to residential cell ${locationToConvert.getKey()}")
+
     if (locationToConvert is Cell && locationToConvert.isConvertedCell()) {
       locationToConvert.convertToCell(
         accommodationType = accommodationType,
@@ -882,13 +985,16 @@ class LocationService(
         workingCapacity = workingCapacity,
         userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
         clock = clock,
+        linkedTransaction = linkedTransaction,
       )
     } else {
       throw LocationNotFoundException(id.toString())
     }
 
     trackLocationUpdate(locationToConvert, "Converted non-residential cell to residential cell")
-    return locationToConvert.toDto(includeParent = true)
+    return locationToConvert.toDto(includeParent = true).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =

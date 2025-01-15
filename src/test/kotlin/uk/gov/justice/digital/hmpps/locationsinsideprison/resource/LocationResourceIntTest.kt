@@ -2841,6 +2841,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           proposedReactivationDate = proposedReactivationDate,
           userOrSystemInContext = EXPECTED_USERNAME,
           clock = clock,
+          linkedTransaction = linkedTransaction,
         )
         repository.save(landingZ1)
 

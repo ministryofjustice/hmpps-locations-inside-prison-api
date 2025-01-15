@@ -4,6 +4,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
@@ -23,7 +24,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification as C
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 
 interface NomisMigrationRequest {
-  fun toNewEntity(clock: Clock): LocationJPA
+  fun toNewEntity(clock: Clock, linkedTransaction: LinkedTransaction): LocationJPA
 
   val prisonId: String
   val code: String
@@ -45,7 +46,7 @@ interface NomisMigrationRequest {
   val lastModifiedDate: LocalDateTime?
   val lastUpdatedBy: String
 
-  fun createLocation(clock: Clock): Location {
+  fun createLocation(clock: Clock, linkedTransaction: LinkedTransaction): Location {
     val location = if (residentialHousingType != null) {
       if (locationType == LocationType.CELL) {
         val location = Cell(
@@ -85,10 +86,10 @@ interface NomisMigrationRequest {
           attribute.mapTo?.let { location.addSpecialistCellType(it) }
         }
         if (location.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
-          location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, lastUpdatedBy, clock)
+          location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, lastUpdatedBy, clock, linkedTransaction)
         }
         if (residentialHousingType == HOLDING_CELL) {
-          location.convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = lastUpdatedBy, clock = clock)
+          location.convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = lastUpdatedBy, clock = clock, linkedTransaction = linkedTransaction)
         }
         location
       } else if (code in getVirtualLocationCodes()) {
