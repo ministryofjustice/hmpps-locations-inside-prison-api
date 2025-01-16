@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.locationsinsideprison.config.ActivePrisonConfig
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
@@ -71,8 +72,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFa
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.Properties
-import java.util.UUID
+import java.util.*
 import java.util.function.Predicate
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
@@ -93,6 +93,7 @@ class LocationService(
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
+  private val activePrisonConfig: ActivePrisonConfig,
   @Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
@@ -1189,7 +1190,7 @@ class LocationService(
         )
       }
 
-    val legacyAttributes = cell.attributes.filter { it.attributeType == ResidentialAttributeType.LOCATION_ATTRIBUTE }
+    val residentialAttributes = cell.attributes.filter { it.attributeType == ResidentialAttributeType.LOCATION_ATTRIBUTE }
       .map {
         CellAttributes(
           it.attributeValue,
@@ -1197,14 +1198,13 @@ class LocationService(
         )
       }
 
-    if (specialistCellTypes.size > 0) {
-      return specialistCellTypes
-    } else if (legacyAttributes.size > 0) {
-      return legacyAttributes
+    return if (activePrisonConfig.isActivePrison(cell.prisonId)) {
+      specialistCellTypes
     } else {
-      return listOf(CellAttributes("", ""))
+      residentialAttributes
     }
   }
+
   fun getUsedForTypesForPrison(prisonId: String): List<UsedForType> {
     val prisonDetails = prisonService.lookupPrisonDetails(prisonId) ?: throw PrisonNotFoundException(prisonId)
     return UsedForType.entries.filter { it.isStandard() || (prisonDetails.female && it.femaleOnly) || (prisonDetails.lthse && it.secureEstateOnly) }

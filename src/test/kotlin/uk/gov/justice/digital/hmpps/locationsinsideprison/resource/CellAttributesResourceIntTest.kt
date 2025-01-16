@@ -57,22 +57,7 @@ class CellAttributesResourceIntTest : CommonDataTestBase() {
     inner class HappyPath {
 
       @Test
-      fun `can get cells legacy attributes`() {
-        webTestClient.get().uri("/locations/${cell1.id}/attributes")
-          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-          .exchange()
-          .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-                          [{"code":"DOUBLE_OCCUPANCY","description":"Double Occupancy"}]
-                        """,
-            false,
-          )
-      }
-
-      @Test
-      fun `can get cells specialist attributes`() {
+      fun `can get cell attributes`() {
         webTestClient.get().uri("/locations/${cell2.id}/attributes")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
