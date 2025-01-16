@@ -64,7 +64,7 @@ data class LegacyLocation(
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
 
-  @Schema(description = "Proposed Date for location reactivation", example = "2026-01-24", required = false)
+  @Schema(description = "Estimated reactivation date for location reactivation", example = "2026-01-24", required = false)
   val proposedReactivationDate: LocalDate? = null,
 
   @Schema(description = "Indicates that this location has been permanently deactivated and should not be changed in NOMIS", example = "false", defaultValue = "false", required = true)

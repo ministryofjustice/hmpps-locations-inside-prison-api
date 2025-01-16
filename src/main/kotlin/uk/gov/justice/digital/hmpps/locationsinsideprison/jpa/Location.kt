@@ -426,7 +426,7 @@ abstract class Location(
   private fun createHistory(): List<ChangeHistory> {
     val withTx = history.asSequence()
       .filter { it.linkedTransaction != null }
-      .sortedByDescending { it.linkedTransaction!!.txStartTime }.sortedBy { it.linkedTransaction!!.transactionId }.sortedByDescending { it.id }
+      .sortedByDescending { it.linkedTransaction!!.txStartTime }.sortedBy { it.linkedTransaction!!.transactionId }.sortedBy { it.id }
       .groupBy { it.linkedTransaction!! }
       .map { (transaction, changes) ->
         changes.groupBy { it.attributeName }
@@ -435,7 +435,7 @@ abstract class Location(
       }.flatten().toList()
 
     val withoutTx = history.asSequence().filter { it.linkedTransaction == null }
-      .sortedByDescending { it.amendedDate }.sortedByDescending { it.id }
+      .sortedByDescending { it.amendedDate }.sortedBy { it.id }
       .filter { it.attributeName.display }
       .map { it.toDto() }.toList()
 

@@ -587,7 +587,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${wingZ.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Window smashed", proposedReactivationDate = proposedReactivationDate)))
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Window smashed", proposedReactivationDate = proposedReactivationDate, planetFmReference = "222333")))
           .exchange()
           .expectStatus().isOk
 
@@ -630,6 +630,16 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "capacityOfCertifiedCell": 2
               },
               "changeHistory": [
+                {
+                  "transactionType": "DEACTIVATION",
+                  "attribute": "Planet FM reference number",
+                  "newValue": "222333"
+                },
+                { 
+                  "transactionType": "DEACTIVATION",
+                  "attribute": "Estimated reactivation date",
+                  "newValue": "$proposedReactivationDate"
+                },
                 {
                   "attribute": "Deactivation reason",
                   "newValue": "Damage - Window smashed"
@@ -686,6 +696,16 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     {
                       "attribute": "Deactivation reason",
                       "newValue": "Damage - Window smashed"
+                    },
+                    {
+                      "transactionType": "DEACTIVATION",
+                      "attribute": "Planet FM reference number",
+                      "newValue": "222333"
+                    },
+                    { 
+                      "transactionType": "DEACTIVATION",
+                      "attribute": "Estimated reactivation date",
+                      "newValue": "$proposedReactivationDate"
                     }
                   ],
                   "childLocations": [
@@ -703,7 +723,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "deactivatedReason": "DAMAGED",
                       "isResidential": true,
                       "key": "MDI-Z-1-002",
-                          "changeHistory": [
+                      "changeHistory": [
+                          {
+                            "transactionType": "DEACTIVATION",
+                            "attribute": "Planet FM reference number",
+                            "newValue": "222333"
+                          },
+                          { 
+                            "transactionType": "DEACTIVATION",
+                            "attribute": "Estimated reactivation date",
+                            "newValue": "$proposedReactivationDate"
+                          },
                           {
                             "attribute": "Deactivation reason",
                             "newValue": "Damage - Window smashed"
@@ -757,7 +787,28 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "deactivatedDate": "$now",
                   "deactivatedReason": "DAMAGED",
                   "isResidential": true,
-                  "key": "MDI-Z-2"
+                  "key": "MDI-Z-2",
+                   "changeHistory": [
+                          {
+                            "transactionType": "DEACTIVATION",
+                            "attribute": "Planet FM reference number",
+                            "newValue": "222333"
+                          },
+                          { 
+                            "transactionType": "DEACTIVATION",
+                            "attribute": "Estimated reactivation date",
+                            "newValue": "$proposedReactivationDate"
+                          },
+                          {
+                            "attribute": "Deactivation reason",
+                            "newValue": "Damage - Window smashed"
+                          },
+                          {
+                            "attribute": "Status",
+                            "oldValue": "Active",
+                            "newValue": "Inactive"
+                          }
+                    ]
                 }
               ]
             }
@@ -847,6 +898,10 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "deactivatedReason": "OTHER",
                 "deactivationReasonDescription": "Not Needed",
                "changeHistory": [
+                 {
+                   "attribute": "Estimated reactivation date",
+                   "newValue": "$proposedReactivationDate"
+                 },
                   {
                     "attribute": "Deactivation reason",
                     "newValue": "Other - Not Needed"
@@ -905,7 +960,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "key": "${cell1.getKey()}",
                 "deactivatedReason": "MOTHBALLED",
                 "deactivationReasonDescription": "",
-               "changeHistory": [
+                 "changeHistory": [
+                  {
+                    "attribute": "Estimated reactivation date",
+                    "newValue": "$proposedReactivationDate"
+                  },
                   {
                     "attribute": "Deactivation reason",
                     "newValue": "Mothballed"
@@ -1003,31 +1062,45 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "isResidential": true,
                 "key": "MDI-Z-1-001",
                 "changeHistory": [
-                    {
-                      "attribute": "Deactivation reason",
-                      "oldValue": "Damage",
-                      "newValue": "Mothballed - Spiders"
-                    },
-                    {
-                      "attribute": "Deactivation reason",
-                      "newValue": "Damage"
-                    },
-                    {
-                      "attribute": "Status",
-                      "oldValue": "Active",
-                      "newValue": "Inactive"
-                    },
-                    {
-                      "attribute": "Working capacity",
-                      "oldValue": "2",
-                      "newValue": "0"
-                    },
-                    {
-                      "attribute": "Used for",
-                      "newValue": "Standard accommodation",
-                      "amendedBy": "A_TEST_USER"
-                    }
-                  ]
+                  {
+                    "transactionType": "LOCATION_CREATE",
+                    "attribute": "Used for",
+                    "newValue": "Standard accommodation"
+                  },
+                  {
+                    "transactionType": "DEACTIVATION",
+                    "attribute": "Working capacity",
+                    "oldValue": "2",
+                    "newValue": "0"
+                  },
+                  {
+                    "transactionType": "DEACTIVATION",
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Inactive"
+                  },
+                  {
+                    "transactionType": "DEACTIVATION",
+                    "attribute": "Deactivation reason",
+                    "newValue": "Damage"
+                  },
+                  {
+                    "transactionType": "LOCATION_UPDATE",
+                    "attribute": "Deactivation reason",
+                    "oldValue": "Damage",
+                    "newValue": "Mothballed - Spiders"
+                  },
+                  {
+                    "transactionType": "LOCATION_UPDATE",
+                    "attribute": "Estimated reactivation date",
+                    "newValue": "2024-01-05"
+                  },
+                  {
+                    "transactionType": "LOCATION_UPDATE",
+                    "attribute": "Planet FM reference number",
+                    "newValue": "334423"
+                  }
+                ]
             }
           """,
             false,
@@ -1092,32 +1165,40 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "planetFmReference": "334423",
                 "isResidential": true,
                 "key": "MDI-Z-1-001",
-              "changeHistory": [
-                {
-                  "attribute": "Deactivation reason",
-                  "oldValue": "Damage - Water damage",
-                  "newValue": "Other - Poor state"
-                },
-                {
-                  "attribute": "Deactivation reason",
-                  "newValue": "Damage - Water damage"
-                },
-                {
-                  "attribute": "Status",
-                  "oldValue": "Active",
-                  "newValue": "Inactive"
-                },
-                {
-                  "attribute": "Working capacity",
-                  "oldValue": "2",
-                  "newValue": "0"
-                },
-                {
-                  "attribute": "Used for",
-                  "newValue": "Standard accommodation",
-                  "amendedBy": "A_TEST_USER"
-                }
-              ]
+                "changeHistory": [
+                  {
+                    "attribute": "Estimated reactivation date",
+                    "newValue": "$proposedReactivationDate"
+                  },
+                  {
+                    "attribute": "Planet FM reference number",
+                    "newValue": "334423"
+                  },
+                  {
+                    "attribute": "Deactivation reason",
+                    "oldValue": "Damage - Water damage",
+                    "newValue": "Other - Poor state"
+                  },
+                  {
+                    "attribute": "Deactivation reason",
+                    "newValue": "Damage - Water damage"
+                  },
+                  {
+                    "attribute": "Status",
+                    "oldValue": "Active",
+                    "newValue": "Inactive"
+                  },
+                  {
+                    "attribute": "Working capacity",
+                    "oldValue": "2",
+                    "newValue": "0"
+                  },
+                  {
+                    "attribute": "Used for",
+                    "newValue": "Standard accommodation",
+                    "amendedBy": "A_TEST_USER"
+                  }
+                ]
             }
           """,
             false,
@@ -1493,35 +1574,73 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "key": "MDI-Z-1-001",
                       "changeHistory": [
                         {
+                          "transactionType": "REACTIVATION",
+                          "attribute": "Planet FM reference number",
+                          "multipleValues": false,
+                          "oldValue": "${cellDetails.planetFmReference}"
+                        },
+                        {
+                          "transactionType": "REACTIVATION",
+                          "attribute": "Estimated reactivation date",
+                          "multipleValues": false,
+                          "oldValue": "${cellDetails.proposedReactivationDate}"
+                        },
+                        {
+                          "transactionType": "REACTIVATION",
                           "attribute": "Status",
                           "oldValue": "Inactive",
                           "newValue": "Active"
                         },
                         {
+                          "transactionType": "REACTIVATION",
                           "attribute": "Working capacity",
                           "oldValue": "0",
                           "newValue": "2"
                         },
                         {
+                          "transactionType": "DEACTIVATION",
+                          "attribute": "Planet FM reference number",
+                          "multipleValues": false,
+                          "newValue": "${cellDetails.planetFmReference}"
+                        },
+                        {
+                          "transactionType": "DEACTIVATION",
+                          "attribute": "Estimated reactivation date",
+                          "multipleValues": false,
+                          "oldValue": "$proposedReactivationDate",
+                          "newValue": "${cellDetails.proposedReactivationDate}"
+                        },
+                        {
+                          "transactionType": "DEACTIVATION",
                           "attribute": "Deactivation reason",
                           "oldValue": "Damage",
                           "newValue": "Mothballed"
                         },
                         {
+                          "transactionType": "DEACTIVATION",
+                          "attribute": "Estimated reactivation date",
+                          "multipleValues": false,
+                          "newValue": "$proposedReactivationDate"
+                        },
+                        {
+                          "transactionType": "DEACTIVATION",
                           "attribute": "Deactivation reason",
                           "newValue": "Damage"
                         },
                         {
+                          "transactionType": "DEACTIVATION",
                           "attribute": "Status",
                           "oldValue": "Active",
                           "newValue": "Inactive"
                         },
                         {
+                          "transactionType": "DEACTIVATION",
                           "attribute": "Working capacity",
                           "oldValue": "2",
                           "newValue": "0"
                         },
                         {
+                          "transactionType": "LOCATION_CREATE",
                           "attribute": "Used for",
                           "newValue": "Standard accommodation",
                           "amendedBy": "A_TEST_USER"
