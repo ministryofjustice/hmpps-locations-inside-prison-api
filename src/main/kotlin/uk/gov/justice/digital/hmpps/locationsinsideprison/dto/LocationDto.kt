@@ -127,10 +127,10 @@ data class Location(
   @Schema(description = "Staff username who deactivated the location", required = false)
   val deactivatedBy: String? = null,
 
-  @Schema(description = "Proposed Date for location reactivation", example = "2026-01-24", required = false)
+  @Schema(description = "Estimated reactivation date for location reactivation", example = "2026-01-24", required = false)
   val proposedReactivationDate: LocalDate? = null,
 
-  @Schema(description = "Planet FM Reference", example = "2323/45M", required = false)
+  @Schema(description = "Planet FM reference number", example = "2323/45M", required = false)
   val planetFmReference: String? = null,
 
   @Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
@@ -576,10 +576,10 @@ data class TemporaryDeactivationLocationRequest(
   )
   @field:Size(max = 255, message = "Other deactivation reason cannot be more than 255 characters")
   val deactivationReasonDescription: String? = null,
-  @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
+  @Schema(description = "Estimated reactivation date", example = "2025-01-05", required = false)
   val proposedReactivationDate: LocalDate? = null,
-  @Schema(description = "Planet FM reference", example = "23423TH/5", required = false)
-  @field:Size(max = 60, message = "Planet FM reference cannot be more than 60 characters")
+  @Schema(description = "Planet FM reference number", example = "23423TH/5", required = false)
+  @field:Size(max = 60, message = "Planet FM reference number cannot be more than 60 characters")
   val planetFmReference: String? = null,
 )
 

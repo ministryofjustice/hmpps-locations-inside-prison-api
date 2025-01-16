@@ -108,9 +108,9 @@ enum class LocationAttribute(
   ORDER_WITHIN_PARENT_LOCATION(description = "Order within parent location"),
   COMMENTS(description = "Comments"),
   ATTRIBUTES(description = "Attributes"),
-  PROPOSED_REACTIVATION_DATE(description = "Proposed reactivation date"),
+  PROPOSED_REACTIVATION_DATE(description = "Estimated reactivation date", display = true),
   ACCOMMODATION_TYPE(description = "Accommodation type", display = true),
-  PLANET_FM_NUMBER(description = "Planet FM number"),
+  PLANET_FM_NUMBER(description = "Planet FM reference number", display = true),
   PERMANENT_DEACTIVATION(description = "Permanent deactivation"),
 
   // non res only

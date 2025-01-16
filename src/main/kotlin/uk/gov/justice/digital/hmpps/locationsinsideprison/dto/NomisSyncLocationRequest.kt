@@ -55,7 +55,7 @@ data class NomisSyncLocationRequest(
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   override val deactivationReason: NomisDeactivatedReason? = null,
 
-  @Schema(description = "Proposed re-activation date", example = "2025-01-05", required = false)
+  @Schema(description = "Estimated reactivation date", example = "2025-01-05", required = false)
   override val proposedReactivationDate: LocalDate? = null,
 
   @Schema(description = "Date deactivation occurred", example = "2023-01-05", required = false)

@@ -2830,69 +2830,98 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "status": "${LocationStatus.ACTIVE}",
                 "changeHistory": [
                   {
-                    "attribute": "Status",
-                    "oldValue": "Non-residential",
-                    "newValue": "Active"
-                  },
-                  {
-                    "attribute": "Certification",
-                    "oldValue": "Uncertified",
-                    "newValue": "Certified"
-                  },
-                  {
-                    "attribute": "Working capacity",
-                    "oldValue": "None",
-                    "newValue": "2"
-                  },
-                  {
-                    "attribute": "Maximum capacity",
-                    "oldValue": "None",
-                    "newValue": "2"
-                  },
-                  {
-                    "attribute": "Cell type",
-                    "newValues": [
-                        "Accessible cell",
-                        "Isolation cell for communicable diseases"
-                    ]
-                  },
-                  {
+                    "transactionType": "LOCATION_CREATE",
                     "attribute": "Used for",
-                    "newValue": "Standard accommodation"
+                    "multipleValues": false,
+                    "newValue": "Standard accommodation",
+                    "amendedBy": "A_TEST_USER"
                   },
                   {
+                    "transactionType": "LOCATION_CREATE",
+                    "attribute": "Working capacity",
+                    "multipleValues": false,
+                    "oldValue": "2",
+                    "newValue": "None",
+                    "amendedBy": "Aleman"
+                  },
+                  {
+                    "transactionType": "LOCATION_CREATE",
+                    "attribute": "Maximum capacity",
+                    "multipleValues": false,
+                    "oldValue": "2",
+                    "newValue": "None",
+                    "amendedBy": "Aleman"
+                  },
+                  {
+                    "transactionType": "LOCATION_CREATE",
+                    "attribute": "Certification",
+                    "multipleValues": false,
+                    "oldValue": "Certified",
+                    "newValue": "Uncertified",
+                    "amendedBy": "Aleman"
+                  },
+                  {
+                    "transactionType": "LOCATION_CREATE",
+                    "attribute": "Status",
+                    "multipleValues": false,
+                    "oldValue": "Active",
+                    "newValue": "Non-residential",
+                    "amendedBy": "Aleman"
+                  },
+                  {
+                    "transactionType": "LOCATION_CREATE",
                     "attribute": "Non-residential room",
+                    "multipleValues": false,
                     "newValue": "Other",
                     "amendedBy": "Aleman"
                   },
                   {
+                    "transactionType": "ROOM_CONVERTION_TO_CELL",
                     "attribute": "Status",
-                    "oldValue": "Active",
-                    "newValue": "Non-residential"
+                    "multipleValues": false,
+                    "oldValue": "Non-residential",
+                    "newValue": "Active"
                   },
                   {
+                    "transactionType": "ROOM_CONVERTION_TO_CELL",
                     "attribute": "Certification",
-                    "oldValue": "Certified",
-                    "newValue": "Uncertified"
+                    "multipleValues": false,
+                    "oldValue": "Uncertified",
+                    "newValue": "Certified"
                   },
                   {
-                    "attribute": "Maximum capacity",
-                    "oldValue": "2",
-                    "amendedBy": "Aleman"
-                  },
-                  {
-                    "attribute": "Working capacity",
-                    "oldValue": "2",
-                    "amendedBy": "Aleman"
-                  },
-                  {
+                    "transactionType": "ROOM_CONVERTION_TO_CELL",
                     "attribute": "Used for",
-                    "newValue": "Standard accommodation",
-                    "amendedBy": "A_TEST_USER"
+                    "multipleValues": false,
+                    "newValue": "Standard accommodation"
+                  },
+                  {
+                    "transactionType": "ROOM_CONVERTION_TO_CELL",
+                    "attribute": "Cell type",
+                    "multipleValues": true,
+                    "newValues": [
+                      "Accessible cell",
+                      "Isolation cell for communicable diseases"
+                    ]
+                  },
+                  {
+                    "transactionType": "ROOM_CONVERTION_TO_CELL",
+                    "attribute": "Maximum capacity",
+                    "multipleValues": false,
+                    "oldValue": "None",
+                    "newValue": "2"
+                  },
+                  {
+                    "transactionType": "ROOM_CONVERTION_TO_CELL",
+                    "attribute": "Working capacity",
+                    "multipleValues": false,
+                    "oldValue": "None",
+                    "newValue": "2"
                   }
                 ]
               }
             """.trimIndent(),
+            false,
           )
 
         assertThat(
