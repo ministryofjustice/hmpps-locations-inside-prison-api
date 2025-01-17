@@ -1,8 +1,13 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.whenever
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.json.JsonCompareMode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.config.ActivePrisonConfig
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
@@ -11,80 +16,91 @@ import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 @DisplayName("GET /locations/{id}/attributes")
 class CellAttributesResourceIntTest : CommonDataTestBase() {
 
-    @Nested
-    inner class Security {
+  @MockitoBean
+  private lateinit var activePrisonConfig: ActivePrisonConfig
 
-        @Test
-        fun `access forbidden when no authority`() {
-            webTestClient.get().uri("/locations/${cell1.id}/attributes")
-                .exchange()
-                .expectStatus().isUnauthorized
-        }
+  @BeforeEach
+  fun beforeEach() {
+    whenever(activePrisonConfig.isActivePrison("MDI")).thenReturn(true)
+    whenever(activePrisonConfig.isActivePrison("NMI")).thenReturn(false)
+  }
 
-        @Test
-        fun `access forbidden when no role`() {
-            webTestClient.get().uri("/locations/${cell1.id}/attributes")
-                .headers(setAuthorisation(roles = listOf()))
-                .exchange()
-                .expectStatus().isForbidden
-        }
+  @Nested
+  inner class Security {
 
-        @Test
-        fun `access forbidden with wrong role`() {
-            webTestClient.get().uri("/locations/${cell1.id}/attributes")
-                .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
-                .exchange()
-                .expectStatus().isForbidden
-        }
+    @Test
+    fun `access forbidden when no authority`() {
+      webTestClient.get().uri("/locations/${cell1.id}/attributes")
+        .exchange()
+        .expectStatus().isUnauthorized
     }
 
-    @Nested
-    inner class Validation {
-
-        @Test
-        fun `cannot get attributes if id is not valid`() {
-            webTestClient.get().uri("/locations/12345/attributes")
-                .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-                .exchange()
-                .expectStatus().is4xxClientError
-        }
+    @Test
+    fun `access forbidden when no role`() {
+      webTestClient.get().uri("/locations/${cell1.id}/attributes")
+        .headers(setAuthorisation(roles = listOf()))
+        .exchange()
+        .expectStatus().isForbidden
     }
 
-    @Nested
-    inner class HappyPath {
+    @Test
+    fun `access forbidden with wrong role`() {
+      webTestClient.get().uri("/locations/${cell1.id}/attributes")
+        .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+        .exchange()
+        .expectStatus().isForbidden
+    }
+  }
 
-//        @Test
-//        fun `can get legacy residential attributes for cell`() {
-//
-//            webTestClient.get().uri("/locations/${cell1.id}/attributes")
-//                .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-//                .exchange()
-//                .expectStatus().isOk
-//                .expectBody().json(
-//                    // language=json
-//                    """
-//                          [{"code":"DOUBLE_OCCUPANCY","description":"Double Occupancy"}]
-//                        """,
-//                    false,
-//                )
-//        }
+  @Nested
+  inner class Validation {
+
+    @Test
+    fun `cannot get attributes if id is not valid`() {
+      webTestClient.get().uri("/locations/12345/attributes")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+        .exchange()
+        .expectStatus().is4xxClientError
+    }
+  }
+
+  @Nested
+  inner class HappyPath {
+
+    @Test
+    fun `can get legacy residential attributes for cell`() {
+
+      webTestClient.get().uri("/locations/${cell1N.id}/attributes")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().json(
+          // language=json
+          """
+                          [
+                            {"code":"DOUBLE_OCCUPANCY","description":"Double Occupancy"}
+                          ]
+                        """,
+          JsonCompareMode.STRICT,
+        )
+    }
 
 
-        @Test
-        fun `can get specialist attributes for cell`() {
-            webTestClient.get().uri("/locations/${cell2.id}/attributes")
-                .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-                .exchange()
-                .expectStatus().isOk
-                .expectBody().json(
-                    // language=json
-                    """
+    @Test
+    fun `can get specialist attributes for cell`() {
+      webTestClient.get().uri("/locations/${cell2.id}/attributes")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().json(
+          // language=json
+          """
                           [{"code":"ACCESSIBLE_CELL","description":"Accessible cell"}]
                         """,
-                    false,
-                )
-        }
+          JsonCompareMode.STRICT,
+        )
     }
+  }
 
 }
 
