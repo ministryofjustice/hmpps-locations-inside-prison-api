@@ -1182,26 +1182,22 @@ class LocationService(
     val cell = cellLocationRepository.findById(id).getOrNull()
       ?: throw LocationNotFoundException(id.toString())
 
-    val specialistCellTypes = cell.specialistCellTypes
-      .map {
-        CellAttributes(
-          it.specialistCellType,
-          it.specialistCellType.description,
-        )
-      }
-
-    val residentialAttributes = cell.attributes.filter { it.attributeType == ResidentialAttributeType.LOCATION_ATTRIBUTE }
-      .map {
-        CellAttributes(
-          it.attributeValue,
-          it.attributeValue.description,
-        )
-      }
-
     return if (activePrisonConfig.isActivePrison(cell.prisonId)) {
-      specialistCellTypes
+      cell.specialistCellTypes
+        .map {
+          CellAttributes(
+            it.specialistCellType,
+            it.specialistCellType.description,
+          )
+        }
     } else {
-      residentialAttributes
+      cell.attributes.filter { it.attributeType == ResidentialAttributeType.LOCATION_ATTRIBUTE }
+        .map {
+          CellAttributes(
+            it.attributeValue,
+            it.attributeValue.description,
+          )
+        }
     }
   }
 
