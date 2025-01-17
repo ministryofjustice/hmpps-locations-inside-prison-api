@@ -13,7 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_U
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
-
+import org.springframework.test.json.JsonCompareMode
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationNonResidentialResourceTest : CommonDataTestBase() {
 
@@ -122,8 +122,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(2).let {
@@ -248,8 +247,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${visitRoom.id}?includeHistory=true")
@@ -280,7 +278,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                   ]
                }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -304,8 +302,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "key": "MDI-Z-VISIT",
               "usage": []
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/key/MDI-Z-VISIT?includeHistory=true")
@@ -331,8 +328,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -449,8 +445,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${visitRoom.id}?includeHistory=true")
@@ -481,7 +476,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                   ]
                }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -505,8 +500,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "key": "MDI-Z-VISIT",
               "usage": []
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/key/MDI-Z-VISIT?includeHistory=true")
@@ -532,8 +526,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }

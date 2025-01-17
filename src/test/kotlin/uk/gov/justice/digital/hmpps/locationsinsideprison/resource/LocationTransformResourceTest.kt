@@ -15,7 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
-
+import org.springframework.test.json.JsonCompareMode
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationTransformResourceTest : CommonDataTestBase() {
 
@@ -680,8 +680,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 "isResidential": true,
                 "key": "MDI-Z-1-001"
               }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(3).let {
@@ -727,8 +726,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 "isResidential": false,
                 "key": "MDI-CSWAP"
               }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(1).let {

@@ -13,7 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
-
+import org.springframework.test.json.JsonCompareMode
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationPrisonIdResourceTest : CommonDataTestBase() {
 
@@ -203,8 +203,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "key": "MDI-Z-VISIT"
                 }
               ]
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -285,8 +284,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
             // language=json
             """
                        [ ]
-                                              """,
-            false,
+                                              """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -312,8 +310,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   ]
                 }
               ]
-                        """,
-            false,
+                        """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -416,8 +413,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
               ]
             }
           ]
-            """,
-            false,
+            """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -466,8 +462,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                 {
                 "locationPrefix": "MDI-Z-"
                 }
-              """,
-            false,
+              """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -486,8 +481,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                         "userMessage":"Location prefix not found for XYI_Houseblock 1",
                         "developerMessage":"Location prefix not found for XYI_Houseblock 1",
                         "errorCode":111}
-                        """,
-            false,
+                        """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -548,8 +542,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                 "key":"MDI-Z-1-003",
                 "permanentlyInactiveReason": "Demolished"
                 }]
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -629,8 +622,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "isResidential": true
                 }
               ]
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -644,8 +636,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
             // language=json
             """
                 [ ]
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -690,8 +681,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "isResidential": true
                 }
               ]
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -752,8 +742,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "id": "${inactiveCellB3001.id}"
                 }
               ]
-           """,
-            false,
+           """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -798,8 +787,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "isResidential": true
                 }
               ]
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -861,8 +849,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                             }],
                             "key": "MDI-Z-VISIT"
                           }]
-                         """,
-            false,
+                         """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -909,8 +896,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                             }],
                             "key": "MDI-RES-VIDEOR1"
                           }]
-                         """,
-            false,
+                         """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -984,8 +970,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
               "active": true,
               "key": "MDI-Z-1-002"
             }]
-                      """,
-            false,
+                      """, JsonCompareMode.LENIENT,
           )
       }
     }

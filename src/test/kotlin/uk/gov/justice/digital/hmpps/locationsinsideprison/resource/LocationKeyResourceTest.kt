@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
-
+import org.springframework.test.json.JsonCompareMode
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationKeyResourceTest : CommonDataTestBase() {
 
@@ -211,8 +211,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                       "isResidential": true,
                       "key": "MDI-Z"
                     }
-                        """,
-            false,
+                        """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -312,8 +311,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                             "leafLevel": true,
                             "level": 2
                           }]
-                         """,
-            false,
+                         """, JsonCompareMode.LENIENT,
           )
       }
     }

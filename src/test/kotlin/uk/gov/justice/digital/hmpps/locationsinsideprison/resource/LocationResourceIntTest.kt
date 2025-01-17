@@ -19,7 +19,7 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
-
+import org.springframework.test.json.JsonCompareMode
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResourceIntTest : CommonDataTestBase() {
 
@@ -204,8 +204,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "empty": false
               }
 
-              """,
-            false,
+              """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -387,8 +386,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -413,8 +411,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "workingCapacity": 0
               }
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -812,8 +809,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -1102,8 +1098,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   }
                 ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -1200,8 +1195,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   }
                 ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -1430,8 +1424,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -1683,8 +1676,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -1755,8 +1747,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 ],
                 "isResidential": false
               }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -1987,8 +1978,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "isResidential": true
                 }
               ]
-              """,
-            false,
+              """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(4).let {
@@ -2175,8 +2165,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         prisonerSearchMockServer.resetAll()
@@ -2399,8 +2388,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         prisonerSearchMockServer.resetAll()
@@ -2467,8 +2455,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(2).let {
@@ -2591,8 +2578,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -2749,8 +2735,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   }
                 ]
               }              
-              """,
-            false,
+              """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(9).let {
@@ -2851,8 +2836,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   }
                 ]
               } 
-             """,
-            false,
+             """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -3019,8 +3003,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "deactivatedDate": "$now"
                 }
               ]
-              """,
-            false,
+              """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(3).let {

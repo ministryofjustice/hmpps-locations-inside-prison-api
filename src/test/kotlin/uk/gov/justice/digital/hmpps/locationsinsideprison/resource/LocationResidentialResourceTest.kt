@@ -27,7 +27,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResid
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 import java.util.*
-
+import org.springframework.test.json.JsonCompareMode
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResidentialResourceTest : CommonDataTestBase() {
 
@@ -132,8 +132,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             }
           ]
           }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -244,8 +243,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               }
             ]
           }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -371,8 +369,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
             ]
           }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -444,8 +441,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-""",
-            false,
+""", JsonCompareMode.LENIENT,
           )
       }
     }
@@ -518,8 +514,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "capacityOfCertifiedCell": 12
               }
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(12).let {
@@ -556,8 +551,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "capacityOfCertifiedCell": 16
               }
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(8).let {
@@ -686,8 +680,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "STANDARD_ACCOMMODATION"
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(3).let {
@@ -731,8 +724,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "STANDARD_ACCOMMODATION"
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(3).let {
@@ -779,8 +771,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "workingCapacity": 90
               }
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(1).let {
@@ -1241,8 +1232,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(4).let {
@@ -1284,8 +1274,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "isResidential": true,
                 "key": "MDI-B-1"
               }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
@@ -1353,8 +1342,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${wingB.id}?includeChildren=true")
@@ -1477,8 +1465,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
 
@@ -1510,8 +1497,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "isResidential": true,
                 "key": "MDI-B-1"
               }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
@@ -1579,8 +1565,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${wingB.id}?includeChildren=true")
@@ -1703,8 +1688,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(6).let {
@@ -1748,8 +1732,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "isResidential": true,
                 "key": "MDI-Y"
               }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
@@ -1817,8 +1800,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/key/MDI-Y?includeChildren=true")
@@ -1878,8 +1860,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(5).let {
@@ -2001,8 +1982,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(4).let {
@@ -2044,8 +2024,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "isResidential": true,
                 "key": "MDI-B-1"
               }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${wingZ.id}?includeChildren=true")
@@ -2114,8 +2093,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${wingB.id}?includeChildren=true")
@@ -2234,8 +2212,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 }
               ]
             }
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }

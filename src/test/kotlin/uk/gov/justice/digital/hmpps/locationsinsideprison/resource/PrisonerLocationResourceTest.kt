@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
-
+import org.springframework.test.json.JsonCompareMode
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class PrisonerLocationResourceTest : CommonDataTestBase() {
 
@@ -78,8 +78,7 @@ class PrisonerLocationResourceTest : CommonDataTestBase() {
             ]
           }
           ]
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -156,8 +155,7 @@ class PrisonerLocationResourceTest : CommonDataTestBase() {
             ]
           }
           ]
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
@@ -234,8 +232,7 @@ class PrisonerLocationResourceTest : CommonDataTestBase() {
             ]
           }
           ]
-          """,
-            false,
+          """, JsonCompareMode.LENIENT,
           )
       }
     }
