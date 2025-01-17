@@ -7,4 +7,6 @@ import org.springframework.context.annotation.Configuration
 class ActivePrisonConfig(
   @Value("\${service.active.prisons}")
   val activePrisons: List<String>,
-)
+) {
+  fun isActivePrison(prisonId: String) = prisonId in activePrisons || "***" in activePrisons
+}

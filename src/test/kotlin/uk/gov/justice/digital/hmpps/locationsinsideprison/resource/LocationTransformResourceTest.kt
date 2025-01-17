@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
@@ -15,7 +16,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
-
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationTransformResourceTest : CommonDataTestBase() {
 
@@ -681,7 +681,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 "key": "MDI-Z-1-001"
               }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(3).let {
@@ -728,7 +728,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 "key": "MDI-CSWAP"
               }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(1).let {

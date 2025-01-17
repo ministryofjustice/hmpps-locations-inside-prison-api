@@ -18,6 +18,9 @@ spring:
     url: jdbc:postgresql://localhost:5432/locations_inside_prison?sslmode=prefer
     username: locations_inside_prison
     password: locations_inside_prison
+    hikari:
+      pool-name: LIP-DB-CP
+      maximum-pool-size: 10
 
   main:
     allow-bean-definition-overriding: true

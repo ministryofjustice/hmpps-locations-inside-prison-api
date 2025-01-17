@@ -15,6 +15,8 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.locationsinsideprison.config.ActivePrisonConfig
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
@@ -70,8 +72,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFa
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.Properties
-import java.util.UUID
+import java.util.*
 import java.util.function.Predicate
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
@@ -92,6 +93,7 @@ class LocationService(
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
+  private val activePrisonConfig: ActivePrisonConfig,
   @Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
@@ -1174,6 +1176,29 @@ class LocationService(
     }.filter {
       it.hasSpace()
     }.sortedBy { it.pathHierarchy }
+  }
+
+  fun getCellAttributes(id: UUID): List<CellAttributes> {
+    val cell = cellLocationRepository.findById(id).getOrNull()
+      ?: throw LocationNotFoundException(id.toString())
+
+    return if (activePrisonConfig.isActivePrison(cell.prisonId)) {
+      cell.specialistCellTypes
+        .map {
+          CellAttributes(
+            it.specialistCellType,
+            it.specialistCellType.description,
+          )
+        }
+    } else {
+      cell.attributes.filter { it.attributeType == ResidentialAttributeType.LOCATION_ATTRIBUTE }
+        .map {
+          CellAttributes(
+            it.attributeValue,
+            it.attributeValue.description,
+          )
+        }
+    }
   }
 
   fun getUsedForTypesForPrison(prisonId: String): List<UsedForType> {

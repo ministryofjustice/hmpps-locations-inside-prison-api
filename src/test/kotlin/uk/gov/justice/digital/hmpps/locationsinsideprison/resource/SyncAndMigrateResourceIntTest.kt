@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
+import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
@@ -47,7 +48,6 @@ import java.util.*
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
-
 class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
   @TestConfiguration
@@ -299,7 +299,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "attributes": ["IMMIGRATION_DETAINEES"]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -327,7 +327,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "attributes": ["IMMIGRATION_DETAINEES"]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -375,7 +375,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               }
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -405,7 +405,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "errorCode": 107
                 }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/sync/id/${permDeactivated.id}")
@@ -424,7 +424,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "permanentlyDeactivated": true
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -467,7 +467,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               }
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -508,7 +508,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -553,7 +553,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               }
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${room.id}")
@@ -587,7 +587,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               }
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -634,7 +634,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               }
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -668,7 +668,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -713,7 +713,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               }
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -764,7 +764,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "orderWithinParentLocation": 6
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -924,7 +924,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}"
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/key/ZZGHI-B-1-002?includeHistory=true")
@@ -985,7 +985,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               ]
             }
             """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 

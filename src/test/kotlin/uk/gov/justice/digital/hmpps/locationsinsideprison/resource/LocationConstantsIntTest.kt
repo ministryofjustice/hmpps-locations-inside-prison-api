@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 
 class LocationConstantsIntTest : SqsIntegrationTestBase() {
@@ -215,7 +216,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 ]
               }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -303,7 +304,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 ]
               }
             """.trimIndent(),
-            true,
+            JsonCompareMode.STRICT,
           )
       }
     }
@@ -382,7 +383,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 ]
               }
             """.trimIndent(),
-            true,
+            JsonCompareMode.STRICT,
           )
       }
     }
@@ -465,7 +466,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
            ]
          }
             """.trimIndent(),
-            true,
+            JsonCompareMode.STRICT,
           )
       }
     }
@@ -879,7 +880,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 ]
               }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -947,7 +948,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 ]
               }
             """.trimIndent(),
-            true,
+            JsonCompareMode.STRICT,
           )
       }
     }
@@ -1057,7 +1058,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 ]
               }
             """.trimIndent(),
-            true,
+            JsonCompareMode.STRICT,
           )
       }
     }
@@ -1177,7 +1178,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
               ]
             }
             """.trimIndent(),
-            true,
+            JsonCompareMode.STRICT,
           )
       }
     }
@@ -1298,7 +1299,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 ]
               }
             """.trimIndent(),
-            true,
+            JsonCompareMode.STRICT,
           )
       }
 
@@ -1369,7 +1370,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
               ]
             }
             """.trimIndent(),
-            true,
+            JsonCompareMode.STRICT,
           )
       }
 
@@ -1448,7 +1449,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
               ]
             }
             """.trimIndent(),
-            true,
+            JsonCompareMode.STRICT,
           )
       }
     }
@@ -1544,7 +1545,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 ]
               }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }

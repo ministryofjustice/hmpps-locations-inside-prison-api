@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
+import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
@@ -19,7 +20,6 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
-
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResourceIntTest : CommonDataTestBase() {
 
@@ -205,7 +205,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               }
 
               """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -388,7 +388,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -414,7 +414,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               }
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -813,7 +813,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -1103,7 +1103,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -1201,7 +1201,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -1431,7 +1431,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -1684,7 +1684,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -1756,7 +1756,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "isResidential": false
               }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -1988,7 +1988,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
               """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(4).let {
@@ -2176,7 +2176,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         prisonerSearchMockServer.resetAll()
@@ -2400,7 +2400,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         prisonerSearchMockServer.resetAll()
@@ -2468,7 +2468,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(2).let {
@@ -2592,7 +2592,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               ]
             }
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -2750,7 +2750,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 ]
               }              
               """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(9).let {
@@ -2852,7 +2852,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 ]
               } 
              """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -3020,7 +3020,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 }
               ]
               """,
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(3).let {

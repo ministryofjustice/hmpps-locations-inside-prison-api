@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
+import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
@@ -228,7 +229,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
               }
             ]
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -274,7 +275,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
               }
             ]
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -320,7 +321,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
               }
             ]
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -366,7 +367,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
               }
             ]
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -412,7 +413,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
               }
             ]
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -471,7 +472,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
               }
             ]
           """,
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
