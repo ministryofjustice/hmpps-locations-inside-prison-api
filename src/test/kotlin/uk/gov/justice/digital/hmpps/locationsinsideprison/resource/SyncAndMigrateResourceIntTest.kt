@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
+import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
@@ -47,7 +48,6 @@ import java.util.*
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
-import org.springframework.test.json.JsonCompareMode
 class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
   @TestConfiguration
@@ -298,7 +298,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "orderWithinParentLocation": 1,
               "attributes": ["IMMIGRATION_DETAINEES"]
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -325,7 +326,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "orderWithinParentLocation": 1,
               "attributes": ["IMMIGRATION_DETAINEES"]
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -372,7 +374,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "capacityOfCertifiedCell": 0
               }
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -401,7 +404,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                   "developerMessage": "Location Location ZZGHI-B-1-013 cannot be updated as permanently deactivated cannot be updated as permanently deactivated",
                   "errorCode": 107
                 }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/sync/id/${permDeactivated.id}")
@@ -419,7 +423,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": false,
               "permanentlyDeactivated": true
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -461,7 +466,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "capacityOfCertifiedCell": 0
               }
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -501,7 +507,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 }
               ]
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -545,7 +552,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "capacityOfCertifiedCell": 1
               }
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/${room.id}")
@@ -578,7 +586,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "capacityOfCertifiedCell": 1
               }
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -624,7 +633,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "capacityOfCertifiedCell": 1
               }
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -657,7 +667,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 }
               ]
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -701,7 +712,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "maxCapacity": 99
               }
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -751,7 +763,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "comments": "This is a new cell (inactive)",
               "orderWithinParentLocation": 6
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -910,7 +923,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "deactivatedReason": "${migrateRequest.deactivationReason}",
               "proposedReactivationDate": "${migrateRequest.proposedReactivationDate}"
             }
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
 
         webTestClient.get().uri("/locations/key/ZZGHI-B-1-002?includeHistory=true")
@@ -970,7 +984,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 }
               ]
             }
-            """, JsonCompareMode.LENIENT,
+            """,
+            JsonCompareMode.LENIENT,
           )
       }
 

@@ -274,7 +274,8 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                 ]
               }
             ]
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -319,7 +320,8 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                 ]
               }
             ]
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -364,7 +366,8 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                 ]
               }
             ]
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -409,7 +412,8 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                 ]
               }
             ]
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -467,7 +471,8 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
                 ]
               }
             ]
-          """, JsonCompareMode.LENIENT,
+          """,
+            JsonCompareMode.LENIENT,
           )
       }
     }

@@ -69,7 +69,6 @@ class CellAttributesResourceIntTest : CommonDataTestBase() {
 
     @Test
     fun `can get legacy residential attributes for cell`() {
-
       webTestClient.get().uri("/locations/${cell1N.id}/attributes")
         .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
         .exchange()
@@ -84,7 +83,6 @@ class CellAttributesResourceIntTest : CommonDataTestBase() {
           JsonCompareMode.STRICT,
         )
     }
-
 
     @Test
     fun `can get specialist attributes for cell`() {
@@ -101,6 +99,4 @@ class CellAttributesResourceIntTest : CommonDataTestBase() {
         )
     }
   }
-
 }
-

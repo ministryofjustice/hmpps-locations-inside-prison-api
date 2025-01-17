@@ -7,8 +7,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
-import org.springframework.boot.test.mock.mockito.SpyBean
 import org.springframework.http.HttpHeaders
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.HmppsAuthMockServer
@@ -20,14 +20,13 @@ import uk.gov.justice.hmpps.test.kotlin.auth.JwtAuthorisationHelper
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 abstract class IntegrationTestBase : TestBase() {
 
-  @Suppress("SpringJavaInjectionPointsAutowiringInspection")
   @Autowired
   lateinit var webTestClient: WebTestClient
 
   @Autowired
   protected lateinit var jwtAuthHelper: JwtAuthorisationHelper
 
-  @SpyBean
+  @MockitoSpyBean
   protected lateinit var telemetryClient: TelemetryClient
 
   @Autowired

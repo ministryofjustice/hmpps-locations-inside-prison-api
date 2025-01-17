@@ -3,10 +3,10 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
-import org.springframework.test.json.JsonCompareMode
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationKeyResourceTest : CommonDataTestBase() {
 
@@ -211,7 +211,8 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                       "isResidential": true,
                       "key": "MDI-Z"
                     }
-                        """, JsonCompareMode.LENIENT,
+                        """,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -311,7 +312,8 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                             "leafLevel": true,
                             "level": 2
                           }]
-                         """, JsonCompareMode.LENIENT,
+                         """,
+            JsonCompareMode.LENIENT,
           )
       }
     }
