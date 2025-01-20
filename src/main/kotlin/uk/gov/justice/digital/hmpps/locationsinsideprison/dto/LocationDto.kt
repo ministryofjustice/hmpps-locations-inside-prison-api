@@ -326,7 +326,7 @@ data class TransactionDetail(
   @Schema(description = "Location key", example = "BXI-1-1-001", required = true)
   val locationKey: String,
 
-  @Schema(description = "Location Code", required = true)
+  @Schema(description = "Attribute Code", required = true)
   val attributeCode: LocationAttribute,
 
   @Schema(description = "Location Attribute", example = "Location Type", required = true)
