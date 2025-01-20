@@ -122,7 +122,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         transactionType = TransactionType.LOCATION_CREATE,
         transactionDetail = "Initial Data Load",
         transactionInvokedBy = EXPECTED_USERNAME,
-        txStartTime = LocalDateTime.now(clock),
+        txStartTime = LocalDateTime.now(clock).minusDays(10),
       ),
     )
 
@@ -886,16 +886,16 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         assertThat(resultLocation.changeHistory).isNotNull
         assertThat(resultLocation.changeHistory).hasSize(2)
 
-        val newestChange = resultLocation.changeHistory?.get(0)
-        assertThat(newestChange?.attribute).isEqualTo("Local name")
-        assertThat(newestChange?.newValue).isEqualTo("A New Cell")
-        assertThat(newestChange?.amendedBy).isEqualTo("user2")
-        assertThat(newestChange?.amendedDate).isEqualTo(LocalDateTime.now(clock).minusYears(2))
-
         val olderChange = resultLocation.changeHistory?.get(1)
-        assertThat(olderChange?.attribute).isEqualTo("Used for")
-        assertThat(olderChange?.newValue).isEqualTo("Standard accommodation")
-        assertThat(olderChange?.amendedBy).isEqualTo("user")
+        assertThat(olderChange?.attribute).isEqualTo("Local name")
+        assertThat(olderChange?.newValue).isEqualTo("A New Cell")
+        assertThat(olderChange?.amendedBy).isEqualTo("user2")
+        assertThat(olderChange?.amendedDate).isEqualTo(LocalDateTime.now(clock).minusYears(2))
+
+        val newestChange = resultLocation.changeHistory?.get(0)
+        assertThat(newestChange?.attribute).isEqualTo("Used for")
+        assertThat(newestChange?.newValue).isEqualTo("Standard accommodation")
+        assertThat(newestChange?.amendedBy).isEqualTo("user")
       }
 
       @Test

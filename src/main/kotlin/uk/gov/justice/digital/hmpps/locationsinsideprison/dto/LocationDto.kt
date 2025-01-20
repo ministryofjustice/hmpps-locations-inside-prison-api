@@ -317,6 +317,58 @@ data class ChangeHistory(
   val amendedDate: LocalDateTime,
 )
 
+@Schema(description = "Transaction Detail")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class TransactionDetail(
+  @Schema(description = "Location Id", example = "019483f5-fee7-7ed0-924c-3ee4b2b51904", required = true)
+  val locationId: UUID,
+
+  @Schema(description = "Location key", example = "BXI-1-1-001", required = true)
+  val locationKey: String,
+
+  @Schema(description = "Location Code", required = true)
+  val attributeCode: LocationAttribute,
+
+  @Schema(description = "Location Attribute", example = "Location Type", required = true)
+  val attribute: String,
+
+  @Schema(description = "User who made the change", example = "user", required = true)
+  val amendedBy: String,
+
+  @Schema(description = "Date the change was made", example = "2023-01-23T10:15:30", required = true)
+  val amendedDate: LocalDateTime,
+
+  @Schema(description = "Previous values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
+  val oldValues: List<String>? = null,
+
+  @Schema(description = "New values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
+  val newValues: List<String>? = null,
+) {
+  fun toChangeHistory(transactionHistory: TransactionHistory): ChangeHistory {
+    val multipleValues = (oldValues?.size ?: 0) > 1 || (newValues?.size ?: 0) > 1
+    return ChangeHistory(
+      transactionId = transactionHistory.transactionId,
+      transactionType = transactionHistory.transactionType,
+      attribute = attribute,
+      multipleValues = multipleValues,
+      oldValue = if (!multipleValues) {
+        oldValues?.firstOrNull()
+      } else {
+        null
+      },
+      newValue = if (!multipleValues) {
+        newValues?.firstOrNull()
+      } else {
+        null
+      },
+      oldValues = oldValues,
+      newValues = newValues,
+      amendedBy = amendedBy,
+      amendedDate = amendedDate,
+    )
+  }
+}
+
 @Schema(description = "Transaction history for location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class TransactionHistory(
@@ -340,8 +392,12 @@ data class TransactionHistory(
   var txEndTime: LocalDateTime? = null,
 
   @Schema(description = "The list of changes that were made in the transaction", required = true)
-  val changesToLocation: List<ChangeHistory>,
-)
+  val transactionDetails: List<TransactionDetail>,
+) {
+  fun toChangeHistory(): List<ChangeHistory> {
+    return transactionDetails.map { it.toChangeHistory(this) }
+  }
+}
 
 @Schema(description = "Certification")
 @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -111,6 +111,9 @@ class LocationService(
     formatLocalName = formatLocalName,
   )
 
+  fun getTransaction(txId: UUID) =
+    linkedTransactionRepository.findById(txId).getOrNull()?.toDto()
+
   fun getLocationByPrison(prisonId: String): List<LocationDTO> =
     locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
       .filter { !it.isPermanentlyDeactivated() }

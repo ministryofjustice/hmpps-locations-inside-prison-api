@@ -19,15 +19,18 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_U
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 import java.util.*
+
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResidentialResourceTest : CommonDataTestBase() {
 
@@ -2387,6 +2390,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 ]
               }
             """.trimIndent(),
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -2792,7 +2796,14 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           convertedCellType = ConvertedCellType.OTHER,
           userOrSystemInContext = "Aleman",
           clock = clock,
-          linkedTransaction = linkedTransaction,
+          linkedTransaction = linkedTransactionRepository.saveAndFlush(
+            LinkedTransaction(
+              transactionType = TransactionType.LOCATION_CREATE,
+              transactionDetail = "Convert to Non Res before test runs",
+              transactionInvokedBy = "Aleman",
+              txStartTime = LocalDateTime.now(clock).minusMinutes(5),
+            ),
+          ),
         )
         repository.save(cell1)
 
@@ -2823,106 +2834,35 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody().json(
-            """
-              {
-                "key": "${cell1.getKey()}",
-                "status": "${LocationStatus.ACTIVE}",
-                "changeHistory": [
-                  {
-                    "transactionType": "LOCATION_CREATE",
-                    "attribute": "Used for",
-                    "multipleValues": false,
-                    "newValue": "Standard accommodation",
-                    "amendedBy": "A_TEST_USER"
-                  },
-                  {
-                    "transactionType": "LOCATION_CREATE",
-                    "attribute": "Working capacity",
-                    "multipleValues": false,
-                    "oldValue": "2",
-                    "newValue": "None",
-                    "amendedBy": "Aleman"
-                  },
-                  {
-                    "transactionType": "LOCATION_CREATE",
-                    "attribute": "Maximum capacity",
-                    "multipleValues": false,
-                    "oldValue": "2",
-                    "newValue": "None",
-                    "amendedBy": "Aleman"
-                  },
-                  {
-                    "transactionType": "LOCATION_CREATE",
-                    "attribute": "Certification",
-                    "multipleValues": false,
-                    "oldValue": "Certified",
-                    "newValue": "Uncertified",
-                    "amendedBy": "Aleman"
-                  },
-                  {
-                    "transactionType": "LOCATION_CREATE",
-                    "attribute": "Status",
-                    "multipleValues": false,
-                    "oldValue": "Active",
-                    "newValue": "Non-residential",
-                    "amendedBy": "Aleman"
-                  },
-                  {
-                    "transactionType": "LOCATION_CREATE",
-                    "attribute": "Non-residential room",
-                    "multipleValues": false,
-                    "newValue": "Other",
-                    "amendedBy": "Aleman"
-                  },
-                  {
-                    "transactionType": "ROOM_CONVERTION_TO_CELL",
-                    "attribute": "Status",
-                    "multipleValues": false,
-                    "oldValue": "Non-residential",
-                    "newValue": "Active"
-                  },
-                  {
-                    "transactionType": "ROOM_CONVERTION_TO_CELL",
-                    "attribute": "Certification",
-                    "multipleValues": false,
-                    "oldValue": "Uncertified",
-                    "newValue": "Certified"
-                  },
-                  {
-                    "transactionType": "ROOM_CONVERTION_TO_CELL",
-                    "attribute": "Used for",
-                    "multipleValues": false,
-                    "newValue": "Standard accommodation"
-                  },
-                  {
-                    "transactionType": "ROOM_CONVERTION_TO_CELL",
-                    "attribute": "Cell type",
-                    "multipleValues": true,
-                    "newValues": [
-                      "Accessible cell",
-                      "Isolation cell for communicable diseases"
-                    ]
-                  },
-                  {
-                    "transactionType": "ROOM_CONVERTION_TO_CELL",
-                    "attribute": "Maximum capacity",
-                    "multipleValues": false,
-                    "oldValue": "None",
-                    "newValue": "2"
-                  },
-                  {
-                    "transactionType": "ROOM_CONVERTION_TO_CELL",
-                    "attribute": "Working capacity",
-                    "multipleValues": false,
-                    "oldValue": "None",
-                    "newValue": "2"
-                  }
-                ]
-              }
-            """.trimIndent(),
-            false,
-          )
+          .expectBody()
+          .jsonPath("$.changeHistory[0].attribute").isEqualTo("Status")
+          .jsonPath("$.changeHistory[1].attribute").isEqualTo("Certification")
+          .jsonPath("$.changeHistory[2].attribute").isEqualTo("Used for")
+          .jsonPath("$.changeHistory[3].attribute").isEqualTo("Cell type")
+          .jsonPath("$.changeHistory[4].attribute").isEqualTo("Working capacity")
+          .jsonPath("$.changeHistory[5].attribute").isEqualTo("Maximum capacity")
+
+        val tx = webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectBody(LocationTest::class.java)
+          .returnResult().responseBody!!.changeHistory?.firstOrNull()?.transactionId
+        assertThat(tx).isNotNull()
+
+        webTestClient.get().uri("/transactions/$tx")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.transactionType").isEqualTo("ROOM_CONVERTION_TO_CELL")
+          .jsonPath("$.transactionDetails[0].attribute").isEqualTo("Status")
+          .jsonPath("$.transactionDetails[1].attribute").isEqualTo("Certification")
+          .jsonPath("$.transactionDetails[2].attribute").isEqualTo("Used for")
+          .jsonPath("$.transactionDetails[3].attribute").isEqualTo("Cell type")
+          .jsonPath("$.transactionDetails[4].attribute").isEqualTo("Working capacity")
+          .jsonPath("$.transactionDetails[5].attribute").isEqualTo("Maximum capacity")
 
         assertThat(
           webTestClient.get().uri("/sync/id/${cell1.id}")

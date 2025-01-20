@@ -65,7 +65,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         transactionType = TransactionType.LOCATION_CREATE,
         transactionDetail = "Initial Data Load",
         transactionInvokedBy = EXPECTED_USERNAME,
-        txStartTime = LocalDateTime.now(clock),
+        txStartTime = LocalDateTime.now(clock).minusDays(1),
       ),
     )
 
