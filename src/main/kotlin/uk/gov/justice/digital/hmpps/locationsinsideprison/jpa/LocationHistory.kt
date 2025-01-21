@@ -10,6 +10,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
 import org.hibernate.Hibernate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TransactionDetail
 import java.time.LocalDateTime
 
 @Entity
@@ -88,18 +89,29 @@ class LocationHistory(
 enum class LocationAttribute(
   val description: String,
   val display: Boolean = false,
+  val displayOrder: Int = 99,
   val notUsed: Boolean = false,
 ) {
-  OPERATIONAL_CAPACITY(description = "Working capacity", display = true),
-  CAPACITY(description = "Maximum capacity", display = true),
-  SPECIALIST_CELL_TYPE(description = "Cell type", display = true),
-  USED_FOR(description = "Used for", display = true),
-  DESCRIPTION(description = "Local name", display = true),
-  CERTIFIED(description = "Certification", display = true),
-  STATUS(description = "Status", display = true),
-  DEACTIVATION_REASON(description = "Deactivation reason", display = true),
-  CONVERTED_CELL_TYPE(description = "Non-residential room", display = true),
 
+  // These are all returned as history changes
+  STATUS(description = "Status", display = true, displayOrder = 0),
+  CERTIFIED(description = "Certification", display = true, displayOrder = 5),
+  ACCOMMODATION_TYPE(description = "Accommodation type", display = true, displayOrder = 10),
+  USED_FOR(description = "Used for", display = true, displayOrder = 15),
+  SPECIALIST_CELL_TYPE(description = "Cell type", display = true, displayOrder = 20),
+  CONVERTED_CELL_TYPE(description = "Non-residential room", display = true, displayOrder = 25),
+  OPERATIONAL_CAPACITY(description = "Working capacity", display = true, displayOrder = 30),
+  CAPACITY(description = "Maximum capacity", display = true, displayOrder = 35),
+  DEACTIVATION_REASON(description = "Deactivation reason", display = true, displayOrder = 40),
+  PROPOSED_REACTIVATION_DATE(description = "Estimated reactivation date", display = true, displayOrder = 45),
+  PLANET_FM_NUMBER(description = "Planet FM reference number", display = true, displayOrder = 50),
+  DESCRIPTION(description = "Local name", display = true, displayOrder = 55),
+
+  // non res only
+  USAGE(description = "Usage", display = true),
+  NON_RESIDENTIAL_CAPACITY(description = "Non residential capacity", display = true),
+
+  // These are recorded but not returned as history changes
   CODE(description = "Code"),
   LOCATION_TYPE(description = "Location type"),
   RESIDENTIAL_HOUSING_TYPE(description = "Residential housing type"),
@@ -108,17 +120,53 @@ enum class LocationAttribute(
   ORDER_WITHIN_PARENT_LOCATION(description = "Order within parent location"),
   COMMENTS(description = "Comments"),
   ATTRIBUTES(description = "Attributes"),
-  PROPOSED_REACTIVATION_DATE(description = "Estimated reactivation date", display = true),
-  ACCOMMODATION_TYPE(description = "Accommodation type", display = true),
-  PLANET_FM_NUMBER(description = "Planet FM reference number", display = true),
   PERMANENT_DEACTIVATION(description = "Permanent deactivation"),
 
-  // non res only
-  USAGE(description = "Usage", display = true),
-  NON_RESIDENTIAL_CAPACITY(description = "Non residential capacity", display = true),
-
+  // These are not recorded
   ACTIVE(description = "Active", notUsed = true),
   DEACTIVATED_DATE(description = "Deactivated date", notUsed = true),
   DEACTIVATED_REASON(description = "Deactivated reason", notUsed = true),
   DEACTIVATED_REASON_DESCRIPTION(description = "Deactivated reason description", notUsed = true),
+}
+
+fun toGroupedHistory(
+  attribute: LocationAttribute,
+  transaction: LinkedTransaction,
+  history: List<LocationHistory>,
+) = if (history.size > 1) {
+  val oldValues = history.mapNotNull { it.oldValue }
+  val newValues = history.mapNotNull { it.newValue }
+  val multipleValues = oldValues.size > 1 || newValues.size > 1
+
+  ChangeHistory(
+    transactionId = transaction.transactionId!!,
+    transactionType = transaction.transactionType,
+    attribute = attribute.description,
+    multipleValues = multipleValues,
+    oldValue = if (multipleValues) null else oldValues.firstOrNull(),
+    oldValues = oldValues.ifEmpty { null },
+    newValue = if (multipleValues) null else newValues.firstOrNull(),
+    newValues = newValues.ifEmpty { null },
+    amendedBy = transaction.transactionInvokedBy,
+    amendedDate = transaction.txStartTime,
+  )
+} else {
+  history.firstOrNull()?.toDto()
+}
+
+fun toGroupedTx(
+  attribute: LocationAttribute,
+  history: List<LocationHistory>,
+): TransactionDetail {
+  val firstRecord = history.first()
+  return TransactionDetail(
+    locationId = firstRecord.location.id!!,
+    locationKey = firstRecord.location.getKey(),
+    amendedBy = firstRecord.amendedBy,
+    amendedDate = firstRecord.amendedDate,
+    attributeCode = attribute,
+    attribute = attribute.description,
+    oldValues = history.mapNotNull { it.oldValue }.ifEmpty { null },
+    newValues = history.mapNotNull { it.newValue }.ifEmpty { null },
+  )
 }

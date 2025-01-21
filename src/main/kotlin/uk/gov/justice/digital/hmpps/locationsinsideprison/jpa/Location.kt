@@ -424,47 +424,21 @@ abstract class Location(
   }
 
   private fun createHistory(): List<ChangeHistory> {
-    val withTx = history.asSequence()
-      .filter { it.linkedTransaction != null }
-      .sortedByDescending { it.linkedTransaction!!.txStartTime }.sortedBy { it.linkedTransaction!!.transactionId }.sortedBy { it.id }
-      .groupBy { it.linkedTransaction!! }
-      .map { (transaction, changes) ->
-        changes.groupBy { it.attributeName }
-          .filter { it.key.display }
-          .mapNotNull { (attribute, history) -> toChangeHistory(attribute, transaction, history) }
-      }.flatten().toList()
+    val withTx = history
+      .asSequence()
+      .mapNotNull { it.linkedTransaction }
+      .distinct()
+      .sortedByDescending { it.txStartTime }
+      .map { tx -> tx.toDto(this).toChangeHistory() }
+      .flatten()
+      .toList()
 
     val withoutTx = history.asSequence().filter { it.linkedTransaction == null }
-      .sortedByDescending { it.amendedDate }.sortedBy { it.id }
+      .sortedByDescending { it.amendedDate }.sortedBy { it.attributeName.displayOrder }
       .filter { it.attributeName.display }
       .map { it.toDto() }.toList()
 
     return withTx.plus(withoutTx)
-  }
-
-  private fun toChangeHistory(
-    attribute: LocationAttribute,
-    transaction: LinkedTransaction,
-    history: List<LocationHistory>,
-  ) = if (history.size > 1) {
-    val oldValues = history.mapNotNull { it.oldValue }
-    val newValues = history.mapNotNull { it.newValue }
-    val multipleValues = oldValues.size > 1 || newValues.size > 1
-
-    ChangeHistory(
-      transactionId = transaction.transactionId!!,
-      transactionType = transaction.transactionType,
-      attribute = attribute.description,
-      multipleValues = multipleValues,
-      oldValue = if (multipleValues) null else oldValues.firstOrNull(),
-      oldValues = oldValues.ifEmpty { null },
-      newValue = if (multipleValues) null else newValues.firstOrNull(),
-      newValues = newValues.ifEmpty { null },
-      amendedBy = transaction.transactionInvokedBy,
-      amendedDate = transaction.txStartTime,
-    )
-  } else {
-    history.firstOrNull()?.toDto()
   }
 
   private fun isLeafLevel() = findSubLocations().isEmpty() && !isStructural() && !isArea()

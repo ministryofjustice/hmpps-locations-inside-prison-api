@@ -14,6 +14,7 @@ enum class ErrorCode(val errorCode: Int) {
   LocationCannotBePermanentlyDeactivated(105),
   ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed(106),
   PermanentlyDeactivatedLocationCannotByUpdated(107),
+  TransactionNotFound(108),
   DeactivationErrorLocationsContainPrisoners(109),
   SignedOperationCapacityForPrisonNotFound(110),
   LocationPrefixNotFound(111),

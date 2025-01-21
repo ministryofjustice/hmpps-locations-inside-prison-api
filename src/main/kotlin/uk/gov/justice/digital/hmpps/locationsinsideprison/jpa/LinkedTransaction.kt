@@ -41,10 +41,16 @@ class LinkedTransaction(
       transactionInvokedBy = transactionInvokedBy,
       txStartTime = txStartTime,
       txEndTime = txEndTime,
-      changesToLocation = auditChanges
+      transactionDetails = auditChanges
+        .asSequence()
         .filter { audit -> (filterLocation == null || audit.location == filterLocation) && audit.attributeName.display }
-        .sortedBy { it.amendedDate }.sortedBy { it.id }
-        .map { it.toDto() },
+        .sortedBy { it.amendedDate }.sortedBy { it.attributeName.displayOrder }
+        .groupBy {
+          it.location
+          it.attributeName
+        }
+        .mapNotNull { (attribute, groupedTx) -> toGroupedTx(attribute, groupedTx) }
+        .toList(),
     )
 
   override fun equals(other: Any?): Boolean {

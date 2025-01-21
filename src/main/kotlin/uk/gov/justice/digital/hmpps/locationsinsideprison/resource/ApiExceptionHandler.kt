@@ -19,6 +19,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
+import java.util.UUID
 
 @RestControllerAdvice
 class ApiExceptionHandler {
@@ -183,6 +184,21 @@ class ApiExceptionHandler {
           status = HttpStatus.NOT_FOUND,
           errorCode = ErrorCode.LocationNotFound,
           userMessage = "Location not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(TransactionNotFoundException::class)
+  fun handleTransactionNotFound(e: TransactionNotFoundException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Transaction not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.TransactionNotFound,
+          userMessage = "Transaction not found: ${e.message}",
           developerMessage = e.message,
         ),
       )
@@ -361,6 +377,8 @@ class ApiExceptionHandler {
 class PrisonNotFoundException(id: String) : Exception("There is no prison found for ID = $id")
 
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
+
+class TransactionNotFoundException(txId: UUID) : Exception("There is no transaction found for txId = $txId")
 
 class LocationPrefixNotFoundException(id: String) : Exception("Location prefix not found for $id")
 
