@@ -46,10 +46,9 @@ class LinkedTransaction(
         .filter { audit -> (filterLocation == null || audit.location == filterLocation) && audit.attributeName.display }
         .sortedBy { it.amendedDate }.sortedBy { it.attributeName.displayOrder }
         .groupBy {
-          it.location
-          it.attributeName
+          Pair(it.location, it.attributeName)
         }
-        .mapNotNull { (attribute, groupedTx) -> toGroupedTx(attribute, groupedTx) }
+        .mapNotNull { (locationAttributePair, groupedTx) -> toGroupedTx(locationAttributePair.second, groupedTx) }
         .toList(),
     )
 
