@@ -419,7 +419,6 @@ class LocationTransformResourceTest : CommonDataTestBase() {
               "changeHistory": [
                 {
                   "attribute": "Cell type",
-                  "multipleValues": true,
                   "oldValues": [
                     "Safe cell",
                     "Dry cell"
@@ -428,7 +427,6 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 },
                 {
                   "attribute": "Cell type",
-                  "multipleValues": true,
                   "oldValues": [
                     "Medical cell"
                   ],
@@ -440,7 +438,6 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 },
                 {
                   "attribute": "Cell type",
-                  "multipleValues": true,
                   "oldValues": [
                     "Constant supervision cell",
                     "Safe cell",
@@ -453,7 +450,6 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 },
                 {
                   "attribute": "Cell type",
-                  "multipleValues": true,
                   "newValues": [
                     "Safe cell",
                     "Constant supervision cell",
@@ -463,8 +459,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 },
                 {
                   "attribute": "Used for",
-                  "multipleValues": false,
-                  "newValue": "Standard accommodation",
+                  "newValues": ["Standard accommodation"],
                   "transactionType": "LOCATION_CREATE"
                 }
               ]

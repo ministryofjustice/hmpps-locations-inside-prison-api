@@ -96,8 +96,8 @@ data class NomisMigrateLocationRequest(
     history?.map {
       location.addHistory(
         attributeName = LocationAttribute.valueOf(it.attribute),
-        oldValue = it.oldValue,
-        newValue = it.newValue,
+        oldValue = it.oldValues?.firstOrNull(),
+        newValue = it.newValues?.firstOrNull(),
         amendedBy = it.amendedBy,
         amendedDate = it.amendedDate,
         linkedTransaction = linkedTransaction,

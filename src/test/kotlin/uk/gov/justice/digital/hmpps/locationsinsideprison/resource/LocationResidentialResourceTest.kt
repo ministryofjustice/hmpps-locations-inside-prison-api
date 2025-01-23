@@ -2360,31 +2360,31 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "changeHistory": [
                    {
                     "attribute": "Status",
-                    "oldValue": "Active",
-                    "newValue": "Non-residential"
+                    "oldValues": ["Active"],
+                    "newValues": ["Non-residential"]
                   },
                   {
                     "attribute": "Certification",
-                    "oldValue": "Certified",
-                    "newValue": "Uncertified"
+                    "oldValues": ["Certified"],
+                    "newValues": ["Uncertified"]
                   },
                   {
                     "attribute": "Working capacity",
-                    "oldValue": "2",
-                    "newValue": "None"
+                    "oldValues": ["2"],
+                    "newValues": ["None"]
                   },
                   {
                     "attribute": "Maximum capacity",
-                    "oldValue": "2",
-                    "newValue": "None"
+                    "oldValues": ["2"],
+                    "newValues": ["None"]
                   },
                   {
                     "attribute": "Non-residential room",
-                    "newValue": "Other - Tanning room"
+                    "newValues": ["Other - Tanning room"]
                   },
                   {
                     "attribute": "Used for",
-                    "newValue": "Standard accommodation",
+                    "newValues": ["Standard accommodation"],
                     "amendedBy": "A_TEST_USER"
                   }
                 ]
@@ -2442,12 +2442,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "changeHistory": [
                   {
                     "attribute": "Status",
-                    "oldValue": "Active",
-                    "newValue": "Non-residential"
+                    "oldValues": ["Active"],
+                    "newValues": ["Non-residential"]
                   },
                   {
                     "attribute": "Non-residential room",
-                    "newValue": "Store room - Store Room"
+                    "newValues": ["Store room - Store Room"]
                   }
                 ]
               }
@@ -2577,34 +2577,34 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "changeHistory": [
                   {
                     "attribute": "Status",
-                    "oldValue": "Active",
-                    "newValue": "Non-residential"
+                    "oldValues": ["Active"],
+                    "newValues": ["Non-residential"]
                   },
                   {
                     "attribute": "Non-residential room",
-                    "oldValue": "Other - Playroom",
-                    "newValue": "Office"
+                    "oldValues": ["Other - Playroom"],
+                    "newValues": ["Office"]
                   },
                   {
                     "attribute": "Non-residential room",
-                    "newValue": "Other - Playroom"
+                    "newValues": ["Other - Playroom"]
                   },
                   {
                     "attribute": "Certification",
-                    "oldValue": "Certified",
-                    "newValue": "Uncertified"
+                    "oldValues": ["Certified"],
+                    "newValues": ["Uncertified"]
                   },
                   {
                     "attribute": "Maximum capacity",
-                    "oldValue": "2"
+                    "oldValues": ["2"]
                   },
                   {
                     "attribute": "Working capacity",
-                    "oldValue": "2"
+                    "oldValues": ["2"]
                   },
                   {
                     "attribute": "Used for",
-                    "newValue": "Standard accommodation"
+                    "newValues": ["Standard accommodation"]
                   }
                 ]
               }

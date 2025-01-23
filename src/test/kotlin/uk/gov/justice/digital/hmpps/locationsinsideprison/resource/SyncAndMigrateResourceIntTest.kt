@@ -95,15 +95,15 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       history = listOf(
         ChangeHistory(
           attribute = LocationAttribute.DESCRIPTION.name,
-          oldValue = null,
-          newValue = "A New Cell",
+          oldValues = null,
+          newValues = listOf("A New Cell"),
           amendedBy = "user2",
           amendedDate = LocalDateTime.now(clock).minusYears(2),
         ),
         ChangeHistory(
           attribute = LocationAttribute.COMMENTS.name,
-          oldValue = "Old comment",
-          newValue = "This is a new cell",
+          oldValues = listOf("Old comment"),
+          newValues = listOf("This is a new cell"),
           amendedBy = "user1",
           amendedDate = LocalDateTime.now(clock).minusYears(1),
         ),
@@ -888,13 +888,13 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
         val olderChange = resultLocation.changeHistory?.get(1)
         assertThat(olderChange?.attribute).isEqualTo("Local name")
-        assertThat(olderChange?.newValue).isEqualTo("A New Cell")
+        assertThat(olderChange?.newValues).isEqualTo(listOf("A New Cell"))
         assertThat(olderChange?.amendedBy).isEqualTo("user2")
         assertThat(olderChange?.amendedDate).isEqualTo(LocalDateTime.now(clock).minusYears(2))
 
         val newestChange = resultLocation.changeHistory?.get(0)
         assertThat(newestChange?.attribute).isEqualTo("Used for")
-        assertThat(newestChange?.newValue).isEqualTo("Standard accommodation")
+        assertThat(newestChange?.newValues).isEqualTo(listOf("Standard accommodation"))
         assertThat(newestChange?.amendedBy).isEqualTo("user")
       }
 
@@ -950,36 +950,36 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "changeHistory": [
                 {
                   "attribute": "Status",
-                  "oldValue": "Inactive",
-                  "newValue": "Non-residential"
+                  "oldValues": ["Inactive"],
+                  "newValues": ["Non-residential"]
                 },
                 {
                   "attribute": "Local name",
-                  "newValue": "A New Cell",
+                  "newValues": ["A New Cell"],
                   "amendedBy": "user2",
                   "amendedDate": "${LocalDateTime.now(clock).minusYears(2)}"
                 },
                 {
                   "attribute": "Working capacity",
-                  "oldValue": "1",
-                  "newValue": "None",
+                  "oldValues": ["1"],
+                  "newValues": ["None"],
                   "amendedBy": "user"
                 },
                 {
                   "attribute": "Maximum capacity",
-                  "oldValue": "1",
-                  "newValue": "None",
+                  "oldValues": ["1"],
+                  "newValues": ["None"],
                   "amendedBy": "user"
                 },
                 {
                   "attribute": "Certification",
-                  "oldValue": "Certified",
-                  "newValue": "Uncertified",
+                  "oldValues": ["Certified"],
+                  "newValues": ["Uncertified"],
                   "amendedBy": "user"
                 },
                 {
                   "attribute": "Non-residential room",
-                  "newValue": "Holding room",
+                  "newValues": ["Holding room"],
                   "amendedBy": "user"
                 }
               ]

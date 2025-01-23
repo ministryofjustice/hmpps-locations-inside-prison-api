@@ -43,8 +43,6 @@ class LocationHistory(
       transactionId = linkedTransaction?.transactionId,
       transactionType = linkedTransaction?.transactionType,
       attribute = attributeName.description,
-      oldValue = oldValue,
-      newValue = newValue,
       oldValues = oldValue?.let { listOf(it) },
       newValues = newValue?.let { listOf(it) },
       amendedBy = amendedBy,
@@ -127,31 +125,6 @@ enum class LocationAttribute(
   DEACTIVATED_DATE(description = "Deactivated date", notUsed = true),
   DEACTIVATED_REASON(description = "Deactivated reason", notUsed = true),
   DEACTIVATED_REASON_DESCRIPTION(description = "Deactivated reason description", notUsed = true),
-}
-
-fun toGroupedHistory(
-  attribute: LocationAttribute,
-  transaction: LinkedTransaction,
-  history: List<LocationHistory>,
-) = if (history.size > 1) {
-  val oldValues = history.mapNotNull { it.oldValue }
-  val newValues = history.mapNotNull { it.newValue }
-  val multipleValues = oldValues.size > 1 || newValues.size > 1
-
-  ChangeHistory(
-    transactionId = transaction.transactionId!!,
-    transactionType = transaction.transactionType,
-    attribute = attribute.description,
-    multipleValues = multipleValues,
-    oldValue = if (multipleValues) null else oldValues.firstOrNull(),
-    oldValues = oldValues.ifEmpty { null },
-    newValue = if (multipleValues) null else newValues.firstOrNull(),
-    newValues = newValues.ifEmpty { null },
-    amendedBy = transaction.transactionInvokedBy,
-    amendedDate = transaction.txStartTime,
-  )
-} else {
-  history.firstOrNull()?.toDto()
 }
 
 fun toGroupedTx(
