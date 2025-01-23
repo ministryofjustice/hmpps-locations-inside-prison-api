@@ -295,17 +295,8 @@ data class ChangeHistory(
   @Schema(description = "Location Attribute", example = "Location Type", required = true)
   val attribute: String,
 
-  @Schema(description = "Indicates the values are lists", example = "false", defaultValue = "false", required = true)
-  val multipleValues: Boolean = false,
-
-  @Schema(description = "Previous value of this attribute", example = "Safe cell", required = false)
-  val oldValue: String? = null,
-
   @Schema(description = "Previous values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
   val oldValues: List<String>? = null,
-
-  @Schema(description = "New value of this attribute", example = "Dry cell", required = false)
-  val newValue: String? = null,
 
   @Schema(description = "New values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
   val newValues: List<String>? = null,
@@ -345,22 +336,10 @@ data class TransactionDetail(
   val newValues: List<String>? = null,
 ) {
   fun toChangeHistory(transactionHistory: TransactionHistory): ChangeHistory {
-    val multipleValues = (oldValues?.size ?: 0) > 1 || (newValues?.size ?: 0) > 1
     return ChangeHistory(
       transactionId = transactionHistory.transactionId,
       transactionType = transactionHistory.transactionType,
       attribute = attribute,
-      multipleValues = multipleValues,
-      oldValue = if (!multipleValues) {
-        oldValues?.firstOrNull()
-      } else {
-        null
-      },
-      newValue = if (!multipleValues) {
-        newValues?.firstOrNull()
-      } else {
-        null
-      },
       oldValues = oldValues,
       newValues = newValues,
       amendedBy = amendedBy,

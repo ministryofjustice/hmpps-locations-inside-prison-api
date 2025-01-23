@@ -633,21 +633,21 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 {
                   "transactionType": "DEACTIVATION",
                   "attribute": "Planet FM reference number",
-                  "newValue": "222333"
+                  "newValues": ["222333"]
                 },
                 { 
                   "transactionType": "DEACTIVATION",
                   "attribute": "Estimated reactivation date",
-                  "newValue": "$proposedReactivationDate"
+                  "newValues": ["$proposedReactivationDate"]
                 },
                 {
                   "attribute": "Deactivation reason",
-                  "newValue": "Damage - Window smashed"
+                  "newValues": ["Damage - Window smashed"]
                 },
                 {
                   "attribute": "Status",
-                  "oldValue": "Active",
-                  "newValue": "Inactive"
+                  "oldValues": ["Active"],
+                  "newValues": ["Inactive"]
                 }
               ],
               "childLocations": [
@@ -690,22 +690,22 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "changeHistory": [
                     {
                       "attribute": "Status",
-                      "oldValue": "Active",
-                      "newValue": "Inactive"
+                      "oldValues": ["Active"],
+                      "newValues": ["Inactive"]
                     },
                     {
                       "attribute": "Deactivation reason",
-                      "newValue": "Damage - Window smashed"
+                      "newValues": ["Damage - Window smashed"]
                     },
                     {
                       "transactionType": "DEACTIVATION",
                       "attribute": "Planet FM reference number",
-                      "newValue": "222333"
+                      "newValues": ["222333"]
                     },
                     { 
                       "transactionType": "DEACTIVATION",
                       "attribute": "Estimated reactivation date",
-                      "newValue": "$proposedReactivationDate"
+                      "newValues": ["$proposedReactivationDate"]
                     }
                   ],
                   "childLocations": [
@@ -727,34 +727,34 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           {
                             "transactionType": "DEACTIVATION",
                             "attribute": "Planet FM reference number",
-                            "newValue": "222333"
+                            "newValues": ["222333"]
                           },
                           { 
                             "transactionType": "DEACTIVATION",
                             "attribute": "Estimated reactivation date",
-                            "newValue": "$proposedReactivationDate"
+                            "newValues": ["$proposedReactivationDate"]
                           },
                           {
                             "attribute": "Deactivation reason",
-                            "newValue": "Damage - Window smashed"
+                            "newValues": ["Damage - Window smashed"]
                           },
                           {
                             "attribute": "Status",
-                            "oldValue": "Active",
-                            "newValue": "Inactive"
+                            "oldValues": ["Active"],
+                            "newValues": ["Inactive"]
                           },
                           {
                             "attribute": "Working capacity",
-                            "oldValue": "2",
-                            "newValue": "0"
+                            "oldValues": ["2"],
+                            "newValues": ["0"]
                           },
                           {
                             "attribute": "Used for",
-                            "newValue": "Standard accommodation"
+                            "newValues": ["Standard accommodation"]
                           },
                           {
                             "attribute": "Cell type",
-                            "newValue": "Accessible cell"
+                            "newValues": ["Accessible cell"]
                           }
                        ]
                     },
@@ -792,21 +792,21 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           {
                             "transactionType": "DEACTIVATION",
                             "attribute": "Planet FM reference number",
-                            "newValue": "222333"
+                            "newValues": ["222333"]
                           },
                           { 
                             "transactionType": "DEACTIVATION",
                             "attribute": "Estimated reactivation date",
-                            "newValue": "$proposedReactivationDate"
+                            "newValues": ["$proposedReactivationDate"]
                           },
                           {
                             "attribute": "Deactivation reason",
-                            "newValue": "Damage - Window smashed"
+                            "newValues": ["Damage - Window smashed"]
                           },
                           {
                             "attribute": "Status",
-                            "oldValue": "Active",
-                            "newValue": "Inactive"
+                            "oldValues": ["Active"],
+                            "newValues": ["Inactive"]
                           }
                     ]
                 }
@@ -851,12 +851,12 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "changeHistory": [
                   {
                     "attribute": "Deactivation reason",
-                    "newValue": "Other - Not Needed"
+                    "newValues": ["Other - Not Needed"]
                   },
                   {
                     "attribute": "Status",
-                    "oldValue": "Active",
-                    "newValue": "Inactive"
+                    "oldValues": ["Active"],
+                    "newValues": ["Inactive"]
                   }
                 ]
               }
@@ -900,25 +900,25 @@ class LocationResourceIntTest : CommonDataTestBase() {
                "changeHistory": [
                  {
                    "attribute": "Estimated reactivation date",
-                   "newValue": "$proposedReactivationDate"
+                   "newValues": ["$proposedReactivationDate"]
                  },
                   {
                     "attribute": "Deactivation reason",
-                    "newValue": "Other - Not Needed"
+                    "newValues": ["Other - Not Needed"]
                   },
                   {
                     "attribute": "Status",
-                    "oldValue": "Active",
-                    "newValue": "Inactive"
+                    "oldValues": ["Active"],
+                    "newValues": ["Inactive"]
                   },
                   {
                     "attribute": "Working capacity",
-                    "oldValue": "2",
-                    "newValue": "0"
+                    "oldValues": ["2"],
+                    "newValues": ["0"]
                   },
                   {
                     "attribute": "Used for",
-                    "newValue": "Standard accommodation",
+                    "newValues": ["Standard accommodation"],
                     "amendedBy": "A_TEST_USER"
                   }
                 ]
@@ -963,25 +963,25 @@ class LocationResourceIntTest : CommonDataTestBase() {
                  "changeHistory": [
                   {
                     "attribute": "Estimated reactivation date",
-                    "newValue": "$proposedReactivationDate"
+                    "newValues": ["$proposedReactivationDate"]
                   },
                   {
                     "attribute": "Deactivation reason",
-                    "newValue": "Mothballed"
+                    "newValues": ["Mothballed"]
                   },
                   {
                     "attribute": "Status",
-                    "oldValue": "Active",
-                    "newValue": "Inactive"
+                    "oldValues": ["Active"],
+                    "newValues": ["Inactive"]
                   },
                   {
                     "attribute": "Working capacity",
-                    "oldValue": "2",
-                    "newValue": "0"
+                    "oldValues": ["2"],
+                    "newValues": ["0"]
                   },
                   {
                     "attribute": "Used for",
-                    "newValue": "Standard accommodation",
+                    "newValues": ["Standard accommodation"],
                     "amendedBy": "A_TEST_USER"
                   }
                 ]
@@ -1065,40 +1065,40 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   {
                     "transactionType": "LOCATION_CREATE",
                     "attribute": "Used for",
-                    "newValue": "Standard accommodation"
+                    "newValues": ["Standard accommodation"]
                   },
                   {
                     "transactionType": "DEACTIVATION",
                     "attribute": "Working capacity",
-                    "oldValue": "2",
-                    "newValue": "0"
+                    "oldValues": ["2"],
+                    "newValues": ["0"]
                   },
                   {
                     "transactionType": "DEACTIVATION",
                     "attribute": "Status",
-                    "oldValue": "Active",
-                    "newValue": "Inactive"
+                    "oldValues": ["Active"],
+                    "newValues": ["Inactive"]
                   },
                   {
                     "transactionType": "DEACTIVATION",
                     "attribute": "Deactivation reason",
-                    "newValue": "Damage"
+                    "newValues": ["Damage"]
                   },
                   {
                     "transactionType": "LOCATION_UPDATE",
                     "attribute": "Deactivation reason",
-                    "oldValue": "Damage",
-                    "newValue": "Mothballed - Spiders"
+                    "oldValues": ["Damage"],
+                    "newValues": ["Mothballed - Spiders"]
                   },
                   {
                     "transactionType": "LOCATION_UPDATE",
                     "attribute": "Estimated reactivation date",
-                    "newValue": "2024-01-05"
+                    "newValues": ["2024-01-05"]
                   },
                   {
                     "transactionType": "LOCATION_UPDATE",
                     "attribute": "Planet FM reference number",
-                    "newValue": "334423"
+                    "newValues": ["334423"]
                   }
                 ]
             }
@@ -1168,34 +1168,34 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "changeHistory": [
                   {
                     "attribute": "Estimated reactivation date",
-                    "newValue": "$proposedReactivationDate"
+                    "newValues": ["$proposedReactivationDate"]
                   },
                   {
                     "attribute": "Planet FM reference number",
-                    "newValue": "334423"
+                    "newValues": ["334423"]
                   },
                   {
                     "attribute": "Deactivation reason",
-                    "oldValue": "Damage - Water damage",
-                    "newValue": "Other - Poor state"
+                    "oldValues": ["Damage - Water damage"],
+                    "newValues": ["Other - Poor state"]
                   },
                   {
                     "attribute": "Deactivation reason",
-                    "newValue": "Damage - Water damage"
+                    "newValues": ["Damage - Water damage"]
                   },
                   {
                     "attribute": "Status",
-                    "oldValue": "Active",
-                    "newValue": "Inactive"
+                    "oldValues": ["Active"],
+                    "newValues": ["Inactive"]
                   },
                   {
                     "attribute": "Working capacity",
-                    "oldValue": "2",
-                    "newValue": "0"
+                    "oldValues": ["2"],
+                    "newValues": ["0"]
                   },
                   {
                     "attribute": "Used for",
-                    "newValue": "Standard accommodation",
+                    "newValues": ["Standard accommodation"],
                     "amendedBy": "A_TEST_USER"
                   }
                 ]
@@ -1314,17 +1314,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "changeHistory": [
                 {
                   "attribute": "Status",
-                  "oldValue": "Inactive",
-                  "newValue": "Active"
+                  "oldValues": ["Inactive"],
+                  "newValues": ["Active"]
                 },
                 {
                   "attribute": "Deactivation reason",
-                  "newValue": "Mothballed"
+                  "newValues": ["Mothballed"]
                 },
                 {
                   "attribute": "Status",
-                  "oldValue": "Active",
-                  "newValue": "Inactive"
+                  "oldValues": ["Active"],
+                  "newValues": ["Inactive"]
                 }
               ],
               "childLocations": [
@@ -1368,31 +1368,31 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "changeHistory": [
                         {
                           "attribute": "Status",
-                          "oldValue": "Inactive",
-                          "newValue": "Active"
+                          "oldValues": ["Inactive"],
+                          "newValues": ["Active"]
                         },
                         {
                           "attribute": "Working capacity",
-                          "oldValue": "0",
-                          "newValue": "2"
+                          "oldValues": ["0"],
+                          "newValues": ["2"]
                         },
                         {
                           "attribute": "Deactivation reason",
-                          "newValue": "Mothballed"
+                          "newValues": ["Mothballed"]
                         },
                         {
                           "attribute": "Status",
-                          "oldValue": "Active",
-                          "newValue": "Inactive"
+                          "oldValues": ["Active"],
+                          "newValues": ["Inactive"]
                         },
                         {
                           "attribute": "Working capacity",
-                          "oldValue": "2",
-                          "newValue": "0"
+                          "oldValues": ["2"],
+                          "newValues": ["0"]
                         },
                         {
                           "attribute": "Used for",
-                          "newValue": "Standard accommodation",
+                          "newValues": ["Standard accommodation"],
                           "amendedBy": "A_TEST_USER"
                         }
                       ]
@@ -1576,73 +1576,68 @@ class LocationResourceIntTest : CommonDataTestBase() {
                         {
                           "transactionType": "REACTIVATION",
                           "attribute": "Planet FM reference number",
-                          "multipleValues": false,
-                          "oldValue": "${cellDetails.planetFmReference}"
+                          "oldValues": ["${cellDetails.planetFmReference}"]
                         },
                         {
                           "transactionType": "REACTIVATION",
                           "attribute": "Estimated reactivation date",
-                          "multipleValues": false,
-                          "oldValue": "${cellDetails.proposedReactivationDate}"
+                          "oldValues": ["${cellDetails.proposedReactivationDate}"]
                         },
                         {
                           "transactionType": "REACTIVATION",
                           "attribute": "Status",
-                          "oldValue": "Inactive",
-                          "newValue": "Active"
+                          "oldValues": ["Inactive"],
+                          "newValues": ["Active"]
                         },
                         {
                           "transactionType": "REACTIVATION",
                           "attribute": "Working capacity",
-                          "oldValue": "0",
-                          "newValue": "2"
+                          "oldValues": ["0"],
+                          "newValues": ["2"]
                         },
                         {
                           "transactionType": "DEACTIVATION",
                           "attribute": "Planet FM reference number",
-                          "multipleValues": false,
-                          "newValue": "${cellDetails.planetFmReference}"
+                          "newValues": ["${cellDetails.planetFmReference}"]
                         },
                         {
                           "transactionType": "DEACTIVATION",
                           "attribute": "Estimated reactivation date",
-                          "multipleValues": false,
-                          "oldValue": "$proposedReactivationDate",
-                          "newValue": "${cellDetails.proposedReactivationDate}"
+                          "oldValues": ["$proposedReactivationDate"],
+                          "newValues": ["${cellDetails.proposedReactivationDate}"]
                         },
                         {
                           "transactionType": "DEACTIVATION",
                           "attribute": "Deactivation reason",
-                          "oldValue": "Damage",
-                          "newValue": "Mothballed"
+                          "oldValues": ["Damage"],
+                          "newValues": ["Mothballed"]
                         },
                         {
                           "transactionType": "DEACTIVATION",
                           "attribute": "Estimated reactivation date",
-                          "multipleValues": false,
-                          "newValue": "$proposedReactivationDate"
+                          "newValues": ["$proposedReactivationDate"]
                         },
                         {
                           "transactionType": "DEACTIVATION",
                           "attribute": "Deactivation reason",
-                          "newValue": "Damage"
+                          "newValues": ["Damage"]
                         },
                         {
                           "transactionType": "DEACTIVATION",
                           "attribute": "Status",
-                          "oldValue": "Active",
-                          "newValue": "Inactive"
+                          "oldValues": ["Active"],
+                          "newValues": ["Inactive"]
                         },
                         {
                           "transactionType": "DEACTIVATION",
                           "attribute": "Working capacity",
-                          "oldValue": "2",
-                          "newValue": "0"
+                          "oldValues": ["2"],
+                          "newValues": ["0"]
                         },
                         {
                           "transactionType": "LOCATION_CREATE",
                           "attribute": "Used for",
-                          "newValue": "Standard accommodation",
+                          "newValues": ["Standard accommodation"],
                           "amendedBy": "A_TEST_USER"
                         }
                       ]
@@ -1740,17 +1735,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "changeHistory": [
                   {
                     "attribute": "Status",
-                    "oldValue": "Inactive",
-                    "newValue": "Active"
+                    "oldValues": ["Inactive"],
+                    "newValues": ["Active"]
                   },
                   {
                     "attribute": "Deactivation reason",
-                    "newValue": "Damage"
+                    "newValues": ["Damage"]
                   },
                   {
                     "attribute": "Status",
-                    "oldValue": "Active",
-                    "newValue": "Inactive"
+                    "oldValues": ["Active"],
+                    "newValues": ["Inactive"]
                   }
                 ],
                 "isResidential": false
@@ -2086,12 +2081,12 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "changeHistory": [
                 {
                   "attribute": "Deactivation reason",
-                  "newValue": "Damage"
+                  "newValues": ["Damage"]
                 },
                 {
                   "attribute": "Status",
-                  "oldValue": "Active",
-                  "newValue": "Inactive"
+                  "oldValues": ["Active"],
+                  "newValues": ["Inactive"]
                 }
               ],
               "childLocations": [
@@ -2115,21 +2110,21 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "changeHistory": [
                         {
                           "attribute": "Deactivation reason",
-                          "newValue": "Damage"
+                          "newValues": ["Damage"]
                         },
                         {
                           "attribute": "Status",
-                          "oldValue": "Active",
-                          "newValue": "Inactive"
+                          "oldValues": ["Active"],
+                          "newValues": ["Inactive"]
                         },
                         {
                           "attribute": "Working capacity",
-                          "oldValue": "2",
-                          "newValue": "0"
+                          "oldValues": ["2"],
+                          "newValues": ["0"]
                         },
                         {
                           "attribute": "Used for",
-                          "newValue": "Standard accommodation"
+                          "newValues": ["Standard accommodation"]
                         }
                       ]
                     },
@@ -2140,25 +2135,25 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "changeHistory": [
                        {
                           "attribute": "Deactivation reason",
-                          "newValue": "Damage"
+                          "newValues": ["Damage"]
                         },
                         {
                           "attribute": "Status",
-                          "oldValue": "Active",
-                          "newValue": "Inactive"
+                          "oldValues": ["Active"],
+                          "newValues": ["Inactive"]
                         },
                         {
                           "attribute": "Working capacity",
-                          "oldValue": "2",
-                          "newValue": "0"
+                          "oldValues": ["2"],
+                          "newValues": ["0"]
                         },
                         {
                           "attribute": "Used for",
-                          "newValue": "Standard accommodation"
+                          "newValues": ["Standard accommodation"]
                         },
                         {
                           "attribute": "Cell type",
-                          "newValue": "Accessible cell"
+                          "newValues": ["Accessible cell"]
                         }
                       ]
                     },
@@ -2236,17 +2231,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "changeHistory": [
                 {
                   "attribute": "Status",
-                  "oldValue": "Inactive",
-                  "newValue": "Active"
+                  "oldValues": ["Inactive"],
+                  "newValues": ["Active"]
                 },
                 {
                   "attribute": "Deactivation reason",
-                  "newValue": "Damage"
+                  "newValues": ["Damage"]
                 },
                 {
                   "attribute": "Status",
-                  "oldValue": "Active",
-                  "newValue": "Inactive"
+                  "oldValues": ["Active"],
+                  "newValues": ["Inactive"]
                 }
               ],
               "childLocations": [
@@ -2294,36 +2289,36 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "changeHistory": [
                         {
                           "attribute": "Status",
-                          "oldValue": "Inactive",
-                          "newValue": "Active"
+                          "oldValues": ["Inactive"],
+                          "newValues": ["Active"]
                         },
                         {
                           "attribute": "Maximum capacity",
-                          "oldValue": "2",
-                          "newValue": "3"
+                          "oldValues": ["2"],
+                          "newValues": ["3"]
                         },
                         {
                           "attribute": "Working capacity",
-                          "oldValue": "0",
-                          "newValue": "3"
+                          "oldValues": ["0"],
+                          "newValues": ["3"]
                         },
                         {
                           "attribute": "Deactivation reason",
-                          "newValue": "Damage"
+                          "newValues": ["Damage"]
                         },
                         {
                           "attribute": "Status",
-                          "oldValue": "Active",
-                          "newValue": "Inactive"
+                          "oldValues": ["Active"],
+                          "newValues": ["Inactive"]
                         },
                         {
                           "attribute": "Working capacity",
-                          "oldValue": "2",
-                          "newValue": "0"
+                          "oldValues": ["2"],
+                          "newValues": ["0"]
                         },
                         {
                           "attribute": "Used for",
-                          "newValue": "Standard accommodation"
+                          "newValues": ["Standard accommodation"]
                         }
                       ]
                     },
@@ -2343,35 +2338,35 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "changeHistory": [
                           {
                           "attribute": "Status",
-                          "oldValue": "Inactive",
-                          "newValue": "Active"
+                          "oldValues": ["Inactive"],
+                          "newValues": ["Active"]
                         },
                         {
                           "attribute": "Working capacity",
-                          "oldValue": "0",
-                          "newValue": "2"
+                          "oldValues": ["0"],
+                          "newValues": ["2"]
                         },
                        {
                           "attribute": "Deactivation reason",
-                          "newValue": "Damage"
+                          "newValues": ["Damage"]
                         },
                         {
                           "attribute": "Status",
-                          "oldValue": "Active",
-                          "newValue": "Inactive"
+                          "oldValues": ["Active"],
+                          "newValues": ["Inactive"]
                         },
                         {
                           "attribute": "Working capacity",
-                          "oldValue": "2",
-                          "newValue": "0"
+                          "oldValues": ["2"],
+                          "newValues": ["0"]
                         },
                         {
                           "attribute": "Used for",
-                          "newValue": "Standard accommodation"
+                          "newValues": ["Standard accommodation"]
                         },
                         {
                           "attribute": "Cell type",
-                          "newValue": "Accessible cell"
+                          "newValues": ["Accessible cell"]
                         }
                       ]
                     },
