@@ -119,6 +119,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
     linkedTransaction = linkedTransactionRepository.save(
       LinkedTransaction(
+        prisonId = "ZZGHI",
         transactionType = TransactionType.LOCATION_CREATE,
         transactionDetail = "Initial Data Load",
         transactionInvokedBy = EXPECTED_USERNAME,

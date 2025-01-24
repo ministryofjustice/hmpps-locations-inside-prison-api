@@ -24,6 +24,7 @@ class LocationTest {
 
     val linkedTransaction = LinkedTransaction(
       transactionId = UUID.randomUUID(),
+      prisonId = "MDI",
       transactionInvokedBy = EXPECTED_USERNAME,
       transactionType = TransactionType.LOCATION_CREATE,
       transactionDetail = "TEST",

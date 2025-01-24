@@ -39,7 +39,7 @@ class SignedOperationCapacityService(
   fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignOpCapResult {
     var newRecord = true
 
-    val tx = createLinkedTransaction(TransactionType.SIGNED_OP_CAP, "Signed op cap for prison ${request.prisonId} set to ${request.signedOperationCapacity}", request.updatedBy)
+    val tx = createLinkedTransaction(prisonId = request.prisonId, TransactionType.SIGNED_OP_CAP, "Signed op cap for prison ${request.prisonId} set to ${request.signedOperationCapacity}", request.updatedBy)
 
     val maxCap = locationService.getResidentialLocations(request.prisonId).prisonSummary?.maxCapacity ?: throw PrisonNotFoundException(request.prisonId)
     if (maxCap < request.signedOperationCapacity) {
@@ -80,8 +80,9 @@ class SignedOperationCapacityService(
     }
   }
 
-  private fun createLinkedTransaction(type: TransactionType, detail: String, transactionInvokedBy: String): LinkedTransaction {
+  private fun createLinkedTransaction(prisonId: String, type: TransactionType, detail: String, transactionInvokedBy: String): LinkedTransaction {
     val linkedTransaction = LinkedTransaction(
+      prisonId = prisonId,
       transactionType = type,
       transactionDetail = detail,
       transactionInvokedBy = transactionInvokedBy,
