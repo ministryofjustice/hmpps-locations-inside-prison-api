@@ -121,10 +121,6 @@ In all instances the domain event will contain the unique reference to a locatio
 This endpoint will contain all the information need to populate the locations database with a location updated in NOMIS
 - `GET /locations/sync/upsert`
 - `GET /locations/sync/delete`
-- 
-### Migration endpoint for locations inside prison
-This endpoint will contain all the information need to populate the locations database with a specific location
-- `POST /locations/migrate`
 
 
 ## Decision
