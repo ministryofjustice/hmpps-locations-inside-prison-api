@@ -23,7 +23,7 @@ class LinkedTransaction(
 
   @Enumerated(EnumType.STRING)
   val transactionType: TransactionType,
-
+  val prisonId: String,
   val transactionDetail: String,
   val transactionInvokedBy: String,
   val txStartTime: LocalDateTime,
@@ -36,6 +36,7 @@ class LinkedTransaction(
   fun toDto(filterLocation: Location? = null) =
     TransactionHistory(
       transactionId = transactionId!!,
+      prisonId = prisonId,
       transactionType = transactionType,
       transactionDetail = transactionDetail,
       transactionInvokedBy = transactionInvokedBy,
