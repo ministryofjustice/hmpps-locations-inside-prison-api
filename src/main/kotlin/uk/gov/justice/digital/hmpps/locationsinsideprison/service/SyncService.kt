@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
@@ -28,7 +27,7 @@ import kotlin.jvm.optionals.getOrNull
 
 @Service
 @Transactional
-open class SyncService(
+class SyncService(
   private val locationRepository: LocationRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val entityManager: EntityManager,
@@ -45,12 +44,10 @@ open class SyncService(
   }
 
   fun sync(upsert: NomisSyncLocationRequest): LegacyLocation {
-    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.SYNC, "NOMIS Sync ${upsert.code} in prison ${upsert.prisonId}", upsert.lastUpdatedBy)
-
     val location = if (upsert.id != null) {
-      updateLocation(upsert.id, upsert, linkedTransaction)
+      updateLocation(upsert.id, upsert)
     } else {
-      createLocation(upsert, linkedTransaction)
+      createLocation(upsert)
     }
 
     log.info("Synchronised Location: ${location.id} (created: ${upsert.id == null}, updated: ${upsert.id != null})")
@@ -65,32 +62,10 @@ open class SyncService(
       ),
       null,
     )
-    return location.also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
-    }
+    return location
   }
 
-  fun migrate(upsert: NomisMigrationRequest): LegacyLocation {
-    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.MIGRATE, "NOMIS Migration ${upsert.code} in prison ${upsert.prisonId}", upsert.lastUpdatedBy)
-
-    val location = createLocation(upsert, linkedTransaction)
-
-    log.info("Migrated Location: ${location.id}")
-    telemetryClient.trackEvent(
-      "Migrated Location",
-      mapOf(
-        "id" to location.id.toString(),
-        "prisonId" to location.prisonId,
-        "path" to location.pathHierarchy,
-      ),
-      null,
-    )
-    return location.also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
-    }
-  }
-
-  private fun updateLocation(id: UUID, upsert: NomisSyncLocationRequest, linkedTransaction: LinkedTransaction): LegacyLocation {
+  private fun updateLocation(id: UUID, upsert: NomisSyncLocationRequest): LegacyLocation {
     var locationToUpdate = locationRepository.findById(id).getOrNull()
       ?: throw LocationNotFoundException(id.toString())
 
@@ -101,6 +76,8 @@ open class SyncService(
     if (locationToUpdate is ResidentialLocation && locationToUpdate.isConvertedCell()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException("Location ${locationToUpdate.getKey()} cannot be updated as has been converted to non-res cell")
     }
+
+    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.SYNC, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()} in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
 
     locationToUpdate = handleChangeOfType(id, locationToUpdate, upsert, linkedTransaction)
 
@@ -161,19 +138,24 @@ open class SyncService(
     return locationRepository.findById(id).getOrNull() ?: throw LocationNotFoundException(id.toString())
   }
 
-  private fun createLocation(upsert: NomisMigrationRequest, linkedTransaction: LinkedTransaction): LegacyLocation {
+  private fun createLocation(upsert: NomisSyncLocationRequest): LegacyLocation {
+    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.SYNC, "<pending>", upsert.lastUpdatedBy)
+
     val locationToCreate = upsert.toNewEntity(clock, linkedTransaction)
     findParent(upsert)?.let { locationToCreate.setParent(it) }
-    return locationRepository.save(locationToCreate).toLegacyDto()
+    return locationRepository.save(locationToCreate).toLegacyDto().also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.transactionDetail = "NOMIS Sync (Create) [${it.pathHierarchy}] in prison ${it.prisonId}"
+    }
   }
 
-  private fun findParent(upsert: NomisMigrationRequest): Location? {
+  private fun findParent(upsert: NomisSyncLocationRequest): Location? {
     return upsert.parentId?.let {
       locationRepository.findById(it).orElseThrow {
         LocationNotFoundException(it.toString())
       }
     } ?: upsert.parentLocationPath?.let {
-      locationRepository.findOneByPrisonIdAndPathHierarchy(upsert.prisonId, upsert.parentLocationPath!!)
+      locationRepository.findOneByPrisonIdAndPathHierarchy(upsert.prisonId, upsert.parentLocationPath)
         ?: throw LocationNotFoundException(upsert.toString())
     }
   }
@@ -184,7 +166,7 @@ open class SyncService(
         throw ValidationException("Cannot delete location with sub-locations")
       }
 
-      val tx = createLinkedTransaction(prisonId = it.prisonId, TransactionType.DELETE, "NOMIS delete location ${it.getKey()}", "NOMIS")
+      val tx = createLinkedTransaction(prisonId = it.prisonId, TransactionType.DELETE, "NOMIS Sync (Delete) [${it.getPathHierarchy()}] in prison ${it.prisonId}", "NOMIS")
 
       locationRepository.deleteLocationById(id)
       log.info("Deleted Location: $id (${it.getKey()})")

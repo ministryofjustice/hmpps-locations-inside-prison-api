@@ -24,7 +24,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisMigrationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
@@ -157,7 +156,7 @@ abstract class Location(
     return findDeactivatedLocation(getParent())
   }
 
-  protected fun findArchivedLocationInHierarchy(): Location? {
+  private fun findArchivedLocationInHierarchy(): Location? {
     if (isArchived()) {
       return this
     }
@@ -621,7 +620,7 @@ abstract class Location(
   }
 
   private fun updateActiveStatusSyncOnly(
-    upsert: NomisMigrationRequest,
+    upsert: NomisSyncLocationRequest,
     clock: Clock,
     updatedBy: String,
     linkedTransaction: LinkedTransaction,

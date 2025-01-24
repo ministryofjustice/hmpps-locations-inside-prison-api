@@ -24,7 +24,7 @@ class LinkedTransaction(
   @Enumerated(EnumType.STRING)
   val transactionType: TransactionType,
   val prisonId: String,
-  val transactionDetail: String,
+  var transactionDetail: String,
   val transactionInvokedBy: String,
   val txStartTime: LocalDateTime,
   var txEndTime: LocalDateTime? = null,
@@ -84,7 +84,6 @@ enum class TransactionType {
   LOCATION_UPDATE,
   SYNC,
   DELETE,
-  MIGRATE,
   CAPACITY_CHANGE,
   CELL_TYPE_CHANGES,
   DEACTIVATION,

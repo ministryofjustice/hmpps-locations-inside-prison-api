@@ -4,15 +4,25 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType.HOLDING_CELL
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getVirtualLocationCodes
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 
 /**
  * Request format to sync a location from NOMIS
@@ -28,67 +38,204 @@ data class NomisSyncLocationRequest(
   @field:Size(min = 3, message = "Prison ID cannot be blank")
   @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
-  override val prisonId: String,
+  val prisonId: String,
 
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be no more than 12 characters")
-  override val code: String,
+  val code: String,
 
   @Schema(description = "Location Type", example = "CELL", required = true)
-  override val locationType: LocationType,
+  val locationType: LocationType,
 
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 80, message = "Local name must be less than 81 characters")
-  override val localName: String? = null,
+  val localName: String? = null,
 
   @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   @field:Size(max = 255, message = "Comments must be less than 256 characters")
-  override val comments: String? = null,
+  val comments: String? = null,
 
   @Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
-  override val orderWithinParentLocation: Int? = null,
+  val orderWithinParentLocation: Int? = null,
 
   @Schema(description = "If residential location, its type", example = "NORMAL_ACCOMMODATION", required = false)
-  override val residentialHousingType: ResidentialHousingType? = null,
+  val residentialHousingType: ResidentialHousingType? = null,
 
   @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
-  override val deactivationReason: NomisDeactivatedReason? = null,
+  val deactivationReason: NomisDeactivatedReason? = null,
 
   @Schema(description = "Estimated reactivation date", example = "2025-01-05", required = false)
-  override val proposedReactivationDate: LocalDate? = null,
+  val proposedReactivationDate: LocalDate? = null,
 
   @Schema(description = "Date deactivation occurred", example = "2023-01-05", required = false)
-  override val deactivatedDate: LocalDate? = null,
+  val deactivatedDate: LocalDate? = null,
 
   @Schema(description = "Path hierarchy of the parent (if one exists)", example = "A-1", required = false)
-  override val parentLocationPath: String? = null,
+  val parentLocationPath: String? = null,
 
   @Schema(description = "Parent UUID of the parent location (if one exists)", example = "2475f250-434a-4257-afe7-b911f1773a4e", required = false)
-  override val parentId: UUID? = null,
+  val parentId: UUID? = null,
 
   @Schema(description = "Capacity details of the location", required = false)
-  override val capacity: Capacity? = null,
+  val capacity: Capacity? = null,
 
   @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
-  override val certification: Certification? = null,
+  val certification: Certification? = null,
 
   @Schema(description = "Location Attributes", required = false)
-  override val attributes: Set<ResidentialAttributeValue>? = null,
+  val attributes: Set<ResidentialAttributeValue>? = null,
 
   @Schema(description = "Location Usage", required = false)
-  override val usage: Set<NonResidentialUsageDto>? = null,
+  val usage: Set<NonResidentialUsageDto>? = null,
 
   @Schema(description = "Date location was created, if not provided then the current time will be used for a new location", required = false)
-  override val createDate: LocalDateTime? = null,
+  val createDate: LocalDateTime? = null,
 
   @Schema(description = "Last updated, if not provided then the current time will be used", required = false)
-  override val lastModifiedDate: LocalDateTime? = null,
+  val lastModifiedDate: LocalDateTime? = null,
 
   @Schema(description = "Username of the staff updating the location", required = true)
-  override val lastUpdatedBy: String,
+  val lastUpdatedBy: String,
 
-) : NomisMigrationRequest {
+) {
 
-  override fun toNewEntity(clock: Clock, linkedTransaction: LinkedTransaction): LocationJPA = createLocation(clock, linkedTransaction)
+  fun toNewEntity(clock: Clock, linkedTransaction: LinkedTransaction): Location {
+    val location = if (residentialHousingType != null) {
+      if (locationType == LocationType.CELL) {
+        val location = Cell(
+          id = null,
+          prisonId = prisonId,
+          code = code,
+          locationType = locationType,
+          pathHierarchy = code,
+          active = !isDeactivated(),
+          localName = localName,
+          residentialHousingType = residentialHousingType,
+          comments = comments,
+          orderWithinParentLocation = orderWithinParentLocation,
+          createdBy = lastUpdatedBy,
+          whenCreated = createDate ?: LocalDateTime.now(clock),
+          deactivatedDate = null,
+          deactivatedReason = null,
+          proposedReactivationDate = null,
+          childLocations = mutableListOf(),
+          accommodationType = residentialHousingType.mapToAccommodationType(),
+          parent = null,
+          capacity = capacity?.let {
+            uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity(
+              maxCapacity = it.maxCapacity,
+              workingCapacity = it.workingCapacity,
+            )
+          },
+          certification = certification?.let {
+            uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification(
+              certified = it.certified,
+              capacityOfCertifiedCell = it.capacityOfCertifiedCell,
+            )
+          },
+        )
+        attributes?.forEach { attribute ->
+          location.addAttribute(attribute)
+          attribute.mapTo?.let { location.addSpecialistCellType(it) }
+        }
+        if (location.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+          location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, lastUpdatedBy, clock, linkedTransaction)
+        }
+        if (residentialHousingType == HOLDING_CELL) {
+          location.convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = lastUpdatedBy, clock = clock, linkedTransaction = linkedTransaction)
+        }
+        location
+      } else if (code in getVirtualLocationCodes()) {
+        VirtualResidentialLocation(
+          prisonId = prisonId,
+          code = code,
+          locationType = locationType,
+          pathHierarchy = code,
+          active = !isDeactivated(),
+          localName = localName,
+          residentialHousingType = residentialHousingType,
+          comments = comments,
+          orderWithinParentLocation = orderWithinParentLocation,
+          createdBy = lastUpdatedBy,
+          whenCreated = createDate ?: LocalDateTime.now(clock),
+          capacity = capacity?.let {
+            uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity(
+              maxCapacity = it.maxCapacity,
+              workingCapacity = it.workingCapacity,
+            )
+          },
+          childLocations = mutableListOf(),
+        )
+      } else {
+        ResidentialLocation(
+          prisonId = prisonId,
+          code = code,
+          locationType = locationType,
+          pathHierarchy = code,
+          active = !isDeactivated(),
+          localName = localName,
+          residentialHousingType = residentialHousingType,
+          comments = comments,
+          orderWithinParentLocation = orderWithinParentLocation,
+          createdBy = lastUpdatedBy,
+          whenCreated = createDate ?: LocalDateTime.now(clock),
+          childLocations = mutableListOf(),
+        )
+      }
+    } else {
+      val location = NonResidentialLocation(
+        prisonId = prisonId,
+        code = code,
+        locationType = locationType,
+        pathHierarchy = code,
+        active = !isDeactivated(),
+        localName = localName,
+        comments = comments,
+        orderWithinParentLocation = orderWithinParentLocation,
+        createdBy = lastUpdatedBy,
+        whenCreated = createDate ?: LocalDateTime.now(clock),
+        childLocations = mutableListOf(),
+      )
+      usage?.forEach { usage ->
+        location.addUsage(usage.usageType, usage.capacity, usage.sequence)
+      }
+      location
+    }
+
+    if (isDeactivated()) {
+      location.deactivatedReason = deactivationReason!!.mapsTo()
+      location.deactivatedDate = deactivatedDate?.atStartOfDay()
+      location.proposedReactivationDate = proposedReactivationDate
+    }
+
+    return location
+  }
+
+  fun isDeactivated() = deactivationReason != null
+}
+
+enum class NomisDeactivatedReason {
+  REFURBISHMENT,
+  LOCAL_WORK,
+  STAFF_SHORTAGE,
+  MOTHBALLED,
+  DAMAGED,
+  NEW_BUILDING,
+  CELL_RECLAIMS,
+  CHANGE_OF_USE,
+  CLOSURE,
+  OUT_OF_USE,
+  CELLS_RETURNING_TO_USE,
+  OTHER,
+  ;
+
+  fun mapsTo(): DeactivatedReason = when (this) {
+    NEW_BUILDING, CELL_RECLAIMS, CHANGE_OF_USE, CLOSURE, OUT_OF_USE, CELLS_RETURNING_TO_USE, OTHER -> DeactivatedReason.OTHER
+    REFURBISHMENT -> DeactivatedReason.REFURBISHMENT
+    LOCAL_WORK -> DeactivatedReason.MAINTENANCE
+    STAFF_SHORTAGE -> DeactivatedReason.STAFF_SHORTAGE
+    MOTHBALLED -> DeactivatedReason.MOTHBALLED
+    DAMAGED -> DeactivatedReason.DAMAGED
+  }
 }
