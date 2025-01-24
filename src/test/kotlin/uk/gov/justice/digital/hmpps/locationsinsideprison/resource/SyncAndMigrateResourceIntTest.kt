@@ -94,7 +94,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       attributes = setOf(ResidentialAttributeValue.CAT_B),
       history = listOf(
         ChangeHistory(
-          attribute = LocationAttribute.DESCRIPTION.name,
+          attribute = LocationAttribute.LOCAL_NAME.name,
           oldValues = null,
           newValues = listOf("A New Cell"),
           amendedBy = "user2",
@@ -178,7 +178,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       ),
     )
     locationHistory = cell.addHistory(
-      attributeName = LocationAttribute.DESCRIPTION,
+      attributeName = LocationAttribute.LOCAL_NAME,
       oldValue = "2",
       newValue = "1",
       amendedBy = "user",

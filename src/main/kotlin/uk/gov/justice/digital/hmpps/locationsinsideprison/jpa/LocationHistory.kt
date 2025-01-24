@@ -93,17 +93,17 @@ enum class LocationAttribute(
 
   // These are all returned as history changes
   STATUS(description = "Status", display = true, displayOrder = 0),
-  CERTIFIED(description = "Certification", display = true, displayOrder = 5),
+  CERTIFICATION(description = "Certification", display = true, displayOrder = 5),
   ACCOMMODATION_TYPE(description = "Accommodation type", display = true, displayOrder = 10),
   USED_FOR(description = "Used for", display = true, displayOrder = 15),
   SPECIALIST_CELL_TYPE(description = "Cell type", display = true, displayOrder = 20),
   CONVERTED_CELL_TYPE(description = "Non-residential room", display = true, displayOrder = 25),
-  OPERATIONAL_CAPACITY(description = "Working capacity", display = true, displayOrder = 30),
-  CAPACITY(description = "Maximum capacity", display = true, displayOrder = 35),
+  WORKING_CAPACITY(description = "Working capacity", display = true, displayOrder = 30),
+  MAX_CAPACITY(description = "Maximum capacity", display = true, displayOrder = 35),
   DEACTIVATION_REASON(description = "Deactivation reason", display = true, displayOrder = 40),
   PROPOSED_REACTIVATION_DATE(description = "Estimated reactivation date", display = true, displayOrder = 45),
   PLANET_FM_NUMBER(description = "Planet FM reference number", display = true, displayOrder = 50),
-  DESCRIPTION(description = "Local name", display = true, displayOrder = 55),
+  LOCAL_NAME(description = "Local name", display = true, displayOrder = 55),
 
   // non res only
   USAGE(description = "Usage", display = true),

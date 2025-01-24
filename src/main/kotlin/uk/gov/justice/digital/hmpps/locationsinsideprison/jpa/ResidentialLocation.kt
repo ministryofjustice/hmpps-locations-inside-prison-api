@@ -167,7 +167,7 @@ open class ResidentialLocation(
     upsert.capacity?.let {
       with(upsert.capacity) {
         addHistory(
-          LocationAttribute.CAPACITY,
+          LocationAttribute.MAX_CAPACITY,
           capacity?.maxCapacity?.toString() ?: "None",
           maxCapacity.toString(),
           userOrSystemInContext,
@@ -175,7 +175,7 @@ open class ResidentialLocation(
           linkedTransaction,
         )
         addHistory(
-          LocationAttribute.OPERATIONAL_CAPACITY,
+          LocationAttribute.WORKING_CAPACITY,
           capacity?.workingCapacity?.toString() ?: "None",
           workingCapacity.toString(),
           userOrSystemInContext,
@@ -331,7 +331,7 @@ open class ResidentialLocation(
       }
 
       addHistory(
-        LocationAttribute.CAPACITY,
+        LocationAttribute.MAX_CAPACITY,
         capacity?.maxCapacity?.toString() ?: "None",
         maxCapacity.toString(),
         userOrSystemInContext,
@@ -339,7 +339,7 @@ open class ResidentialLocation(
         linkedTransaction,
       )
       addHistory(
-        LocationAttribute.OPERATIONAL_CAPACITY,
+        LocationAttribute.WORKING_CAPACITY,
         capacity?.workingCapacity?.let { calcWorkingCapacity().toString() } ?: "None",
         workingCapacity.toString(),
         userOrSystemInContext,

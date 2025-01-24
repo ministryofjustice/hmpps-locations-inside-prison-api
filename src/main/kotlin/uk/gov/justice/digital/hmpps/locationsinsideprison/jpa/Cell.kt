@@ -146,7 +146,7 @@ class Cell(
     )
 
     addHistory(
-      LocationAttribute.CAPACITY,
+      LocationAttribute.MAX_CAPACITY,
       capacity?.maxCapacity?.toString() ?: "None",
       "None",
       userOrSystemInContext,
@@ -154,7 +154,7 @@ class Cell(
       linkedTransaction,
     )
     addHistory(
-      LocationAttribute.OPERATIONAL_CAPACITY,
+      LocationAttribute.WORKING_CAPACITY,
       capacity?.workingCapacity?.toString() ?: "None",
       "None",
       userOrSystemInContext,
@@ -249,7 +249,7 @@ class Cell(
     }
 
     addHistory(
-      LocationAttribute.CERTIFIED,
+      LocationAttribute.CERTIFICATION,
       oldCertification,
       getCertifiedSummary(this.certification),
       userOrSystemInContext,
@@ -263,7 +263,7 @@ class Cell(
 
   fun deCertifyCell(userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
-      LocationAttribute.CERTIFIED,
+      LocationAttribute.CERTIFICATION,
       getCertifiedSummary(this.certification),
       "Uncertified",
       userOrSystemInContext,
@@ -431,7 +431,7 @@ class Cell(
         }
 
         addHistory(
-          LocationAttribute.CERTIFIED,
+          LocationAttribute.CERTIFICATION,
           oldCertification,
           getCertifiedSummary(certification),
           userOrSystemInContext,
