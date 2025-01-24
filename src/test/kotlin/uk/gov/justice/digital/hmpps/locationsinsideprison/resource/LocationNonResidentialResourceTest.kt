@@ -227,6 +227,21 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         webTestClient.patch().uri("/locations/non-residential/${visitRoom.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              PatchNonResidentialLocationRequest(
+                usage = setOf(
+                  NonResidentialUsageDto(usageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES),
+                ),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.patch().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
           .bodyValue(jsonString(changeUsage))
           .exchange()
           .expectStatus().isOk
@@ -268,16 +283,34 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                    }
                  ],
                  "changeHistory": [
-                    {
-                      "attribute": "Usage",
-                      "oldValues": ["Visit"],
-                      "newValues": ["Appointment"]
-                    },
-                    {
-                      "attribute": "Non residential capacity",
-                      "newValues": ["20"]
-                    }
-                  ]
+                   {
+                     "transactionType": "LOCATION_UPDATE",
+                     "attribute": "Usage",
+                     "oldValues": [
+                       "Programmes/activities"
+                     ],
+                     "newValues": [
+                       "Appointment"
+                     ]
+                   },
+                   {
+                     "transactionType": "LOCATION_UPDATE",
+                     "attribute": "Non residential capacity",
+                     "newValues": [
+                       "20"
+                     ]
+                   },
+                   {
+                     "transactionType": "LOCATION_UPDATE",
+                     "attribute": "Usage",
+                     "oldValues": [
+                       "Visit"
+                     ],
+                     "newValues": [
+                       "Programmes/activities"
+                     ]
+                   }
+                 ]
                }
             """.trimIndent(),
             JsonCompareMode.LENIENT,

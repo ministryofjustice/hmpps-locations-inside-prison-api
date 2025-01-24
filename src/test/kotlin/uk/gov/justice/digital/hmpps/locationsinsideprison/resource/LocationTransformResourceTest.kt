@@ -183,12 +183,26 @@ class LocationTransformResourceTest : CommonDataTestBase() {
 
       @Test
       fun `can update Use for type to two values successfully`() {
-        val expectedTypes = listOf(UsedForType.FIRST_NIGHT_CENTRE, UsedForType.PERSONALITY_DISORDER)
+        val expectedTypes =
+
+          webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(listOf(UsedForType.FIRST_NIGHT_CENTRE, UsedForType.PERSONALITY_DISORDER, UsedForType.STANDARD_ACCOMMODATION)))
+            .exchange()
+            .expectStatus().isOk
+
+        webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(listOf(UsedForType.FIRST_NIGHT_CENTRE, UsedForType.HIGH_SECURITY)))
+          .exchange()
+          .expectStatus().isOk
 
         val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(expectedTypes))
+          .bodyValue("[]")
           .exchange()
           .expectStatus().isOk
           .expectBody(LocationTest::class.java)
@@ -221,6 +235,63 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-Z",
           )
         }
+
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+              "key": "MDI-Z-1-001",
+              "changeHistory": [
+                {
+                  "transactionType": "LOCATION_UPDATE",
+                  "attribute": "Used for",
+                  "oldValues": [
+                    "First night centre / Induction",
+                    "High security unit"
+                  ]
+                },
+                {
+                  "transactionType": "LOCATION_UPDATE",
+                  "attribute": "Used for",
+                  "oldValues": [
+                    "First night centre / Induction",
+                    "Personality disorder unit",
+                    "Standard accommodation"
+                  ],
+                  "newValues": [
+                    "First night centre / Induction",
+                    "High security unit"
+                  ]
+                },
+                {
+                  "transactionType": "LOCATION_UPDATE",
+                  "attribute": "Used for",
+                  "oldValues": [
+                    "Standard accommodation"
+                  ],
+                  "newValues": [
+                    "Standard accommodation",
+                    "First night centre / Induction",
+                    "Personality disorder unit"
+                  ]
+                },
+                {
+                  "transactionType": "LOCATION_CREATE",
+                  "attribute": "Used for",
+                  "newValues": [
+                    "Standard accommodation"
+                  ],
+                  "amendedBy": "A_TEST_USER"
+                }
+              ]
+            }
+            """.trimIndent(),
+            false,
+          )
       }
     }
   }
@@ -389,14 +460,21 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(setOf(SpecialistCellType.MEDICAL)))
+          .bodyValue(jsonString(setOf(SpecialistCellType.MEDICAL, SpecialistCellType.SAFE_CELL)))
           .exchange()
           .expectStatus().isOk
 
         webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(setOf(SpecialistCellType.DRY, SpecialistCellType.SAFE_CELL)))
+          .bodyValue(jsonString(setOf(SpecialistCellType.DRY, SpecialistCellType.MEDICAL)))
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.DRY)))
           .exchange()
           .expectStatus().isOk
 
@@ -420,7 +498,6 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 {
                   "attribute": "Cell type",
                   "oldValues": [
-                    "Safe cell",
                     "Dry cell"
                   ],
                   "transactionType": "CELL_TYPE_CHANGES"
@@ -428,10 +505,22 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 {
                   "attribute": "Cell type",
                   "oldValues": [
+                    "Medical cell",
+                    "Dry cell"
+                  ],
+                  "newValues": [
+                    "Dry cell"
+                  ],
+                  "transactionType": "CELL_TYPE_CHANGES"
+                },
+                {
+                  "attribute": "Cell type",
+                  "oldValues": [
+                    "Safe cell",
                     "Medical cell"
                   ],
                   "newValues": [
-                    "Safe cell",
+                    "Medical cell",
                     "Dry cell"
                   ],
                   "transactionType": "CELL_TYPE_CHANGES"
@@ -439,11 +528,12 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 {
                   "attribute": "Cell type",
                   "oldValues": [
-                    "Constant supervision cell",
                     "Safe cell",
-                    "Biohazard / dirty protest cell"
+                    "Biohazard / dirty protest cell",
+                    "Constant supervision cell"
                   ],
                   "newValues": [
+                    "Safe cell",
                     "Medical cell"
                   ],
                   "transactionType": "CELL_TYPE_CHANGES"

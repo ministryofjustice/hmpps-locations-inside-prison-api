@@ -461,8 +461,28 @@ class Cell(
     linkedTransaction: LinkedTransaction,
   ) {
     val oldSpecialistCellTypes = this.specialistCellTypes.map { it.specialistCellType }.toSet()
-    oldSpecialistCellTypes.subtract(specialistCellTypes).forEach { removedSpecialistCellType ->
-      addHistory(LocationAttribute.SPECIALIST_CELL_TYPE, removedSpecialistCellType.description, null, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
+    if (oldSpecialistCellTypes != specialistCellTypes) {
+      oldSpecialistCellTypes.forEach { removedSpecialistCellType ->
+        addHistory(
+          LocationAttribute.SPECIALIST_CELL_TYPE,
+          removedSpecialistCellType.description,
+          null,
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+          linkedTransaction,
+        )
+      }
+
+      oldSpecialistCellTypes.intersect(specialistCellTypes).forEach { keptCellTypes ->
+        addHistory(
+          LocationAttribute.SPECIALIST_CELL_TYPE,
+          null,
+          keptCellTypes.description,
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+          linkedTransaction,
+        )
+      }
     }
   }
 
@@ -473,8 +493,28 @@ class Cell(
     linkedTransaction: LinkedTransaction,
   ) {
     val oldUsedFor = this.usedFor.map { it.usedFor }.toSet()
-    oldUsedFor.subtract(usedFor).forEach { removedUsedFor ->
-      addHistory(LocationAttribute.USED_FOR, removedUsedFor.description, null, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
+    if (oldUsedFor != usedFor) {
+      oldUsedFor.forEach { removedUsedFor ->
+        addHistory(
+          LocationAttribute.USED_FOR,
+          removedUsedFor.description,
+          null,
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+          linkedTransaction,
+        )
+      }
+
+      oldUsedFor.intersect(usedFor).forEach { keptUsedFor ->
+        addHistory(
+          LocationAttribute.USED_FOR,
+          null,
+          keptUsedFor.description,
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+          linkedTransaction,
+        )
+      }
     }
   }
 

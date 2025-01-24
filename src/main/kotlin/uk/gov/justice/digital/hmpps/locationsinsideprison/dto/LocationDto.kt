@@ -335,16 +335,21 @@ data class TransactionDetail(
   @Schema(description = "New values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
   val newValues: List<String>? = null,
 ) {
-  fun toChangeHistory(transactionHistory: TransactionHistory): ChangeHistory {
-    return ChangeHistory(
-      transactionId = transactionHistory.transactionId,
-      transactionType = transactionHistory.transactionType,
-      attribute = attribute,
-      oldValues = oldValues,
-      newValues = newValues,
-      amendedBy = amendedBy,
-      amendedDate = amendedDate,
-    )
+  fun toChangeHistory(transactionHistory: TransactionHistory): ChangeHistory? {
+    val distinctOldValues = oldValues?.distinct()
+    val distinctNewValues = newValues?.distinct()
+    if (distinctOldValues != distinctNewValues) {
+      return ChangeHistory(
+        transactionId = transactionHistory.transactionId,
+        transactionType = transactionHistory.transactionType,
+        attribute = attribute,
+        oldValues = distinctOldValues,
+        newValues = distinctNewValues,
+        amendedBy = amendedBy,
+        amendedDate = amendedDate,
+      )
+    }
+    return null
   }
 }
 
@@ -377,7 +382,7 @@ data class TransactionHistory(
   val transactionDetails: List<TransactionDetail>,
 ) {
   fun toChangeHistory(): List<ChangeHistory> {
-    return transactionDetails.map { it.toChangeHistory(this) }
+    return transactionDetails.mapNotNull { it.toChangeHistory(this) }
   }
 }
 
