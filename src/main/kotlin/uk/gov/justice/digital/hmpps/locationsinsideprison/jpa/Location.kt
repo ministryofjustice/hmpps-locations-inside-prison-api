@@ -537,7 +537,7 @@ abstract class Location(
   open fun updateLocalName(localName: String?, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (!isCell()) {
       addHistory(
-        LocationAttribute.DESCRIPTION,
+        LocationAttribute.LOCAL_NAME,
         this.localName,
         localName,
         userOrSystemInContext,
@@ -584,7 +584,7 @@ abstract class Location(
     this.locationType = upsert.locationType
 
     addHistory(
-      LocationAttribute.DESCRIPTION,
+      LocationAttribute.LOCAL_NAME,
       this.localName,
       upsert.localName,
       upsert.lastUpdatedBy,
@@ -673,7 +673,7 @@ abstract class Location(
 
       if (this is Cell) {
         addHistory(
-          LocationAttribute.OPERATIONAL_CAPACITY,
+          LocationAttribute.WORKING_CAPACITY,
           getWorkingCapacityIgnoreParent().toString(),
           "0",
           userOrSystemInContext,
@@ -966,7 +966,7 @@ abstract class Location(
 
       if (this is Cell && !capacityAdjusted) {
         addHistory(
-          LocationAttribute.OPERATIONAL_CAPACITY,
+          LocationAttribute.WORKING_CAPACITY,
           previousWorkingCapacity.toString(),
           getWorkingCapacityIgnoreParent().toString(),
           userOrSystemInContext,
