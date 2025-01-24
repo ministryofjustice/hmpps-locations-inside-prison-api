@@ -45,7 +45,7 @@ open class SyncService(
   }
 
   fun sync(upsert: NomisSyncLocationRequest): LegacyLocation {
-    val linkedTransaction = createLinkedTransaction(TransactionType.SYNC, "NOMIS Sync ${upsert.code} in prison ${upsert.prisonId}", upsert.lastUpdatedBy)
+    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.SYNC, "NOMIS Sync ${upsert.code} in prison ${upsert.prisonId}", upsert.lastUpdatedBy)
 
     val location = if (upsert.id != null) {
       updateLocation(upsert.id, upsert, linkedTransaction)
@@ -71,7 +71,7 @@ open class SyncService(
   }
 
   fun migrate(upsert: NomisMigrationRequest): LegacyLocation {
-    val linkedTransaction = createLinkedTransaction(TransactionType.MIGRATE, "NOMIS Migration ${upsert.code} in prison ${upsert.prisonId}", upsert.lastUpdatedBy)
+    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.MIGRATE, "NOMIS Migration ${upsert.code} in prison ${upsert.prisonId}", upsert.lastUpdatedBy)
 
     val location = createLocation(upsert, linkedTransaction)
 
@@ -184,7 +184,7 @@ open class SyncService(
         throw ValidationException("Cannot delete location with sub-locations")
       }
 
-      val tx = createLinkedTransaction(TransactionType.DELETE, "NOMIS delete location ${it.getKey()}", "NOMIS")
+      val tx = createLinkedTransaction(prisonId = it.prisonId, TransactionType.DELETE, "NOMIS delete location ${it.getKey()}", "NOMIS")
 
       locationRepository.deleteLocationById(id)
       log.info("Deleted Location: $id (${it.getKey()})")
@@ -202,8 +202,9 @@ open class SyncService(
       ?: throw LocationNotFoundException(id.toString())
   }
 
-  private fun createLinkedTransaction(type: TransactionType, detail: String, transactionInvokedBy: String): LinkedTransaction {
+  private fun createLinkedTransaction(prisonId: String, type: TransactionType, detail: String, transactionInvokedBy: String): LinkedTransaction {
     val linkedTransaction = LinkedTransaction(
+      prisonId = prisonId,
       transactionType = type,
       transactionDetail = detail,
       transactionInvokedBy = transactionInvokedBy,

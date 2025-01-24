@@ -358,6 +358,9 @@ data class TransactionHistory(
   @Schema(description = "Type of transaction", example = "CAPACITY_CHANGE", required = true)
   val transactionType: TransactionType,
 
+  @Schema(description = "Prison ID of the transaction", example = "MDI", required = true)
+  val prisonId: String,
+
   @Schema(description = "Description of the transaction", example = "Working capacity changed from 0 to 1", required = true)
   val transactionDetail: String,
 

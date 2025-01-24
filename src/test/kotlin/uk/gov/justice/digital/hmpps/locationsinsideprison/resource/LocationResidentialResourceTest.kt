@@ -2798,6 +2798,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           clock = clock,
           linkedTransaction = linkedTransactionRepository.saveAndFlush(
             LinkedTransaction(
+              prisonId = cell1.prisonId,
               transactionType = TransactionType.LOCATION_CREATE,
               transactionDetail = "Convert to Non Res before test runs",
               transactionInvokedBy = "Aleman",
@@ -2857,6 +2858,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .expectStatus().isOk
           .expectBody()
           .jsonPath("$.transactionType").isEqualTo("ROOM_CONVERTION_TO_CELL")
+          .jsonPath("$.prisonId").isEqualTo(cell1.prisonId)
           .jsonPath("$.transactionDetails[0].attribute").isEqualTo("Status")
           .jsonPath("$.transactionDetails[1].attribute").isEqualTo("Certification")
           .jsonPath("$.transactionDetails[2].attribute").isEqualTo("Used for")
