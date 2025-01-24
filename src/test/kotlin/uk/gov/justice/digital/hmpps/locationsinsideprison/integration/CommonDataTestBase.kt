@@ -62,6 +62,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
 
     linkedTransaction = linkedTransactionRepository.saveAndFlush(
       LinkedTransaction(
+        prisonId = "MDI",
         transactionType = TransactionType.LOCATION_CREATE,
         transactionDetail = "Initial Data Load",
         transactionInvokedBy = EXPECTED_USERNAME,

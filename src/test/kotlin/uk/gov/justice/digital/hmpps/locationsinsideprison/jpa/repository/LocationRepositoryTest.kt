@@ -53,6 +53,7 @@ class LocationRepositoryTest : TestBase() {
   fun findCellsOnAWingTest() {
     val linkedTransaction = linkedTransactionRepository.saveAndFlush(
       LinkedTransaction(
+        prisonId = "MDI",
         transactionInvokedBy = EXPECTED_USERNAME,
         transactionType = TransactionType.LOCATION_CREATE,
         transactionDetail = "TEST",
