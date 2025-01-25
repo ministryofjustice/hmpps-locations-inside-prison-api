@@ -432,9 +432,9 @@ abstract class Location(
       .flatten()
       .toList()
 
-    val withoutTx = history.asSequence().filter { it.linkedTransaction == null }
-      .sortedByDescending { it.amendedDate }.sortedBy { it.attributeName.displayOrder }
-      .filter { it.attributeName.display }
+    val withoutTx = history.asSequence()
+      .filter { it.linkedTransaction == null && it.attributeName.display }
+      .sortedByDescending { it.amendedDate }
       .map { it.toDto() }.toList()
 
     return withTx.plus(withoutTx)
