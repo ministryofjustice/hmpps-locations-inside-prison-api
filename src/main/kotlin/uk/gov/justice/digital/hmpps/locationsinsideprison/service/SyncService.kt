@@ -77,7 +77,7 @@ class SyncService(
       throw PermanentlyDeactivatedUpdateNotAllowedException("Location ${locationToUpdate.getKey()} cannot be updated as has been converted to non-res cell")
     }
 
-    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.SYNC, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()} in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
+    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.SYNC, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()}] in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
 
     locationToUpdate = handleChangeOfType(id, locationToUpdate, upsert, linkedTransaction)
 
