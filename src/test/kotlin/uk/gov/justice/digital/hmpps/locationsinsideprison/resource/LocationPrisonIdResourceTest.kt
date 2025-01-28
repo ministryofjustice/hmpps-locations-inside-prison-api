@@ -928,6 +928,161 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
     }
   }
 
+  @DisplayName("GET /locations/prison/{prisonId}/usage-type")
+  @Nested
+  inner class ViewNonResidentialLocationsWithUsageTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type")
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve locations with at least one usage type`() {
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                [
+                  {
+                    "key": "MDI-Z-ADJUDICATION",
+                    "pathHierarchy": "Z-ADJUDICATION",
+                    "locationType": "ADJUDICATION_ROOM",
+                    "usage": [
+                      {
+                        "usageType": "ADJUDICATION_HEARING",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  },
+                  {
+                    "key": "MDI-Z-VISIT",
+                    "pathHierarchy": "Z-VISIT",
+                    "locationType": "VISITS",
+                    "usage": [
+                      {
+                        "usageType": "VISIT",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  }
+                ]
+                         """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can retrieve locations from usage type filter our parents`() {
+        val videoLinkParent = buildNonResidentialLocation(
+          pathHierarchy = "RES",
+          locationType = LocationType.CLASSROOM,
+          nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+        )
+
+        repository.save(
+          buildNonResidentialLocation(
+            pathHierarchy = "RTU",
+            locationType = LocationType.RESIDENTIAL_UNIT,
+            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          ),
+        )
+
+        videoLinkParent.addChildLocation(
+          buildNonResidentialLocation(
+            pathHierarchy = "VIDEOR1",
+            locationType = LocationType.VIDEO_LINK,
+            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          ),
+        )
+        repository.save(videoLinkParent)
+
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                [
+                  {
+                    "key": "MDI-RES-VIDEOR1",
+                    "pathHierarchy": "RES-VIDEOR1",
+                    "locationType": "VIDEO_LINK",
+                    "usage": [
+                      {
+                        "usageType": "PROGRAMMES_ACTIVITIES",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  },
+                  {
+                    "key": "MDI-Z-ADJUDICATION",
+                    "pathHierarchy": "Z-ADJUDICATION",
+                    "locationType": "ADJUDICATION_ROOM",
+                    "usage": [
+                      {
+                        "usageType": "ADJUDICATION_HEARING",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  },
+                  {
+                    "key": "MDI-Z-VISIT",
+                    "pathHierarchy": "Z-VISIT",
+                    "locationType": "VISITS",
+                    "usage": [
+                      {
+                        "usageType": "VISIT",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  }
+                ]
+                         """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /locations/prison/{prisonId}/location-type/{locationTYpe}")
   @Nested
   inner class ViewLocationsByLocationTypeTest {
