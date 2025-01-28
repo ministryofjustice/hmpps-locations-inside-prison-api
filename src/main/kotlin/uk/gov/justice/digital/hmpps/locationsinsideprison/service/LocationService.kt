@@ -510,7 +510,7 @@ class LocationService(
   }
 
   @Transactional
-  fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int): LocationDTO {
+  fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int, linkedTransaction: LinkedTransaction? = null): LocationDTO {
     val locCapChange = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -518,7 +518,7 @@ class LocationService(
       throw PermanentlyDeactivatedUpdateNotAllowedException(locCapChange.getKey())
     }
 
-    val linkedTransaction = createLinkedTransaction(
+    val trackingTx = linkedTransaction ?: createLinkedTransaction(
       prisonId = locCapChange.prisonId,
       TransactionType.CAPACITY_CHANGE,
       "Capacity of ${locCapChange.getKey()} changed from ${locCapChange.calcWorkingCapacity()} to $workingCapacity",
@@ -538,7 +538,7 @@ class LocationService(
       workingCapacity = workingCapacity,
       userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
       clock = clock,
-      linkedTransaction = linkedTransaction,
+      linkedTransaction = trackingTx,
     )
 
     telemetryClient.trackEvent(
@@ -552,7 +552,7 @@ class LocationService(
       null,
     )
     return locCapChange.toDto(includeParent = true, includeNonResidential = false).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      trackingTx.txEndTime = LocalDateTime.now(clock)
     }
   }
 
@@ -845,6 +845,7 @@ class LocationService(
                     location.id!!,
                     maxCapacity = maxCapacity,
                     workingCapacity = workingCapacity,
+                    linkedTransaction = linkedTransaction,
                   )
                   if (oldMaxCapacity != maxCapacity) {
                     changes.add(CapacityChanges(key, message = "Max capacity from $oldMaxCapacity ==> $maxCapacity", type = "maxCapacity", previousValue = oldMaxCapacity, newValue = maxCapacity))
@@ -881,7 +882,15 @@ class LocationService(
         changes.add(CapacityChanges(key, message = "Location not found"))
       }
       audit[key] = changes
-      log.info("$key: ${changes.joinToString { "${it.type}: ${it.previousValue} ==> ${it.newValue}" }}")
+      log.info(
+        "$key: ${changes.joinToString {
+          if (it.type == null) {
+            "$it.message"
+          } else {
+            "${it.type}: ${it.previousValue} ==> ${it.newValue}"
+          }
+        }}",
+      )
     }
     val updatedLocationsDto = updatedCapacities.map { it.toDto() }.toSet()
 
