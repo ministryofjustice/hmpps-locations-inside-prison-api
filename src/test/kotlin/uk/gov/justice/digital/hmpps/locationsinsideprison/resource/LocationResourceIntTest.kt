@@ -964,7 +964,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                  "changeHistory": [
                   {
                     "attribute": "Estimated reactivation date",
-                    "newValues": ["${proposedReactivationDate.format(DATE_FORMAT)}}"]
+                    "newValues": ["${proposedReactivationDate.format(DATE_FORMAT)}"]
                   },
                   {
                     "attribute": "Deactivation reason",
@@ -1604,7 +1604,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                         {
                           "transactionType": "DEACTIVATION",
                           "attribute": "Estimated reactivation date",
-                          "oldValues": ["$proposedReactivationDate"],
+                          "oldValues": ["${proposedReactivationDate?.format(DATE_FORMAT)}"],
                           "newValues": ["${cellDetails.proposedReactivationDate?.format(DATE_FORMAT)}"]
                         },
                         {
