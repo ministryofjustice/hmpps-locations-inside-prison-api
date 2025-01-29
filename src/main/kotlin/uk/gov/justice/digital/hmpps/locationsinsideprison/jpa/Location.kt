@@ -697,8 +697,8 @@ abstract class Location(
       }
       if (addHistory(
           LocationAttribute.PROPOSED_REACTIVATION_DATE,
-          this.proposedReactivationDate?.toString(),
-          proposedReactivationDate?.toString(),
+          this.proposedReactivationDate?.format(DATE_FORMAT),
+          proposedReactivationDate?.format(DATE_FORMAT),
           userOrSystemInContext,
           amendedDate,
           linkedTransaction,
@@ -791,8 +791,8 @@ abstract class Location(
       )
       addHistory(
         LocationAttribute.PROPOSED_REACTIVATION_DATE,
-        this.proposedReactivationDate?.toString(),
-        proposedReactivationDate?.toString(),
+        this.proposedReactivationDate?.format(DATE_FORMAT),
+        proposedReactivationDate?.format(DATE_FORMAT),
         userOrSystemInContext,
         amendedDate,
         linkedTransaction,
