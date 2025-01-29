@@ -15,6 +15,7 @@ interface PatchLocationRequest {
   val parentLocationKey: String?
   val removeParent: Boolean?
   val localName: String?
+  val comments: String?
 }
 
 /**
@@ -52,6 +53,9 @@ data class PatchResidentialLocationRequest(
   @Schema(description = "Location Type", example = "CELL", required = false)
   val locationType: ResidentialLocationType? = null,
 
+  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
+  override val comments: String? = null,
+
 ) : PatchLocationRequest
 
 @Schema(description = "Request to update a non-res location")
@@ -81,6 +85,9 @@ data class PatchNonResidentialLocationRequest(
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 30, message = "Description must be less than 31 characters")
   override val localName: String? = null,
+
+  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
+  override val comments: String? = null,
 ) : PatchLocationRequest
 
 @Schema(description = "Request to update the local name of a location")
