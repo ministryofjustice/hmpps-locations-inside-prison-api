@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivat
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DATE_FORMAT
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.Clock
@@ -638,7 +639,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 { 
                   "transactionType": "DEACTIVATION",
                   "attribute": "Estimated reactivation date",
-                  "newValues": ["$proposedReactivationDate"]
+                  "newValues": ["${proposedReactivationDate.format(DATE_FORMAT)}"]
                 },
                 {
                   "attribute": "Deactivation reason",
@@ -705,7 +706,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     { 
                       "transactionType": "DEACTIVATION",
                       "attribute": "Estimated reactivation date",
-                      "newValues": ["$proposedReactivationDate"]
+                      "newValues": ["${proposedReactivationDate.format(DATE_FORMAT)}"]
                     }
                   ],
                   "childLocations": [
@@ -732,7 +733,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           { 
                             "transactionType": "DEACTIVATION",
                             "attribute": "Estimated reactivation date",
-                            "newValues": ["$proposedReactivationDate"]
+                            "newValues": ["${proposedReactivationDate.format(DATE_FORMAT)}"]
                           },
                           {
                             "attribute": "Deactivation reason",
@@ -797,7 +798,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           { 
                             "transactionType": "DEACTIVATION",
                             "attribute": "Estimated reactivation date",
-                            "newValues": ["$proposedReactivationDate"]
+                            "newValues": ["${proposedReactivationDate.format(DATE_FORMAT)}"]
                           },
                           {
                             "attribute": "Deactivation reason",
@@ -900,7 +901,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                "changeHistory": [
                  {
                    "attribute": "Estimated reactivation date",
-                   "newValues": ["$proposedReactivationDate"]
+                   "newValues": ["${proposedReactivationDate.format(DATE_FORMAT)}"]
                  },
                   {
                     "attribute": "Deactivation reason",
@@ -963,7 +964,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                  "changeHistory": [
                   {
                     "attribute": "Estimated reactivation date",
-                    "newValues": ["$proposedReactivationDate"]
+                    "newValues": ["${proposedReactivationDate.format(DATE_FORMAT)}}"]
                   },
                   {
                     "attribute": "Deactivation reason",
@@ -1093,7 +1094,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   {
                     "transactionType": "LOCATION_UPDATE",
                     "attribute": "Estimated reactivation date",
-                    "newValues": ["2024-01-05"]
+                    "newValues": ["05/01/2024"]
                   },
                   {
                     "transactionType": "LOCATION_UPDATE",
@@ -1168,7 +1169,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "changeHistory": [
                   {
                     "attribute": "Estimated reactivation date",
-                    "newValues": ["$proposedReactivationDate"]
+                    "newValues": ["${proposedReactivationDate.format(DATE_FORMAT)}"]
                   },
                   {
                     "attribute": "Planet FM reference number",
@@ -1581,7 +1582,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                         {
                           "transactionType": "REACTIVATION",
                           "attribute": "Estimated reactivation date",
-                          "oldValues": ["${cellDetails.proposedReactivationDate}"]
+                          "oldValues": ["${cellDetails.proposedReactivationDate?.format(DATE_FORMAT)}"]
                         },
                         {
                           "transactionType": "REACTIVATION",
@@ -1604,7 +1605,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "transactionType": "DEACTIVATION",
                           "attribute": "Estimated reactivation date",
                           "oldValues": ["$proposedReactivationDate"],
-                          "newValues": ["${cellDetails.proposedReactivationDate}"]
+                          "newValues": ["${cellDetails.proposedReactivationDate?.format(DATE_FORMAT)}"]
                         },
                         {
                           "transactionType": "DEACTIVATION",
@@ -1615,7 +1616,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                         {
                           "transactionType": "DEACTIVATION",
                           "attribute": "Estimated reactivation date",
-                          "newValues": ["$proposedReactivationDate"]
+                          "newValues": ["${proposedReactivationDate.format(DATE_FORMAT)}"]
                         },
                         {
                           "transactionType": "DEACTIVATION",

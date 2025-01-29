@@ -37,8 +37,11 @@ import java.io.Serializable
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
+
+val DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
 @Entity
 @DiscriminatorColumn(name = "location_type_discriminator")
@@ -933,7 +936,7 @@ abstract class Location(
       )
       addHistory(
         LocationAttribute.PROPOSED_REACTIVATION_DATE,
-        proposedReactivationDate?.toString(),
+        proposedReactivationDate?.format(DATE_FORMAT),
         null,
         userOrSystemInContext,
         amendedDate,
