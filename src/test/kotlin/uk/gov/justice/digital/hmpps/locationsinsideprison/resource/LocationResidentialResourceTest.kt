@@ -1201,6 +1201,33 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     @Nested
     inner class HappyPath {
       @Test
+      fun `can update comment`() {
+        webTestClient.patch().uri("/locations/residential/${cell1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(PatchResidentialLocationRequest(comments = "Change comment")))
+          .exchange()
+          .expectStatus().isOk
+
+        assertThat(
+          webTestClient.get().uri("/sync/id/${cell1.id}")
+            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+            .header("Content-Type", "application/json")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(LegacyLocation::class.java)
+            .returnResult().responseBody!!.comments,
+        ).isEqualTo("Change comment")
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+          )
+        }
+      }
+
+      @Test
       fun `can update details of a locations code`() {
         webTestClient.patch().uri("/locations/residential/${landingZ1.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
