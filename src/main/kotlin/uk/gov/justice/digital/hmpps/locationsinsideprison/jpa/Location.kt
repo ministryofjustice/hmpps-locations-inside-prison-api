@@ -762,6 +762,9 @@ abstract class Location(
     if (upsert.localName != null && this.localName != upsert.localName) {
       updateLocalName(upsert.localName, userOrSystemInContext, clock, linkedTransaction)
     }
+    if (upsert.comments != null && this.comments != upsert.comments) {
+      updateComments(upsert.comments, userOrSystemInContext, clock, linkedTransaction)
+    }
     return this
   }
 
