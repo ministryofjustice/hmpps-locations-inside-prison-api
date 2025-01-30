@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedT
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateNotAllowedAsConvertedCellException
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.*
@@ -74,7 +75,7 @@ class SyncService(
     }
 
     if (locationToUpdate is ResidentialLocation && locationToUpdate.isConvertedCell()) {
-      throw PermanentlyDeactivatedUpdateNotAllowedException("Location ${locationToUpdate.getKey()} cannot be updated as has been converted to non-res cell")
+      throw UpdateNotAllowedAsConvertedCellException("Location ${locationToUpdate.getKey()} cannot be updated as has been converted to non-res cell")
     }
 
     val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.SYNC, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()}] in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
