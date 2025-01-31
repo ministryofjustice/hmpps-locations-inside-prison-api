@@ -285,6 +285,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       @Test
       fun `cannot sync an a converted cell`() {
         cell.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OFFICE, userOrSystemInContext = "user", clock = clock, linkedTransaction = linkedTransaction)
+        cell.updateComments("This comment will NOT change", "user", clock, linkedTransaction)
         repository.save(cell)
         webTestClient.post().uri("/sync/upsert")
           .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
@@ -293,7 +294,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             jsonString(
               syncResRequest.copy(
                 id = cell.id,
-                comments = "Update comment",
+                comments = "This will not allow this updated comment",
               ),
             ),
           )
@@ -304,14 +305,14 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             """ 
                 {
                   "status": 409,
-                  "errorCode": 120,
+                  "errorCode": ${ErrorCode.LocationCannotByUpdatedAsConvertedCell.errorCode},
                   "userMessage": "Location cannot be updated exception: Location ZZGHI-B-1-001 cannot be updated as has been converted to non-res cell"
                 }
           """,
             JsonCompareMode.LENIENT,
           )
 
-        webTestClient.get().uri("/sync/id/${permDeactivated.id}")
+        webTestClient.get().uri("/sync/id/${cell.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -321,11 +322,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             """ 
              {
               "prisonId": "ZZGHI",
-              "code": "013",
-              "pathHierarchy": "B-1-013",
-              "active": false,
-              "permanentlyDeactivated": true
-            }
+              "code": "001",
+              "pathHierarchy": "B-1-001",
+              "active": true,
+              "comments": "This comment will NOT change"
+              }
           """,
             JsonCompareMode.LENIENT,
           )
