@@ -71,11 +71,11 @@ class SyncService(
       ?: throw LocationNotFoundException(id.toString())
 
     if (locationToUpdate.isPermanentlyDeactivated()) {
-      throw PermanentlyDeactivatedUpdateNotAllowedException("Location ${locationToUpdate.getKey()} cannot be updated as permanently deactivated")
+      throw PermanentlyDeactivatedUpdateNotAllowedException(locationToUpdate.getKey())
     }
 
     if (locationToUpdate is ResidentialLocation && locationToUpdate.isConvertedCell()) {
-      throw UpdateNotAllowedAsConvertedCellException("Location ${locationToUpdate.getKey()} cannot be updated as has been converted to non-res cell")
+      throw UpdateNotAllowedAsConvertedCellException(locationToUpdate.getKey())
     }
 
     val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.SYNC, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()}] in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
