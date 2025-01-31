@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegra
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationHistory
@@ -231,6 +232,105 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           .exchange()
           .expectStatus().is4xxClientError
       }
+
+      @Test
+      fun `cannot sync an existing permanently deactivated location`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncResRequest.copy(
+                id = permDeactivated.id,
+                code = "013",
+                capacity = CapacityDTO(3, 3),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isEqualTo(409)
+          .expectBody().json(
+            // language=json
+            """ 
+                {
+                  "status": 409,
+                  "userMessage": "Deactivated Location Exception: Location ZZGHI-B-1-013 cannot be updated as has been permanently deactivated",
+                  "developerMessage": "Location ZZGHI-B-1-013 cannot be updated as has been permanently deactivated",
+                  "errorCode": 107
+                }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        webTestClient.get().uri("/sync/id/${permDeactivated.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "013",
+              "pathHierarchy": "B-1-013",
+              "active": false,
+              "permanentlyDeactivated": true
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `cannot sync an a converted cell`() {
+        cell.convertToNonResidentialCell(convertedCellType = ConvertedCellType.OFFICE, userOrSystemInContext = "user", clock = clock, linkedTransaction = linkedTransaction)
+        cell.updateComments("This comment will NOT change", "user", clock, linkedTransaction)
+        repository.save(cell)
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncResRequest.copy(
+                id = cell.id,
+                comments = "This will not allow this updated comment",
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isEqualTo(409)
+          .expectBody().json(
+            // language=json
+            """ 
+                {
+                  "status": 409,
+                  "errorCode": ${ErrorCode.LocationCannotByUpdatedAsConvertedCell.errorCode},
+                  "userMessage": "Location cannot be updated exception: Location ZZGHI-B-1-001 cannot be updated as has been converted to non-res cell"
+                }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        webTestClient.get().uri("/sync/id/${cell.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "001",
+              "pathHierarchy": "B-1-001",
+              "active": true,
+              "comments": "This comment will NOT change"
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
     }
 
     @Nested
@@ -333,55 +433,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "certified": false,
                 "capacityOfCertifiedCell": 0
               }
-            }
-          """,
-            JsonCompareMode.LENIENT,
-          )
-      }
-
-      @Test
-      fun `cannot sync an existing permanently deactivated location`() {
-        webTestClient.post().uri("/sync/upsert")
-          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              syncResRequest.copy(
-                id = permDeactivated.id,
-                code = "013",
-                capacity = CapacityDTO(3, 3),
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isEqualTo(409)
-          .expectBody().json(
-            // language=json
-            """ 
-                {
-                  "status": 409,
-                  "userMessage": "Deactivated Location Exception: Location Location ZZGHI-B-1-013 cannot be updated as permanently deactivated cannot be updated as permanently deactivated",
-                  "developerMessage": "Location Location ZZGHI-B-1-013 cannot be updated as permanently deactivated cannot be updated as permanently deactivated",
-                  "errorCode": 107
-                }
-          """,
-            JsonCompareMode.LENIENT,
-          )
-
-        webTestClient.get().uri("/sync/id/${permDeactivated.id}")
-          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """ 
-             {
-              "prisonId": "ZZGHI",
-              "code": "013",
-              "pathHierarchy": "B-1-013",
-              "active": false,
-              "permanentlyDeactivated": true
             }
           """,
             JsonCompareMode.LENIENT,

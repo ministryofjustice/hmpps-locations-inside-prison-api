@@ -26,4 +26,5 @@ enum class ErrorCode(val errorCode: Int) {
   MaxCapacityCannotBeBelowOccupancyLevel(117),
   OtherReasonNotProvidedForDeactivation(118),
   DuplicateLocalNameAtSameLevel(119),
+  LocationCannotByUpdatedAsConvertedCell(120),
 }

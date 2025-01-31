@@ -324,6 +324,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(UpdateNotAllowedAsConvertedCellException::class)
+  fun handleUpdateNotAllowedAsConvertedCellException(e: UpdateNotAllowedAsConvertedCellException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Location cannot be updated: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.LocationCannotByUpdatedAsConvertedCell,
+          userMessage = "Location cannot be updated exception: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(ActiveLocationCannotBePermanentlyDeactivatedException::class)
   fun handleActiveLocationCannotBePermanentlyDeactivatedException(e: ActiveLocationCannotBePermanentlyDeactivatedException): ResponseEntity<ErrorResponse?>? {
     log.debug("Attempt to perm deactivate an active location {}", e.message)
@@ -390,7 +405,8 @@ class ReasonForDeactivationMustBeProvidedException(key: String) : Exception("De-
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
 class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")
 class CapacityException(val key: String, override val message: String, val errorCode: ErrorCode) : ValidationException("$key: [Error Code: $errorCode] - Capacity Exception: $message")
-class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationException("Location $key cannot be updated as permanently deactivated")
+class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationException("Location $key cannot be updated as has been permanently deactivated")
+class UpdateNotAllowedAsConvertedCellException(key: String) : ValidationException("Location $key cannot be updated as has been converted to non-res cell")
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
 class DuplicateLocalNameForSameHierarchyException(key: String, topLocationKey: String) : ValidationException("$key already the same local name in this hierarchy $topLocationKey")
 class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated as it is active")
