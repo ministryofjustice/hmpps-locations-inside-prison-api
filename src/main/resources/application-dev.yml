@@ -24,7 +24,3 @@ spring:
 
   jpa:
     show-sql: true
-
-service:
-  active:
-    prisons: ${SERVICE_ACTIVE_PRISONS:***}

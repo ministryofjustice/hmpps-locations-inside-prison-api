@@ -290,7 +290,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
               ]
             }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }
@@ -555,7 +555,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
               ]
             }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }

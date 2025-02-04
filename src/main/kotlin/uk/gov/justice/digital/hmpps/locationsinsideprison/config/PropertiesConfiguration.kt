@@ -14,7 +14,7 @@ open class PropertiesConfiguration(
 
   @Bean
   @Qualifier("residentialGroups")
-  open fun generatePropertiesBean(): PropertiesFactoryBean {
+  fun generatePropertiesBean(): PropertiesFactoryBean {
     val properties = PropertiesFactoryBean()
     properties.setLocations(*resources)
     return properties

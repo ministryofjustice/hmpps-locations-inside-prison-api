@@ -1,24 +1,22 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
 import jakarta.persistence.Entity
-import jakarta.persistence.GeneratedValue
-import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
 import org.hibernate.Hibernate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import java.time.LocalDateTime
 
 @Entity
-class PrisonSignedOperationCapacity(
+class PrisonConfiguration(
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  val id: Long? = null,
+  val prisonId: String,
   var signedOperationCapacity: Int,
-  var prisonId: String,
+  var resiLocationServiceActive: Boolean = false,
+  var includeSegregationInRollCount: Boolean = false,
   var whenUpdated: LocalDateTime,
   var updatedBy: String,
 ) {
-  fun toDto() = SignedOperationCapacityDto(
+  fun toSignedOperationCapacityDto() = SignedOperationCapacityDto(
     signedOperationCapacity = signedOperationCapacity,
     prisonId = prisonId,
     whenUpdated = whenUpdated,
@@ -29,7 +27,7 @@ class PrisonSignedOperationCapacity(
     if (this === other) return true
     if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
 
-    other as PrisonSignedOperationCapacity
+    other as PrisonConfiguration
 
     return prisonId == other.prisonId
   }
@@ -39,6 +37,6 @@ class PrisonSignedOperationCapacity(
   }
 
   override fun toString(): String {
-    return "Prison Signed Operation Capacity(id=$id, signedOperationCapacity=$signedOperationCapacity, prisonId=$prisonId, whenUpdated=$whenUpdated, updatedBy=$updatedBy )"
+    return "PrisonConfiguration(includeSegregationInRollCount=$includeSegregationInRollCount, resiLocationServiceActive=$resiLocationServiceActive, signedOperationCapacity=$signedOperationCapacity, prisonId='$prisonId')"
   }
 }

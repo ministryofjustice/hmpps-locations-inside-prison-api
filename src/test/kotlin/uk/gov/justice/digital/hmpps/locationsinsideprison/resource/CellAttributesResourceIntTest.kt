@@ -7,9 +7,9 @@ import org.junit.jupiter.api.Test
 import org.mockito.kotlin.whenever
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.json.JsonCompareMode
-import uk.gov.justice.digital.hmpps.locationsinsideprison.config.ActivePrisonConfig
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ActivePrisonService
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
@@ -17,12 +17,12 @@ import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 class CellAttributesResourceIntTest : CommonDataTestBase() {
 
   @MockitoBean
-  private lateinit var activePrisonConfig: ActivePrisonConfig
+  private lateinit var activePrisonService: ActivePrisonService
 
   @BeforeEach
   fun beforeEach() {
-    whenever(activePrisonConfig.isActivePrison("MDI")).thenReturn(true)
-    whenever(activePrisonConfig.isActivePrison("NMI")).thenReturn(false)
+    whenever(activePrisonService.isActivePrison("MDI")).thenReturn(true)
+    whenever(activePrisonService.isActivePrison("NMI")).thenReturn(false)
   }
 
   @Nested

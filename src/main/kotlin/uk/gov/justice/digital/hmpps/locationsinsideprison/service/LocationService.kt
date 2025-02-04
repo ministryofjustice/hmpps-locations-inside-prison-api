@@ -15,7 +15,6 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import uk.gov.justice.digital.hmpps.locationsinsideprison.config.ActivePrisonConfig
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
@@ -48,7 +47,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLoc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanentDeactivationRequest
@@ -83,7 +82,7 @@ class LocationService(
   private val locationRepository: LocationRepository,
   private val nonResidentialLocationRepository: NonResidentialLocationRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
-  private val signedOperationCapacityRepository: PrisonSignedOperationCapacityRepository,
+  private val signedOperationCapacityRepository: PrisonConfigurationRepository,
   private val cellLocationRepository: CellLocationRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val entityManager: EntityManager,
@@ -93,7 +92,7 @@ class LocationService(
   private val telemetryClient: TelemetryClient,
   private val authenticationFacade: AuthenticationFacade,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
-  private val activePrisonConfig: ActivePrisonConfig,
+  private val activePrisonService: ActivePrisonService,
   @Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
@@ -1180,7 +1179,7 @@ class LocationService(
           workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
           maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
           numberOfCellLocations = locations.sumOf { it.numberOfCellLocations ?: 0 },
-          signedOperationalCapacity = signedOperationCapacityRepository.findOneByPrisonId(prisonId)?.signedOperationCapacity
+          signedOperationalCapacity = signedOperationCapacityRepository.findById(prisonId).getOrNull()?.signedOperationCapacity
             ?: 0,
         )
       } else {
@@ -1292,7 +1291,7 @@ class LocationService(
     val cell = cellLocationRepository.findById(id).getOrNull()
       ?: throw LocationNotFoundException(id.toString())
 
-    return if (activePrisonConfig.isActivePrison(cell.prisonId)) {
+    return if (activePrisonService.isActivePrison(cell.prisonId)) {
       cell.specialistCellTypes
         .map {
           CellAttributes(

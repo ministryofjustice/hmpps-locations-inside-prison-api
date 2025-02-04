@@ -1,12 +1,35 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.integration.health
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.whenever
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class InfoTest : SqsIntegrationTestBase() {
+
+  @MockitoBean
+  private lateinit var prisonConfigurationRepository: PrisonConfigurationRepository
+
+  @BeforeEach
+  fun beforeEach() {
+    whenever(prisonConfigurationRepository.findAll()).thenReturn(
+      listOf(
+        PrisonConfiguration(
+          prisonId = "MDI",
+          signedOperationCapacity = 130,
+          resiLocationServiceActive = true,
+          whenUpdated = LocalDateTime.now(clock),
+          updatedBy = "TEST",
+        ),
+      ),
+    )
+  }
 
   @Test
   fun `Info page is accessible`() {

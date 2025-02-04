@@ -10,17 +10,18 @@ import org.springframework.test.context.jdbc.Sql
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import java.time.LocalDateTime
+import kotlin.jvm.optionals.getOrNull
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Transactional
-class PrisonSignedOperationalCapacityRepositoryTest : TestBase() {
+class PrisonConfigurationRepositoryTest : TestBase() {
 
   val testPrisonId = "MDI"
   val testUser = "USER"
 
   @Autowired
-  lateinit var repository: PrisonSignedOperationCapacityRepository
+  lateinit var repository: PrisonConfigurationRepository
 
   @AfterEach
   fun cleanUp() {
@@ -29,20 +30,19 @@ class PrisonSignedOperationalCapacityRepositoryTest : TestBase() {
 
   @Test
   fun `Return null when capacity not defined for prison id`() {
-    val oc = repository.findOneByPrisonId(testPrisonId)
+    val oc = repository.findById(testPrisonId).getOrNull()
     assertThat(oc).isNull()
   }
 
   @Test
   @Sql("classpath:repository/insert-prison-signed-operation-capacity.sql")
   fun `Return result when capacity defined for prison id`() {
-    val oc = repository.findOneByPrisonId(testPrisonId)
-    assertThat(oc?.id).isNotNull()
+    val oc = repository.findById(testPrisonId).getOrNull()
     assertThat(oc?.signedOperationCapacity).isEqualTo(130)
     assertThat(oc?.prisonId).isEqualTo(testPrisonId)
     assertThat(oc?.whenUpdated).isEqualTo(LocalDateTime.now(clock))
     assertThat(oc?.updatedBy).isEqualTo(testUser)
-    assertThat(oc.toString()).contains("Prison Signed Operation Capacity")
+    assertThat(oc.toString()).contains("PrisonConfiguration")
     assertThat(oc.toString()).contains(testPrisonId)
   }
 }
