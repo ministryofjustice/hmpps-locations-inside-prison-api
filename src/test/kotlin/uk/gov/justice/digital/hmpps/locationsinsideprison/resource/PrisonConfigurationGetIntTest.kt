@@ -6,17 +6,18 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.jdbc.Sql
+import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 
-class PrisonSignedOperationCapacityGetIntTest : SqsIntegrationTestBase() {
+class PrisonConfigurationGetIntTest : SqsIntegrationTestBase() {
 
   @Autowired
-  lateinit var repository: PrisonSignedOperationCapacityRepository
+  lateinit var repository: PrisonConfigurationRepository
 
   @DisplayName("GET /signed-op-cap/MDI")
   @Nested
-  inner class PrisonSignedOperationCapacityGetIntTest {
+  inner class PrisonConfigurationGetIntTest {
 
     @AfterEach
     fun cleanUp() {
@@ -104,7 +105,7 @@ class PrisonSignedOperationCapacityGetIntTest : SqsIntegrationTestBase() {
                 "whenUpdated": "2023-12-05T12:34:56"
               }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 

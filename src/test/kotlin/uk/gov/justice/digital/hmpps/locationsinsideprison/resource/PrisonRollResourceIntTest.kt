@@ -1,17 +1,32 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.whenever
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.MovementCount
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollMovementInfo
+import java.time.LocalDateTime
+import java.util.*
 
 class PrisonRollResourceIntTest : CommonDataTestBase() {
+
+  @MockitoBean
+  private lateinit var prisonConfigurationRepository: PrisonConfigurationRepository
 
   @DisplayName("GET /prison/roll-count/{prisonId}")
   @Nested
   inner class PrisonRollCountTest {
+
+    @BeforeEach
+    fun beforeEach() {
+    }
 
     @Nested
     inner class Security {
@@ -129,7 +144,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             ]
           }        
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -241,7 +256,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                 ]
               }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -361,7 +376,140 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
               ]
             }      
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can obtain a role count for MDI showing seg`() {
+        whenever(prisonConfigurationRepository.findById("MDI")).thenReturn(
+          Optional.of(
+            PrisonConfiguration(
+              prisonId = "MDI",
+              signedOperationCapacity = 1,
+              resiLocationServiceActive = true,
+              includeSegregationInRollCount = true,
+              whenUpdated = LocalDateTime.now(clock),
+              updatedBy = "TEST",
+            ),
+          ),
+        )
+
+        prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
+        prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+
+        webTestClient.get().uri("/prison/roll-count/MDI")
+          .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """ 
+            {
+              "prisonId": "MDI",
+              "numUnlockRollToday": 8,
+              "numCurrentPopulation": 7,
+              "numArrivedToday": 1,
+              "numInReception": 4,
+              "numStillToArrive": 2,
+              "numOutToday": 2,
+              "numNoCellAllocated": 1,
+              "totals": {
+                "bedsInUse": 2,
+                "currentlyInCell": 1,
+                "currentlyOut": 1,
+                "workingCapacity": 4,
+                "netVacancies": 2,
+                "outOfOrder": 1
+              },
+              "locations": [
+                {
+                  "key": "MDI-B",
+                  "locationType": "WING",
+                  "locationCode": "B",
+                  "fullLocationPath": "B",
+                  "localName": "Wing B",
+                  "certified": true,
+                  "rollCount": {
+                    "bedsInUse": 0,
+                    "currentlyInCell": 0,
+                    "currentlyOut": 0,
+                    "workingCapacity": 0,
+                    "netVacancies": 0,
+                    "outOfOrder": 1
+                  },
+                  "subLocations": [
+                    {
+                      "key": "MDI-B-A",
+                      "locationType": "LANDING",
+                      "locationCode": "A",
+                      "fullLocationPath": "B-A",
+                      "localName": "Landing 1",
+                      "certified": true,
+                      "rollCount": {
+                        "bedsInUse": 0,
+                        "currentlyInCell": 0,
+                        "currentlyOut": 0,
+                        "workingCapacity": 0,
+                        "netVacancies": 0,
+                        "outOfOrder": 1
+                      }
+                    }
+                  ]
+                },
+                {
+                  "key": "MDI-Z",
+                  "locationType": "WING",
+                  "locationCode": "Z",
+                  "fullLocationPath": "Z",
+                  "localName": "Z",
+                  "certified": true,
+                  "rollCount": {
+                    "bedsInUse": 2,
+                    "currentlyInCell": 1,
+                    "currentlyOut": 1,
+                    "workingCapacity": 4,
+                    "netVacancies": 2,
+                    "outOfOrder": 0
+                  },
+                  "subLocations": [
+                    {
+                      "key": "MDI-Z-1",
+                      "locationType": "LANDING",
+                      "locationCode": "1",
+                      "fullLocationPath": "Z-1",
+                      "localName": "Landing 1",
+                      "certified": true,
+                      "rollCount": {
+                        "bedsInUse": 2,
+                        "currentlyInCell": 1,
+                        "currentlyOut": 1,
+                        "workingCapacity": 4,
+                        "netVacancies": 2,
+                        "outOfOrder": 0
+                      }
+                    },
+                    {
+                      "key": "MDI-Z-2",
+                      "locationType": "LANDING",
+                      "locationCode": "2",
+                      "fullLocationPath": "Z-2",
+                      "localName": "Landing 2",
+                      "certified": false,
+                      "rollCount": {
+                        "bedsInUse": 0,
+                        "currentlyInCell": 0,
+                        "currentlyOut": 0,
+                        "workingCapacity": 0,
+                        "netVacancies": 0,
+                        "outOfOrder": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            }      
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
           )
       }
 
@@ -531,7 +679,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
               ]
             }        
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
       }
     }

@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getCSwapLocationCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getReceptionLocationCodes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import java.util.*
@@ -27,6 +28,7 @@ class PrisonRollCountService(
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val prisonerLocationService: PrisonerLocationService,
   private val prisonApiService: PrisonApiService,
+  private val prisonConfigurationRepository: PrisonConfigurationRepository,
 
 ) {
   companion object {
@@ -46,6 +48,7 @@ class PrisonRollCountService(
       movements,
       includeCells,
       residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId),
+      segShouldBeFiltered(prisonId),
     )
   }
 
@@ -63,13 +66,17 @@ class PrisonRollCountService(
 
     val locations = currentLocation.toResidentialPrisonerLocation(mapOfPrisoners)
 
+    val filterSeg = segShouldBeFiltered(prisonId)
     val prisonRollCount = PrisonCellRollCount(
       locationHierarchy = currentLocation.getHierarchy(),
-      totals = locationRollCount(listOf(locations)),
-      locations = removeLocations(listOf(locations), includeCells = true),
+      totals = locationRollCount(listOf(locations), filterSeg),
+      locations = removeLocations(listOf(locations), includeCells = true, filterSeg = filterSeg),
     )
     return prisonRollCount
   }
+
+  private fun segShouldBeFiltered(prisonId: String) =
+    !(prisonConfigurationRepository.findById(prisonId).getOrNull()?.includeSegregationInRollCount ?: false)
 
   private fun prisonRollCount(
     prisonId: String,
@@ -78,6 +85,7 @@ class PrisonRollCountService(
     movements: PrisonRollMovementInfo,
     includeCells: Boolean,
     residentialLocations: List<ResidentialLocation>,
+    filterSeg: Boolean,
   ): PrisonRollCount {
     val locations: List<ResidentialPrisonerLocation> =
       residentialLocations
@@ -99,19 +107,23 @@ class PrisonRollCountService(
       numInReception = numInReception,
       numStillToArrive = movements.enRouteToday,
       numNoCellAllocated = numNoCellAllocated,
-      totals = locationRollCount(locations),
-      locations = removeLocations(locations, includeCells = includeCells),
+      totals = locationRollCount(locations, filterSeg),
+      locations = removeLocations(locations, includeCells = includeCells, filterSeg = filterSeg),
     )
     return prisonRollCount
   }
 
-  private fun locationRollCount(locations: List<ResidentialPrisonerLocation>) =
+  private fun locationRollCount(locations: List<ResidentialPrisonerLocation>, filterSeg: Boolean) =
     LocationRollCount(
       bedsInUse = locations.sumOf { it.getBedsInUse() },
       currentlyInCell = locations.sumOf { it.getCurrentlyInCell() },
       currentlyOut = locations.sumOf { it.getCurrentlyOut() },
       workingCapacity = locations.sumOf { it.getWorkingCapacity() },
-      netVacancies = locations.sumOf { it.getWorkingCapacity() - it.getCurrentlyInCell(true) - it.getCurrentlyOut(true) },
+      netVacancies = locations.sumOf {
+        it.getWorkingCapacity() - it.getCurrentlyInCell(filterSeg) - it.getCurrentlyOut(
+          filterSeg,
+        )
+      },
       outOfOrder = locations.sumOf { it.getOutOfOrder() },
     )
 }
@@ -133,7 +145,7 @@ data class ResidentialPrisonerLocation(
   val accommodationType: AccommodationType? = null,
 ) : SortAttribute {
 
-  fun toDto(includeCells: Boolean = false) =
+  fun toDto(includeCells: Boolean = false, filterSeg: Boolean) =
     ResidentialLocationRollCount(
       locationId = locationId,
       key = key,
@@ -143,17 +155,17 @@ data class ResidentialPrisonerLocation(
       localName = localName,
       certified = certified,
       deactivatedReason = deactivatedReason,
-      rollCount = getRollCount(),
-      subLocations = removeLocations(subLocations, includeCells = includeCells),
+      rollCount = getRollCount(filterSeg),
+      subLocations = removeLocations(subLocations, includeCells = includeCells, filterSeg = filterSeg),
     )
 
-  private fun getRollCount() =
+  private fun getRollCount(filterSeg: Boolean) =
     LocationRollCount(
       bedsInUse = getBedsInUse(),
       currentlyInCell = getCurrentlyInCell(),
       currentlyOut = getCurrentlyOut(),
       workingCapacity = getWorkingCapacity(),
-      netVacancies = getNetVacancies(),
+      netVacancies = getNetVacancies(filterSeg),
       outOfOrder = getOutOfOrder(),
     )
 
@@ -168,7 +180,7 @@ data class ResidentialPrisonerLocation(
 
   fun getOutOfOrder(): Int = getCells().filter { it.status == LocationStatus.INACTIVE }.size
 
-  private fun getNetVacancies() = getWorkingCapacity() - getNumOfOccupants(true)
+  private fun getNetVacancies(filterSeg: Boolean) = getWorkingCapacity() - getNumOfOccupants(filterSeg)
 
   private fun getNumOfOccupants(filterSeg: Boolean = false): Int = getCells(filterSeg).sumOf { it.prisoners?.size ?: 0 }
 
@@ -290,9 +302,9 @@ data class ResidentialLocationRollCount(
 
 )
 
-fun removeLocations(locations: List<ResidentialPrisonerLocation>, includeCells: Boolean = false): List<ResidentialLocationRollCount> =
+fun removeLocations(locations: List<ResidentialPrisonerLocation>, includeCells: Boolean = false, filterSeg: Boolean): List<ResidentialLocationRollCount> =
   locations
     .filter { it.status in listOf(LocationStatus.ACTIVE) && (includeCells || !it.isLeafLevel) }
     .map {
-      it.toDto(includeCells)
+      it.toDto(includeCells, filterSeg)
     }

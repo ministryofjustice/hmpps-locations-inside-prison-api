@@ -7,13 +7,14 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.jdbc.Sql
+import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 
-class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
+class PrisonConfigurationUpdateIntTest : SqsIntegrationTestBase() {
 
   @Autowired
-  lateinit var repository: PrisonSignedOperationCapacityRepository
+  lateinit var repository: PrisonConfigurationRepository
 
   @AfterEach
   fun cleanUp() {
@@ -23,7 +24,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
 
   @DisplayName("POST /signed-op-cap/")
   @Nested
-  inner class PrisonSignedOperationCapacityPostIntTest {
+  inner class PrisonConfigurationPostIntTest {
 
     @Nested
     inner class Security {
@@ -216,7 +217,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
                 "updatedBy": "MALEMAN"
               }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(1).let {
@@ -268,7 +269,7 @@ class PrisonSignedOperationCapacityUpdateIntTest : SqsIntegrationTestBase() {
                 "updatedBy": "TEST"
               }
             """.trimIndent(),
-            false,
+            JsonCompareMode.LENIENT,
           )
 
         getDomainEvents(2).let {

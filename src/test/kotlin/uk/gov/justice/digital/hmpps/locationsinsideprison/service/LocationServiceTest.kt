@@ -10,7 +10,6 @@ import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
-import uk.gov.justice.digital.hmpps.locationsinsideprison.config.ActivePrisonConfig
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
@@ -29,7 +28,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLoc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonSignedOperationCapacityRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
@@ -44,7 +43,7 @@ class LocationServiceTest {
   private val locationRepository: LocationRepository = mock()
   private val nonResidentialLocationRepository: NonResidentialLocationRepository = mock()
   private val residentialLocationRepository: ResidentialLocationRepository = mock()
-  private val signedOperationCapacityRepository: PrisonSignedOperationCapacityRepository = mock()
+  private val signedOperationCapacityRepository: PrisonConfigurationRepository = mock()
   private val cellLocationRepository: CellLocationRepository = mock()
   private val linkedTransactionRepository: LinkedTransactionRepository = mock()
   private val prisonerLocationService: PrisonerLocationService = mock()
@@ -54,7 +53,7 @@ class LocationServiceTest {
   private val telemetryClient: TelemetryClient = mock()
   private val authenticationFacade: AuthenticationFacade = mock()
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService = mock()
-  private val activePrisonConfig: ActivePrisonConfig = mock()
+  private val activePrisonService: ActivePrisonService = mock()
   private val groupsProperties: Properties = mock()
 
   private val service = LocationService(
@@ -71,7 +70,7 @@ class LocationServiceTest {
     telemetryClient,
     authenticationFacade,
     locationGroupFromPropertiesService,
-    activePrisonConfig,
+    activePrisonService,
     groupsProperties,
   )
 
@@ -361,7 +360,7 @@ class LocationServiceTest {
 
     whenever(mockCell.specialistCellTypes).thenReturn(mutableSetOf())
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
-    whenever(activePrisonConfig.isActivePrison(any())).thenReturn(true)
+    whenever(activePrisonService.isActivePrison(any())).thenReturn(true)
 
     val attributes = service.getCellAttributes(UUID.randomUUID())
     Assertions.assertThat(attributes).isEqualTo(emptyList<CellAttributes>())
@@ -375,7 +374,7 @@ class LocationServiceTest {
 
     whenever(mockCell.specialistCellTypes).thenReturn(mutableSetOf(SpecialistCell(1, location, specialistCellType)))
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
-    whenever(activePrisonConfig.isActivePrison(any())).thenReturn(false)
+    whenever(activePrisonService.isActivePrison(any())).thenReturn(false)
 
     val attributes = service.getCellAttributes(UUID.randomUUID())
     Assertions.assertThat(attributes).isEqualTo(emptyList<CellAttributes>())
@@ -390,7 +389,7 @@ class LocationServiceTest {
     whenever(mockCell.specialistCellTypes).thenReturn(mutableSetOf(SpecialistCell(1, location, specialistCellType)))
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(mockCell.prisonId).thenReturn("MDI")
-    whenever(activePrisonConfig.isActivePrison(any())).thenReturn(true)
+    whenever(activePrisonService.isActivePrison(any())).thenReturn(true)
 
     val attributes = service.getCellAttributes(UUID.randomUUID())
     Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code = SpecialistCellType.CAT_A, description = SpecialistCellType.CAT_A.description)))
@@ -405,7 +404,7 @@ class LocationServiceTest {
 
     whenever(mockCell.attributes).thenReturn(mutableSetOf(ResidentialAttribute(1, location, residentialCellType, residentialCellValue)))
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
-    whenever(activePrisonConfig.isActivePrison(any())).thenReturn(false)
+    whenever(activePrisonService.isActivePrison(any())).thenReturn(false)
 
     val attributes = service.getCellAttributes(UUID.randomUUID())
     Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code = residentialCellValue, description = residentialCellValue.description)))
@@ -423,7 +422,7 @@ class LocationServiceTest {
     whenever(mockCell.attributes).thenReturn(mutableSetOf(ResidentialAttribute(1, location, residentialCellType, residentialCellValue)))
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(mockCell.prisonId).thenReturn("MDI")
-    whenever(activePrisonConfig.isActivePrison(any())).thenReturn(true)
+    whenever(activePrisonService.isActivePrison(any())).thenReturn(true)
 
     val attributes = service.getCellAttributes(UUID.randomUUID())
     Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code = SpecialistCellType.CAT_A, description = SpecialistCellType.CAT_A.description)))
