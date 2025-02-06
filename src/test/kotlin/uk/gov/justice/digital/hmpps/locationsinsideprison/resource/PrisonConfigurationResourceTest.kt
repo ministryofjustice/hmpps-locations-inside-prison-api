@@ -16,7 +16,7 @@ class PrisonConfigurationResourceTest : SqsIntegrationTestBase() {
   @Autowired
   lateinit var prisonConfigurationRepository: PrisonConfigurationRepository
 
-  val prisonId = "MDI"
+  val prisonId = "LEI"
 
   @BeforeEach
   fun setUp() {
