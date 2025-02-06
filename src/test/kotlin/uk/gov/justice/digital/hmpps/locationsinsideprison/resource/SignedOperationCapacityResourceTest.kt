@@ -11,7 +11,7 @@ import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 
-class PrisonConfigurationUpdateIntTest : SqsIntegrationTestBase() {
+class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: PrisonConfigurationRepository

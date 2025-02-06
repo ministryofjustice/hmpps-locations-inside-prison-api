@@ -4,6 +4,8 @@ import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import org.hibernate.Hibernate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonConfigurationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialStatus
 import java.time.LocalDateTime
 
 @Entity
@@ -22,6 +24,18 @@ class PrisonConfiguration(
     whenUpdated = whenUpdated,
     updatedBy = updatedBy,
   )
+
+  fun toPrisonConfiguration() = PrisonConfigurationDto(
+    prisonId = prisonId,
+    resiLocationServiceActive = convertToStatus(resiLocationServiceActive),
+    includeSegregationInRollCount = convertToStatus(includeSegregationInRollCount),
+  )
+
+  private fun convertToStatus(active: Boolean) =
+    when (active) {
+      true -> ResidentialStatus.ACTIVE
+      false -> ResidentialStatus.INACTIVE
+    }
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
