@@ -535,8 +535,8 @@ BEGIN
     PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_used_for := NULL, p_accommodation_type := 'HEALTHCARE_INPATIENTS');
 
     -- setup the signed op capacity
-    insert into prison_configuration (signed_operation_capacity, prison_id, when_updated, updated_by)
-    select SUM(COALESCE(c.max_capacity, 0)), l.prison_id, now(), p_username from location l left join capacity c on c.id = l.capacity_id and l.active = true and l.archived = false where l.prison_id = p_prison_id group by l.prison_id;
+    insert into prison_configuration (signed_operation_capacity, prison_id, resi_location_service_active, when_updated, updated_by)
+    select SUM(COALESCE(c.max_capacity, 0)), l.prison_id, true, now(), p_username from location l left join capacity c on c.id = l.capacity_id and l.active = true and l.archived = false where l.prison_id = p_prison_id group by l.prison_id;
 END;
 $$ LANGUAGE plpgsql;
 

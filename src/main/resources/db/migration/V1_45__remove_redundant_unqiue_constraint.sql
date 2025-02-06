@@ -1,0 +1,2 @@
+alter table prison_configuration
+    drop constraint prison_signed_operation_capacity_prison_id_key;
