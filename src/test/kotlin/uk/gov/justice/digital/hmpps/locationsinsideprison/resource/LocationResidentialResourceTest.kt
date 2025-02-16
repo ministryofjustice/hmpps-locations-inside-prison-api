@@ -461,8 +461,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
       prisonId = "MDI",
       wingCode = "Y",
       wingDescription = "Y Wing",
-      numberOfLandings = 3,
-      numberOfSpursPerLanding = 2,
+      numberOfSpurs = 4,
+      numberOfLandings = 2,
       numberOfCellsPerSection = 2,
       defaultCellCapacity = 1,
     )
@@ -493,7 +493,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     @Nested
     inner class HappyPath {
       @Test
-      fun `can create an entire wing with 3 landings, 2 spurs and 2 cells per spur`() {
+      fun `can create an entire wing with 4 spurs, 2 landings, and 2 cells per landing`() {
         webTestClient.post().uri("/locations/create-wing")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -513,29 +513,29 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               "localName": "Y Wing",
               
               "capacity": {
-                "maxCapacity": 12,
-                "workingCapacity": 12
+                "maxCapacity": 16,
+                "workingCapacity": 16
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 12
+                "capacityOfCertifiedCell": 16
               }
             }
           """,
             JsonCompareMode.LENIENT,
           )
 
-        getDomainEvents(12).let {
-          assertThat(it).hasSize(12)
+        getDomainEvents(16).let {
+          assertThat(it).hasSize(16)
         }
       }
 
       @Test
-      fun `can create an entire wing with 4 landings, 2 cells per landing`() {
+      fun `can create an entire wing with 2 landings, 2 cells per landing`() {
         webTestClient.post().uri("/locations/create-wing")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(createWingRequest.copy(wingCode = "X", wingDescription = "X Wing", numberOfLandings = 4, numberOfSpursPerLanding = 0, numberOfCellsPerSection = 2, defaultCellCapacity = 2))
+          .bodyValue(createWingRequest.copy(wingCode = "X", wingDescription = "X Wing", numberOfLandings = 2, numberOfSpurs = 0, numberOfCellsPerSection = 2, defaultCellCapacity = 2))
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(
@@ -551,20 +551,20 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               "localName": "X Wing",
               
               "capacity": {
-                "maxCapacity": 16,
-                "workingCapacity": 16
+                "maxCapacity": 8,
+                "workingCapacity": 8
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 16
+                "capacityOfCertifiedCell": 8
               }
             }
           """,
             JsonCompareMode.LENIENT,
           )
 
-        getDomainEvents(8).let {
-          assertThat(it).hasSize(8)
+        getDomainEvents(4).let {
+          assertThat(it).hasSize(4)
         }
       }
     }

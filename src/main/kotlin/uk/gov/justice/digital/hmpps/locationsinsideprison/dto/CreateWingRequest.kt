@@ -31,17 +31,21 @@ data class CreateWingRequest(
   @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 80, message = "Max of 80 characters")
   val wingDescription: String?,
-  @Schema(description = "Number of landings required", example = "3", required = false)
-  @field:Max(value = 10, message = "Max of 10")
-  val numberOfLandings: Int? = null,
+
   @Schema(description = "Number of spurs required", example = "2", required = false)
-  @field:Max(value = 10, message = "Max of 10")
-  val numberOfSpursPerLanding: Int? = null,
+  @field:Max(value = 4, message = "Max of 4")
+  val numberOfSpurs: Int? = null,
+
+  @Schema(description = "Number of landings required", example = "3", required = false)
+  @field:Max(value = 5, message = "Max of 5")
+  val numberOfLandings: Int? = null,
+
   @Schema(description = "Number of cells required in each section (wing,landing or spur)", example = "40", required = true)
-  @field:Max(value = 999, message = "Max of 999")
+  @field:Max(value = 100, message = "Max of 100")
   val numberOfCellsPerSection: Int,
+
   @Schema(description = "Default Cell Capacity", example = "1", required = true, defaultValue = "1")
-  @field:Max(value = 10, message = "Max of 10")
+  @field:Max(value = 4, message = "Max of 4")
   val defaultCellCapacity: Int = 1,
 ) {
 
@@ -59,40 +63,40 @@ data class CreateWingRequest(
     )
     LocationService.log.info("Created Wing [${wing.getKey()}]")
 
-    numberOfLandings?.let { numberOfLandings ->
-      for (landingNumber in 1..numberOfLandings) {
-        val landing = ResidentialLocation(
+    numberOfSpurs?.let { numberOfSpurs ->
+      for (spurNumber in 1..numberOfSpurs) {
+        val spur = ResidentialLocation(
           prisonId = prisonId,
-          code = "$landingNumber",
-          locationType = LocationType.LANDING,
-          pathHierarchy = "$wingCode-$landingNumber",
-          localName = "Landing $landingNumber on Wing $wingCode",
-          orderWithinParentLocation = landingNumber,
+          code = "$spurNumber",
+          locationType = LocationType.SPUR,
+          pathHierarchy = "$wingCode-$spurNumber",
+          localName = "Spur $spurNumber on Wing $wingCode",
+          orderWithinParentLocation = spurNumber,
           createdBy = createdBy,
           whenCreated = LocalDateTime.now(clock),
           childLocations = mutableListOf(),
         )
-        wing.addChildLocation(landing)
-        LocationService.log.info("Created Landing [${landing.getKey()}]")
+        wing.addChildLocation(spur)
+        LocationService.log.info("Created Spur [${spur.getKey()}]")
       }
     }
 
-    wing.findAllLeafLocations().forEach { landing ->
-      numberOfSpursPerLanding?.let { numberOfSpurs ->
-        for (spurNumber in 1..numberOfSpurs) {
-          val spur = ResidentialLocation(
+    wing.findAllLeafLocations().forEach { spur ->
+      numberOfLandings?.let { numberOfLandings ->
+        for (landingNumber in 1..numberOfLandings) {
+          val landing = ResidentialLocation(
             prisonId = prisonId,
-            code = "$spurNumber",
+            code = "$landingNumber",
             locationType = LocationType.SPUR,
-            pathHierarchy = "${landing.getPathHierarchy()}-$spurNumber",
-            localName = "Spur $spurNumber on Landing ${landing.getCode()}",
-            orderWithinParentLocation = spurNumber,
+            pathHierarchy = "${spur.getPathHierarchy()}-$landingNumber",
+            localName = "Landing $landingNumber on Spur ${spur.getCode()}",
+            orderWithinParentLocation = landingNumber,
             createdBy = createdBy,
             whenCreated = LocalDateTime.now(clock),
             childLocations = mutableListOf(),
           )
-          landing.addChildLocation(spur)
-          LocationService.log.info("Created Spur [${spur.getKey()}]")
+          spur.addChildLocation(landing)
+          LocationService.log.info("Created Landing [${landing.getKey()}]")
         }
       }
     }
