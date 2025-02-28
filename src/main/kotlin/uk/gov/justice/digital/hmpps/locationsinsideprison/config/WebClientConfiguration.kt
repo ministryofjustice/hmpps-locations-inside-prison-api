@@ -32,10 +32,8 @@ class WebClientConfiguration(
   fun prisonApiHealthWebClient(builder: WebClient.Builder): WebClient = builder.healthWebClient(prisonApiUri, healthTimeout)
 
   @Bean
-  fun prisonerSearchWebClient(authorizedClientManager: OAuth2AuthorizedClientManager, builder: WebClient.Builder): WebClient =
-    builder.authorisedWebClient(authorizedClientManager, registrationId = SYSTEM_USERNAME, url = prisonerSearchUri, healthTimeout)
+  fun prisonerSearchWebClient(authorizedClientManager: OAuth2AuthorizedClientManager, builder: WebClient.Builder): WebClient = builder.authorisedWebClient(authorizedClientManager, registrationId = SYSTEM_USERNAME, url = prisonerSearchUri, healthTimeout)
 
   @Bean
-  fun prisonApiWebClient(authorizedClientManager: OAuth2AuthorizedClientManager, builder: WebClient.Builder): WebClient =
-    builder.authorisedWebClient(authorizedClientManager, registrationId = SYSTEM_USERNAME, url = prisonApiUri, healthTimeout)
+  fun prisonApiWebClient(authorizedClientManager: OAuth2AuthorizedClientManager, builder: WebClient.Builder): WebClient = builder.authorisedWebClient(authorizedClientManager, registrationId = SYSTEM_USERNAME, url = prisonApiUri, healthTimeout)
 }

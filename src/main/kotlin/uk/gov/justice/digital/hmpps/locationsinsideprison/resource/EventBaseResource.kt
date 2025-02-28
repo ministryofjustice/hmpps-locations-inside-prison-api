@@ -18,73 +18,62 @@ abstract class EventBaseResource {
   protected fun publishSignedOpCapChange(
     event: InternalLocationDomainEventType,
     function: () -> SignedOperationCapacityDto,
-  ) =
-    function().also { signedOpCap ->
-      eventPublishAndAuditService.signedOpCapEvent(
-        eventType = event,
-        signedOperationCapacity = signedOpCap,
-        auditData = signedOpCap,
-      )
-    }
+  ) = function().also { signedOpCap ->
+    eventPublishAndAuditService.signedOpCapEvent(
+      eventType = event,
+      signedOperationCapacity = signedOpCap,
+      auditData = signedOpCap,
+    )
+  }
 
   protected fun eventPublishAndAudit(
     event: InternalLocationDomainEventType,
     function: () -> Location,
-  ) =
-    function().also { location ->
-      eventPublishAndAuditService.publishEvent(
-        eventType = event,
-        locationDetail = location,
-        auditData = location.copy(childLocations = null, parentLocation = null, changeHistory = null),
-        source = InformationSource.DPS,
-      )
-    }
+  ) = function().also { location ->
+    eventPublishAndAuditService.publishEvent(
+      eventType = event,
+      locationDetail = location,
+      auditData = location.copy(childLocations = null, parentLocation = null, changeHistory = null),
+      source = InformationSource.DPS,
+    )
+  }
 
   protected fun eventPublish(
     function: () -> Map<InternalLocationDomainEventType, List<LocationDTO>>,
-  ) =
-    function().onEach { (event, locationsChanged) ->
-      if (locationsChanged.isNotEmpty()) {
-        eventPublishAndAuditService.publishEvent(
-          eventType = event,
-          locationDetail = locationsChanged,
-          source = InformationSource.DPS,
-        )
-      }
-    }
-
-  protected fun audit(id: String, function: () -> Location) =
-    function().also { auditData ->
-      eventPublishAndAuditService.auditEvent(
-        auditType = AuditType.LOCATION_AMENDED,
-        id = id,
-        auditData = auditData,
+  ) = function().onEach { (event, locationsChanged) ->
+    if (locationsChanged.isNotEmpty()) {
+      eventPublishAndAuditService.publishEvent(
+        eventType = event,
+        locationDetail = locationsChanged,
+        source = InformationSource.DPS,
       )
     }
+  }
+
+  protected fun audit(id: String, function: () -> Location) = function().also { auditData ->
+    eventPublishAndAuditService.auditEvent(
+      auditType = AuditType.LOCATION_AMENDED,
+      id = id,
+      auditData = auditData,
+    )
+  }
 
   protected fun legacyEventPublishAndAudit(
     event: InternalLocationDomainEventType,
     function: () -> LegacyLocation,
-  ) =
-    function().also { location ->
-      eventPublishAndAuditService.legacyPublishEvent(
-        eventType = event,
-        location = location,
-        auditData = location.copy(changeHistory = null),
-      )
-    }
-
-  protected fun reactivate(reactivatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> {
-    return auditAndEmit(InternalLocationDomainEventType.LOCATION_REACTIVATED, reactivatedLocations)
+  ) = function().also { location ->
+    eventPublishAndAuditService.legacyPublishEvent(
+      eventType = event,
+      location = location,
+      auditData = location.copy(changeHistory = null),
+    )
   }
 
-  protected fun deactivate(deactivatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> {
-    return auditAndEmit(InternalLocationDomainEventType.LOCATION_DEACTIVATED, deactivatedLocations)
-  }
+  protected fun reactivate(reactivatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> = auditAndEmit(InternalLocationDomainEventType.LOCATION_REACTIVATED, reactivatedLocations)
 
-  protected fun update(updatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> {
-    return auditAndEmit(InternalLocationDomainEventType.LOCATION_AMENDED, updatedLocations)
-  }
+  protected fun deactivate(deactivatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> = auditAndEmit(InternalLocationDomainEventType.LOCATION_DEACTIVATED, deactivatedLocations)
+
+  protected fun update(updatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> = auditAndEmit(InternalLocationDomainEventType.LOCATION_AMENDED, updatedLocations)
 
   protected fun auditAndEmit(eventType: InternalLocationDomainEventType, locations: Map<InternalLocationDomainEventType, List<Location>>): List<Location> {
     eventPublish { locations }

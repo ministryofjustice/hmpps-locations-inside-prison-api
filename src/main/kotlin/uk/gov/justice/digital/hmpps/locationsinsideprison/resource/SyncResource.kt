@@ -70,8 +70,7 @@ class SyncResource(
     @PathVariable
     id: UUID,
     @RequestParam(name = "includeHistory", required = false, defaultValue = "false") includeHistory: Boolean = false,
-  ) =
-    syncService.getLegacyLocation(id = id, includeHistory = includeHistory) ?: throw LocationNotFoundException(id.toString())
+  ) = syncService.getLegacyLocation(id = id, includeHistory = includeHistory) ?: throw LocationNotFoundException(id.toString())
 
   @PostMapping("/upsert")
   @Operation(

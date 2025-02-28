@@ -79,51 +79,45 @@ open class VirtualResidentialLocation(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
-  ): LocationDto =
-    super.toDto(
-      includeChildren = includeChildren,
-      includeParent = includeParent,
-      includeHistory = includeHistory,
-      countInactiveCells = false,
-      includeNonResidential = includeNonResidential,
-      useHistoryForUpdate = useHistoryForUpdate,
-      countCells = false,
-      formatLocalName = formatLocalName,
-    ).copy(
-      capacity = CapacityDto(
-        maxCapacity = getMaxCapacity(),
-        workingCapacity = getWorkingCapacity(),
-      ),
-      certification = null,
-      accommodationTypes = null,
-      usedFor = null,
-      specialistCellTypes = null,
-    )
+  ): LocationDto = super.toDto(
+    includeChildren = includeChildren,
+    includeParent = includeParent,
+    includeHistory = includeHistory,
+    countInactiveCells = false,
+    includeNonResidential = includeNonResidential,
+    useHistoryForUpdate = useHistoryForUpdate,
+    countCells = false,
+    formatLocalName = formatLocalName,
+  ).copy(
+    capacity = CapacityDto(
+      maxCapacity = getMaxCapacity(),
+      workingCapacity = getWorkingCapacity(),
+    ),
+    certification = null,
+    accommodationTypes = null,
+    usedFor = null,
+    specialistCellTypes = null,
+  )
 
-  private fun getWorkingCapacity(): Int {
-    return if (isActiveAndAllParentsActive()) {
-      capacity?.workingCapacity ?: 0
-    } else {
-      0
-    }
+  private fun getWorkingCapacity(): Int = if (isActiveAndAllParentsActive()) {
+    capacity?.workingCapacity ?: 0
+  } else {
+    0
   }
 
-  private fun getMaxCapacity(): Int {
-    return if (!isPermanentlyDeactivated()) {
-      capacity?.maxCapacity ?: 0
-    } else {
-      0
-    }
+  private fun getMaxCapacity(): Int = if (!isPermanentlyDeactivated()) {
+    capacity?.maxCapacity ?: 0
+  } else {
+    0
   }
 
-  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation =
-    super.toLegacyDto(includeHistory = includeHistory).copy(
-      ignoreWorkingCapacity = false,
-      capacity = CapacityDto(
-        maxCapacity = getMaxCapacity(),
-        workingCapacity = getWorkingCapacity(),
-      ),
-    )
+  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
+    ignoreWorkingCapacity = false,
+    capacity = CapacityDto(
+      maxCapacity = getMaxCapacity(),
+      workingCapacity = getWorkingCapacity(),
+    ),
+  )
 
   override fun sync(upsert: NomisSyncLocationRequest, clock: Clock, linkedTransaction: LinkedTransaction): VirtualResidentialLocation {
     super.sync(upsert, clock, linkedTransaction)

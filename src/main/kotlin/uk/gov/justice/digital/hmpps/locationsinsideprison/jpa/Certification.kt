@@ -46,9 +46,7 @@ class Certification(
     return result
   }
 
-  override fun toString(): String {
-    return "Certification(certified=$certified, capacityOfCertifiedCell=$capacityOfCertifiedCell)"
-  }
+  override fun toString(): String = "Certification(certified=$certified, capacityOfCertifiedCell=$capacityOfCertifiedCell)"
 }
 
 fun getCertifiedSummary(certification: Certification?) = if (certification?.certified == true) {

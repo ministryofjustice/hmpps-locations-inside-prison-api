@@ -40,9 +40,7 @@ class SyncService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun getLegacyLocation(id: UUID, includeHistory: Boolean = false): LegacyLocation? {
-    return locationRepository.findById(id).getOrNull()?.toLegacyDto(includeHistory = includeHistory)
-  }
+  fun getLegacyLocation(id: UUID, includeHistory: Boolean = false): LegacyLocation? = locationRepository.findById(id).getOrNull()?.toLegacyDto(includeHistory = includeHistory)
 
   fun sync(upsert: NomisSyncLocationRequest): LegacyLocation {
     val location = if (upsert.id != null) {
@@ -150,40 +148,36 @@ class SyncService(
     }
   }
 
-  private fun findParent(upsert: NomisSyncLocationRequest): Location? {
-    return upsert.parentId?.let {
-      locationRepository.findById(it).orElseThrow {
-        LocationNotFoundException(it.toString())
-      }
-    } ?: upsert.parentLocationPath?.let {
-      locationRepository.findOneByPrisonIdAndPathHierarchy(upsert.prisonId, upsert.parentLocationPath)
-        ?: throw LocationNotFoundException(upsert.toString())
+  private fun findParent(upsert: NomisSyncLocationRequest): Location? = upsert.parentId?.let {
+    locationRepository.findById(it).orElseThrow {
+      LocationNotFoundException(it.toString())
     }
+  } ?: upsert.parentLocationPath?.let {
+    locationRepository.findOneByPrisonIdAndPathHierarchy(upsert.prisonId, upsert.parentLocationPath)
+      ?: throw LocationNotFoundException(upsert.toString())
   }
 
-  fun deleteLocation(id: UUID): LegacyLocation {
-    return locationRepository.findById(id).getOrNull()?.also {
-      if (it.findSubLocations().isNotEmpty()) {
-        throw ValidationException("Cannot delete location with sub-locations")
-      }
+  fun deleteLocation(id: UUID): LegacyLocation = locationRepository.findById(id).getOrNull()?.also {
+    if (it.findSubLocations().isNotEmpty()) {
+      throw ValidationException("Cannot delete location with sub-locations")
+    }
 
-      val tx = createLinkedTransaction(prisonId = it.prisonId, TransactionType.DELETE, "NOMIS Sync (Delete) [${it.getPathHierarchy()}] in prison ${it.prisonId}", "NOMIS")
+    val tx = createLinkedTransaction(prisonId = it.prisonId, TransactionType.DELETE, "NOMIS Sync (Delete) [${it.getPathHierarchy()}] in prison ${it.prisonId}", "NOMIS")
 
-      locationRepository.deleteLocationById(id)
-      log.info("Deleted Location: $id (${it.getKey()})")
-      telemetryClient.trackEvent(
-        "Deleted Location",
-        mapOf(
-          "id" to id.toString(),
-          "prisonId" to it.prisonId,
-          "key" to it.getKey(),
-        ),
-        null,
-      )
-      tx.txEndTime = LocalDateTime.now(clock)
-    }?.toLegacyDto()
-      ?: throw LocationNotFoundException(id.toString())
-  }
+    locationRepository.deleteLocationById(id)
+    log.info("Deleted Location: $id (${it.getKey()})")
+    telemetryClient.trackEvent(
+      "Deleted Location",
+      mapOf(
+        "id" to id.toString(),
+        "prisonId" to it.prisonId,
+        "key" to it.getKey(),
+      ),
+      null,
+    )
+    tx.txEndTime = LocalDateTime.now(clock)
+  }?.toLegacyDto()
+    ?: throw LocationNotFoundException(id.toString())
 
   private fun createLinkedTransaction(prisonId: String, type: TransactionType, detail: String, transactionInvokedBy: String): LinkedTransaction {
     val linkedTransaction = LinkedTransaction(

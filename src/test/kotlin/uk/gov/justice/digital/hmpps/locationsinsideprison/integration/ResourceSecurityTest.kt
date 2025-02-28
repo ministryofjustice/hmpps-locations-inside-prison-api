@@ -50,8 +50,6 @@ class ResourceSecurityTest : SqsIntegrationTestBase() {
   }
 }
 
-private fun RequestMappingInfo.getMappings() =
-  methodsCondition.methods.map { it.name }.flatMap {
-      method ->
-    pathPatternsCondition?.patternValues!!.map { "$method $it" }
-  }
+private fun RequestMappingInfo.getMappings() = methodsCondition.methods.map { it.name }.flatMap { method ->
+  pathPatternsCondition?.patternValues!!.map { "$method $it" }
+}

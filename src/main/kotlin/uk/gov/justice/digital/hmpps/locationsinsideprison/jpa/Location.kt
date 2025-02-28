@@ -109,9 +109,7 @@ abstract class Location(
 
   open fun getDerivedLocationType() = locationType
 
-  open fun getPathHierarchy(): String {
-    return pathHierarchy
-  }
+  open fun getPathHierarchy(): String = pathHierarchy
 
   open fun setParent(parent: Location?) {
     removeParent()
@@ -123,13 +121,9 @@ abstract class Location(
     parent = null
   }
 
-  open fun getCode(): String {
-    return code
-  }
+  open fun getCode(): String = code
 
-  open fun getParent(): Location? {
-    return parent
-  }
+  open fun getParent(): Location? = parent
 
   private fun findArchivedParent(): Location? {
     fun findArchivedLocation(location: Location?): Location? {
@@ -190,9 +184,7 @@ abstract class Location(
     return this
   }
 
-  fun findTopLevelLocation(): Location {
-    return getParent()?.findTopLevelLocation() ?: this
-  }
+  fun findTopLevelLocation(): Location = getParent()?.findTopLevelLocation() ?: this
 
   fun getParentLocations(): List<Location> {
     val parents = mutableListOf<Location>()
@@ -233,20 +225,17 @@ abstract class Location(
     return locationSummary.sortedBy { it.level }
   }
 
-  private fun getDeactivationReason() =
-    listOfNotBlank(deactivatedReason?.description, deactivationReasonDescription).joinToString(" - ")
+  private fun getDeactivationReason() = listOfNotBlank(deactivatedReason?.description, deactivationReasonDescription).joinToString(" - ")
 
-  private fun getLocationSummary(): LocationSummary {
-    return LocationSummary(
-      id = id,
-      code = getCode(),
-      type = getDerivedLocationType(),
-      pathHierarchy = getPathHierarchy(),
-      prisonId = prisonId,
-      localName = getDerivedLocalName(),
-      level = getLevel(),
-    )
-  }
+  private fun getLocationSummary(): LocationSummary = LocationSummary(
+    id = id,
+    code = getCode(),
+    type = getDerivedLocationType(),
+    pathHierarchy = getPathHierarchy(),
+    prisonId = prisonId,
+    localName = getDerivedLocalName(),
+    level = getLevel(),
+  )
 
   private fun updateHierarchicalPath() {
     pathHierarchy = getHierarchicalPath()
@@ -255,16 +244,13 @@ abstract class Location(
     }
   }
 
-  private fun getHierarchicalPath(): String {
-    return if (getParent() == null) {
-      getCode()
-    } else {
-      "${getParent()!!.getHierarchicalPath()}-${getCode()}"
-    }
+  private fun getHierarchicalPath(): String = if (getParent() == null) {
+    getCode()
+  } else {
+    "${getParent()!!.getHierarchicalPath()}-${getCode()}"
   }
 
-  private fun getActiveResidentialLocationsBelowThisLevel() =
-    childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
+  private fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
 
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>().filter { !it.isPermanentlyDeactivated() }
 
@@ -461,41 +447,38 @@ abstract class Location(
     )
   }
 
-  fun toLocationGroupDto(): LocationGroupDto {
-    return LocationGroupDto(
-      key = code,
-      name = getDerivedLocalName(formatLocalName = true) ?: code,
-      children = getActiveResidentialLocationsBelowThisLevel()
-        .filter { it.isStructural() }
-        .map { it.toLocationGroupDto() }
-        .sortedWith(NaturalOrderComparator()),
-    )
-  }
+  fun toLocationGroupDto(): LocationGroupDto = LocationGroupDto(
+    key = code,
+    name = getDerivedLocalName(formatLocalName = true) ?: code,
+    children = getActiveResidentialLocationsBelowThisLevel()
+      .filter { it.isStructural() }
+      .map { it.toLocationGroupDto() }
+      .sortedWith(NaturalOrderComparator()),
+  )
 
-  open fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation =
-    ResidentialPrisonerLocation(
-      locationId = id!!,
-      key = getKey(),
-      locationCode = getCode(),
-      locationType = getDerivedLocationType(),
-      fullLocationPath = getPathHierarchy(),
-      localName = if (isCell()) {
-        getCode()
-      } else {
-        formatLocation(localName ?: getCode())
-      },
-      prisoners = mapOfPrisoners[getPathHierarchy()] ?: emptyList(),
-      deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
-      status = getStatus(),
-      isLeafLevel = isLeafLevel(),
-      accommodationType = (this as? Cell)?.accommodationType,
-      subLocations = this.childLocations.filter { !it.isPermanentlyDeactivated() }
-        .filterIsInstance<ResidentialLocation>()
-        .map {
-          it.toResidentialPrisonerLocation(mapOfPrisoners)
-        }
-        .sortedWith(NaturalOrderComparator()),
-    )
+  open fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation = ResidentialPrisonerLocation(
+    locationId = id!!,
+    key = getKey(),
+    locationCode = getCode(),
+    locationType = getDerivedLocationType(),
+    fullLocationPath = getPathHierarchy(),
+    localName = if (isCell()) {
+      getCode()
+    } else {
+      formatLocation(localName ?: getCode())
+    },
+    prisoners = mapOfPrisoners[getPathHierarchy()] ?: emptyList(),
+    deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
+    status = getStatus(),
+    isLeafLevel = isLeafLevel(),
+    accommodationType = (this as? Cell)?.accommodationType,
+    subLocations = this.childLocations.filter { !it.isPermanentlyDeactivated() }
+      .filterIsInstance<ResidentialLocation>()
+      .map {
+        it.toResidentialPrisonerLocation(mapOfPrisoners)
+      }
+      .sortedWith(NaturalOrderComparator()),
+  )
 
   private fun getDerivedLocalName(formatLocalName: Boolean = false) = if (!isCellOrConvertedCell()) {
     if (formatLocalName) {
@@ -507,19 +490,17 @@ abstract class Location(
     null
   }
 
-  fun getStatus(ignoreParentStatus: Boolean = false): LocationStatus {
-    return if ((ignoreParentStatus && isActive()) || isActiveAndAllParentsActive()) {
-      if (isConvertedCell()) {
-        LocationStatus.NON_RESIDENTIAL
-      } else {
-        LocationStatus.ACTIVE
-      }
+  fun getStatus(ignoreParentStatus: Boolean = false): LocationStatus = if ((ignoreParentStatus && isActive()) || isActiveAndAllParentsActive()) {
+    if (isConvertedCell()) {
+      LocationStatus.NON_RESIDENTIAL
     } else {
-      if (isPermanentlyDeactivated()) {
-        LocationStatus.ARCHIVED
-      } else {
-        LocationStatus.INACTIVE
-      }
+      LocationStatus.ACTIVE
+    }
+  } else {
+    if (isPermanentlyDeactivated()) {
+      LocationStatus.ARCHIVED
+    } else {
+      LocationStatus.INACTIVE
     }
   }
 
@@ -532,9 +513,7 @@ abstract class Location(
     return getKey() == other.getKey()
   }
 
-  override fun hashCode(): Int {
-    return getKey().hashCode()
-  }
+  override fun hashCode(): Int = getKey().hashCode()
 
   open fun updateLocalName(localName: String?, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (!isCell()) {
@@ -988,9 +967,7 @@ abstract class Location(
     return false
   }
 
-  override fun toString(): String {
-    return getKey()
-  }
+  override fun toString(): String = getKey()
 
   private fun isCellOrConvertedCell() = this is Cell || isConvertedCell()
   open fun isCell() = false
@@ -998,27 +975,25 @@ abstract class Location(
   fun isStructural() = locationType in ResidentialLocationType.entries.filter { it.structural }.map { it.baseType }
   fun isArea() = locationType in ResidentialLocationType.entries.filter { it.area }.map { it.baseType }
 
-  open fun toLegacyDto(includeHistory: Boolean = false): LegacyLocation {
-    return LegacyLocation(
-      id = id!!,
-      code = getCode(),
-      locationType = getDerivedLocationType(),
-      pathHierarchy = pathHierarchy,
-      prisonId = prisonId,
-      parentId = getParent()?.id,
-      lastModifiedDate = whenUpdated,
-      lastModifiedBy = updatedBy,
-      localName = localName,
-      comments = comments,
-      orderWithinParentLocation = orderWithinParentLocation,
-      active = isActiveAndAllParentsActive(),
-      deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate?.toLocalDate(),
-      deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
-      proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
-      permanentlyDeactivated = isPermanentlyDeactivated(),
-      changeHistory = if (includeHistory) history.map { it.toDto() } else null,
-    )
-  }
+  open fun toLegacyDto(includeHistory: Boolean = false): LegacyLocation = LegacyLocation(
+    id = id!!,
+    code = getCode(),
+    locationType = getDerivedLocationType(),
+    pathHierarchy = pathHierarchy,
+    prisonId = prisonId,
+    parentId = getParent()?.id,
+    lastModifiedDate = whenUpdated,
+    lastModifiedBy = updatedBy,
+    localName = localName,
+    comments = comments,
+    orderWithinParentLocation = orderWithinParentLocation,
+    active = isActiveAndAllParentsActive(),
+    deactivatedDate = findDeactivatedLocationInHierarchy()?.deactivatedDate?.toLocalDate(),
+    deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
+    proposedReactivationDate = findDeactivatedLocationInHierarchy()?.proposedReactivationDate,
+    permanentlyDeactivated = isPermanentlyDeactivated(),
+    changeHistory = if (includeHistory) history.map { it.toDto() } else null,
+  )
 }
 
 @Schema(description = "Location Hierarchy Summary")

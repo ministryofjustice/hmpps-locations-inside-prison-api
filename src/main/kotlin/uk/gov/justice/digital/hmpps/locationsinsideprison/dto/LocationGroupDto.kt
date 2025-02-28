@@ -17,7 +17,5 @@ data class LocationGroupDto(
 ) : SortAttribute {
 
   @JsonIgnore
-  override fun getSortName(): String {
-    return name ?: key
-  }
+  override fun getSortName(): String = name ?: key
 }

@@ -96,6 +96,5 @@ class PrisonConfigurationResource(
     @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
     @PathVariable
     prisonId: String,
-  ) =
-    prisonConfigurationService.getPrisonConfiguration(prisonId)
+  ) = prisonConfigurationService.getPrisonConfiguration(prisonId)
 }

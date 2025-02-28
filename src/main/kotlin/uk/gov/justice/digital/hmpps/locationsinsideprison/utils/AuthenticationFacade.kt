@@ -51,10 +51,8 @@ class AuthenticationFacade {
       return hasMatchingRole(roles, SecurityContextHolder.getContext().authentication)
     }
 
-    private fun hasMatchingRole(roles: List<String>, authentication: Authentication?): Boolean {
-      return authentication != null &&
-        authentication.authorities.stream()
-          .anyMatch { a: GrantedAuthority? -> roles.contains(RegExUtils.replaceFirst(a!!.authority, "ROLE_", "")) }
-    }
+    private fun hasMatchingRole(roles: List<String>, authentication: Authentication?): Boolean = authentication != null &&
+      authentication.authorities.stream()
+        .anyMatch { a: GrantedAuthority? -> roles.contains(RegExUtils.replaceFirst(a!!.authority, "ROLE_", "")) }
   }
 }

@@ -78,14 +78,13 @@ class LocationOccupancyResource(
     @RequestParam(name = "specialistCellType", required = false) specialistCellType: SpecialistCellType? = null,
     @Schema(description = "Include prisoner details in this cell", required = false, defaultValue = "false")
     @RequestParam(name = "includePrisonerInformation", required = false, defaultValue = "false") includePrisonerInformation: Boolean = false,
-  ): List<CellWithSpecialistCellTypes> =
-    locationService.getCellsWithCapacity(
-      prisonId = prisonId,
-      locationId = locationId,
-      groupName = groupName,
-      specialistCellType = specialistCellType,
-      includePrisonerInformation = includePrisonerInformation,
-    )
+  ): List<CellWithSpecialistCellTypes> = locationService.getCellsWithCapacity(
+    prisonId = prisonId,
+    locationId = locationId,
+    groupName = groupName,
+    specialistCellType = specialistCellType,
+    includePrisonerInformation = includePrisonerInformation,
+  )
 }
 
 @Schema(description = "Cell with specialist cell attributes details")
@@ -113,9 +112,7 @@ data class CellWithSpecialistCellTypes(
   val prisonersInCell: List<Prisoner>? = null,
 ) {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
-  fun getKey(): String {
-    return "$prisonId-$pathHierarchy"
-  }
+  fun getKey(): String = "$prisonId-$pathHierarchy"
 
   @JsonIgnore
   fun hasSpace() = noOfOccupants < getActualCapacity()

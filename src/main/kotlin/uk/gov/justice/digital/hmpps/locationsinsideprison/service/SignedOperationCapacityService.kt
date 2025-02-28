@@ -32,9 +32,7 @@ class SignedOperationCapacityService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun getSignedOperationalCapacity(prisonId: String): SignedOperationCapacityDto? {
-    return prisonConfigurationRepository.findById(prisonId).getOrNull()?.toSignedOperationCapacityDto()
-  }
+  fun getSignedOperationalCapacity(prisonId: String): SignedOperationCapacityDto? = prisonConfigurationRepository.findById(prisonId).getOrNull()?.toSignedOperationCapacityDto()
 
   @Transactional
   fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignOpCapResult {

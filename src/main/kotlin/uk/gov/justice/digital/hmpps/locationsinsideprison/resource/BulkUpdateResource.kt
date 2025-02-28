@@ -71,9 +71,7 @@ class BulkUpdateResource(
   )
   fun bulkDeactivateLocations(
     @RequestBody @Validated deactivateLocationsRequest: DeactivateLocationsRequest,
-  ): List<Location> {
-    return deactivate(locationService.deactivateLocations(deactivateLocationsRequest))
-  }
+  ): List<Location> = deactivate(locationService.deactivateLocations(deactivateLocationsRequest))
 
   @PutMapping("deactivate/permanent")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -109,8 +107,7 @@ class BulkUpdateResource(
   )
   fun bulkPermanentlyDeactivateLocations(
     @RequestBody @Validated permanentDeactivationRequest: BulkPermanentDeactivationRequest,
-  ): List<Location> =
-    deactivate(mapOf(InternalLocationDomainEventType.LOCATION_DEACTIVATED to locationService.permanentlyDeactivateLocations(permanentDeactivationRequest)))
+  ): List<Location> = deactivate(mapOf(InternalLocationDomainEventType.LOCATION_DEACTIVATED to locationService.permanentlyDeactivateLocations(permanentDeactivationRequest)))
 
   @PutMapping("reactivate")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -146,9 +143,7 @@ class BulkUpdateResource(
   )
   fun bulkReactivateLocations(
     @RequestBody @Validated reactivateLocationsRequest: ReactivateLocationsRequest,
-  ): List<Location> {
-    return reactivate(locationService.reactivateLocations(reactivateLocationsRequest))
-  }
+  ): List<Location> = reactivate(locationService.reactivateLocations(reactivateLocationsRequest))
 
   @PutMapping("capacity-update")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")

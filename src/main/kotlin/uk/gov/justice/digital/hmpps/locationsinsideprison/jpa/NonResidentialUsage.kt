@@ -25,12 +25,11 @@ class NonResidentialUsage(
   var sequence: Int = 99,
 
 ) {
-  fun toDto() =
-    NonResidentialUsageDto(
-      usageType = usageType,
-      capacity = capacity,
-      sequence = sequence,
-    )
+  fun toDto() = NonResidentialUsageDto(
+    usageType = usageType,
+    capacity = capacity,
+    sequence = sequence,
+  )
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -50,9 +49,7 @@ class NonResidentialUsage(
     return result
   }
 
-  override fun toString(): String {
-    return "NonResidentialUsage(usageType=$usageType, capacity=$capacity)"
-  }
+  override fun toString(): String = "NonResidentialUsage(usageType=$usageType, capacity=$capacity)"
 }
 
 enum class NonResidentialUsageType(

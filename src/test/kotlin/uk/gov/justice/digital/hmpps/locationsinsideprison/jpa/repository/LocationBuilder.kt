@@ -26,39 +26,35 @@ fun buildResidentialLocation(
   locationType: LocationType,
   localName: String? = null,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-): ResidentialLocation {
-  return ResidentialLocation(
-    prisonId = prisonId,
-    code = pathHierarchy.split("-").last(),
-    pathHierarchy = pathHierarchy,
-    locationType = locationType,
-    createdBy = EXPECTED_USERNAME,
-    whenCreated = LocalDateTime.now(clock),
-    childLocations = mutableListOf(),
-    orderWithinParentLocation = 99,
-    localName = localName,
-    residentialHousingType = residentialHousingType,
-  )
-}
+): ResidentialLocation = ResidentialLocation(
+  prisonId = prisonId,
+  code = pathHierarchy.split("-").last(),
+  pathHierarchy = pathHierarchy,
+  locationType = locationType,
+  createdBy = EXPECTED_USERNAME,
+  whenCreated = LocalDateTime.now(clock),
+  childLocations = mutableListOf(),
+  orderWithinParentLocation = 99,
+  localName = localName,
+  residentialHousingType = residentialHousingType,
+)
 
 fun buildVirtualResidentialLocation(
   prisonId: String = "MDI",
   pathHierarchy: String,
   capacity: Capacity? = null,
   localName: String? = null,
-): VirtualResidentialLocation {
-  return VirtualResidentialLocation(
-    prisonId = prisonId,
-    code = pathHierarchy.split("-").last(),
-    pathHierarchy = pathHierarchy,
-    createdBy = EXPECTED_USERNAME,
-    whenCreated = LocalDateTime.now(clock),
-    childLocations = mutableListOf(),
-    orderWithinParentLocation = 99,
-    localName = localName,
-    capacity = capacity,
-  )
-}
+): VirtualResidentialLocation = VirtualResidentialLocation(
+  prisonId = prisonId,
+  code = pathHierarchy.split("-").last(),
+  pathHierarchy = pathHierarchy,
+  createdBy = EXPECTED_USERNAME,
+  whenCreated = LocalDateTime.now(clock),
+  childLocations = mutableListOf(),
+  orderWithinParentLocation = 99,
+  localName = localName,
+  capacity = capacity,
+)
 
 fun buildCell(
   prisonId: String = "MDI",

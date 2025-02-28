@@ -60,7 +60,5 @@ class CellAttributesResource(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
-  ): List<CellAttributes> {
-    return locationService.getCellAttributes(id)
-  }
+  ): List<CellAttributes> = locationService.getCellAttributes(id)
 }

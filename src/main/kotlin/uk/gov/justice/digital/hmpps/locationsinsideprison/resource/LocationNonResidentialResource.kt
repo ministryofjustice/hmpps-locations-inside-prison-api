@@ -77,12 +77,10 @@ class LocationNonResidentialResource(
     @RequestBody
     @Validated
     createNonResidentialLocationRequest: CreateNonResidentialLocationRequest,
-  ): Location {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_CREATED,
-    ) {
-      locationService.createNonResidentialLocation(createNonResidentialLocationRequest)
-    }
+  ): Location = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_CREATED,
+  ) {
+    locationService.createNonResidentialLocation(createNonResidentialLocationRequest)
   }
 
   @PatchMapping("/non-residential/{id}")

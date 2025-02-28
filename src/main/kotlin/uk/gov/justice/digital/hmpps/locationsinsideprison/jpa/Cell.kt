@@ -299,9 +299,7 @@ class Cell(
     return residentialAttribute
   }
 
-  fun addAttributes(attributes: Set<ResidentialAttributeValue>): Set<ResidentialAttribute> {
-    return attributes.map { addAttribute(it) }.toSet()
-  }
+  fun addAttributes(attributes: Set<ResidentialAttributeValue>): Set<ResidentialAttribute> = attributes.map { addAttribute(it) }.toSet()
 
   fun addSpecialistCellType(specialistCellType: SpecialistCellType, linkedTransaction: LinkedTransaction? = null, userOrSystemInContext: String? = null, clock: Clock? = null): SpecialistCell {
     val specialistCell = SpecialistCell(location = this, specialistCellType = specialistCellType)
@@ -527,30 +525,28 @@ class Cell(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
-  ): LocationDto =
-    super.toDto(
-      includeChildren = includeChildren,
-      includeParent = includeParent,
-      includeHistory = includeHistory,
-      countInactiveCells = countInactiveCells,
-      includeNonResidential = includeNonResidential,
-      useHistoryForUpdate = useHistoryForUpdate,
-      countCells = countCells,
-      formatLocalName = formatLocalName,
-    ).copy(
-      oldWorkingCapacity = if (isTemporarilyDeactivated()) {
-        getWorkingCapacity()
-      } else {
-        null
-      },
-      convertedCellType = convertedCellType,
-      otherConvertedCellType = otherConvertedCellType,
-    )
+  ): LocationDto = super.toDto(
+    includeChildren = includeChildren,
+    includeParent = includeParent,
+    includeHistory = includeHistory,
+    countInactiveCells = countInactiveCells,
+    includeNonResidential = includeNonResidential,
+    useHistoryForUpdate = useHistoryForUpdate,
+    countCells = countCells,
+    formatLocalName = formatLocalName,
+  ).copy(
+    oldWorkingCapacity = if (isTemporarilyDeactivated()) {
+      getWorkingCapacity()
+    } else {
+      null
+    },
+    convertedCellType = convertedCellType,
+    otherConvertedCellType = otherConvertedCellType,
+  )
 
-  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation =
-    super.toLegacyDto(includeHistory = includeHistory).copy(
-      ignoreWorkingCapacity = false,
-      capacity = capacity?.toDto(),
-      certification = certification?.toDto(),
-    )
+  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
+    ignoreWorkingCapacity = false,
+    capacity = capacity?.toDto(),
+    certification = certification?.toDto(),
+  )
 }

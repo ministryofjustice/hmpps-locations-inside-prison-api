@@ -110,16 +110,14 @@ class LocationService(
     formatLocalName = formatLocalName,
   )
 
-  fun getTransaction(txId: UUID) =
-    linkedTransactionRepository.findById(txId).getOrNull()?.toDto()
+  fun getTransaction(txId: UUID) = linkedTransactionRepository.findById(txId).getOrNull()?.toDto()
 
-  fun getLocationByPrison(prisonId: String): List<LocationDTO> =
-    locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
-      .filter { !it.isPermanentlyDeactivated() }
-      .map {
-        it.toDto()
-      }
-      .sortedBy { it.getKey() }
+  fun getLocationByPrison(prisonId: String): List<LocationDTO> = locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
+    .filter { !it.isPermanentlyDeactivated() }
+    .map {
+      it.toDto()
+    }
+    .sortedBy { it.getKey() }
 
   fun getLocationGroupsForPrison(prisonId: String): List<LocationGroupDto> {
     val groups = locationGroupFromPropertiesService.getLocationGroups(prisonId)
@@ -133,14 +131,12 @@ class LocationService(
     }
   }
 
-  fun getPrisonResidentialHierarchy(prisonId: String): List<PrisonHierarchyDto> {
-    return residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
-      .filter { it.isActiveAndAllParentsActive() && it.isStructural() }
-      .map {
-        it.toPrisonHierarchyDto()
-      }
-      .sortedWith(NaturalOrderComparator())
-  }
+  fun getPrisonResidentialHierarchy(prisonId: String): List<PrisonHierarchyDto> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+    .filter { it.isActiveAndAllParentsActive() && it.isStructural() }
+    .map {
+      it.toPrisonHierarchyDto()
+    }
+    .sortedWith(NaturalOrderComparator())
 
   fun getLocationPrefixFromGroup(prisonId: String, group: String): LocationPrefixDto {
     val agencyGroupKey = "${prisonId}_$group"
@@ -155,30 +151,25 @@ class LocationService(
     return LocationPrefixDto(locationPrefix)
   }
 
-  fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> =
-    cellsInGroup(prisonId, groupName, cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true))
-      .toMutableList()
-      .map { it.toDto() }
-      .sortedWith(NaturalOrderComparator())
+  fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> = cellsInGroup(prisonId, groupName, cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true))
+    .toMutableList()
+    .map { it.toDto() }
+    .sortedWith(NaturalOrderComparator())
 
   private fun cellsInGroup(
     prisonId: String,
     groupName: String?,
     cellsToFilter: List<Cell>,
-  ): List<Cell> {
-    return if (groupName != null) {
-      cellsToFilter.filter(locationGroupFilter(prisonId, groupName)::test)
-    } else {
-      cellsToFilter
-    }
+  ): List<Cell> = if (groupName != null) {
+    cellsToFilter.filter(locationGroupFilter(prisonId, groupName)::test)
+  } else {
+    cellsToFilter
   }
 
-  private fun locationGroupFilter(prisonId: String, groupName: String): Predicate<Location> {
-    return try {
-      locationGroupFromPropertiesService.locationGroupFilter(prisonId, groupName)
-    } catch (e: EntityNotFoundException) {
-      fallBackLocationGroupFilter(groupName)
-    }
+  private fun locationGroupFilter(prisonId: String, groupName: String): Predicate<Location> = try {
+    locationGroupFromPropertiesService.locationGroupFilter(prisonId, groupName)
+  } catch (e: EntityNotFoundException) {
+    fallBackLocationGroupFilter(groupName)
   }
 
   private fun fallBackLocationGroupFilter(groupName: String): Predicate<Location> {
@@ -208,21 +199,16 @@ class LocationService(
     }
   }
 
-  fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? {
-    return locationRepository.findOneByKey(key)?.toDto(
-      includeChildren = includeChildren,
-      includeHistory = includeHistory,
-    )
-  }
+  fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? = locationRepository.findOneByKey(key)?.toDto(
+    includeChildren = includeChildren,
+    includeHistory = includeHistory,
+  )
 
-  fun getLocationsByKeys(keys: List<String>): List<LocationDTO> =
-    locationRepository.findAllByKeys(keys)
-      .map { it.toDto() }
-      .sortedBy { it.getKey() }
+  fun getLocationsByKeys(keys: List<String>): List<LocationDTO> = locationRepository.findAllByKeys(keys)
+    .map { it.toDto() }
+    .sortedBy { it.getKey() }
 
-  fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LegacyLocation> {
-    return locationRepository.findAll(pageable).map(Location::toLegacyDto)
-  }
+  fun getLocations(pageable: Pageable = PageRequest.of(0, 20, Sort.by("id"))): Page<LegacyLocation> = locationRepository.findAll(pageable).map(Location::toLegacyDto)
 
   fun getLocationByPrisonAndLocationType(
     prisonId: String,
@@ -1110,12 +1096,11 @@ class LocationService(
     }
   }
 
-  private fun buildNewPathHierarchy(parentLocation: Location?, code: String) =
-    if (parentLocation != null) {
-      parentLocation.getPathHierarchy() + "-"
-    } else {
-      ""
-    } + code
+  private fun buildNewPathHierarchy(parentLocation: Location?, code: String) = if (parentLocation != null) {
+    parentLocation.getPathHierarchy() + "-"
+  } else {
+    ""
+  } + code
 
   private fun checkParentValid(
     parentLocation: Location?,
@@ -1128,11 +1113,10 @@ class LocationService(
       ?.let { throw LocationAlreadyExistsException("$prisonId-$pathHierarchy") }
   }
 
-  private fun getParentLocation(parentId: UUID?): Location? =
-    parentId?.let {
-      locationRepository.findById(parentId).getOrNull()
-        ?: throw LocationNotFoundException(it.toString())
-    }
+  private fun getParentLocation(parentId: UUID?): Location? = parentId?.let {
+    locationRepository.findById(parentId).getOrNull()
+      ?: throw LocationNotFoundException(it.toString())
+  }
 
   fun getResidentialLocations(
     prisonId: String,
@@ -1198,13 +1182,10 @@ class LocationService(
     return (mostCommonType?.description) + "s"
   }
 
-  fun <T> mostCommon(list: List<T>): T? {
-    return list.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
-  }
+  fun <T> mostCommon(list: List<T>): T? = list.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key
 
-  fun getArchivedLocations(prisonId: String): List<LocationDTO> =
-    residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }
-      .sortedWith(NaturalOrderComparator())
+  fun getArchivedLocations(prisonId: String): List<LocationDTO> = residentialLocationRepository.findAllByPrisonIdAndArchivedIsTrue(prisonId).map { it.toDto() }
+    .sortedWith(NaturalOrderComparator())
 
   fun getResidentialInactiveLocations(prisonId: String, parentLocationId: UUID?): List<LocationDTO> {
     val startLocation = parentLocationId?.let {
@@ -1326,13 +1307,11 @@ class LocationService(
       .map { it.toDto() }
   }
 
-  fun findByPrisonIdTopParentAndLocalName(prisonId: String, localName: String, parentLocationId: UUID? = null): LocationDTO {
-    return findAllByPrisonIdTopParentAndLocalName(
-      prisonId = prisonId,
-      localName = localName,
-      parentLocationId = parentLocationId,
-    ).firstOrNull() ?: throw LocationNotFoundException("$prisonId-$parentLocationId-$localName")
-  }
+  fun findByPrisonIdTopParentAndLocalName(prisonId: String, localName: String, parentLocationId: UUID? = null): LocationDTO = findAllByPrisonIdTopParentAndLocalName(
+    prisonId = prisonId,
+    localName = localName,
+    parentLocationId = parentLocationId,
+  ).firstOrNull() ?: throw LocationNotFoundException("$prisonId-$parentLocationId-$localName")
 }
 
 fun buildEventsToPublishOnUpdate(results: UpdateLocationResult): () -> Map<InternalLocationDomainEventType, List<LocationDTO>> {
