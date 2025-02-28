@@ -66,11 +66,9 @@ class LocationConstants(
     ],
   )
   @ResponseBody
-  fun locationConstants(): Map<String, List<Constant>> {
-    return mapOf(
-      "locationTypes" to LocationType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
-    )
-  }
+  fun locationConstants(): Map<String, List<Constant>> = mapOf(
+    "locationTypes" to LocationType.entries.map { Constant(it.name, it.description) }.sortedBy { it.description },
+  )
 
   @GetMapping("/deactivated-reason")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -96,11 +94,9 @@ class LocationConstants(
     ],
   )
   @ResponseBody
-  fun deactivedReasonsConstants(): Map<String, List<Constant>> {
-    return mapOf(
-      "deactivatedReasons" to DeactivatedReason.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
-    )
-  }
+  fun deactivedReasonsConstants(): Map<String, List<Constant>> = mapOf(
+    "deactivatedReasons" to DeactivatedReason.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+  )
 
   @GetMapping("/residential-housing-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -126,11 +122,9 @@ class LocationConstants(
     ],
   )
   @ResponseBody
-  fun locationAttributeConstants(): Map<String, List<Constant>> {
-    return mapOf(
-      "residentialHousingTypes" to ResidentialHousingType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
-    )
-  }
+  fun locationAttributeConstants(): Map<String, List<Constant>> = mapOf(
+    "residentialHousingTypes" to ResidentialHousingType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+  )
 
   @GetMapping("/non-residential-usage-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -156,11 +150,9 @@ class LocationConstants(
     ],
   )
   @ResponseBody
-  fun nonResidentialUsageTypeConstants(): Map<String, List<Constant>> {
-    return mapOf(
-      "nonResidentialUsageTypes" to NonResidentialUsageType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
-    )
-  }
+  fun nonResidentialUsageTypeConstants(): Map<String, List<Constant>> = mapOf(
+    "nonResidentialUsageTypes" to NonResidentialUsageType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+  )
 
   @GetMapping("/residential-attribute-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -186,20 +178,18 @@ class LocationConstants(
     ],
   )
   @ResponseBody
-  fun residentialAttributeTypeConstants(): Map<String, List<CompoundConstant>> {
-    return mapOf(
-      "residentialAttributeTypes" to ResidentialAttributeType.entries.map { attr ->
-        val residentialAttributeTypeName = attr.name
-        CompoundConstant(
-          attr.name,
-          attr.description,
-          ResidentialAttributeValue.entries
-            .filter { it.type.toString() == residentialAttributeTypeName }
-            .map { Constant(it.name, it.description) }.sortedBy { it.description },
-        )
-      }.sortedBy { it.description },
-    )
-  }
+  fun residentialAttributeTypeConstants(): Map<String, List<CompoundConstant>> = mapOf(
+    "residentialAttributeTypes" to ResidentialAttributeType.entries.map { attr ->
+      val residentialAttributeTypeName = attr.name
+      CompoundConstant(
+        attr.name,
+        attr.description,
+        ResidentialAttributeValue.entries
+          .filter { it.type.toString() == residentialAttributeTypeName }
+          .map { Constant(it.name, it.description) }.sortedBy { it.description },
+      )
+    }.sortedBy { it.description },
+  )
 
   @GetMapping("/accommodation-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -225,11 +215,9 @@ class LocationConstants(
     ],
   )
   @ResponseBody
-  fun getAccommodationTypeConstants(): Map<String, List<Constant>> {
-    return mapOf(
-      "accommodationTypes" to AccommodationType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
-    )
-  }
+  fun getAccommodationTypeConstants(): Map<String, List<Constant>> = mapOf(
+    "accommodationTypes" to AccommodationType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+  )
 
   @GetMapping("specialist-cell-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -255,11 +243,9 @@ class LocationConstants(
     ],
   )
   @ResponseBody
-  fun getSpecialistCellTypeConstants(): Map<String, List<Constant>> {
-    return mapOf(
-      "specialistCellTypes" to SpecialistCellType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description, it.additionalInformation) },
-    )
-  }
+  fun getSpecialistCellTypeConstants(): Map<String, List<Constant>> = mapOf(
+    "specialistCellTypes" to SpecialistCellType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description, it.additionalInformation) },
+  )
 
   @GetMapping("used-for-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -285,11 +271,9 @@ class LocationConstants(
     ],
   )
   @ResponseBody
-  fun getUsedForTypeConstants(): Map<String, List<Constant>> {
-    return mapOf(
-      "usedForTypes" to UsedForType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
-    )
-  }
+  fun getUsedForTypeConstants(): Map<String, List<Constant>> = mapOf(
+    "usedForTypes" to UsedForType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+  )
 
   @GetMapping("used-for-type/{prisonId}")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -324,11 +308,9 @@ class LocationConstants(
     @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
     @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
     prisonId: String,
-  ): Map<String, List<Constant>> {
-    return mapOf(
-      "usedForTypes" to locationService.getUsedForTypesForPrison(prisonId).sortedBy { it.sequence }.map { Constant(it.name, it.description) },
-    )
-  }
+  ): Map<String, List<Constant>> = mapOf(
+    "usedForTypes" to locationService.getUsedForTypesForPrison(prisonId).sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+  )
 
   @GetMapping("converted-cell-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
@@ -354,11 +336,9 @@ class LocationConstants(
     ],
   )
   @ResponseBody
-  fun getConvertedCellType(): Map<String, List<Constant>> {
-    return mapOf(
-      "convertedCellTypes" to ConvertedCellType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
-    )
-  }
+  fun getConvertedCellType(): Map<String, List<Constant>> = mapOf(
+    "convertedCellTypes" to ConvertedCellType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+  )
 
   @Schema(description = "Reference data information")
   @JsonInclude(JsonInclude.Include.NON_NULL)

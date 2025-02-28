@@ -89,57 +89,38 @@ open class ResidentialLocation(
   }
 
   fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
-  fun isLocationShownOnResidentialSummary() =
-    locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
+  fun isLocationShownOnResidentialSummary() = locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
 
-  fun getWorkingCapacityIgnoreParent(): Int {
-    return cellLocations().filter { it.isActive() }
-      .sumOf { it.getWorkingCapacity() ?: 0 }
-  }
+  fun getWorkingCapacityIgnoreParent(): Int = cellLocations().filter { it.isActive() }
+    .sumOf { it.getWorkingCapacity() ?: 0 }
 
-  fun calcWorkingCapacity(): Int {
-    return cellLocations().filter { it.isActiveAndAllParentsActive() }
-      .sumOf { it.getWorkingCapacity() ?: 0 }
-  }
+  fun calcWorkingCapacity(): Int = cellLocations().filter { it.isActiveAndAllParentsActive() }
+    .sumOf { it.getWorkingCapacity() ?: 0 }
 
-  private fun getMaxCapacity(): Int {
-    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-      .sumOf { it.getMaxCapacity() ?: 0 }
-  }
+  private fun getMaxCapacity(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .sumOf { it.getMaxCapacity() ?: 0 }
 
-  private fun getCapacityOfCertifiedCell(): Int {
-    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-      .sumOf { it.getCapacityOfCertifiedCell() ?: 0 }
-  }
+  private fun getCapacityOfCertifiedCell(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .sumOf { it.getCapacityOfCertifiedCell() ?: 0 }
 
-  private fun hasCertifiedCells(): Boolean {
-    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-      .any { it.isCertified() }
-  }
+  private fun hasCertifiedCells(): Boolean = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .any { it.isCertified() }
 
-  private fun getAttributes(): Set<ResidentialAttribute> {
-    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-      .flatMap { it.attributes }
-      .toSet()
-  }
+  private fun getAttributes(): Set<ResidentialAttribute> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .flatMap { it.attributes }
+    .toSet()
 
-  private fun getAccommodationTypes(): Set<AccommodationType> {
-    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-      .map { it.accommodationType }
-      .toSet()
-  }
+  private fun getAccommodationTypes(): Set<AccommodationType> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .map { it.accommodationType }
+    .toSet()
 
-  private fun getUsedFor(): Set<CellUsedFor> {
-    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-      .flatMap { it.usedFor }
-      .toSet()
-  }
+  private fun getUsedFor(): Set<CellUsedFor> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .flatMap { it.usedFor }
+    .toSet()
 
-  private fun getSpecialistCellTypes(): Set<SpecialistCell> {
-    return cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-      .flatMap { it.specialistCellTypes }
-      .toSet()
-  }
+  private fun getSpecialistCellTypes(): Set<SpecialistCell> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .flatMap { it.specialistCellTypes }
+    .toSet()
 
   private fun isCurrentCellOrNotPermanentlyInactive(cell: Cell) = !cell.isPermanentlyDeactivated() || cell == this
 
@@ -219,63 +200,59 @@ open class ResidentialLocation(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
-  ): LocationDto {
-    return super.toDto(
-      includeChildren = includeChildren,
-      includeParent = includeParent,
-      includeHistory = includeHistory,
-      countInactiveCells = countInactiveCells,
-      includeNonResidential = includeNonResidential,
-      useHistoryForUpdate = useHistoryForUpdate,
-      countCells = countCells,
-      formatLocalName = formatLocalName,
-    ).copy(
+  ): LocationDto = super.toDto(
+    includeChildren = includeChildren,
+    includeParent = includeParent,
+    includeHistory = includeHistory,
+    countInactiveCells = countInactiveCells,
+    includeNonResidential = includeNonResidential,
+    useHistoryForUpdate = useHistoryForUpdate,
+    countCells = countCells,
+    formatLocalName = formatLocalName,
+  ).copy(
 
-      capacity = CapacityDto(
-        maxCapacity = getMaxCapacity(),
-        workingCapacity = calcWorkingCapacity(),
-      ),
+    capacity = CapacityDto(
+      maxCapacity = getMaxCapacity(),
+      workingCapacity = calcWorkingCapacity(),
+    ),
 
-      certification = CertificationDto(
-        certified = hasCertifiedCells(),
-        capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
-      ),
+    certification = CertificationDto(
+      certified = hasCertifiedCells(),
+      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+    ),
 
-      accommodationTypes = getAccommodationTypes().map { it }.distinct().sortedBy { it.sequence },
-      usedFor = getUsedFor().map { it.usedFor }.distinct().sortedBy { it.sequence },
+    accommodationTypes = getAccommodationTypes().map { it }.distinct().sortedBy { it.sequence },
+    usedFor = getUsedFor().map { it.usedFor }.distinct().sortedBy { it.sequence },
 
-      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct().sortedBy { it.sequence },
-      inactiveCells = if (countInactiveCells) {
-        getInactiveCellCount()
-      } else {
-        null
-      },
-      numberOfCellLocations = if (countCells) {
-        countCellAndNonResLocations()
-      } else {
-        null
-      },
-    )
-  }
+    specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct().sortedBy { it.sequence },
+    inactiveCells = if (countInactiveCells) {
+      getInactiveCellCount()
+    } else {
+      null
+    },
+    numberOfCellLocations = if (countCells) {
+      countCellAndNonResLocations()
+    } else {
+      null
+    },
+  )
 
-  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
-    return super.toLegacyDto(includeHistory = includeHistory).copy(
-      residentialHousingType = residentialHousingType,
+  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
+    residentialHousingType = residentialHousingType,
 
-      ignoreWorkingCapacity = true,
-      capacity = CapacityDto(
-        maxCapacity = getMaxCapacity(),
-        workingCapacity = calcWorkingCapacity(),
-      ),
+    ignoreWorkingCapacity = true,
+    capacity = CapacityDto(
+      maxCapacity = getMaxCapacity(),
+      workingCapacity = calcWorkingCapacity(),
+    ),
 
-      certification = CertificationDto(
-        certified = hasCertifiedCells(),
-        capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
-      ),
+    certification = CertificationDto(
+      certified = hasCertifiedCells(),
+      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+    ),
 
-      attributes = getAttributes().map { it.attributeValue }.distinct().sortedBy { it.name },
-    )
-  }
+    attributes = getAttributes().map { it.attributeValue }.distinct().sortedBy { it.name },
+  )
 
   override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): ResidentialLocation {
     super.update(upsert, userOrSystemInContext, clock, linkedTransaction)
@@ -298,14 +275,13 @@ open class ResidentialLocation(
     return this
   }
 
-  override fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation =
-    super.toResidentialPrisonerLocation(mapOfPrisoners).copy(
-      capacity = CapacityDto(
-        maxCapacity = getMaxCapacity(),
-        workingCapacity = calcWorkingCapacity(),
-      ),
-      certified = hasCertifiedCells(),
-    )
+  override fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation = super.toResidentialPrisonerLocation(mapOfPrisoners).copy(
+    capacity = CapacityDto(
+      maxCapacity = getMaxCapacity(),
+      workingCapacity = calcWorkingCapacity(),
+    ),
+    certified = hasCertifiedCells(),
+  )
 
   open fun setCapacity(maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (isCell() || isVirtualResidentialLocation()) {
@@ -375,17 +351,15 @@ enum class ResidentialHousingType(
   OTHER_USE("Other Use", 99),
   ;
 
-  fun mapToAccommodationType(): AccommodationType {
-    return when (this) {
-      NORMAL_ACCOMMODATION -> AccommodationType.NORMAL_ACCOMMODATION
-      HEALTHCARE -> AccommodationType.HEALTHCARE_INPATIENTS
-      SEGREGATION -> AccommodationType.CARE_AND_SEPARATION
+  fun mapToAccommodationType(): AccommodationType = when (this) {
+    NORMAL_ACCOMMODATION -> AccommodationType.NORMAL_ACCOMMODATION
+    HEALTHCARE -> AccommodationType.HEALTHCARE_INPATIENTS
+    SEGREGATION -> AccommodationType.CARE_AND_SEPARATION
 
-      SPECIALIST_CELL,
-      HOLDING_CELL,
-      OTHER_USE,
-      RECEPTION,
-      -> AccommodationType.OTHER_NON_RESIDENTIAL
-    }
+    SPECIALIST_CELL,
+    HOLDING_CELL,
+    OTHER_USE,
+    RECEPTION,
+    -> AccommodationType.OTHER_NON_RESIDENTIAL
   }
 }

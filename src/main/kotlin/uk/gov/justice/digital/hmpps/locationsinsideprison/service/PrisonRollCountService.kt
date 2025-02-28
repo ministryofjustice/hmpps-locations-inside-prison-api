@@ -75,8 +75,7 @@ class PrisonRollCountService(
     return prisonRollCount
   }
 
-  private fun segShouldBeFiltered(prisonId: String) =
-    !(prisonConfigurationRepository.findById(prisonId).getOrNull()?.includeSegregationInRollCount ?: false)
+  private fun segShouldBeFiltered(prisonId: String) = !(prisonConfigurationRepository.findById(prisonId).getOrNull()?.includeSegregationInRollCount ?: false)
 
   private fun prisonRollCount(
     prisonId: String,
@@ -113,19 +112,18 @@ class PrisonRollCountService(
     return prisonRollCount
   }
 
-  private fun locationRollCount(locations: List<ResidentialPrisonerLocation>, filterSeg: Boolean) =
-    LocationRollCount(
-      bedsInUse = locations.sumOf { it.getBedsInUse() },
-      currentlyInCell = locations.sumOf { it.getCurrentlyInCell() },
-      currentlyOut = locations.sumOf { it.getCurrentlyOut() },
-      workingCapacity = locations.sumOf { it.getWorkingCapacity() },
-      netVacancies = locations.sumOf {
-        it.getWorkingCapacity() - it.getCurrentlyInCell(filterSeg) - it.getCurrentlyOut(
-          filterSeg,
-        )
-      },
-      outOfOrder = locations.sumOf { it.getOutOfOrder() },
-    )
+  private fun locationRollCount(locations: List<ResidentialPrisonerLocation>, filterSeg: Boolean) = LocationRollCount(
+    bedsInUse = locations.sumOf { it.getBedsInUse() },
+    currentlyInCell = locations.sumOf { it.getCurrentlyInCell() },
+    currentlyOut = locations.sumOf { it.getCurrentlyOut() },
+    workingCapacity = locations.sumOf { it.getWorkingCapacity() },
+    netVacancies = locations.sumOf {
+      it.getWorkingCapacity() - it.getCurrentlyInCell(filterSeg) - it.getCurrentlyOut(
+        filterSeg,
+      )
+    },
+    outOfOrder = locations.sumOf { it.getOutOfOrder() },
+  )
 }
 
 data class ResidentialPrisonerLocation(
@@ -145,29 +143,27 @@ data class ResidentialPrisonerLocation(
   val accommodationType: AccommodationType? = null,
 ) : SortAttribute {
 
-  fun toDto(includeCells: Boolean = false, filterSeg: Boolean) =
-    ResidentialLocationRollCount(
-      locationId = locationId,
-      key = key,
-      locationType = locationType,
-      locationCode = locationCode,
-      fullLocationPath = fullLocationPath,
-      localName = localName,
-      certified = certified,
-      deactivatedReason = deactivatedReason,
-      rollCount = getRollCount(filterSeg),
-      subLocations = removeLocations(subLocations, includeCells = includeCells, filterSeg = filterSeg),
-    )
+  fun toDto(includeCells: Boolean = false, filterSeg: Boolean) = ResidentialLocationRollCount(
+    locationId = locationId,
+    key = key,
+    locationType = locationType,
+    locationCode = locationCode,
+    fullLocationPath = fullLocationPath,
+    localName = localName,
+    certified = certified,
+    deactivatedReason = deactivatedReason,
+    rollCount = getRollCount(filterSeg),
+    subLocations = removeLocations(subLocations, includeCells = includeCells, filterSeg = filterSeg),
+  )
 
-  private fun getRollCount(filterSeg: Boolean) =
-    LocationRollCount(
-      bedsInUse = getBedsInUse(),
-      currentlyInCell = getCurrentlyInCell(),
-      currentlyOut = getCurrentlyOut(),
-      workingCapacity = getWorkingCapacity(),
-      netVacancies = getNetVacancies(filterSeg),
-      outOfOrder = getOutOfOrder(),
-    )
+  private fun getRollCount(filterSeg: Boolean) = LocationRollCount(
+    bedsInUse = getBedsInUse(),
+    currentlyInCell = getCurrentlyInCell(),
+    currentlyOut = getCurrentlyOut(),
+    workingCapacity = getWorkingCapacity(),
+    netVacancies = getNetVacancies(filterSeg),
+    outOfOrder = getOutOfOrder(),
+  )
 
   fun getWorkingCapacity() = capacity?.workingCapacity ?: 0
 
@@ -184,11 +180,9 @@ data class ResidentialPrisonerLocation(
 
   private fun getNumOfOccupants(filterSeg: Boolean = false): Int = getCells(filterSeg).sumOf { it.prisoners?.size ?: 0 }
 
-  private fun getCells(filterCareAndSeparation: Boolean) =
-    if (filterCareAndSeparation) getNonCareAndSeparationCells() else getCells()
+  private fun getCells(filterCareAndSeparation: Boolean) = if (filterCareAndSeparation) getNonCareAndSeparationCells() else getCells()
 
-  private fun getNonCareAndSeparationCells() =
-    getCells().filter { it.accommodationType != AccommodationType.CARE_AND_SEPARATION }
+  private fun getNonCareAndSeparationCells() = getCells().filter { it.accommodationType != AccommodationType.CARE_AND_SEPARATION }
 
   private fun getCells(): List<ResidentialPrisonerLocation> {
     val leafLocations = mutableListOf<ResidentialPrisonerLocation>()
@@ -302,9 +296,8 @@ data class ResidentialLocationRollCount(
 
 )
 
-fun removeLocations(locations: List<ResidentialPrisonerLocation>, includeCells: Boolean = false, filterSeg: Boolean): List<ResidentialLocationRollCount> =
-  locations
-    .filter { it.status in listOf(LocationStatus.ACTIVE) && (includeCells || !it.isLeafLevel) }
-    .map {
-      it.toDto(includeCells, filterSeg)
-    }
+fun removeLocations(locations: List<ResidentialPrisonerLocation>, includeCells: Boolean = false, filterSeg: Boolean): List<ResidentialLocationRollCount> = locations
+  .filter { it.status in listOf(LocationStatus.ACTIVE) && (includeCells || !it.isLeafLevel) }
+  .map {
+    it.toDto(includeCells, filterSeg)
+  }

@@ -114,5 +114,4 @@ enum class InternalLocationDomainEventType(val value: String, val description: S
   ),
 }
 
-fun Instant.toOffsetDateFormat(): String =
-  atZone(ZoneId.of("Europe/London")).toOffsetDateTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+fun Instant.toOffsetDateFormat(): String = atZone(ZoneId.of("Europe/London")).toOffsetDateTime().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)

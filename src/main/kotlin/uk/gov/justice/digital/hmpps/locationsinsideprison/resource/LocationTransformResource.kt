@@ -71,12 +71,10 @@ class LocationTransformResource(
     @RequestBody
     @Validated
     usedFor: Set<UsedForType>,
-  ): Location {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_AMENDED,
-    ) {
-      locationService.updateResidentialLocationUsedForTypes(id = id, usedFor = usedFor)
-    }
+  ): Location = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_AMENDED,
+  ) {
+    locationService.updateResidentialLocationUsedForTypes(id = id, usedFor = usedFor)
   }
 
   @PutMapping("/{id}/specialist-cell-types", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -118,12 +116,10 @@ class LocationTransformResource(
     @RequestBody
     @Validated
     specialistCellTypes: Set<SpecialistCellType>,
-  ): Location {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_AMENDED,
-    ) {
-      locationService.updateSpecialistCellTypes(id = id, specialistCellTypes = specialistCellTypes)
-    }
+  ): Location = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_AMENDED,
+  ) {
+    locationService.updateSpecialistCellTypes(id = id, specialistCellTypes = specialistCellTypes)
   }
 
   @PutMapping("/{id}/capacity")
@@ -165,15 +161,13 @@ class LocationTransformResource(
     @RequestBody
     @Validated
     capacity: Capacity,
-  ): Location {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_AMENDED,
-    ) {
-      locationService.updateCellCapacity(
-        id = id,
-        maxCapacity = capacity.maxCapacity,
-        workingCapacity = capacity.workingCapacity,
-      )
-    }
+  ): Location = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_AMENDED,
+  ) {
+    locationService.updateCellCapacity(
+      id = id,
+      maxCapacity = capacity.maxCapacity,
+      workingCapacity = capacity.workingCapacity,
+    )
   }
 }

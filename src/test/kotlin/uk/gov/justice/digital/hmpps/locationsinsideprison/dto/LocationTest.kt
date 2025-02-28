@@ -50,9 +50,7 @@ data class LocationTest(
   val lastModifiedDate: LocalDateTime? = null,
 ) {
 
-  fun getKey(): String {
-    return "$prisonId-$pathHierarchy"
-  }
+  fun getKey(): String = "$prisonId-$pathHierarchy"
 
   fun findByPathHierarchy(pathHierarchy: String): LocationTest? {
     val locations = mutableListOf<LocationTest>()

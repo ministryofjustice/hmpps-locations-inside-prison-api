@@ -27,9 +27,7 @@ class PrisonerLocationService(
     return getPrisonersAndMap(prisonersInLocations(prisonId, locations.filter { !it.isPermanentlyDeactivated() }))
   }
 
-  fun prisonersInPrisonAllLocations(prisonId: String): List<Prisoner> {
-    return prisonerSearchService.getPrisonersInPrison(prisonId)
-  }
+  fun prisonersInPrisonAllLocations(prisonId: String): List<Prisoner> = prisonerSearchService.getPrisonersInPrison(prisonId)
 
   fun prisonersInLocations(key: String): List<PrisonerLocation> {
     val location = locationRepository.findOneByKey(key)
@@ -45,9 +43,7 @@ class PrisonerLocationService(
     return getPrisonersAndMap(prisonersInLocations(location.prisonId, location.cellLocations()))
   }
 
-  fun prisonersInLocations(location: Location): List<Prisoner> {
-    return prisonersInLocations(location.prisonId, location.cellLocations())
-  }
+  fun prisonersInLocations(location: Location): List<Prisoner> = prisonersInLocations(location.prisonId, location.cellLocations())
 
   fun prisonersInLocations(prisonId: String, locations: List<Cell>): List<Prisoner> {
     val locationsToCheck = locations.map { it.getPathHierarchy() }.sorted()
@@ -58,16 +54,15 @@ class PrisonerLocationService(
     }
   }
 
-  private fun getPrisonersAndMap(prisonerLocations: List<Prisoner>) =
-    prisonerLocations
-      .filter { it.cellLocation != null }
-      .groupBy { it.cellLocation }
-      .map {
-        PrisonerLocation(
-          cellLocation = it.key!!,
-          prisoners = it.value,
-        )
-      }.sortedBy { it.cellLocation }
+  private fun getPrisonersAndMap(prisonerLocations: List<Prisoner>) = prisonerLocations
+    .filter { it.cellLocation != null }
+    .groupBy { it.cellLocation }
+    .map {
+      PrisonerLocation(
+        cellLocation = it.key!!,
+        prisoners = it.value,
+      )
+    }.sortedBy { it.cellLocation }
 }
 
 @Schema(description = "Prisoner Location Information")

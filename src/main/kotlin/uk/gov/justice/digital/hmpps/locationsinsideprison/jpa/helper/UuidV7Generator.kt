@@ -16,9 +16,7 @@ class UuidV7Generator : BeforeExecutionGenerator {
     val uuidGenerator: NoArgGenerator = Generators.timeBasedEpochGenerator(null)
   }
 
-  override fun getEventTypes(): EnumSet<EventType> {
-    return EventTypeSets.INSERT_ONLY
-  }
+  override fun getEventTypes(): EnumSet<EventType> = EventTypeSets.INSERT_ONLY
 
   override fun generate(
     session: SharedSessionContractImplementor?,

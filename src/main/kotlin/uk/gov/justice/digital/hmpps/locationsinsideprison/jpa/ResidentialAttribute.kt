@@ -44,9 +44,7 @@ class ResidentialAttribute(
     return result
   }
 
-  override fun toString(): String {
-    return "ResidentialAttribute(attributeType=$attributeType, attributeValue=$attributeValue)"
-  }
+  override fun toString(): String = "ResidentialAttribute(attributeType=$attributeType, attributeValue=$attributeValue)"
 }
 
 enum class ResidentialAttributeType(

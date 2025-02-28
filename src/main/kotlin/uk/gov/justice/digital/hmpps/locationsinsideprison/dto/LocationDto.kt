@@ -175,19 +175,13 @@ data class Location(
 
 ) : SortAttribute {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
-  fun getKey(): String {
-    return "$prisonId-$pathHierarchy"
-  }
+  fun getKey(): String = "$prisonId-$pathHierarchy"
 
   @JsonIgnore
-  override fun getSortName(): String {
-    return localName?.capitalizeWords() ?: pathHierarchy
-  }
+  override fun getSortName(): String = localName?.capitalizeWords() ?: pathHierarchy
 
   @Schema(description = "Indicates if the location is a residential location", example = "true", required = true)
-  fun isResidential(): Boolean {
-    return accommodationTypes != null && convertedCellType == null
-  }
+  fun isResidential(): Boolean = accommodationTypes != null && convertedCellType == null
 
   @JsonIgnore
   fun getSubLocations(): List<Location> {
@@ -381,9 +375,7 @@ data class TransactionHistory(
   @Schema(description = "The list of changes that were made in the transaction", required = true)
   val transactionDetails: List<TransactionDetail>,
 ) {
-  fun toChangeHistory(): List<ChangeHistory> {
-    return transactionDetails.mapNotNull { it.toChangeHistory(this) }
-  }
+  fun toChangeHistory(): List<ChangeHistory> = transactionDetails.mapNotNull { it.toChangeHistory(this) }
 }
 
 @Schema(description = "Certification")
@@ -637,9 +629,8 @@ data class PermanentDeactivationLocationRequest(
   val reason: String,
 )
 
-fun String.capitalizeWords(delimiter: String = " ") =
-  split(delimiter).joinToString(delimiter) { word ->
+fun String.capitalizeWords(delimiter: String = " ") = split(delimiter).joinToString(delimiter) { word ->
 
-    val smallCaseWord = word.lowercase()
-    smallCaseWord.replaceFirstChar(Char::titlecaseChar)
-  }
+  val smallCaseWord = word.lowercase()
+  smallCaseWord.replaceFirstChar(Char::titlecaseChar)
+}

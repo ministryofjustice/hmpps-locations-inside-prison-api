@@ -338,20 +338,18 @@ class LocationServiceTest {
     }
   }
 
-  private fun buildLocation(localName: String): NonResidentialLocation {
-    return NonResidentialLocation(
-      id = UUID.randomUUID(),
-      localName = localName,
-      code = "code",
-      pathHierarchy = "path-a",
-      locationType = LocationType.LOCATION,
-      prisonId = "prisonId",
-      active = true,
-      whenCreated = LocalDateTime.now(),
-      childLocations = mutableListOf(),
-      createdBy = "createdBy",
-    )
-  }
+  private fun buildLocation(localName: String): NonResidentialLocation = NonResidentialLocation(
+    id = UUID.randomUUID(),
+    localName = localName,
+    code = "code",
+    pathHierarchy = "path-a",
+    locationType = LocationType.LOCATION,
+    prisonId = "prisonId",
+    active = true,
+    whenCreated = LocalDateTime.now(),
+    childLocations = mutableListOf(),
+    createdBy = "createdBy",
+  )
 
   // getCellAttributes
   @Test

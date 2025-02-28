@@ -38,16 +38,15 @@ class LocationHistory(
 
 ) : Comparable<LocationHistory> {
 
-  fun toDto() =
-    ChangeHistory(
-      transactionId = linkedTransaction?.transactionId,
-      transactionType = linkedTransaction?.transactionType,
-      attribute = attributeName.description,
-      oldValues = oldValue?.let { listOf(it) },
-      newValues = newValue?.let { listOf(it) },
-      amendedBy = amendedBy,
-      amendedDate = amendedDate,
-    )
+  fun toDto() = ChangeHistory(
+    transactionId = linkedTransaction?.transactionId,
+    transactionType = linkedTransaction?.transactionType,
+    attribute = attributeName.description,
+    oldValues = oldValue?.let { listOf(it) },
+    newValues = newValue?.let { listOf(it) },
+    amendedBy = amendedBy,
+    amendedDate = amendedDate,
+  )
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -77,12 +76,9 @@ class LocationHistory(
     return result
   }
 
-  override fun compareTo(other: LocationHistory) =
-    compareValuesBy(this, other, { it.linkedTransaction?.transactionId }, { it.location.id }, { it.amendedDate }, { it.attributeName }, { it.oldValue }, { it.newValue }, { it.amendedBy })
+  override fun compareTo(other: LocationHistory) = compareValuesBy(this, other, { it.linkedTransaction?.transactionId }, { it.location.id }, { it.amendedDate }, { it.attributeName }, { it.oldValue }, { it.newValue }, { it.amendedBy })
 
-  override fun toString(): String {
-    return "${linkedTransaction?.transactionId ?: "NONE"}: Changed $attributeName from $oldValue --> $newValue, on $amendedDate)"
-  }
+  override fun toString(): String = "${linkedTransaction?.transactionId ?: "NONE"}: Changed $attributeName from $oldValue --> $newValue, on $amendedDate)"
 }
 enum class LocationAttribute(
   val description: String,

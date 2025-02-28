@@ -33,25 +33,24 @@ class LinkedTransaction(
   val auditChanges: MutableList<LocationHistory> = mutableListOf(),
 ) {
 
-  fun toDto(filterLocation: Location? = null) =
-    TransactionHistory(
-      transactionId = transactionId!!,
-      prisonId = prisonId,
-      transactionType = transactionType,
-      transactionDetail = transactionDetail,
-      transactionInvokedBy = transactionInvokedBy,
-      txStartTime = txStartTime,
-      txEndTime = txEndTime,
-      transactionDetails = auditChanges
-        .asSequence()
-        .filter { audit -> (filterLocation == null || audit.location == filterLocation) && audit.attributeName.display }
-        .sortedBy { it.amendedDate }.sortedBy { it.attributeName.displayOrder }
-        .groupBy {
-          Pair(it.location, it.attributeName)
-        }
-        .mapNotNull { (locationAttributePair, groupedTx) -> toGroupedTx(locationAttributePair.second, groupedTx) }
-        .toList(),
-    )
+  fun toDto(filterLocation: Location? = null) = TransactionHistory(
+    transactionId = transactionId!!,
+    prisonId = prisonId,
+    transactionType = transactionType,
+    transactionDetail = transactionDetail,
+    transactionInvokedBy = transactionInvokedBy,
+    txStartTime = txStartTime,
+    txEndTime = txEndTime,
+    transactionDetails = auditChanges
+      .asSequence()
+      .filter { audit -> (filterLocation == null || audit.location == filterLocation) && audit.attributeName.display }
+      .sortedBy { it.amendedDate }.sortedBy { it.attributeName.displayOrder }
+      .groupBy {
+        Pair(it.location, it.attributeName)
+      }
+      .mapNotNull { (locationAttributePair, groupedTx) -> toGroupedTx(locationAttributePair.second, groupedTx) }
+      .toList(),
+  )
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -74,9 +73,7 @@ class LinkedTransaction(
     result = 31 * result + txStartTime.hashCode()
     return result
   }
-  override fun toString(): String {
-    return "$transactionId: $transactionType at $txStartTime by $transactionInvokedBy, ($transactionDetail) )"
-  }
+  override fun toString(): String = "$transactionId: $transactionType at $txStartTime by $transactionInvokedBy, ($transactionDetail) )"
 }
 
 enum class TransactionType {

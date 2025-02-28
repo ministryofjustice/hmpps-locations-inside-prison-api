@@ -18,12 +18,10 @@ enum class AccommodationType(
   OTHER_NON_RESIDENTIAL("Other", 99),
   ;
 
-  fun mapToResidentialHousingType(): ResidentialHousingType {
-    return when (this) {
-      NORMAL_ACCOMMODATION -> ResidentialHousingType.NORMAL_ACCOMMODATION
-      HEALTHCARE_INPATIENTS -> HEALTHCARE
-      CARE_AND_SEPARATION -> SEGREGATION
-      OTHER_NON_RESIDENTIAL -> OTHER_USE
-    }
+  fun mapToResidentialHousingType(): ResidentialHousingType = when (this) {
+    NORMAL_ACCOMMODATION -> ResidentialHousingType.NORMAL_ACCOMMODATION
+    HEALTHCARE_INPATIENTS -> HEALTHCARE
+    CARE_AND_SEPARATION -> SEGREGATION
+    OTHER_NON_RESIDENTIAL -> OTHER_USE
   }
 }

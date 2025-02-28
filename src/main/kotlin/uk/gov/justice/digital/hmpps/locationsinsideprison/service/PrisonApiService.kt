@@ -15,15 +15,13 @@ class PrisonApiService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun getMovementTodayInAndOutOfPrison(prisonId: String): PrisonRollMovementInfo {
-    return prisonApiWebClient
-      .get()
-      .uri("/api/prison/roll-count/$prisonId/movement-count")
-      .header("Content-Type", "application/json")
-      .retrieve()
-      .bodyToMono<PrisonRollMovementInfo>()
-      .block()!!
-  }
+  fun getMovementTodayInAndOutOfPrison(prisonId: String): PrisonRollMovementInfo = prisonApiWebClient
+    .get()
+    .uri("/api/prison/roll-count/$prisonId/movement-count")
+    .header("Content-Type", "application/json")
+    .retrieve()
+    .bodyToMono<PrisonRollMovementInfo>()
+    .block()!!
 }
 
 data class MovementCount(

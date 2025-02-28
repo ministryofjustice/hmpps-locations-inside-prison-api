@@ -83,7 +83,5 @@ data class LegacyLocation(
   val lastModifiedDate: LocalDateTime,
 ) {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
-  fun getKey(): String {
-    return "$prisonId-$pathHierarchy"
-  }
+  fun getKey(): String = "$prisonId-$pathHierarchy"
 }

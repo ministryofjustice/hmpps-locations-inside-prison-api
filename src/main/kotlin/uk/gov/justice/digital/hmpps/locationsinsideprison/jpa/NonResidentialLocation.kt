@@ -91,26 +91,22 @@ class NonResidentialLocation(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
-  ): LocationDto {
-    return super.toDto(
-      includeChildren = includeChildren,
-      includeParent = includeParent,
-      includeHistory = includeHistory,
-      countInactiveCells = countInactiveCells,
-      includeNonResidential = includeNonResidential,
-      useHistoryForUpdate = useHistoryForUpdate,
-      countCells = countCells,
-      formatLocalName = formatLocalName,
-    ).copy(
-      usage = nonResidentialUsages.map { it.toDto() }.sortedBy { it.usageType.sequence },
-    )
-  }
+  ): LocationDto = super.toDto(
+    includeChildren = includeChildren,
+    includeParent = includeParent,
+    includeHistory = includeHistory,
+    countInactiveCells = countInactiveCells,
+    includeNonResidential = includeNonResidential,
+    useHistoryForUpdate = useHistoryForUpdate,
+    countCells = countCells,
+    formatLocalName = formatLocalName,
+  ).copy(
+    usage = nonResidentialUsages.map { it.toDto() }.sortedBy { it.usageType.sequence },
+  )
 
-  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation {
-    return super.toLegacyDto(includeHistory = includeHistory).copy(
-      usage = nonResidentialUsages.map { it.toDto() },
-    )
-  }
+  override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
+    usage = nonResidentialUsages.map { it.toDto() },
+  )
 
   override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): NonResidentialLocation {
     super.update(upsert, userOrSystemInContext, clock, linkedTransaction)

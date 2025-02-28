@@ -195,8 +195,7 @@ class LocationPrisonIdResource(
     @Schema(description = "The group name", example = "Houseblock 1", required = true)
     @PathVariable("group")
     group: String,
-  ): LocationPrefixDto =
-    locationService.getLocationPrefixFromGroup(prisonId, group)
+  ): LocationPrefixDto = locationService.getLocationPrefixFromGroup(prisonId, group)
 
   @GetMapping("/groups/{prisonId}/{name}")
   @Operation(
@@ -237,8 +236,7 @@ class LocationPrisonIdResource(
     @Parameter(description = "Group name", required = true)
     @PathVariable("name")
     name: String,
-  ) =
-    locationService.getCellLocationsForGroup(prisonId, name)
+  ) = locationService.getCellLocationsForGroup(prisonId, name)
 
   @GetMapping("/prison/{prisonId}/archived")
   @ResponseStatus(HttpStatus.OK)

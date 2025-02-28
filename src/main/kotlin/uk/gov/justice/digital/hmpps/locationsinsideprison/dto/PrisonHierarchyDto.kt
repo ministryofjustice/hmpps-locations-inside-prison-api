@@ -38,7 +38,5 @@ data class PrisonHierarchyDto(
 ) : SortAttribute {
 
   @JsonIgnore
-  override fun getSortName(): String {
-    return localName?.capitalizeWords() ?: fullLocationPath
-  }
+  override fun getSortName(): String = localName?.capitalizeWords() ?: fullLocationPath
 }

@@ -149,12 +149,10 @@ class LocationResidentialResource(
     @RequestBody
     @Validated
     createWingRequest: CreateWingRequest,
-  ): Location {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_CREATED,
-    ) {
-      locationService.createWing(createWingRequest)
-    }
+  ): Location = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_CREATED,
+  ) {
+    locationService.createWing(createWingRequest)
   }
 
   @PostMapping("/residential", produces = [MediaType.APPLICATION_JSON_VALUE])
@@ -199,12 +197,10 @@ class LocationResidentialResource(
     @RequestBody
     @Validated
     createResidentialLocationRequest: CreateResidentialLocationRequest,
-  ): Location {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_CREATED,
-    ) {
-      locationService.createResidentialLocation(createResidentialLocationRequest)
-    }
+  ): Location = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_CREATED,
+  ) {
+    locationService.createResidentialLocation(createResidentialLocationRequest)
   }
 
   @PatchMapping("/residential/{id}")
@@ -297,13 +293,11 @@ class LocationResidentialResource(
     @RequestBody
     @Validated
     convertCellToNonResidentialLocationRequest: ConvertCellToNonResidentialLocationRequest,
-  ): Location {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_AMENDED,
-    ) {
-      with(convertCellToNonResidentialLocationRequest) {
-        locationService.convertToNonResidentialCell(id, convertedCellType, otherConvertedCellType)
-      }
+  ): Location = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_AMENDED,
+  ) {
+    with(convertCellToNonResidentialLocationRequest) {
+      locationService.convertToNonResidentialCell(id, convertedCellType, otherConvertedCellType)
     }
   }
 
@@ -346,13 +340,11 @@ class LocationResidentialResource(
     @RequestBody
     @Validated
     updateNonResCellTypeRequest: UpdateNonResCellTypeRequest,
-  ): Location {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_AMENDED,
-    ) {
-      with(updateNonResCellTypeRequest) {
-        locationService.updateNonResidentialCellType(id, convertedCellType, otherConvertedCellType)
-      }
+  ): Location = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_AMENDED,
+  ) {
+    with(updateNonResCellTypeRequest) {
+      locationService.updateNonResidentialCellType(id, convertedCellType, otherConvertedCellType)
     }
   }
 
@@ -400,20 +392,18 @@ class LocationResidentialResource(
     @RequestBody
     @Validated
     convertToCellRequest: ConvertToCellRequest,
-  ): Location {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_AMENDED,
-    ) {
-      with(convertToCellRequest) {
-        locationService.convertToCell(
-          id = id,
-          accommodationType = accommodationType,
-          specialistCellTypes = specialistCellTypes,
-          maxCapacity = maxCapacity,
-          workingCapacity = workingCapacity,
-          usedForTypes = usedForTypes,
-        )
-      }
+  ): Location = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_AMENDED,
+  ) {
+    with(convertToCellRequest) {
+      locationService.convertToCell(
+        id = id,
+        accommodationType = accommodationType,
+        specialistCellTypes = specialistCellTypes,
+        maxCapacity = maxCapacity,
+        workingCapacity = workingCapacity,
+        usedForTypes = usedForTypes,
+      )
     }
   }
 

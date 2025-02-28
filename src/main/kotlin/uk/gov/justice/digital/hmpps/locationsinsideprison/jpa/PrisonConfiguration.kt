@@ -31,11 +31,10 @@ class PrisonConfiguration(
     includeSegregationInRollCount = convertToStatus(includeSegregationInRollCount),
   )
 
-  private fun convertToStatus(active: Boolean) =
-    when (active) {
-      true -> ResidentialStatus.ACTIVE
-      false -> ResidentialStatus.INACTIVE
-    }
+  private fun convertToStatus(active: Boolean) = when (active) {
+    true -> ResidentialStatus.ACTIVE
+    false -> ResidentialStatus.INACTIVE
+  }
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -46,11 +45,7 @@ class PrisonConfiguration(
     return prisonId == other.prisonId
   }
 
-  override fun hashCode(): Int {
-    return prisonId.hashCode()
-  }
+  override fun hashCode(): Int = prisonId.hashCode()
 
-  override fun toString(): String {
-    return "PrisonConfiguration(includeSegregationInRollCount=$includeSegregationInRollCount, resiLocationServiceActive=$resiLocationServiceActive, signedOperationCapacity=$signedOperationCapacity, prisonId='$prisonId')"
-  }
+  override fun toString(): String = "PrisonConfiguration(includeSegregationInRollCount=$includeSegregationInRollCount, resiLocationServiceActive=$resiLocationServiceActive, signedOperationCapacity=$signedOperationCapacity, prisonId='$prisonId')"
 }

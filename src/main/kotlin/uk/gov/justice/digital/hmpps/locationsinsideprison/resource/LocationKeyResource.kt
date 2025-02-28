@@ -68,8 +68,7 @@ class LocationKeyResource(
     key: String,
     @RequestParam(name = "includeChildren", required = false, defaultValue = "false") includeChildren: Boolean = false,
     @RequestParam(name = "includeHistory", required = false, defaultValue = "false") includeHistory: Boolean = false,
-  ) =
-    locationService.getLocationByKey(key = key, includeChildren = includeChildren, includeHistory = includeHistory) ?: throw LocationNotFoundException(key)
+  ) = locationService.getLocationByKey(key = key, includeChildren = includeChildren, includeHistory = includeHistory) ?: throw LocationNotFoundException(key)
 
   @PostMapping("/keys", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")

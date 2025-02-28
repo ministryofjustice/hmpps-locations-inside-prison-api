@@ -162,15 +162,13 @@ class LocationResource(
     @RequestBody
     @Validated
     updateLocationLocalNameRequest: UpdateLocationLocalNameRequest,
-  ): LocationDTO {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_AMENDED,
-    ) {
-      locationService.updateLocalName(
-        id = id,
-        updateLocationLocalNameRequest = updateLocationLocalNameRequest,
-      )
-    }
+  ): LocationDTO = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_AMENDED,
+  ) {
+    locationService.updateLocalName(
+      id = id,
+      updateLocationLocalNameRequest = updateLocationLocalNameRequest,
+    )
   }
 
   @GetMapping("/{prisonId}/local-name/{localName}")
@@ -218,8 +216,7 @@ class LocationResource(
     @Schema(description = "The level above in this hierarchy to look below, empty will check prison level", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = false)
     @RequestParam(name = "parentLocationId", required = false)
     parentLocationId: UUID? = null,
-  ): LocationDTO =
-    locationService.findByPrisonIdTopParentAndLocalName(prisonId = prisonId, parentLocationId = parentLocationId, localName = localName)
+  ): LocationDTO = locationService.findByPrisonIdTopParentAndLocalName(prisonId = prisonId, parentLocationId = parentLocationId, localName = localName)
 
   @PutMapping("/{id}/deactivate/temporary")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -260,9 +257,7 @@ class LocationResource(
     @RequestBody
     @Validated
     temporaryDeactivationLocationRequest: TemporaryDeactivationLocationRequest,
-  ): List<LocationDTO> {
-    return deactivate(locationService.deactivateLocations(DeactivateLocationsRequest(mapOf(id to temporaryDeactivationLocationRequest))))
-  }
+  ): List<LocationDTO> = deactivate(locationService.deactivateLocations(DeactivateLocationsRequest(mapOf(id to temporaryDeactivationLocationRequest))))
 
   @PutMapping("/{id}/update/temporary-deactivation")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -303,18 +298,16 @@ class LocationResource(
     @RequestBody
     @Validated
     updateDeactivationDetailsRequest: TemporaryDeactivationLocationRequest,
-  ): LocationDTO {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_DEACTIVATED,
-    ) {
-      locationService.updateDeactivatedDetails(
-        id,
-        deactivatedReason = updateDeactivationDetailsRequest.deactivationReason,
-        deactivationReasonDescription = updateDeactivationDetailsRequest.deactivationReasonDescription,
-        proposedReactivationDate = updateDeactivationDetailsRequest.proposedReactivationDate,
-        planetFmReference = updateDeactivationDetailsRequest.planetFmReference,
-      )
-    }
+  ): LocationDTO = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_DEACTIVATED,
+  ) {
+    locationService.updateDeactivatedDetails(
+      id,
+      deactivatedReason = updateDeactivationDetailsRequest.deactivationReason,
+      deactivationReasonDescription = updateDeactivationDetailsRequest.deactivationReasonDescription,
+      proposedReactivationDate = updateDeactivationDetailsRequest.proposedReactivationDate,
+      planetFmReference = updateDeactivationDetailsRequest.planetFmReference,
+    )
   }
 
   @PutMapping("/{id}/deactivate/permanent")
@@ -356,15 +349,13 @@ class LocationResource(
     @RequestBody
     @Validated
     permanentDeactivationLocationRequest: PermanentDeactivationLocationRequest,
-  ): LocationDTO {
-    return eventPublishAndAudit(
-      InternalLocationDomainEventType.LOCATION_DEACTIVATED,
-    ) {
-      locationService.permanentlyDeactivateLocation(
-        id,
-        reasonForPermanentDeactivation = permanentDeactivationLocationRequest.reason,
-      )
-    }
+  ): LocationDTO = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_DEACTIVATED,
+  ) {
+    locationService.permanentlyDeactivateLocation(
+      id,
+      reasonForPermanentDeactivation = permanentDeactivationLocationRequest.reason,
+    )
   }
 
   @PutMapping("/{id}/reactivate")
@@ -409,7 +400,5 @@ class LocationResource(
       required = false,
       defaultValue = "false",
     ) cascadeReactivation: Boolean = false,
-  ): LocationDTO {
-    return reactivate(locationService.reactivateLocations(ReactivateLocationsRequest(mapOf(id to ReactivationDetail(cascadeReactivation = cascadeReactivation))))).first()
-  }
+  ): LocationDTO = reactivate(locationService.reactivateLocations(ReactivateLocationsRequest(mapOf(id to ReactivationDetail(cascadeReactivation = cascadeReactivation))))).first()
 }

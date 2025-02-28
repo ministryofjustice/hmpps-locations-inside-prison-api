@@ -117,19 +117,18 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
   }
 }
 
-fun createPrisoner(prisonId: String, cellLocation: String, index: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN") =
-  Prisoner(
-    prisonerNumber = "A${index.toString().padStart(4, '0')}AA",
-    firstName = "Firstname-$index",
-    lastName = "Surname-$index",
-    prisonId = prisonId,
-    prisonName = prisonId,
-    cellLocation = cellLocation,
-    gender = "MALE",
-    status = status,
-    lastMovementTypeCode = "ADM",
-    inOutStatus = inOutStatus,
-    csra = "High",
-    category = "C",
-    alerts = emptyList(),
-  )
+fun createPrisoner(prisonId: String, cellLocation: String, index: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN") = Prisoner(
+  prisonerNumber = "A${index.toString().padStart(4, '0')}AA",
+  firstName = "Firstname-$index",
+  lastName = "Surname-$index",
+  prisonId = prisonId,
+  prisonName = prisonId,
+  cellLocation = cellLocation,
+  gender = "MALE",
+  status = status,
+  lastMovementTypeCode = "ADM",
+  inOutStatus = inOutStatus,
+  csra = "High",
+  category = "C",
+  alerts = emptyList(),
+)

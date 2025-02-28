@@ -397,8 +397,7 @@ class TransactionNotFoundException(txId: UUID) : Exception("There is no transact
 
 class LocationPrefixNotFoundException(id: String) : Exception("Location prefix not found for $id")
 
-class SignedOperationCapacityNotFoundException(prisonId: String) :
-  Exception("There is no signed operation capacity found for prison ID = $prisonId")
+class SignedOperationCapacityNotFoundException(prisonId: String) : Exception("There is no signed operation capacity found for prison ID = $prisonId")
 
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class ReasonForDeactivationMustBeProvidedException(key: String) : Exception("De-activating location $key requires a reason when using OTHER reason type")
