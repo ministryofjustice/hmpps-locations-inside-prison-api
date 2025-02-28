@@ -114,9 +114,9 @@ open class ResidentialLocation(
     .map { it.accommodationType }
     .toSet()
 
-  private fun getUsedFor(): Set<CellUsedFor> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+  open fun getUsedForValues(): MutableSet<CellUsedFor> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .flatMap { it.usedFor }
-    .toSet()
+    .toMutableSet()
 
   private fun getSpecialistCellTypes(): Set<SpecialistCell> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .flatMap { it.specialistCellTypes }
@@ -126,8 +126,59 @@ open class ResidentialLocation(
 
   private fun getInactiveCellCount() = cellLocations().count { it.isTemporarilyDeactivated() }
 
-  fun updateCellUsedFor(setOfUsedFor: Set<UsedForType>, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
-    cellLocations().forEach { it.updateUsedFor(setOfUsedFor, userOrSystemInContext, clock, linkedTransaction) }
+  fun updateCellUsedFor(newUsedFor: Set<UsedForType>, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+    if (cellLocations().isNotEmpty()) {
+      updateUsedFor(newUsedFor, userOrSystemInContext, clock, linkedTransaction)
+    }
+    findSubLocations().filterIsInstance<ResidentialLocation>().filter { it.cellLocations().isNotEmpty() }.forEach { it.updateUsedFor(newUsedFor, userOrSystemInContext, clock, linkedTransaction) }
+  }
+
+  open fun addUsedFor(usedForType: UsedForType, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): CellUsedFor {
+    addHistory(LocationAttribute.USED_FOR, null, usedForType.description, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
+    return CellUsedFor(location = this, usedFor = usedForType)
+  }
+
+  fun updateUsedFor(
+    newUsedFor: Set<UsedForType>,
+    userOrSystemInContext: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    recordRemovedUsedForTypes(getUsedForValues(), newUsedFor, userOrSystemInContext, clock, linkedTransaction)
+    getUsedForValues().retainAll(newUsedFor.map { addUsedFor(it, userOrSystemInContext, clock, linkedTransaction) }.toSet())
+  }
+
+  protected fun recordRemovedUsedForTypes(
+    currentUsedFor: Set<CellUsedFor>,
+    newUsedFor: Set<UsedForType>,
+    userOrSystemInContext: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    val oldUsedFor = currentUsedFor.map { it.usedFor }.toSet()
+    if (oldUsedFor != newUsedFor) {
+      oldUsedFor.forEach { removedUsedFor ->
+        addHistory(
+          LocationAttribute.USED_FOR,
+          removedUsedFor.description,
+          null,
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+          linkedTransaction,
+        )
+      }
+
+      oldUsedFor.intersect(newUsedFor).forEach { keptUsedFor ->
+        addHistory(
+          LocationAttribute.USED_FOR,
+          null,
+          keptUsedFor.description,
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+          linkedTransaction,
+        )
+      }
+    }
   }
 
   fun updateCellSpecialistCellTypes(
@@ -222,7 +273,7 @@ open class ResidentialLocation(
     ),
 
     accommodationTypes = getAccommodationTypes().map { it }.distinct().sortedBy { it.sequence },
-    usedFor = getUsedFor().map { it.usedFor }.distinct().sortedBy { it.sequence },
+    usedFor = getUsedForValues().map { it.usedFor }.distinct().sortedBy { it.sequence },
 
     specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.distinct().sortedBy { it.sequence },
     inactiveCells = if (countInactiveCells) {

@@ -236,6 +236,119 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           )
         }
 
+        webTestClient.get().uri("/locations/${landingZ1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+              "key": "MDI-Z-1",
+              "changeHistory": [
+                {
+                  "transactionType": "LOCATION_UPDATE",
+                  "attribute": "Used for",
+                  "oldValues": [
+                    "First night centre / Induction",
+                    "High security unit"
+                  ]
+                },
+                {
+                  "transactionType": "LOCATION_UPDATE",
+                  "attribute": "Used for",
+                  "oldValues": [
+                    "First night centre / Induction",
+                    "Personality disorder unit",
+                    "Standard accommodation"
+                  ],
+                  "newValues": [
+                    "First night centre / Induction",
+                    "High security unit"
+                  ]
+                },
+                {
+                  "transactionType": "LOCATION_UPDATE",
+                  "attribute": "Used for",
+                  "oldValues": [
+                    "Standard accommodation"
+                  ],
+                  "newValues": [
+                    "Standard accommodation",
+                    "First night centre / Induction",
+                    "Personality disorder unit"
+                  ]
+                }
+              ]
+            }
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+
+        webTestClient.get().uri("/locations/${landingZ2.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+              "key": "MDI-Z-2",
+              "changeHistory": []
+            }
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+
+        webTestClient.get().uri("/locations/${wingZ.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+              "key": "MDI-Z",
+              "changeHistory": [
+                {
+                  "transactionType": "LOCATION_UPDATE",
+                  "attribute": "Used for",
+                  "oldValues": [
+                    "First night centre / Induction",
+                    "High security unit"
+                  ]
+                },
+                {
+                  "transactionType": "LOCATION_UPDATE",
+                  "attribute": "Used for",
+                  "oldValues": [
+                    "First night centre / Induction",
+                    "Personality disorder unit",
+                    "Standard accommodation"
+                  ],
+                  "newValues": [
+                    "First night centre / Induction",
+                    "High security unit"
+                  ]
+                },
+                {
+                  "transactionType": "LOCATION_UPDATE",
+                  "attribute": "Used for",
+                  "oldValues": [
+                    "Standard accommodation"
+                  ],
+                  "newValues": [
+                    "Standard accommodation",
+                    "First night centre / Induction",
+                    "Personality disorder unit"
+                  ]
+                }
+              ]
+            }
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+
         webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
