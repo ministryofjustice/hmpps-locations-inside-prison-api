@@ -167,9 +167,17 @@ class Cell(
     recordRemovedSpecialistCellTypes(specialistCellTypes.map { it.specialistCellType }.toSet(), userOrSystemInContext, clock, linkedTransaction)
     specialistCellTypes.clear()
 
-    recordRemovedUsedForTypes(usedFor.map { it.usedFor }.toSet(), userOrSystemInContext, clock, linkedTransaction)
-    usedFor.clear()
+    recordRemovedUsedForTypes(
+      currentUsedFor = this.usedFor,
+      newUsedFor = this.usedFor.map { it.usedFor }.toSet(),
+      userOrSystemInContext = userOrSystemInContext,
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
+    this.usedFor.clear()
   }
+
+  override fun getUsedForValues() = this.usedFor
 
   fun updateNonResidentialCellType(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
@@ -309,7 +317,7 @@ class Cell(
     return specialistCell
   }
 
-  fun addUsedFor(usedForType: UsedForType, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): CellUsedFor {
+  override fun addUsedFor(usedForType: UsedForType, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): CellUsedFor {
     val cellUsedFor = CellUsedFor(location = this, usedFor = usedForType)
     if (this.usedFor.add(cellUsedFor)) {
       addHistory(LocationAttribute.USED_FOR, null, usedForType.description, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
@@ -356,16 +364,6 @@ class Cell(
         )
       }.toSet(),
     )
-  }
-
-  fun updateUsedFor(
-    usedFor: Set<UsedForType>,
-    userOrSystemInContext: String,
-    clock: Clock,
-    linkedTransaction: LinkedTransaction,
-  ) {
-    recordRemovedUsedForTypes(usedFor, userOrSystemInContext, clock, linkedTransaction)
-    this.usedFor.retainAll(usedFor.map { addUsedFor(it, userOrSystemInContext, clock, linkedTransaction) }.toSet())
   }
 
   override fun sync(upsert: NomisSyncLocationRequest, clock: Clock, linkedTransaction: LinkedTransaction): Cell {
@@ -476,38 +474,6 @@ class Cell(
           LocationAttribute.SPECIALIST_CELL_TYPE,
           null,
           keptCellTypes.description,
-          userOrSystemInContext,
-          LocalDateTime.now(clock),
-          linkedTransaction,
-        )
-      }
-    }
-  }
-
-  private fun recordRemovedUsedForTypes(
-    usedFor: Set<UsedForType>,
-    userOrSystemInContext: String,
-    clock: Clock,
-    linkedTransaction: LinkedTransaction,
-  ) {
-    val oldUsedFor = this.usedFor.map { it.usedFor }.toSet()
-    if (oldUsedFor != usedFor) {
-      oldUsedFor.forEach { removedUsedFor ->
-        addHistory(
-          LocationAttribute.USED_FOR,
-          removedUsedFor.description,
-          null,
-          userOrSystemInContext,
-          LocalDateTime.now(clock),
-          linkedTransaction,
-        )
-      }
-
-      oldUsedFor.intersect(usedFor).forEach { keptUsedFor ->
-        addHistory(
-          LocationAttribute.USED_FOR,
-          null,
-          keptUsedFor.description,
           userOrSystemInContext,
           LocalDateTime.now(clock),
           linkedTransaction,
