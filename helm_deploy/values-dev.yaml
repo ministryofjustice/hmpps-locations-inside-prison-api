@@ -15,6 +15,7 @@ generic-service:
     API_BASE_URL_PRISONER_SEARCH: https://prisoner-search-dev.prison.service.justice.gov.uk
     API_BASE_URL_PRISON_REGISTER: https://prison-register-dev.hmpps.service.justice.gov.uk
     API_BASE_URL_PRISON_API: https://prison-api-dev.prison.service.justice.gov.uk
+    API_BASE_URL_MANAGE_USERS: https://manage-users-api-dev.hmpps.service.justice.gov.uk
 
   namespace_secrets:
     hmpps-domain-events-topic:

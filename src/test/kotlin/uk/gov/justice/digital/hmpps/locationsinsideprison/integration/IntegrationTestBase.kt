@@ -12,6 +12,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.HmppsAuthMockServer
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.ManageUsersApiMockServer
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.PrisonApiMockServer
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.PrisonRegisterMockServer
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.PrisonerSearchMockServer
@@ -46,6 +47,9 @@ abstract class IntegrationTestBase : TestBase() {
     @JvmField
     val prisonApiMockServer = PrisonApiMockServer()
 
+    @JvmField
+    val manageUsersApiMockServer = ManageUsersApiMockServer()
+
     @BeforeAll
     @JvmStatic
     fun startMocks() {
@@ -54,11 +58,13 @@ abstract class IntegrationTestBase : TestBase() {
       prisonerSearchMockServer.start()
       prisonRegisterMockServer.start()
       prisonApiMockServer.start()
+      manageUsersApiMockServer.start()
     }
 
     @AfterAll
     @JvmStatic
     fun stopMocks() {
+      manageUsersApiMockServer.stop()
       prisonApiMockServer.stop()
       prisonRegisterMockServer.stop()
       prisonerSearchMockServer.stop()
@@ -75,7 +81,12 @@ abstract class IntegrationTestBase : TestBase() {
     user: String = SYSTEM_USERNAME,
     roles: List<String> = listOf(),
     scopes: List<String> = listOf(),
-  ): (HttpHeaders) -> Unit = jwtAuthHelper.setAuthorisationHeader(username = user, roles = roles, scope = scopes)
+  ): (HttpHeaders) -> Unit = jwtAuthHelper.setAuthorisationHeader(
+    clientId = "hmpps-locations-inside-prison-api",
+    username = user,
+    roles = roles,
+    scope = scopes,
+  )
 
   protected fun jsonString(any: Any) = objectMapper.writeValueAsString(any) as String
 }

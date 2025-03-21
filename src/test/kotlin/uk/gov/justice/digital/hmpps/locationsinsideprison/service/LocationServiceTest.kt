@@ -32,7 +32,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonC
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
+import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.Optional
@@ -51,7 +51,7 @@ class LocationServiceTest {
   private val entityManager: EntityManager = mock()
   private val clock: Clock = TestBase.clock
   private val telemetryClient: TelemetryClient = mock()
-  private val authenticationFacade: AuthenticationFacade = mock()
+  private val authenticationHolder: HmppsAuthenticationHolder = mock()
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService = mock()
   private val activePrisonService: ActivePrisonService = mock()
   private val groupsProperties: Properties = mock()
@@ -68,7 +68,7 @@ class LocationServiceTest {
     prisonService,
     clock,
     telemetryClient,
-    authenticationFacade,
+    authenticationHolder,
     locationGroupFromPropertiesService,
     activePrisonService,
     groupsProperties,
@@ -76,7 +76,7 @@ class LocationServiceTest {
 
   @BeforeEach
   fun setUp() {
-    whenever(authenticationFacade.getUserOrSystemInContext()).thenReturn("User 1")
+    whenever(authenticationHolder.username).thenReturn("User 1")
     whenever(linkedTransactionRepository.save(any())).thenReturn(mock())
   }
 

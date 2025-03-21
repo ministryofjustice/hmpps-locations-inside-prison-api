@@ -11,10 +11,7 @@ class HealthCheckTest : SqsIntegrationTestBase() {
 
   @Test
   fun `Health page reports ok`() {
-    hmppsAuthMockServer.stubHealthPing(200)
-    prisonerSearchMockServer.stubHealthPing(200)
-    prisonRegisterMockServer.stubHealthPing(200)
-    prisonApiMockServer.stubHealthPing(200)
+    stubPings()
 
     webTestClient.get()
       .uri("/health")
@@ -27,10 +24,7 @@ class HealthCheckTest : SqsIntegrationTestBase() {
 
   @Test
   fun `Health info reports version`() {
-    hmppsAuthMockServer.stubHealthPing(200)
-    prisonerSearchMockServer.stubHealthPing(200)
-    prisonRegisterMockServer.stubHealthPing(200)
-    prisonApiMockServer.stubHealthPing(200)
+    stubPings()
 
     webTestClient.get().uri("/health")
       .exchange()
@@ -40,6 +34,14 @@ class HealthCheckTest : SqsIntegrationTestBase() {
           assertThat(it).startsWith(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE))
         },
       )
+  }
+
+  private fun stubPings() {
+    hmppsAuthMockServer.stubHealthPing(200)
+    prisonerSearchMockServer.stubHealthPing(200)
+    prisonRegisterMockServer.stubHealthPing(200)
+    prisonApiMockServer.stubHealthPing(200)
+    manageUsersApiMockServer.stubHealthPing(200)
   }
 
   @Test

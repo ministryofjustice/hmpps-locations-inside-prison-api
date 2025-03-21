@@ -22,12 +22,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCe
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildVirtualResidentialLocation
-import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 
 const val EXPECTED_USERNAME = "A_TEST_USER"
-
-@WithMockAuthUser(username = EXPECTED_USERNAME)
 class CommonDataTestBase : SqsIntegrationTestBase() {
 
   @Autowired

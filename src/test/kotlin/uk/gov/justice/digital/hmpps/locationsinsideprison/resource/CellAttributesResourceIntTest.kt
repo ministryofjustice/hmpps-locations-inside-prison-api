@@ -8,11 +8,8 @@ import org.mockito.kotlin.whenever
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
-import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ActivePrisonService
-import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
-@WithMockAuthUser(username = EXPECTED_USERNAME)
 @DisplayName("GET /locations/{id}/attributes")
 class CellAttributesResourceIntTest : CommonDataTestBase() {
 
