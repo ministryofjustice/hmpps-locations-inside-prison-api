@@ -13,10 +13,6 @@ api:
       prison-register: http://localhost:8095
       prison-api: http://localhost:8096
       manage-users: http://localhost:8082
-dpr:
-  lib:
-    system:
-      role:
 
 spring:
   datasource:
