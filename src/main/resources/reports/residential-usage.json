@@ -72,8 +72,6 @@
               "staticoptions": [
                 {"name": "LOCATION_CREATE", "display": "Created location"},
                 {"name": "LOCATION_UPDATE", "display": "Updated location"},
-                {"name": "SYNC", "display": "Sync"},
-                {"name": "DELETE", "display": "Delete"},
                 {"name": "CAPACITY_CHANGE", "display": "Capacity change"},
                 {"name": "CELL_TYPE_CHANGES", "display": "Cell type change"},
                 {"name": "DEACTIVATION", "display": "Deactivation"},
@@ -100,6 +98,26 @@
           },
           {
             "name": "locations_affected",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "id": "prisons",
+      "name": "Prison active",
+      "datasource": "dataSource",
+      "query": "SELECT prison_id, prison_id as description FROM prison_configuration where resi_location_service_active = true",
+      "schema": {
+        "field": [
+          {
+            "name": "prison_id",
+            "display": "Prison code",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "display": "Prison",
             "type": "string"
           }
         ]
@@ -131,8 +149,15 @@
             "defaultsort": false,
             "default": "${activeCaseloadId}",
             "filter": {
-              "type": "caseloads",
-              "mandatory": false
+              "type": "multiselect",
+              "mandatory": false,
+              "dynamicoptions": {
+                "maximumOptions": 120,
+                "returnAsStaticOptions": true,
+                "dataset": "prisons",
+                "name": "prison_id",
+                "display": "description"
+              }
             }
           },
           {
@@ -151,7 +176,7 @@
             "defaultsort": true,
             "filter": {
               "type": "daterange",
-              "default": "today(-1,months) - today()"
+              "default": "today(-3,months) - today()"
             }
           },
           {
@@ -178,7 +203,7 @@
             "name": "$ref:locations_affected",
             "display": "Locations affected",
             "sortable": false,
-            "visible": "true",
+            "visible": "false",
             "defaultsort": false
           }
         ]
