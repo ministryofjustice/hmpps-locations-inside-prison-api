@@ -63,6 +63,12 @@ spring:
       max-lifetime: 600000
       connection-timeout: 1000
       validation-timeout: 500
+dpr:
+  lib:
+    definition:
+      locations: "reports/residential-usage.json"
+    system:
+      role: DPR_API_ACCESS
 
 server:
   port: 8080

@@ -22,6 +22,7 @@ generic-service:
     API_BASE_URL_PRISONER_SEARCH: http://localhost:8090
     API_BASE_URL_PRISON_REGISTER: https://prison-register.hmpps.service.justice.gov.uk
     API_BASE_URL_PRISON_API: https://prison-api-preprod.prison.service.justice.gov.uk
+    API_BASE_URL_MANAGE_USERS: https://manage-users-api-preprod.hmpps.service.justice.gov.uk
     HMPPS_SQS_LOCALSTACK_URL: http://localhost:4566
     SPRING_PROFILES_ACTIVE: train
 

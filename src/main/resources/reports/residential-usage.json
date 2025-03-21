@@ -1,0 +1,194 @@
+{
+  "id": "transactions",
+  "name": "Transactions for locations",
+  "description": "List of transactions in locations",
+  "metadata": {
+    "author": "Michael Willis",
+    "version": "1.0.0",
+    "owner": "Move a prisoner team"
+  },
+  "datasource": [
+    {
+      "id": "irs",
+      "name": "dataSource",
+      "connection": "postgres"
+    }
+  ],
+  "policy": [
+    {
+      "id": "access",
+      "type": "access",
+      "rule": [
+        {
+          "effect": "permit",
+          "condition": [
+            {
+              "match": [
+                "${role}",
+                "MANAGE_RES_LOCATIONS_OP_CAP"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "caseloads",
+      "type": "row-level",
+      "action": ["prison_id IN (${caseloads})"],
+      "rule": [
+        {
+          "effect": "permit",
+          "condition": [
+            {
+              "exists": ["${caseloads}"]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "dataset": [
+    {
+      "id": "residential",
+      "name": "Transactions for residential locations",
+      "datasource": "dataSource",
+      "query": "select  tx.prison_id, tx.tx_start_time, tx.transaction_type, tx.transaction_detail, tx.transaction_invoked_by,\n  (select COUNT(distinct location_id) FROM location_history lh where lh.linked_transaction_id = tx.id ) number_locations_affected,\n(SELECT STRING_AGG (distinct l.path_hierarchy,', ') FROM location_history lh join location l on l.id = lh.location_id where lh.linked_transaction_id = tx.id) locations_affected\nfrom linked_transaction tx join prison_configuration p on p.prison_id = tx.prison_id and p.resi_location_service_active = true\n where tx.transaction_type  NOT IN ('SYNC', 'DELETE')",
+      "schema": {
+        "field": [
+          {
+            "name": "prison_id",
+            "type": "string"
+          },
+          {
+            "name": "tx_start_time",
+            "type": "datetime"
+          },
+          {
+            "name": "transaction_type",
+            "type": "string",
+            "filter": {
+              "type": "multiselect",
+              "staticoptions": [
+                {"name": "LOCATION_CREATE", "display": "Created location"},
+                {"name": "LOCATION_UPDATE", "display": "Updated location"},
+                {"name": "SYNC", "display": "Sync"},
+                {"name": "DELETE", "display": "Delete"},
+                {"name": "CAPACITY_CHANGE", "display": "Capacity change"},
+                {"name": "CELL_TYPE_CHANGES", "display": "Cell type change"},
+                {"name": "DEACTIVATION", "display": "Deactivation"},
+                {"name": "PERMANENT_DEACTIVATION", "display": "Permanent deactivation"},
+                {"name": "REACTIVATION", "display": "Reactivation"},
+                {"name": "CELL_CONVERTION_TO_ROOM", "display": "Cell conversion to room"},
+                {"name": "ROOM_CONVERTION_TO_CELL", "display": "Room conversion to cell"},
+                {"name": "SIGNED_OP_CAP", "display": "Signed operational capacity"},
+                {"name": "RESI_SERVICE_ACTIVATION", "display": "Residential service activation"}
+              ]
+            }
+          },
+          {
+            "name": "transaction_detail",
+            "type": "string"
+          },
+          {
+              "name": "transaction_invoked_by",
+              "type": "string"
+          },
+          {
+            "name": "number_locations_affected",
+            "type": "int"
+          },
+          {
+            "name": "locations_affected",
+            "type": "string"
+          }
+        ]
+      }
+    }
+  ],
+  "report": [
+    {
+      "id": "residential",
+      "name": "Transactions for residential locations",
+      "description": "Details each transaction that has occurred in a residential location",
+      "version": "1.0.0",
+      "dataset": "$ref:residential",
+      "policy": [],
+      "render": "HTML",
+      "feature": [
+        {
+          "type": "print"
+        }
+      ],
+      "specification": {
+        "template": "list",
+        "field": [
+          {
+            "name": "$ref:prison_id",
+            "display": "Prison ID",
+            "sortable": true,
+            "visible": "true",
+            "defaultsort": false,
+            "default": "${activeCaseloadId}",
+            "filter": {
+              "type": "caseloads",
+              "mandatory": false
+            }
+          },
+          {
+            "name": "$ref:transaction_type",
+            "display": "Transaction type",
+            "sortable": true,
+            "visible": "true",
+            "defaultsort": false
+          },
+          {
+            "name": "$ref:tx_start_time",
+            "display": "Transaction time",
+            "formula": "format_date(${tx_start_time}, 'dd/MM/yyyy hh:mm')",
+            "sortable": true,
+            "visible": "true",
+            "defaultsort": true,
+            "filter": {
+              "type": "daterange",
+              "default": "today(-1,months) - today()"
+            }
+          },
+          {
+            "name": "$ref:transaction_detail",
+            "display": "Details",
+            "sortable": false,
+            "visible": "true"
+          },
+          {
+            "name": "$ref:transaction_invoked_by",
+            "display": "Staff username",
+            "sortable": true,
+            "visible": "true",
+            "defaultsort": false
+          },
+          {
+            "name": "$ref:number_locations_affected",
+            "display": "# locations affected",
+            "sortable": true,
+            "visible": "true",
+            "defaultsort": false
+          },
+          {
+            "name": "$ref:locations_affected",
+            "display": "Locations affected",
+            "sortable": false,
+            "visible": "true",
+            "defaultsort": false
+          }
+        ]
+      },
+      "destination": [],
+      "summary": [{
+        "id": "summaryId",
+        "template": "page-header",
+        "dataset": "$ref:residential"
+      }]
+    }
+  ]
+}

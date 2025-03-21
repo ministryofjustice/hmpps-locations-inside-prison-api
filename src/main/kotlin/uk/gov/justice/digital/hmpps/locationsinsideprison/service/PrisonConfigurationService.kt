@@ -7,11 +7,12 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
+import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
 import java.time.LocalDateTime
 
@@ -20,7 +21,7 @@ import java.time.LocalDateTime
 class PrisonConfigurationService(
   private val activePrisonService: ActivePrisonService,
   private val linkedTransactionRepository: LinkedTransactionRepository,
-  private val authenticationFacade: AuthenticationFacade,
+  private val authenticationHolder: HmppsAuthenticationHolder,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
 ) {
@@ -39,7 +40,7 @@ class PrisonConfigurationService(
         transactionType = TransactionType.RESI_SERVICE_ACTIVATION,
         prisonId = prisonId,
         transactionDetail = "Residential service status changed to $residentialStatus",
-        transactionInvokedBy = authenticationFacade.getUserOrSystemInContext(),
+        transactionInvokedBy = authenticationHolder.username ?: SYSTEM_USERNAME,
         txStartTime = LocalDateTime.now(clock),
       )
       linkedTransactionRepository.save(tx)

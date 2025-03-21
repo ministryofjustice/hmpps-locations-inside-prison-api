@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable
 import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
@@ -67,7 +68,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoun
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateCapacityRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.utils.AuthenticationFacade
+import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -90,7 +91,7 @@ class LocationService(
   private val prisonService: PrisonService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
-  private val authenticationFacade: AuthenticationFacade,
+  private val authenticationHolder: HmppsAuthenticationHolder,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
   private val activePrisonService: ActivePrisonService,
   @Qualifier("residentialGroups") private val groupsProperties: Properties,
@@ -247,7 +248,7 @@ class LocationService(
       "Create residential location ${request.code} in prison ${request.prisonId} under ${parentLocation?.getKey() ?: "top level"}",
     )
 
-    val locationToCreate = request.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock, linkedTransaction = linkedTransaction)
+    val locationToCreate = request.toNewEntity(getUsername(), clock, linkedTransaction = linkedTransaction)
     parentLocation?.let { locationToCreate.setParent(it) }
 
     val capacityChanged = request.isCell() && request.capacity != null
@@ -267,13 +268,15 @@ class LocationService(
       prisonId = prisonId,
       transactionType = type,
       transactionDetail = detail,
-      transactionInvokedBy = authenticationFacade.getUserOrSystemInContext(),
+      transactionInvokedBy = getUsername(),
       txStartTime = LocalDateTime.now(clock),
     )
     return linkedTransactionRepository.save(linkedTransaction).also {
       log.info("Created linked transaction: $it")
     }
   }
+
+  private fun getUsername() = authenticationHolder.username ?: SYSTEM_USERNAME
 
   @Transactional
   fun createNonResidentialLocation(request: CreateNonResidentialLocationRequest): LocationDTO {
@@ -291,7 +294,7 @@ class LocationService(
       "Create non-residential location ${request.code} in prison ${request.prisonId} under ${parentLocation?.getKey() ?: "top level"}",
     )
 
-    val locationToCreate = request.toNewEntity(authenticationFacade.getUserOrSystemInContext(), clock, linkedTransaction)
+    val locationToCreate = request.toNewEntity(getUsername(), clock, linkedTransaction)
     parentLocation?.let { locationToCreate.setParent(it) }
 
     val usageChanged = request.usage != null
@@ -317,7 +320,7 @@ class LocationService(
       "Create wing ${createWingRequest.wingCode} in prison ${createWingRequest.prisonId}",
     )
 
-    val wing = createWingRequest.toEntity(authenticationFacade.getUserOrSystemInContext(), clock, linkedTransaction)
+    val wing = createWingRequest.toEntity(getUsername(), clock, linkedTransaction)
     return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
@@ -404,7 +407,7 @@ class LocationService(
   ): UpdateLocationResult {
     val (codeChanged, oldParent, parentChanged) = updateCoreLocationDetails(location, patchLocationRequest, linkedTransaction)
 
-    location.update(patchLocationRequest, authenticationFacade.getUserOrSystemInContext(), clock, linkedTransaction)
+    location.update(patchLocationRequest, getUsername(), clock, linkedTransaction)
 
     return UpdateLocationResult(
       location.toDto(
@@ -429,7 +432,7 @@ class LocationService(
 
     residentialLocation.updateCellUsedFor(
       usedFor,
-      authenticationFacade.getUserOrSystemInContext(),
+      getUsername(),
       clock,
       linkedTransaction,
     )
@@ -485,7 +488,7 @@ class LocationService(
           LocationAttribute.PARENT_LOCATION,
           oldParent?.id?.toString(),
           theParent?.id?.toString(),
-          authenticationFacade.getUserOrSystemInContext(),
+          getUsername(),
           LocalDateTime.now(clock),
           linkedTransaction,
         )
@@ -521,7 +524,7 @@ class LocationService(
     locCapChange.setCapacity(
       maxCapacity = maxCapacity,
       workingCapacity = workingCapacity,
-      userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+      userOrSystemInContext = getUsername(),
       clock = clock,
       linkedTransaction = trackingTx,
     )
@@ -567,7 +570,7 @@ class LocationService(
 
     cell.updateSpecialistCellTypes(
       specialistCellTypes,
-      authenticationFacade.getUserOrSystemInContext(),
+      getUsername(),
       clock,
       linkedTransaction,
     )
@@ -617,7 +620,7 @@ class LocationService(
 
       location.updateLocalName(
         localName = localName,
-        userOrSystemInContext = updatedBy ?: authenticationFacade.getUserOrSystemInContext(),
+        userOrSystemInContext = updatedBy ?: getUsername(),
         clock = clock,
         linkedTransaction,
       )
@@ -667,7 +670,7 @@ class LocationService(
             deactivationReasonDescription = deactivationReasonDescription,
             planetFmReference = planetFmReference,
             proposedReactivationDate = proposedReactivationDate,
-            userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+            userOrSystemInContext = getUsername(),
             clock = clock,
             deactivatedLocations = deactivatedLocations,
             linkedTransaction = linkedTransaction,
@@ -713,7 +716,7 @@ class LocationService(
       if (locationToPermanentlyDeactivate.permanentlyDeactivate(
           reason = permanentDeactivationRequest.reason,
           deactivatedDate = LocalDateTime.now(clock),
-          userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+          userOrSystemInContext = getUsername(),
           clock = clock,
           activeLocationCanBePermDeactivated = activeLocationCanBePermDeactivated,
           linkedTransaction = linkedTransaction,
@@ -757,7 +760,7 @@ class LocationService(
         deactivationReasonDescription = deactivationReasonDescription,
         planetFmReference = planetFmReference,
         proposedReactivationDate = proposedReactivationDate,
-        userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+        userOrSystemInContext = getUsername(),
         clock = clock,
         linkedTransaction = linkedTransaction,
       )
@@ -849,7 +852,7 @@ class LocationService(
                 val oldCapacityOfCertifiedCell = location.getCapacityOfCertifiedCell()
                 location.setCapacityOfCertifiedCell(
                   capacityOfCertifiedCell,
-                  authenticationFacade.getUserOrSystemInContext(),
+                  getUsername(),
                   clock,
                   linkedTransaction,
                 )
@@ -921,7 +924,7 @@ class LocationService(
       }
 
       locationToUpdate.reactivate(
-        userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+        userOrSystemInContext = getUsername(),
         clock = clock,
         reactivatedLocations = locationsReactivated,
         amendedLocations = amendedLocations,
@@ -933,7 +936,7 @@ class LocationService(
       if (reactivationDetail.cascadeReactivation) {
         locationToUpdate.findSubLocations().forEach { location ->
           location.reactivate(
-            userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+            userOrSystemInContext = getUsername(),
             clock = clock,
             reactivatedLocations = locationsReactivated,
             amendedLocations = amendedLocations,
@@ -998,7 +1001,7 @@ class LocationService(
     nonResCellToUpdate.updateNonResidentialCellType(
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
-      userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+      userOrSystemInContext = getUsername(),
       clock = clock,
       linkedTransaction = linkedTransaction,
     )
@@ -1043,7 +1046,7 @@ class LocationService(
       locationToConvert.convertToNonResidentialCell(
         convertedCellType = convertedCellType,
         otherConvertedCellType = otherConvertedCellType,
-        userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+        userOrSystemInContext = getUsername(),
         clock = clock,
         linkedTransaction = linkedTransaction,
       )
@@ -1082,7 +1085,7 @@ class LocationService(
         specialistCellTypes = specialistCellTypes,
         maxCapacity = maxCapacity,
         workingCapacity = workingCapacity,
-        userOrSystemInContext = authenticationFacade.getUserOrSystemInContext(),
+        userOrSystemInContext = getUsername(),
         clock = clock,
         linkedTransaction = linkedTransaction,
       )

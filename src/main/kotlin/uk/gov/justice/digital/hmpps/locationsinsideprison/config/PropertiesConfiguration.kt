@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.io.Resource
 
 @Configuration
-open class PropertiesConfiguration(
+class PropertiesConfiguration(
   @Value("classpath:locations/patterns/*.properties") private val resources: Array<Resource>,
 ) {
 
