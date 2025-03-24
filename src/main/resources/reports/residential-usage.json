@@ -53,7 +53,7 @@
       "id": "residential",
       "name": "Transactions for residential locations",
       "datasource": "dataSource",
-      "query": "select  tx.prison_id, tx.tx_start_time, tx.transaction_type, tx.transaction_detail, tx.transaction_invoked_by,\n  (select COUNT(distinct location_id) FROM location_history lh where lh.linked_transaction_id = tx.id ) number_locations_affected,\n(SELECT STRING_AGG (distinct l.path_hierarchy,', ') FROM location_history lh join location l on l.id = lh.location_id where lh.linked_transaction_id = tx.id) locations_affected\nfrom linked_transaction tx join prison_configuration p on p.prison_id = tx.prison_id and p.resi_location_service_active = true\n where tx.transaction_type  NOT IN ('SYNC', 'DELETE')",
+      "query": "select  tx.prison_id, tx.tx_start_time, tx.transaction_type, (CASE tx.transaction_type\n           WHEN 'LOCATION_CREATE' THEN 'Created location'\n           WHEN 'LOCATION_UPDATE' THEN 'Updated location'\n           WHEN 'CAPACITY_CHANGE' THEN 'Capacity change'\n           WHEN 'CELL_TYPE_CHANGES' THEN 'Cell type change'\n           WHEN 'DEACTIVATION' THEN 'Deactivation'\n           WHEN 'PERMANENT_DEACTIVATION' THEN 'Permanent deactivation'\n           WHEN 'REACTIVATION' THEN 'Reactivation'\n           WHEN 'CELL_CONVERTION_TO_ROOM' THEN 'Cell conversion to room'\n           WHEN 'ROOM_CONVERTION_TO_CELL' THEN 'Room conversion to cell'\n           WHEN 'SIGNED_OP_CAP' THEN 'Signed operational capacity'\n           WHEN 'RESI_SERVICE_ACTIVATION' THEN 'Residential service activation'\n           ELSE 'Unknown transaction type' END) as transaction_description, tx.transaction_detail, tx.transaction_invoked_by,\n  (select COUNT(distinct location_id) FROM location_history lh where lh.linked_transaction_id = tx.id ) number_locations_affected,\n(SELECT STRING_AGG (distinct l.path_hierarchy,', ') FROM location_history lh join location l on l.id = lh.location_id where lh.linked_transaction_id = tx.id) locations_affected\nfrom linked_transaction tx join prison_configuration p on p.prison_id = tx.prison_id and p.resi_location_service_active = true\n where tx.transaction_type  NOT IN ('SYNC', 'DELETE')",
       "schema": {
         "field": [
           {
@@ -83,6 +83,10 @@
                 {"name": "RESI_SERVICE_ACTIVATION", "display": "Residential service activation"}
               ]
             }
+          },
+          {
+            "name": "transaction_description",
+            "type": "string"
           },
           {
             "name": "transaction_detail",
@@ -162,8 +166,15 @@
           },
           {
             "name": "$ref:transaction_type",
+            "display": "Tx code",
+            "sortable": false,
+            "visible": "false",
+            "defaultsort": false
+          },
+          {
+            "name": "$ref:transaction_description",
             "display": "Transaction type",
-            "sortable": true,
+            "sortable": false,
             "visible": "true",
             "defaultsort": false
           },
