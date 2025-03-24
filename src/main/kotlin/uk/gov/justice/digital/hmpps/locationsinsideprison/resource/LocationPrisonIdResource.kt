@@ -350,7 +350,8 @@ class LocationPrisonIdResource(
     prisonId: String,
     @RequestParam(name = "sortByLocalName", required = false, defaultValue = "false") sortByLocalName: Boolean = false,
     @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
-  ): List<Location> = locationService.getLocationsByPrisonAndNonResidentialUsageType(prisonId = prisonId, sortByLocalName = sortByLocalName, formatLocalName = formatLocalName)
+    @RequestParam(name = "filterParents", required = false, defaultValue = "true") filterParents: Boolean = true,
+  ): List<Location> = locationService.getLocationsByPrisonAndNonResidentialUsageType(prisonId = prisonId, sortByLocalName = sortByLocalName, formatLocalName = formatLocalName, filterParents = filterParents)
 
   @GetMapping("/prison/{prisonId}/non-residential-usage-type/{usageType}")
   @ResponseStatus(HttpStatus.OK)
@@ -393,11 +394,13 @@ class LocationPrisonIdResource(
     usageType: NonResidentialUsageType,
     @RequestParam(name = "sortByLocalName", required = false, defaultValue = "false") sortByLocalName: Boolean = false,
     @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
+    @RequestParam(name = "filterParents", required = false, defaultValue = "true") filterParents: Boolean = true,
   ): List<Location> = locationService.getLocationsByPrisonAndNonResidentialUsageType(
     prisonId = prisonId,
     usageType = usageType,
     sortByLocalName = sortByLocalName,
     formatLocalName = formatLocalName,
+    filterParents = filterParents,
   )
 
   @GetMapping("/prison/{prisonId}/location-type/{locationType}")
