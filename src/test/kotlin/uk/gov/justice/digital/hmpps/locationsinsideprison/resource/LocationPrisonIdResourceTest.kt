@@ -1006,7 +1006,87 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
       }
 
       @Test
-      fun `can retrieve locations from usage type filter our parents`() {
+      fun `can retrieve locations from usage type filter and return parents`() {
+        val videoLinkParent = buildNonResidentialLocation(
+          pathHierarchy = "RES",
+          locationType = LocationType.CLASSROOM,
+          nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+        )
+
+        videoLinkParent.addChildLocation(
+          buildNonResidentialLocation(
+            pathHierarchy = "VIDEOR1",
+            locationType = LocationType.VIDEO_LINK,
+            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          ),
+        )
+        repository.save(videoLinkParent)
+
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type?filterParents=false")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                [
+                   {
+                    "key": "MDI-RES",
+                    "pathHierarchy": "RES",
+                    "locationType": "CLASSROOM",
+                    "usage": [
+                      {
+                        "usageType": "PROGRAMMES_ACTIVITIES",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  },
+                  {
+                    "key": "MDI-RES-VIDEOR1",
+                    "pathHierarchy": "RES-VIDEOR1",
+                    "locationType": "VIDEO_LINK",
+                    "usage": [
+                      {
+                        "usageType": "PROGRAMMES_ACTIVITIES",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  },
+                  {
+                    "key": "MDI-Z-ADJUDICATION",
+                    "pathHierarchy": "Z-ADJUDICATION",
+                    "locationType": "ADJUDICATION_ROOM",
+                    "usage": [
+                      {
+                        "usageType": "ADJUDICATION_HEARING",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  },
+                  {
+                    "key": "MDI-Z-VISIT",
+                    "pathHierarchy": "Z-VISIT",
+                    "locationType": "VISITS",
+                    "usage": [
+                      {
+                        "usageType": "VISIT",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  }
+                ]
+                         """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can retrieve locations from usage type filter out parents`() {
         val videoLinkParent = buildNonResidentialLocation(
           pathHierarchy = "RES",
           locationType = LocationType.CLASSROOM,

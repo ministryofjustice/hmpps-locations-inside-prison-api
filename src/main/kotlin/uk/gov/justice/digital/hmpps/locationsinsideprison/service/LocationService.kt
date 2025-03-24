@@ -183,6 +183,7 @@ class LocationService(
     usageType: NonResidentialUsageType? = null,
     sortByLocalName: Boolean = false,
     formatLocalName: Boolean = false,
+    filterParents: Boolean = true,
   ): List<LocationDTO> {
     val filteredByUsage = usageType?.let {
       nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
@@ -190,7 +191,7 @@ class LocationService(
 
     val filteredResults = filteredByUsage
       .filter { it.getCode() != "RTU" }
-      .filter { it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
+      .filter { !filterParents || it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
       .map { it.toDto(formatLocalName = formatLocalName) }
 
     return if (sortByLocalName) {
