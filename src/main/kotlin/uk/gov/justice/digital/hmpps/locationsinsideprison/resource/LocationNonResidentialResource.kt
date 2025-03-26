@@ -40,7 +40,7 @@ class LocationNonResidentialResource(
   private val locationService: LocationService,
 ) : EventBaseResource() {
 
-  @GetMapping("/non-residential/prison/{prisonId}")
+  @GetMapping("/prison/{prisonId}/non-residential")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @Operation(
     summary = "Get a list of active non-residential locations for a prison (excluding RTU)",

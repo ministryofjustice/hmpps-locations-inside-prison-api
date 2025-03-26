@@ -572,21 +572,21 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
     }
   }
 
-  @DisplayName("GET /locations/non-residential/prison/{prisonId}")
+  @DisplayName("GET /locations/prison/{prisonId}/non-residential")
   @Nested
   inner class GetNonResidentialLocationsTest {
     @Nested
     inner class Security {
       @Test
       fun `access forbidden when no authority`() {
-        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}")
+        webTestClient.get().uri("/locations/prison/{${wingZ.prisonId}/non-residential")
           .exchange()
           .expectStatus().isUnauthorized
       }
 
       @Test
       fun `access forbidden when no role`() {
-        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}")
+        webTestClient.get().uri("/locations/prison/{${wingZ.prisonId}/non-residential")
           .headers(setAuthorisation(roles = listOf()))
           .header("Content-Type", "application/json")
           .exchange()
@@ -595,7 +595,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `access forbidden with wrong role`() {
-        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}")
+        webTestClient.get().uri("/locations/prison/{${wingZ.prisonId}/non-residential")
           .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -607,7 +607,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
     inner class Validation {
       @Test
       fun `access client error bad data`() {
-        webTestClient.get().uri("/locations/non-residential/prison/XXXYXT")
+        webTestClient.get().uri("/locations/prison/XXXYXT/non-residential")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -619,7 +619,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
     inner class HappyPath {
       @Test
       fun `can retrieve all non-residential locations`() {
-        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}")
+        webTestClient.get().uri("/locations/prison/{${wingZ.prisonId}/non-residential")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
