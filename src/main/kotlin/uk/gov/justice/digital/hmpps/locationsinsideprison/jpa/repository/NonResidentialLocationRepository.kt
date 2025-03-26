@@ -9,10 +9,13 @@ import java.util.*
 
 @Repository
 interface NonResidentialLocationRepository : JpaRepository<NonResidentialLocation, UUID> {
-  @Query("select nrl from NonResidentialLocation nrl join nrl.nonResidentialUsages u where u.usageType = :usageType and nrl.prisonId = :prisonId")
+  @Query("select nrl from NonResidentialLocation nrl join fetch nrl.nonResidentialUsages u where u.usageType = :usageType and nrl.prisonId = :prisonId")
   fun findAllByPrisonIdAndNonResidentialUsages(prisonId: String, usageType: NonResidentialUsageType): List<NonResidentialLocation>
 
-  @Query("select nrl from NonResidentialLocation nrl join nrl.nonResidentialUsages u where nrl.prisonId = :prisonId")
+  @Query("select nrl from NonResidentialLocation nrl left join fetch nrl.nonResidentialUsages u where nrl.prisonId = :prisonId")
+  fun findAllByPrisonId(prisonId: String): List<NonResidentialLocation>
+
+  @Query("select nrl from NonResidentialLocation nrl join fetch nrl.nonResidentialUsages u where nrl.prisonId = :prisonId")
   fun findAllByPrisonIdWithNonResidentialUsages(prisonId: String): List<NonResidentialLocation>
 
   @Query("select l from NonResidentialLocation l where concat(l.prisonId,'-',l.pathHierarchy) = :key")
