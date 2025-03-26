@@ -74,6 +74,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 import java.util.function.Predicate
+import kotlin.collections.filter
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
@@ -176,6 +177,23 @@ class LocationService(
   private fun fallBackLocationGroupFilter(groupName: String): Predicate<Location> {
     val prefixToMatch = "${groupName.replace('_', '-')}-"
     return Predicate { it.getPathHierarchy().startsWith(prefixToMatch) }
+  }
+
+  fun getActiveNonResidentialLocationsForPrison(
+    prisonId: String,
+    sortByLocalName: Boolean = true,
+    formatLocalName: Boolean = true,
+  ): List<LocationDTO> {
+    val results = nonResidentialLocationRepository.findAllByPrisonId(prisonId)
+      .filter { it.isActiveAndAllParentsActive() }
+      .filter { it.getCode() != "RTU" }
+      .map { it.toDto(formatLocalName = formatLocalName) }
+    return if (sortByLocalName) {
+      results.sortedBy { it.localName }
+    } else {
+      results.sortedBy { it.getKey() }
+    }
+    return results
   }
 
   fun getLocationsByPrisonAndNonResidentialUsageType(
@@ -1397,5 +1415,4 @@ data class CapacityChanges(
   val previousValue: Int? = null,
   @Schema(description = "New value of this attribute", example = "1")
   val newValue: Int? = null,
-
 )

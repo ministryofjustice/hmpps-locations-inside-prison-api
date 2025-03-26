@@ -12,6 +12,8 @@ interface NonResidentialLocationRepository : JpaRepository<NonResidentialLocatio
   @Query("select nrl from NonResidentialLocation nrl join nrl.nonResidentialUsages u where u.usageType = :usageType and nrl.prisonId = :prisonId")
   fun findAllByPrisonIdAndNonResidentialUsages(prisonId: String, usageType: NonResidentialUsageType): List<NonResidentialLocation>
 
+  fun findAllByPrisonId(prisonId: String): List<NonResidentialLocation>
+
   @Query("select nrl from NonResidentialLocation nrl join nrl.nonResidentialUsages u where nrl.prisonId = :prisonId")
   fun findAllByPrisonIdWithNonResidentialUsages(prisonId: String): List<NonResidentialLocation>
 

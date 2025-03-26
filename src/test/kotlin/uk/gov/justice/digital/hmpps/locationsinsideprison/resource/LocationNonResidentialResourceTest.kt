@@ -571,4 +571,92 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       }
     }
   }
+
+  @DisplayName("GET /locations/non-residential/prison/{prisonId}")
+  @Nested
+  inner class GetNonResidentialLocationsTest {
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.get().uri("/locations/non-residential/prison/XXXYXT")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve all non-residential locations`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                [
+                  {
+                    "key": "MDI-Z-ADJUDICATION",
+                    "pathHierarchy": "Z-ADJUDICATION",
+                    "locationType": "ADJUDICATION_ROOM",
+                    "usage": [
+                      {
+                        "usageType": "ADJUDICATION_HEARING",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  },
+                  {
+                    "key": "MDI-Z-VISIT",
+                    "pathHierarchy": "Z-VISIT",
+                    "locationType": "VISITS",
+                    "usage": [
+                      {
+                        "usageType": "VISIT",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  }
+                ]
+                         """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+    }
+  }
 }

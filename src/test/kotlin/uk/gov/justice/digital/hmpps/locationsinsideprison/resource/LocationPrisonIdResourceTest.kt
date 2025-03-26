@@ -1159,6 +1159,32 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                          """,
             JsonCompareMode.LENIENT,
           )
+
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/non-residential-usage-type/PROGRAMMES_ACTIVITIES")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                [
+                  {
+                    "key": "MDI-RES-VIDEOR1",
+                    "pathHierarchy": "RES-VIDEOR1",
+                    "locationType": "VIDEO_LINK",
+                    "usage": [
+                      {
+                        "usageType": "PROGRAMMES_ACTIVITIES",
+                        "capacity": 15,
+                        "sequence": 1
+                      }
+                    ]
+                  }
+                ]
+                         """,
+            JsonCompareMode.LENIENT,
+          )
       }
     }
   }
