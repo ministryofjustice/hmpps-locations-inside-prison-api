@@ -133,10 +133,10 @@ class LocationService(
     }
   }
 
-  fun getPrisonResidentialHierarchy(prisonId: String): List<PrisonHierarchyDto> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+  fun getPrisonResidentialHierarchy(prisonId: String, maxLevel: Int? = null): List<PrisonHierarchyDto> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
     .filter { it.isActiveAndAllParentsActive() && it.isStructural() }
     .map {
-      it.toPrisonHierarchyDto()
+      it.toPrisonHierarchyDto(maxLevel)
     }
     .sortedWith(NaturalOrderComparator())
 

@@ -151,7 +151,10 @@ class LocationPrisonIdResource(
     @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
     @PathVariable
     prisonId: String,
-  ): List<PrisonHierarchyDto> = locationService.getPrisonResidentialHierarchy(prisonId)
+    @Schema(description = "The maximum level to return, default is all if not defined.  Most APIs will just need the first level so maxLevel=1", example = "1", required = false)
+    @RequestParam(name = "maxLevel", required = false)
+    maxLevel: Int? = null,
+  ): List<PrisonHierarchyDto> = locationService.getPrisonResidentialHierarchy(prisonId, maxLevel)
 
   @GetMapping("/prison/{prisonId}/group/{group}/location-prefix")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
