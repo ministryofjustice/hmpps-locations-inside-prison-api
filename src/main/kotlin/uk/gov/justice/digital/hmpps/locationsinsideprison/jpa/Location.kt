@@ -431,10 +431,10 @@ abstract class Location(
 
   private fun isLeafLevel() = findSubLocations().isEmpty() && !isStructural() && !isArea()
 
-  fun toPrisonHierarchyDto(): PrisonHierarchyDto {
+  fun toPrisonHierarchyDto(maxLevel: Int? = null): PrisonHierarchyDto {
     val subLocations: List<PrisonHierarchyDto> = childLocations
-      .filter { it.isActiveAndAllParentsActive() && (it.isStructural() || it.isCell()) }
-      .map { it.toPrisonHierarchyDto() }
+      .filter { it.isActiveAndAllParentsActive() && (it.isStructural() || it.isCell()) && (maxLevel == null || it.getLevel() <= maxLevel) }
+      .map { it.toPrisonHierarchyDto(maxLevel = maxLevel) }
 
     return PrisonHierarchyDto(
       locationId = id!!,

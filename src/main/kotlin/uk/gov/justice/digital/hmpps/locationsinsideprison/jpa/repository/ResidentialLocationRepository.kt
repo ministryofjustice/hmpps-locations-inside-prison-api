@@ -10,6 +10,8 @@ import java.util.UUID
 interface ResidentialLocationRepository : JpaRepository<ResidentialLocation, UUID> {
   fun findOneByPrisonIdAndId(prisonId: String, id: UUID): ResidentialLocation?
   fun findAllByPrisonIdAndParentId(prisonId: String, parentId: UUID): List<ResidentialLocation>
+
+  @Query("select l from ResidentialLocation l left join fetch l.capacity c where l.prisonId = :prisonId and l.parent is null")
   fun findAllByPrisonIdAndParentIsNull(prisonId: String): List<ResidentialLocation>
   fun findAllByPrisonIdAndArchivedIsTrue(prisonId: String): List<ResidentialLocation>
   fun findOneByPrisonIdAndPathHierarchy(prisonId: String, pathHierarchy: String): ResidentialLocation?
