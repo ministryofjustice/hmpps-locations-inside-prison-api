@@ -422,6 +422,50 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `can retrieve wings and virtual locations for a prison`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-first-level?includeVirtualLocations=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              [
+                {
+                  "locationType": "AREA",
+                  "locationCode": "CSWAP",
+                  "fullLocationPath": "CSWAP",
+                  "localName": "Cell Swap",
+                  "level": 1
+                },
+                {
+                  "locationType": "AREA",
+                  "locationCode": "TAP",
+                  "fullLocationPath": "TAP",
+                  "localName": "Temp Absentee Prisoner",
+                  "level": 1
+                },
+                {
+                  "locationType": "WING",
+                  "locationCode": "B",
+                  "fullLocationPath": "B",
+                  "localName": "Wing B",
+                  "level": 1
+                },
+                {
+                  "locationType": "WING",
+                  "locationCode": "Z",
+                  "fullLocationPath": "Z",
+                  "level": 1
+                }
+              ]
+            """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
       fun `can retrieve level 1 hierarchy for a prison`() {
         webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy?maxLevel=1")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
