@@ -133,8 +133,8 @@ class LocationService(
     }
   }
 
-  fun getPrisonResidentialHierarchy(prisonId: String, maxLevel: Int? = null): List<PrisonHierarchyDto> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
-    .filter { it.isActiveAndAllParentsActive() && it.isStructural() }
+  fun getPrisonResidentialHierarchy(prisonId: String, includeVirtualLocations: Boolean = false, maxLevel: Int? = null): List<PrisonHierarchyDto> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+    .filter { it.isActiveAndAllParentsActive() && (it.isStructural() || (includeVirtualLocations && it.isVirtualResidentialLocation())) }
     .map {
       it.toPrisonHierarchyDto(maxLevel)
     }
@@ -170,7 +170,7 @@ class LocationService(
 
   private fun locationGroupFilter(prisonId: String, groupName: String): Predicate<Location> = try {
     locationGroupFromPropertiesService.locationGroupFilter(prisonId, groupName)
-  } catch (e: EntityNotFoundException) {
+  } catch (_: EntityNotFoundException) {
     fallBackLocationGroupFilter(groupName)
   }
 
@@ -903,7 +903,7 @@ class LocationService(
 
     audit.flatMap { it.value }.forEach { l ->
       var trackMap = mapOf("key" to l.key, "message" to l.message)
-      l.type?.let { trackMap = trackMap.plus("${l.type}" to "${l.previousValue} ==> ${l.newValue}") }
+      l.type?.let { trackMap = trackMap.plus(it to "${l.previousValue} ==> ${l.newValue}") }
       telemetryClient.trackEvent("CAPACITY_CHANGE", trackMap, null)
     }
     return CapacityUpdateResult(
@@ -1144,7 +1144,6 @@ class LocationService(
     prisonId: String,
     parentLocationId: UUID? = null,
     parentPathHierarchy: String? = null,
-    returnLatestHistory: Boolean = false,
   ): ResidentialSummary {
     val currentLocation =
       if (parentLocationId != null) {

@@ -109,7 +109,6 @@ class LocationResidentialResource(
     prisonId = prisonId,
     parentLocationId = parentLocationId,
     parentPathHierarchy = parentPathHierarchy,
-    returnLatestHistory = latestHistory,
   )
 
   @PostMapping("/create-wing", produces = [MediaType.APPLICATION_JSON_VALUE])
