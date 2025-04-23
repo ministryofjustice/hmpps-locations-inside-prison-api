@@ -9,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest
 import org.springframework.test.context.transaction.TestTransaction
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
@@ -77,7 +78,7 @@ class LocationRepositoryTest : TestBase() {
       "A-2-001",
       residentialAttributeValues = setOf(ResidentialAttributeValue.ANTI_BARRICADE_DOOR, ResidentialAttributeValue.SAFE_CELL),
     )
-    val adjRoom = buildNonResLocation("A-ADJ", locationType = LocationType.ADJUDICATION_ROOM, active = true)
+    val adjRoom = buildNonResLocation("A-ADJ", locationType = LocationType.ADJUDICATION_ROOM, status = LocationStatus.ACTIVE)
     wing.addChildLocation(landing1)
     wing.addChildLocation(landing2)
     wing.addChildLocation(adjRoom)
@@ -150,7 +151,7 @@ class LocationRepositoryTest : TestBase() {
     TestTransaction.start()
 
     val cell3Converted = repository.findOneByPrisonIdAndPathHierarchy(cell3.prisonId, cell3.getPathHierarchy()) ?: throw Exception("Location not found")
-    assertThat(cell3Converted.getStatus()).isEqualTo(LocationStatus.NON_RESIDENTIAL)
+    assertThat(cell3Converted.getDerivedStatus()).isEqualTo(DerivedLocationStatus.NON_RESIDENTIAL)
     assertThat((cell3Converted as Cell).getMaxCapacity()).isNull()
     assertThat(cell3Converted.isCertified()).isFalse()
 
@@ -170,7 +171,7 @@ class LocationRepositoryTest : TestBase() {
     TestTransaction.start()
 
     val cell3ConvertedBack = repository.findOneByPrisonIdAndPathHierarchy(cell3.prisonId, cell3.getPathHierarchy()) ?: throw Exception("Location not found")
-    assertThat(cell3ConvertedBack.getStatus()).isEqualTo(LocationStatus.ACTIVE)
+    assertThat(cell3ConvertedBack.getDerivedStatus()).isEqualTo(DerivedLocationStatus.ACTIVE)
     assertThat((cell3ConvertedBack as Cell).accommodationType).isEqualTo(AccommodationType.NORMAL_ACCOMMODATION)
     assertThat((cell3ConvertedBack).getMaxCapacity()).isEqualTo(1)
     assertThat(cell3ConvertedBack.isCertified()).isTrue()
@@ -180,16 +181,16 @@ class LocationRepositoryTest : TestBase() {
     pathHierarchy: String,
     prisonId: String = "MDI",
     locationType: LocationType = LocationType.CELL,
-    active: Boolean = true,
+    status: LocationStatus = LocationStatus.ACTIVE,
     parent: Location? = null,
-  ): Location {
+  ): ResidentialLocation {
     val now = LocalDateTime.now(clock)
     return ResidentialLocation(
       code = pathHierarchy.split("-").last(),
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
       locationType = locationType,
-      active = active,
+      status = status,
       createdBy = SYSTEM_USERNAME,
       whenCreated = now,
       parent = parent,
@@ -206,7 +207,7 @@ class LocationRepositoryTest : TestBase() {
   private fun buildCell(
     pathHierarchy: String,
     prisonId: String = "MDI",
-    active: Boolean = true,
+    status: LocationStatus = LocationStatus.ACTIVE,
     parent: Location? = null,
     residentialAttributeValues: Set<ResidentialAttributeValue>,
   ): Location {
@@ -216,7 +217,7 @@ class LocationRepositoryTest : TestBase() {
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
       locationType = LocationType.CELL,
-      active = active,
+      status = status,
       createdBy = SYSTEM_USERNAME,
       whenCreated = now,
       parent = parent,
@@ -238,7 +239,7 @@ class LocationRepositoryTest : TestBase() {
     pathHierarchy: String,
     prisonId: String = "MDI",
     locationType: LocationType,
-    active: Boolean = true,
+    status: LocationStatus = LocationStatus.ACTIVE,
     parent: Location? = null,
   ): Location {
     val now = LocalDateTime.now(clock)
@@ -247,7 +248,7 @@ class LocationRepositoryTest : TestBase() {
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
       locationType = locationType,
-      active = active,
+      status = status,
       createdBy = SYSTEM_USERNAME,
       whenCreated = now,
       parent = parent,

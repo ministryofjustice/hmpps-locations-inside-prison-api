@@ -9,8 +9,8 @@ import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
@@ -82,7 +82,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               "topLevelLocationType": "Wings",
               "prisonSummary": {
                 "workingCapacity": 4,
-                "signedOperationalCapacity": 0,
+                "signedOperationalCapacity": 200,
                 "maxCapacity": 6,
                 "numberOfCellLocations": 4
               },
@@ -581,6 +581,15 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
       accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
       capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
       certified = true,
+      capacityNormalAccommodation = 2,
+      inCellSanitation = true,
+    )
+
+    var createWing = CreateResidentialLocationRequest(
+      prisonId = "LEI",
+      code = "A",
+      locationType = ResidentialLocationType.WING,
+      accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
     )
 
     @Nested
@@ -683,11 +692,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 0
+                "capacityOfCertifiedCell": 2
               },
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
-              ]
+              ],
+              "inCellSanitation": true
             }
           """,
             JsonCompareMode.LENIENT,
@@ -701,6 +711,73 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-Z",
           )
         }
+      }
+
+      @Test
+      fun `can create a wing location in draft form`() {
+        webTestClient.post().uri("/locations/residential")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createWing))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "LEI",
+              "code": "A",
+              "pathHierarchy": "A",
+              "status": "DRAFT",
+              "locationType": "WING",
+              "active": false,
+              "key": "LEI-A",
+              "capacity": {
+                "maxCapacity": 0,
+                "workingCapacity": 0
+              }
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(0)
+      }
+
+      @Test
+      fun `can create a cell location in draft form`() {
+        webTestClient.post().uri("/locations/residential")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createResidentialLocationRequest.copy(prisonId = "LEI", code = "001")))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "LEI",
+              "code": "001",
+              "pathHierarchy": "001",
+              "status": "DRAFT",
+              "locationType": "CELL",
+              "active": false,
+              "key": "LEI-001",
+              "inCellSanitation": true,
+              "capacity": {
+                "maxCapacity": 2,
+                "workingCapacity": 0
+              },
+              "certification": {
+                "certified": false,
+                "capacityOfCertifiedCell": 2
+              }
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(0)
       }
 
       @Test
@@ -728,7 +805,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 0
+                "capacityOfCertifiedCell": 2
               },
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
@@ -1072,7 +1149,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     @Nested
     inner class Validation {
       @Test
-      fun `access client error bad localname data`() {
+      fun `access client error bad local name data`() {
         webTestClient.get().uri("/locations/${landingZ1.prisonId}/local-name/1234567890123456789012345678901")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
@@ -2366,7 +2443,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .returnResult().responseBody!!
 
         assertThat(result.convertedCellType).isEqualTo(ConvertedCellType.OTHER)
-        assertThat(result.status).isEqualTo(LocationStatus.NON_RESIDENTIAL)
+        assertThat(result.status).isEqualTo(DerivedLocationStatus.NON_RESIDENTIAL)
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2447,7 +2524,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         assertThat(result.otherConvertedCellType == nonResStoreRoomRequest.otherConvertedCellType)
         assertThat(result.locationType == LocationType.ROOM)
         assertThat(result.localName).isNull()
-        assertThat(result.status).isEqualTo(LocationStatus.NON_RESIDENTIAL)
+        assertThat(result.status).isEqualTo(DerivedLocationStatus.NON_RESIDENTIAL)
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2848,7 +2925,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         assertThat(cellZ1001.capacity?.maxCapacity).isEqualTo(2)
         assertThat(cellZ1001.capacity?.workingCapacity).isEqualTo(2)
         assertThat(cellZ1001.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL, SpecialistCellType.ISOLATION_DISEASES)
-        assertThat(cellZ1001.convertedCellType).isNotEqualTo("OTHER")
+        assertThat(cellZ1001.convertedCellType).isNotEqualTo(ConvertedCellType.OTHER)
 
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2928,8 +3005,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
       assertThat(cellZ1001.capacity?.maxCapacity).isEqualTo(2)
       assertThat(cellZ1001.capacity?.workingCapacity).isEqualTo(2)
       assertThat(cellZ1001.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
-      assertThat(cellZ1001.convertedCellType).isNotEqualTo("OTHER")
-      assertThat(cellZ1001.status == LocationStatus.ACTIVE)
+      assertThat(cellZ1001.convertedCellType).isNotEqualTo(ConvertedCellType.OTHER)
+      assertThat(cellZ1001.status == DerivedLocationStatus.ACTIVE)
 
       getDomainEvents(3).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
@@ -2963,7 +3040,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
       assertThat(cellZ1001.capacity?.maxCapacity).isEqualTo(2)
       assertThat(cellZ1001.capacity?.workingCapacity).isEqualTo(2)
       assertThat(cellZ1001.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
-      assertThat(cellZ1001.convertedCellType).isNotEqualTo("OTHER")
+      assertThat(cellZ1001.convertedCellType).isNotEqualTo(ConvertedCellType.OTHER)
 
       getDomainEvents(3).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(

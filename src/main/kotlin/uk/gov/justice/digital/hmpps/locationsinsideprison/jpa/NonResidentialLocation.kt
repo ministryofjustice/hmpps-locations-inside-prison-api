@@ -6,6 +6,7 @@ import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
@@ -24,11 +25,11 @@ class NonResidentialLocation(
   pathHierarchy: String,
   locationType: LocationType,
   prisonId: String,
+  status: LocationStatus,
   parent: Location? = null,
   localName: String? = null,
   comments: String? = null,
   orderWithinParentLocation: Int? = 1,
-  active: Boolean = true,
   deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
@@ -49,7 +50,7 @@ class NonResidentialLocation(
   localName = localName,
   comments = comments,
   orderWithinParentLocation = orderWithinParentLocation,
-  active = active,
+  status = status,
   deactivatedDate = deactivatedDate,
   deactivatedReason = deactivatedReason,
   proposedReactivationDate = proposedReactivationDate,

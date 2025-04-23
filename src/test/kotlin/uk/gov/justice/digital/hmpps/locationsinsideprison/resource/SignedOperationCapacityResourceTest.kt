@@ -46,7 +46,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
               { 
                 "prisonId": "MDI",
                 "signedOperationCapacity": "10",
-                "updatedBy": "MALEMAN"
+                "updatedBy": "TEST"
               }
             """.trimIndent(),
           )
@@ -64,7 +64,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
               { 
                 "prisonId": "MDI",
                 "signedOperationCapacity": "10",
-                "updatedBy": "MALEMAN"
+                "updatedBy": "TEST"
               }
             """.trimIndent(),
           )
@@ -87,7 +87,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
               { 
                 "prisonId": "XYZ",
                 "signedOperationCapacity": "10",
-                "updatedBy": "MALEMAN"
+                "updatedBy": "TEST"
               }
             """.trimIndent(),
           )
@@ -105,7 +105,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
               { 
                 "prisonId": "",
                 "signedOperationCapacity": "10",
-                "updatedBy": "MALEMAN"
+                "updatedBy": "TEST"
               }
             """.trimIndent(),
           )
@@ -123,7 +123,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
               { 
                 "prisonId": "MDI",
                 "signedOperationCapacity": -1,
-                "updatedBy": "MALEMAN"
+                "updatedBy": "TEST"
               }
             """.trimIndent(),
           )
@@ -141,7 +141,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
               { 
                 "prisonId": "X6_XXX",
                 "signedOperationCapacity": "10",
-                "updatedBy": "MALEMAN"
+                "updatedBy": "TEST"
               }
             """.trimIndent(),
           )
@@ -180,7 +180,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
               { 
                 "prisonId": "MDI",
                 "signedOperationCapacity": 12,
-                "updatedBy": "MALEMAN"
+                "updatedBy": "TEST"
               }
             """.trimIndent(),
           )
@@ -194,7 +194,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
       @Test
       @Sql("classpath:repository/insert-dummy-locations.sql")
       fun `can create Signed Operation Capacity`() {
-        prisonRegisterMockServer.stubLookupPrison("MDI")
+        prisonRegisterMockServer.stubLookupPrison("HLI")
 
         webTestClient.post().uri("/signed-op-cap/")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -202,9 +202,9 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
           .bodyValue(
             """
               { 
-                "prisonId": "MDI",
-                "signedOperationCapacity": 10,
-                "updatedBy": "MALEMAN"
+                "prisonId": "HLI",
+                "signedOperationCapacity": 0,
+                "updatedBy": "TEST"
               }
             """.trimIndent(),
           )
@@ -213,8 +213,8 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
           .expectBody().json(
             """
               { 
-                "signedOperationCapacity": 10,
-                "updatedBy": "MALEMAN"
+                "signedOperationCapacity": 0,
+                "updatedBy": "TEST"
               }
             """.trimIndent(),
             JsonCompareMode.LENIENT,
@@ -222,7 +222,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
 
         getDomainEvents(1).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.signed-op-cap.amended" to "MDI",
+            "location.inside.prison.signed-op-cap.amended" to "HLI",
           )
         }
       }
@@ -240,7 +240,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
               { 
                 "prisonId": "MDI",
                 "signedOperationCapacity": 7,
-                "updatedBy": "MALEMAN"
+                "updatedBy": "TEST"
               }
             """.trimIndent(),
           )

@@ -93,7 +93,10 @@ data class Location(
   val usedFor: List<UsedForType>? = null,
 
   @Schema(description = "Status of the location", example = "ACTIVE", required = true)
-  val status: LocationStatus,
+  val status: DerivedLocationStatus,
+
+  @Schema(description = "Location is locked", example = "false", required = true)
+  val locked: Boolean = false,
 
   @Schema(description = "Convert Cell Type", required = false)
   val convertedCellType: ConvertedCellType? = null,
@@ -101,8 +104,11 @@ data class Location(
   @Schema(description = "Convert Cell Type (Other)", required = false)
   val otherConvertedCellType: String? = null,
 
-  @Schema(description = "Indicates the location is enabled", example = "true", required = true)
+  @Schema(description = "Indicates the location is enabled", example = "true", required = true, deprecated = true)
   val active: Boolean = true,
+
+  @Schema(description = "In-cell sanitation", required = false, example = "true")
+  val inCellSanitation: Boolean? = null,
 
   @Schema(
     description = "Indicates the location in inactive as a parent is deactivated",
@@ -461,9 +467,15 @@ data class CreateResidentialLocationRequest(
 
   @Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: Set<SpecialistCellType>? = null,
+
+  @Schema(description = "CNA value", required = false, defaultValue = "0")
+  val capacityNormalAccommodation: Int = 0,
+
+  @Schema(description = "In-cell sanitation", required = false, defaultValue = "false")
+  val inCellSanitation: Boolean = false,
 ) {
 
-  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction): ResidentialLocationJPA {
+  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false): ResidentialLocationJPA {
     val newLocation = if (isCell()) {
       val location = CellJPA(
         prisonId = prisonId,
@@ -471,16 +483,18 @@ data class CreateResidentialLocationRequest(
         locationType = locationType.baseType,
         pathHierarchy = code,
         localName = localName,
+        status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE,
         residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
         createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
         childLocations = mutableListOf(),
         accommodationType = accommodationType,
         capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
+        inCellSanitation = inCellSanitation,
         certification =
         CertificationJPA(
-          certified = certified,
-          capacityOfCertifiedCell = 0,
+          certified = if (createInDraft) false else certified,
+          capacityOfCertifiedCell = capacityNormalAccommodation,
         ),
       )
       if (location.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
@@ -500,6 +514,7 @@ data class CreateResidentialLocationRequest(
         code = code,
         pathHierarchy = code,
         localName = localName,
+        status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE,
         capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
         createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
@@ -511,6 +526,7 @@ data class CreateResidentialLocationRequest(
         code = code,
         locationType = locationType.baseType,
         pathHierarchy = code,
+        status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE,
         localName = localName,
         residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
         createdBy = createdBy,
@@ -574,6 +590,7 @@ data class CreateNonResidentialLocationRequest(
       code = code,
       locationType = locationType.baseType,
       pathHierarchy = code,
+      status = LocationStatus.ACTIVE,
       localName = localName,
       createdBy = createdBy,
       whenCreated = LocalDateTime.now(clock),

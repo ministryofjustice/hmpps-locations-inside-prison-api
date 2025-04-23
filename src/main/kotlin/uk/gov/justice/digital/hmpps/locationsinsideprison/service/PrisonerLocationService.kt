@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
@@ -23,7 +24,7 @@ class PrisonerLocationService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
   fun prisonersInPrison(prisonId: String): List<PrisonerLocation> {
-    val locations = cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true)
+    val locations = cellLocationRepository.findAllByPrisonIdAndStatus(prisonId, LocationStatus.ACTIVE)
     return getPrisonersAndMap(prisonersInLocations(prisonId, locations.filter { !it.isPermanentlyDeactivated() }))
   }
 

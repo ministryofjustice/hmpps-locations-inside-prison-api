@@ -36,7 +36,7 @@ CREATE OR REPLACE FUNCTION create_cell(IN p_code varchar,
                                         IN p_cell_type varchar(80) = null,
                                         IN p_used_for varchar(80) = 'STANDARD_ACCOMMODATION',
                                         IN p_certified boolean = true,
-                                        IN p_active boolean = true
+                                        IN p_status varchar(20) = 'ACTIVE'
 ) RETURNS UUID
 AS $$
 DECLARE v_location_id UUID;
@@ -50,10 +50,10 @@ BEGIN
     INSERT INTO capacity (max_capacity, working_capacity) VALUES (p_max_cap, p_working_cap) returning id INTO v_capacity_id;
     INSERT INTO certification (certified, capacity_of_certified_cell) VALUES (p_certified, p_max_cap)  returning id INTO v_certification_id;
 
-    INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, active,
+    INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status,
                           capacity_id, certification_id,
                           accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, p_active, v_capacity_id, v_certification_id,
+    values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, p_status, v_capacity_id, v_certification_id,
             p_accommodation_type, map_accommodation_type(p_accommodation_type),
             now(), now(), p_username) RETURNING id INTO v_location_id;
 
@@ -84,7 +84,7 @@ DECLARE v_location_id UUID;
 
 BEGIN
 
-    Select create_cell(p_code := p_code, p_prison_id := p_prison_id, p_parent_path := p_parent_path, p_username := p_username, p_max_cap := p_max_cap, p_working_cap := p_working_cap, p_active := false, p_cell_type := p_cell_type)
+    Select create_cell(p_code := p_code, p_prison_id := p_prison_id, p_parent_path := p_parent_path, p_username := p_username, p_max_cap := p_max_cap, p_working_cap := p_working_cap, p_status := 'INACTIVE', p_cell_type := p_cell_type)
     INTO v_location_id;
 
     UPDATE location set deactivated_reason = p_deactivation_reason, deactivation_reason_description = p_deactivation_desc,
@@ -107,9 +107,9 @@ BEGIN
 
     SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_parent_path;
 
-    INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, active, converted_cell_type, other_converted_cell_type,
+    INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status, converted_cell_type, other_converted_cell_type,
                           accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, true,
+    values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, 'ACTIVE',
             p_non_res_cell_type, null,
             'NORMAL_ACCOMMODATION', map_accommodation_type('NORMAL_ACCOMMODATION'),
             now(), now(), p_username) RETURNING id INTO v_location_id;
@@ -178,10 +178,10 @@ BEGIN
         v_path_hierarchy := p_code;
     end if;
 
-    INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, active, archived, archived_reason,
+    INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status, archived_reason,
                           deactivated_by, deactivated_date,
                           accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, v_path_hierarchy, p_code, p_location_type, p_location_type_discriminator, v_current_parent_id, false, true, p_archive_reason,
+    values (p_prison_id, v_path_hierarchy, p_code, p_location_type, p_location_type_discriminator, v_current_parent_id, 'ARCHIVED', p_archive_reason,
             p_username, now(),
             'NORMAL_ACCOMMODATION', map_accommodation_type('NORMAL_ACCOMMODATION'),
             now(), now(), p_username) RETURNING id INTO v_location_id;
@@ -199,17 +199,17 @@ BEGIN
 
     -- Wings A to D, S and H
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'A', 'A', 'WING', 'RESIDENTIAL', null, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'A', 'A', 'WING', 'RESIDENTIAL', null, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'B', 'B', 'WING', 'RESIDENTIAL',null, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'B', 'B', 'WING', 'RESIDENTIAL',null, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator,parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'C', 'C', 'WING', 'RESIDENTIAL',null, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'C', 'C', 'WING', 'RESIDENTIAL',null, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'D', 'D', 'WING', 'RESIDENTIAL',null, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'D', 'D', 'WING', 'RESIDENTIAL',null, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
 
     INSERT INTO cell_used_for (location_id, used_for)
     SELECT id, 'STANDARD_ACCOMMODATION' from location l where l.prison_id = p_prison_id and path_hierarchy in ('A', 'B', 'C') ;
@@ -221,25 +221,25 @@ BEGIN
     SELECT id, 'VULNERABLE_PRISONERS' from location l where l.prison_id = p_prison_id and path_hierarchy in ('D') ;
 
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'S', 'S', 'WING', 'RESIDENTIAL',null, 'Separation Unit', 'CARE_AND_SEPARATION', 'SEGREGATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'S', 'S', 'WING', 'RESIDENTIAL',null, 'Separation Unit', 'CARE_AND_SEPARATION', 'SEGREGATION', now(), now(), p_username, 'ACTIVE');
 
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'H', 'H', 'WING', 'RESIDENTIAL',null, 'Healthcare', 'HEALTHCARE_INPATIENTS', 'HEALTHCARE', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'H', 'H', 'WING', 'RESIDENTIAL',null, 'Healthcare', 'HEALTHCARE_INPATIENTS', 'HEALTHCARE', now(), now(), p_username, 'ACTIVE');
 
 
     -- Landing A
     SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = 'A';
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'A-1', '1', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'A-1', '1', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'A-2', '2', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'A-2', '2', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'A-3', '3', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'A-3', '3', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
 
     INSERT INTO cell_used_for (location_id, used_for)
     SELECT id, 'STANDARD_ACCOMMODATION' from location l where l.prison_id = p_prison_id and path_hierarchy in ('A-1', 'A-2', 'A-3') ;
@@ -247,14 +247,14 @@ BEGIN
     -- Landing B
     SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = 'B';
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'B-1', '1', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'B-1', '1', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'B-2', '2', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'B-2', '2', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'B-3', '3', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'B-3', '3', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
 
     INSERT INTO cell_used_for (location_id, used_for)
     SELECT id, 'STANDARD_ACCOMMODATION' from location l where l.prison_id = p_prison_id and path_hierarchy in ('B-1', 'B-2') ;
@@ -266,14 +266,14 @@ BEGIN
     -- Landing C
     SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = 'C';
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'C-1', '1', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'C-1', '1', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'C-2', '2', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'C-2', '2', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'C-3', '3', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'C-3', '3', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
 
     INSERT INTO cell_used_for (location_id, used_for)
     SELECT id, 'STANDARD_ACCOMMODATION' from location l where l.prison_id = p_prison_id and path_hierarchy in ('C-1', 'C-2', 'C-3') ;
@@ -282,11 +282,11 @@ BEGIN
     -- Landing D
     SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = 'D';
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'D-1', '1', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'D-1', '1', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'D-2', '2', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'D-2', '2', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'NORMAL_ACCOMMODATION', 'NORMAL_ACCOMMODATION', now(), now(), p_username, 'ACTIVE');
 
     INSERT INTO cell_used_for (location_id, used_for)
     SELECT id, 'VULNERABLE_PRISONERS' from location l where l.prison_id = p_prison_id and path_hierarchy in ('D-1', 'D-2') ;
@@ -295,15 +295,15 @@ BEGIN
     -- Landing S
     SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = 'S';
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'S-1', '1', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'CARE_AND_SEPARATION', 'SEGREGATION', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'S-1', '1', 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, 'CARE_AND_SEPARATION', 'SEGREGATION', now(), now(), p_username, 'ACTIVE');
 
 
     -- Landing H
     SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = 'H';
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
-                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-    values (p_prison_id, 'H-1', '1', 'LANDING', 'RESIDENTIAL', v_current_parent_id, null, 'HEALTHCARE_INPATIENTS', 'HEALTHCARE', now(), now(), p_username);
+                          accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
+    values (p_prison_id, 'H-1', '1', 'LANDING', 'RESIDENTIAL', v_current_parent_id, null, 'HEALTHCARE_INPATIENTS', 'HEALTHCARE', now(), now(), p_username, 'ACTIVE');
 
     -- cells in A-1
     PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'A-1', p_username := p_username, p_cell_type := 'ACCESSIBLE_CELL', p_max_cap := 2, p_working_cap := 2);
@@ -536,7 +536,7 @@ BEGIN
 
     -- setup the signed op capacity
     insert into prison_configuration (signed_operation_capacity, prison_id, resi_location_service_active, when_updated, updated_by)
-    select SUM(COALESCE(c.max_capacity, 0)), l.prison_id, true, now(), p_username from location l left join capacity c on c.id = l.capacity_id and l.active = true and l.archived = false where l.prison_id = p_prison_id group by l.prison_id;
+    select SUM(COALESCE(c.max_capacity, 0)), l.prison_id, true, now(), p_username from location l left join capacity c on c.id = l.capacity_id and l.status = 'ACTIVE' where l.prison_id = p_prison_id group by l.prison_id;
 END;
 $$ LANGUAGE plpgsql;
 

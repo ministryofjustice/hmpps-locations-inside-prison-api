@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository
 
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.Companion.clock
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
@@ -24,6 +25,7 @@ fun buildResidentialLocation(
   prisonId: String = "MDI",
   pathHierarchy: String,
   locationType: LocationType,
+  status: LocationStatus = LocationStatus.ACTIVE,
   localName: String? = null,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
 ): ResidentialLocation = ResidentialLocation(
@@ -31,6 +33,7 @@ fun buildResidentialLocation(
   code = pathHierarchy.split("-").last(),
   pathHierarchy = pathHierarchy,
   locationType = locationType,
+  status = status,
   createdBy = EXPECTED_USERNAME,
   whenCreated = LocalDateTime.now(clock),
   childLocations = mutableListOf(),
@@ -42,12 +45,14 @@ fun buildResidentialLocation(
 fun buildVirtualResidentialLocation(
   prisonId: String = "MDI",
   pathHierarchy: String,
+  status: LocationStatus = LocationStatus.ACTIVE,
   capacity: Capacity? = null,
   localName: String? = null,
 ): VirtualResidentialLocation = VirtualResidentialLocation(
   prisonId = prisonId,
   code = pathHierarchy.split("-").last(),
   pathHierarchy = pathHierarchy,
+  status = status,
   createdBy = EXPECTED_USERNAME,
   whenCreated = LocalDateTime.now(clock),
   childLocations = mutableListOf(),
@@ -59,7 +64,7 @@ fun buildVirtualResidentialLocation(
 fun buildCell(
   prisonId: String = "MDI",
   pathHierarchy: String,
-  active: Boolean = true,
+  status: LocationStatus = LocationStatus.ACTIVE,
   capacity: Capacity? = null,
   certification: Certification? = null,
   residentialAttributeValues: Set<ResidentialAttributeValue> = setOf(
@@ -67,7 +72,6 @@ fun buildCell(
     ResidentialAttributeValue.CAT_B,
   ),
   specialistCellType: SpecialistCellType? = null,
-  archived: Boolean = false,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
   accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
   linkedTransaction: LinkedTransaction,
@@ -75,7 +79,7 @@ fun buildCell(
   val cell = Cell(
     prisonId = prisonId,
     code = pathHierarchy.split("-").last(),
-    active = active,
+    status = if (status == LocationStatus.ARCHIVED) LocationStatus.INACTIVE else status,
     pathHierarchy = pathHierarchy,
     createdBy = EXPECTED_USERNAME,
     whenCreated = LocalDateTime.now(clock),
@@ -85,12 +89,12 @@ fun buildCell(
     certification = certification,
     accommodationType = accommodationType,
     residentialHousingType = residentialHousingType,
-    deactivatedReason = if (!active) {
+    deactivatedReason = if (status != LocationStatus.ACTIVE) {
       DeactivatedReason.DAMAGED
     } else {
       null
     },
-    deactivatedDate = if (!active) {
+    deactivatedDate = if (status != LocationStatus.ACTIVE) {
       LocalDateTime.now(clock)
     } else {
       null
@@ -100,7 +104,7 @@ fun buildCell(
 
   specialistCellType?.let { cell.updateCellSpecialistCellTypes(setOf(it), EXPECTED_USERNAME, clock, linkedTransaction) }
   cell.updateCellUsedFor(setOf(UsedForType.STANDARD_ACCOMMODATION), EXPECTED_USERNAME, clock, linkedTransaction)
-  if (archived) {
+  if (status == LocationStatus.ARCHIVED) {
     cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), EXPECTED_USERNAME, clock, linkedTransaction)
   }
   return cell
@@ -110,6 +114,7 @@ fun buildNonResidentialLocation(
   prisonId: String = "MDI",
   pathHierarchy: String,
   locationType: LocationType,
+  status: LocationStatus = LocationStatus.ACTIVE,
   nonResidentialUsageType: NonResidentialUsageType,
 ): NonResidentialLocation {
   val nonResidentialLocationJPA = NonResidentialLocation(
@@ -117,6 +122,7 @@ fun buildNonResidentialLocation(
     code = pathHierarchy.split("-").last(),
     pathHierarchy = pathHierarchy,
     locationType = locationType,
+    status = status,
     createdBy = "DIFFERENT_USER",
     whenCreated = LocalDateTime.now(clock).minusDays(1),
     childLocations = mutableListOf(),

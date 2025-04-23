@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
@@ -134,7 +134,7 @@ data class ResidentialPrisonerLocation(
   val fullLocationPath: String,
   val localName: String? = null,
   val certified: Boolean = false,
-  val status: LocationStatus,
+  val status: DerivedLocationStatus,
   val deactivatedReason: DeactivatedReason? = null,
   val subLocations: List<ResidentialPrisonerLocation>,
   val capacity: Capacity? = null,
@@ -174,7 +174,7 @@ data class ResidentialPrisonerLocation(
 
   fun getCurrentlyOut(filterSeg: Boolean = false): Int = getCells(filterSeg).sumOf { it.prisoners?.filter { p -> p.inOutStatus == "OUT" }?.size ?: 0 }
 
-  fun getOutOfOrder(): Int = getCells().filter { it.status == LocationStatus.INACTIVE }.size
+  fun getOutOfOrder(): Int = getCells().filter { it.status == DerivedLocationStatus.INACTIVE }.size
 
   private fun getNetVacancies(filterSeg: Boolean) = getWorkingCapacity() - getNumOfOccupants(filterSeg)
 
@@ -297,7 +297,7 @@ data class ResidentialLocationRollCount(
 )
 
 fun removeLocations(locations: List<ResidentialPrisonerLocation>, includeCells: Boolean = false, filterSeg: Boolean): List<ResidentialLocationRollCount> = locations
-  .filter { it.status in listOf(LocationStatus.ACTIVE) && (includeCells || !it.isLeafLevel) }
+  .filter { it.status in listOf(DerivedLocationStatus.ACTIVE) && (includeCells || !it.isLeafLevel) }
   .map {
     it.toDto(includeCells, filterSeg)
   }

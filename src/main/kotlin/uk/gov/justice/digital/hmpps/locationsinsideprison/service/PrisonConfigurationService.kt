@@ -64,6 +64,40 @@ class PrisonConfigurationService(
     return prisonConfig.toPrisonConfiguration()
   }
 
+  @Transactional
+  fun updateCertificationApprovalProcess(prisonId: String, certificationApprovalProcessStatus: ResidentialStatus): PrisonConfigurationDto {
+    val prisonConfig = activePrisonService.getPrisonConfiguration(prisonId) ?: throw PrisonNotFoundException(prisonId)
+
+    val approvalActive = certificationApprovalProcessStatus == ResidentialStatus.ACTIVE
+    if (prisonConfig.certificationApprovalRequired != approvalActive) {
+      val tx = LinkedTransaction(
+        transactionType = TransactionType.APPROVAL_PROCESS_ACTIVATION,
+        prisonId = prisonId,
+        transactionDetail = "Certification approval process changed to $certificationApprovalProcessStatus",
+        transactionInvokedBy = authenticationHolder.username ?: SYSTEM_USERNAME,
+        txStartTime = LocalDateTime.now(clock),
+      )
+      linkedTransactionRepository.save(tx)
+      prisonConfig.certificationApprovalRequired = approvalActive
+
+      telemetryClient.trackEvent(
+        "Certification approval process configuration update",
+        mapOf(
+          "prisonId" to prisonId,
+          "certificationApprovalProcess" to certificationApprovalProcessStatus.name,
+          "tx" to tx.transactionId.toString(),
+        ),
+        null,
+      )
+      log.info("Updated certification approval status [$tx]")
+      tx.txEndTime = LocalDateTime.now(clock)
+    } else {
+      log.warn("No change applied approval process, service already is $certificationApprovalProcessStatus")
+    }
+
+    return prisonConfig.toPrisonConfiguration()
+  }
+
   fun getPrisonConfiguration(prisonId: String) = activePrisonService.getPrisonConfiguration(prisonId)?.toPrisonConfiguration() ?: throw PrisonNotFoundException(prisonId)
 }
 
@@ -76,6 +110,8 @@ data class PrisonConfigurationDto(
   val resiLocationServiceActive: ResidentialStatus,
   @Schema(description = "Indicates that roll count should include segregation in its calculations for net vacancies", example = "false", required = true)
   val includeSegregationInRollCount: ResidentialStatus,
+  @Schema(description = "Indicates that this prison must go through the certification process to create or change cells", example = "false", required = true)
+  var certificationApprovalRequired: ResidentialStatus,
 )
 
 enum class ResidentialStatus {

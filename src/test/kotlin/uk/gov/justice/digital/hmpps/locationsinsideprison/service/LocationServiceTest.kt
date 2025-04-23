@@ -11,6 +11,7 @@ import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -115,7 +116,7 @@ class LocationServiceTest {
         localName = "R23",
         comments = "comment 1",
         orderWithinParentLocation = 2,
-        active = true,
+        status = LocationStatus.ACTIVE,
         deactivatedDate = null,
         deactivatedReason = null,
         proposedReactivationDate = null,
@@ -141,7 +142,7 @@ class LocationServiceTest {
         parent = null,
         comments = "comment 1",
         orderWithinParentLocation = 2,
-        active = true,
+        status = LocationStatus.ACTIVE,
         deactivatedDate = null,
         deactivatedReason = null,
         proposedReactivationDate = null,
@@ -206,8 +207,8 @@ class LocationServiceTest {
       service.getLocationsByPrisonAndNonResidentialUsageType(
         "prisonId",
         NonResidentialUsageType.OCCURRENCE,
-        false,
-        true,
+        sortByLocalName = false,
+        formatLocalName = true,
       )
     Assertions.assertThat(nonResLoc[0].localName).isEqualTo("Bullingdon (HMP)")
   }
@@ -218,7 +219,7 @@ class LocationServiceTest {
 
   @Test
   fun `should sort by localName`() {
-    var locations = listOf(location3, location1, location2)
+    val locations = listOf(location3, location1, location2)
 
     whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
       locations,
@@ -228,8 +229,8 @@ class LocationServiceTest {
       service.getLocationsByPrisonAndNonResidentialUsageType(
         "prisonId",
         NonResidentialUsageType.OCCURRENCE,
-        true,
-        false,
+        sortByLocalName = true,
+        formatLocalName = false,
       )
     Assertions.assertThat(nonResLoc[0].localName).isEqualTo("A")
     Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
@@ -238,7 +239,7 @@ class LocationServiceTest {
 
   @Test
   fun `should not sort by localName`() {
-    var locations = listOf(location3, location2, location1)
+    val locations = listOf(location3, location2, location1)
 
     whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
       locations,
@@ -253,14 +254,19 @@ class LocationServiceTest {
 
   @Test
   fun `should sort by localName and format localName`() {
-    var locations = listOf(location3, location2, location1)
+    val locations = listOf(location3, location2, location1)
 
     whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
       locations,
     )
 
     val nonResLoc =
-      service.getLocationsByPrisonAndNonResidentialUsageType("prisonId", NonResidentialUsageType.OCCURRENCE, true, true)
+      service.getLocationsByPrisonAndNonResidentialUsageType(
+        "prisonId",
+        NonResidentialUsageType.OCCURRENCE,
+        sortByLocalName = true,
+        formatLocalName = true,
+      )
     Assertions.assertThat(nonResLoc[0].localName).isEqualTo("A")
     Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
     Assertions.assertThat(nonResLoc[2].localName).isEqualTo("Cc")
@@ -345,7 +351,7 @@ class LocationServiceTest {
     pathHierarchy = "path-a",
     locationType = LocationType.LOCATION,
     prisonId = "prisonId",
-    active = true,
+    status = LocationStatus.ACTIVE,
     whenCreated = LocalDateTime.now(),
     childLocations = mutableListOf(),
     createdBy = "createdBy",

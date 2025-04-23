@@ -13,6 +13,8 @@ interface ResidentialLocationRepository : JpaRepository<ResidentialLocation, UUI
 
   @Query("select l from ResidentialLocation l left join fetch l.capacity c where l.prisonId = :prisonId and l.parent is null")
   fun findAllByPrisonIdAndParentIsNull(prisonId: String): List<ResidentialLocation>
+
+  @Query("select l from ResidentialLocation l where l.prisonId = :prisonId and l.status = 'ARCHIVED'")
   fun findAllByPrisonIdAndArchivedIsTrue(prisonId: String): List<ResidentialLocation>
   fun findOneByPrisonIdAndPathHierarchy(prisonId: String, pathHierarchy: String): ResidentialLocation?
 

@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import org.hibernate.annotations.BatchSize
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -31,11 +32,11 @@ class Cell(
   pathHierarchy: String,
   locationType: LocationType = LocationType.CELL,
   prisonId: String,
+  status: LocationStatus,
   parent: Location? = null,
   localName: String? = null,
   comments: String? = null,
   orderWithinParentLocation: Int? = null,
-  active: Boolean = true,
   deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
@@ -68,17 +69,22 @@ class Cell(
 
   private var otherConvertedCellType: String? = null,
 
+  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
+  private var pendingChange: PendingLocationChange? = null,
+
+  var inCellSanitation: Boolean? = null,
+
 ) : ResidentialLocation(
   id = id,
   code = code,
   pathHierarchy = pathHierarchy,
   locationType = locationType,
   prisonId = prisonId,
+  status = status,
   parent = parent,
   localName = localName,
   comments = comments,
   orderWithinParentLocation = orderWithinParentLocation,
-  active = active,
   deactivatedDate = deactivatedDate,
   deactivatedReason = deactivatedReason,
   proposedReactivationDate = proposedReactivationDate,
@@ -129,8 +135,8 @@ class Cell(
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.STATUS,
-      this.getStatus().description,
-      LocationStatus.NON_RESIDENTIAL.description,
+      this.getDerivedStatus().description,
+      DerivedLocationStatus.NON_RESIDENTIAL.description,
       userOrSystemInContext,
       LocalDateTime.now(clock),
       linkedTransaction,
@@ -210,7 +216,7 @@ class Cell(
   fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.STATUS,
-      this.getStatus().description,
+      this.getDerivedStatus().description,
       LocationStatus.ACTIVE.description,
       userOrSystemInContext,
       LocalDateTime.now(clock),
@@ -245,7 +251,15 @@ class Cell(
         ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
       )
     }
-    super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, clock, linkedTransaction)
+    if (isCertificationApprovalProcessRequired() && getMaxCapacity() != maxCapacity) {
+      if (pendingChange == null) {
+        pendingChange = PendingLocationChange()
+      }
+      pendingChange?.let { it.capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = getWorkingCapacity() ?: 0) }
+      lock(clock, userOrSystemInContext, linkedTransaction)
+    } else {
+      super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, clock, linkedTransaction)
+    }
   }
 
   fun certifyCell(userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
@@ -482,6 +496,27 @@ class Cell(
     }
   }
 
+  override fun approve(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+    pendingChange?.let { pending ->
+      pending.capacity?.let { cap ->
+        setCapacity(
+          maxCapacity = cap.maxCapacity,
+          workingCapacity = cap.workingCapacity,
+          userOrSystemInContext,
+          clock,
+          linkedTransaction,
+        )
+      }
+    }
+    pendingChange = null
+    unlock(clock, userOrSystemInContext, linkedTransaction)
+  }
+
+  override fun reject(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+    pendingChange = null
+    unlock(clock, userOrSystemInContext, linkedTransaction)
+  }
+
   override fun toDto(
     includeChildren: Boolean,
     includeParent: Boolean,
@@ -508,6 +543,7 @@ class Cell(
     },
     convertedCellType = convertedCellType,
     otherConvertedCellType = otherConvertedCellType,
+    inCellSanitation = inCellSanitation,
   )
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
