@@ -58,14 +58,6 @@ abstract class EventBaseResource {
     )
   }
 
-  protected fun audit(function: () -> Location) = function().also { auditData ->
-    eventPublishAndAuditService.auditEvent(
-      auditType = AuditType.LOCATION_CREATED,
-      id = auditData.getKey(),
-      auditData = auditData,
-    )
-  }
-
   protected fun legacyEventPublishAndAudit(
     event: InternalLocationDomainEventType,
     function: () -> LegacyLocation,

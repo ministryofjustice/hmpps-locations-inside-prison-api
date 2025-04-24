@@ -141,7 +141,7 @@ open class ResidentialLocation(
     whenUpdated = LocalDateTime.now(clock)
   }
 
-  open fun lockForApproval(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+  open fun sendForApproval(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
     fun traverseAndLock(location: ResidentialLocation) {
       location.lock(clock, userOrSystemInContext, linkedTransaction)
       location.childLocations.filterIsInstance<ResidentialLocation>().forEach { traverseAndLock(it) }
