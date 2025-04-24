@@ -19,6 +19,8 @@ class ActivePrisonService(
 
   fun isActivePrison(prisonId: String) = isAllPrisonsActive() || (getPrisonConfiguration(prisonId)?.resiLocationServiceActive ?: false)
 
+  fun isCertificationApprovalRequired(prisonId: String) = getPrisonConfiguration(prisonId)?.certificationApprovalRequired == true
+
   fun getPrisonConfiguration(prisonId: String): PrisonConfiguration? = prisonConfigurationRepository.findById(prisonId).getOrNull()
 
   @Cacheable(CacheConfiguration.ACTIVE_PRISONS_CACHE_NAME)

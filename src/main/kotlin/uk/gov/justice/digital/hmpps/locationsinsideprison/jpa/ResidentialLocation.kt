@@ -100,8 +100,8 @@ open class ResidentialLocation(
   fun calcWorkingCapacity(): Int = cellLocations().filter { it.isActiveAndAllParentsActive() }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
-  private fun getMaxCapacity(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-    .sumOf { it.getMaxCapacity() ?: 0 }
+  fun getDerivedMaxCapacity(includePendingChange: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .sumOf { it.getMaxCapacity(includePendingChange) ?: 0 }
 
   private fun getCapacityOfCertifiedCell(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .sumOf { it.getCapacityOfCertifiedCell() ?: 0 }
@@ -360,6 +360,7 @@ open class ResidentialLocation(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
+    includePendingChange: Boolean,
   ): LocationDto = super.toDto(
     includeChildren = includeChildren,
     includeParent = includeParent,
@@ -369,10 +370,11 @@ open class ResidentialLocation(
     useHistoryForUpdate = useHistoryForUpdate,
     countCells = countCells,
     formatLocalName = formatLocalName,
+    includePendingChange = includePendingChange,
   ).copy(
 
     capacity = CapacityDto(
-      maxCapacity = getMaxCapacity(),
+      maxCapacity = getDerivedMaxCapacity(includePendingChange),
       workingCapacity = calcWorkingCapacity(),
     ),
 
@@ -402,7 +404,7 @@ open class ResidentialLocation(
 
     ignoreWorkingCapacity = true,
     capacity = CapacityDto(
-      maxCapacity = getMaxCapacity(),
+      maxCapacity = getDerivedMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),
     ),
 
@@ -442,7 +444,7 @@ open class ResidentialLocation(
 
   override fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation = super.toResidentialPrisonerLocation(mapOfPrisoners).copy(
     capacity = CapacityDto(
-      maxCapacity = getMaxCapacity(),
+      maxCapacity = getDerivedMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),
     ),
     certified = hasCertifiedCells(),

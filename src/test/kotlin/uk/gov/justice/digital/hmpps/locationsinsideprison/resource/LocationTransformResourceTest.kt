@@ -935,6 +935,51 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           )
         }
       }
+
+      @Test
+      fun `can change the max capacity of a cell for an certification approval required prison`() {
+        val aCell = leedsWing.cellLocations().find { it.getKey() == "LEI-A-1-001" } ?: throw RuntimeException("Cell not found")
+        prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
+
+        val incMaxCap = aCell.getMaxCapacity()?.inc() ?: 1
+        webTestClient.put().uri("/locations/${aCell.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                workingCapacity = aCell.getWorkingCapacity() ?: 0,
+                maxCapacity = incMaxCap,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "key": "${aCell.getKey()}",
+                "id": "${aCell.id}",
+                "prisonId": "${aCell.prisonId}",
+                "code": "${aCell.getCode()}",
+                "pathHierarchy": "${aCell.getPathHierarchy()}",
+                "capacity": {
+                  "maxCapacity": $incMaxCap,
+                  "workingCapacity": ${aCell.getWorkingCapacity()}
+                },
+                "certification": {
+                  "certified": true
+                },
+                "status": "LOCKED_ACTIVE"
+
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(0)
+      }
     }
   }
 }

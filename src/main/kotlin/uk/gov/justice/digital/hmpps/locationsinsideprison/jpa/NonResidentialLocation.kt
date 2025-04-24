@@ -92,6 +92,7 @@ class NonResidentialLocation(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
+    includePendingChange: Boolean,
   ): LocationDto = super.toDto(
     includeChildren = includeChildren,
     includeParent = includeParent,
@@ -101,6 +102,7 @@ class NonResidentialLocation(
     useHistoryForUpdate = useHistoryForUpdate,
     countCells = countCells,
     formatLocalName = formatLocalName,
+    includePendingChange = includePendingChange,
   ).copy(
     usage = nonResidentialUsages.map { it.toDto() }.sortedBy { it.usageType.sequence },
   )

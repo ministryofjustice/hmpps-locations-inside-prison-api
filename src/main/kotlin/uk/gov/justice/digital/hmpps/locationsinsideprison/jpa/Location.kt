@@ -342,6 +342,7 @@ abstract class Location(
     useHistoryForUpdate: Boolean = false,
     countCells: Boolean = false,
     formatLocalName: Boolean = false,
+    includePendingChange: Boolean = false,
   ): LocationDto {
     val topHistoryEntry = if (useHistoryForUpdate) {
       history.maxByOrNull { it.amendedDate }
@@ -910,7 +911,7 @@ abstract class Location(
     val capacityAdjusted = maxCapacity != null || workingCapacity != null
     if (this is Cell && capacityAdjusted) {
       setCapacity(
-        maxCapacity = maxCapacity ?: getMaxCapacity() ?: 0,
+        maxCapacity = maxCapacity ?: getMaxCapacity(includePendingChange = true) ?: 0,
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
         userOrSystemInContext = userOrSystemInContext,
         clock = clock,

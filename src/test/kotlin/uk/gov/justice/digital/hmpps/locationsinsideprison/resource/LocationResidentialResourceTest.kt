@@ -587,7 +587,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
     var createWing = CreateResidentialLocationRequest(
       prisonId = "LEI",
-      code = "A",
+      code = "B",
       locationType = ResidentialLocationType.WING,
       accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
     )
@@ -726,12 +726,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             """ 
              {
               "prisonId": "LEI",
-              "code": "A",
-              "pathHierarchy": "A",
+              "code": "B",
+              "pathHierarchy": "B",
               "status": "DRAFT",
               "locationType": "WING",
               "active": false,
-              "key": "LEI-A",
+              "key": "LEI-B",
               "capacity": {
                 "maxCapacity": 0,
                 "workingCapacity": 0
@@ -749,7 +749,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         webTestClient.post().uri("/locations/residential")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(createResidentialLocationRequest.copy(prisonId = "LEI", code = "001")))
+          .bodyValue(jsonString(createResidentialLocationRequest.copy(prisonId = "LEI", code = "010", parentId = leedsWing.findSubLocations().find { it.getKey() == "LEI-A-1" }!!.id)))
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(
@@ -757,12 +757,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             """ 
              {
               "prisonId": "LEI",
-              "code": "001",
-              "pathHierarchy": "001",
+              "code": "010",
+              "pathHierarchy": "A-1-010",
               "status": "DRAFT",
               "locationType": "CELL",
               "active": false,
-              "key": "LEI-001",
+              "key": "LEI-A-1-010",
               "inCellSanitation": true,
               "capacity": {
                 "maxCapacity": 2,

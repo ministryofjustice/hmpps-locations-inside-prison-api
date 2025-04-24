@@ -97,7 +97,11 @@ class Cell(
 
   fun getWorkingCapacity() = capacity?.workingCapacity
 
-  fun getMaxCapacity() = capacity?.maxCapacity
+  fun getMaxCapacity(includePendingChange: Boolean = false) = if (includePendingChange) {
+    pendingChange?.let { it.capacity?.maxCapacity } ?: capacity?.maxCapacity
+  } else {
+    capacity?.maxCapacity
+  }
 
   fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
 
@@ -251,7 +255,7 @@ class Cell(
         ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
       )
     }
-    if (isCertificationApprovalProcessRequired() && getMaxCapacity() != maxCapacity) {
+    if (isCertificationApprovalProcessRequired() && getMaxCapacity(includePendingChange = true) != maxCapacity) {
       if (pendingChange == null) {
         pendingChange = PendingLocationChange()
       }
@@ -526,6 +530,7 @@ class Cell(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
+    includePendingChange: Boolean,
   ): LocationDto = super.toDto(
     includeChildren = includeChildren,
     includeParent = includeParent,
@@ -535,6 +540,7 @@ class Cell(
     useHistoryForUpdate = useHistoryForUpdate,
     countCells = countCells,
     formatLocalName = formatLocalName,
+    includePendingChange = includePendingChange,
   ).copy(
     oldWorkingCapacity = if (isTemporarilyDeactivated()) {
       getWorkingCapacity()

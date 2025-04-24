@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
@@ -29,6 +30,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildVi
 import java.time.LocalDateTime
 
 const val EXPECTED_USERNAME = "A_TEST_USER"
+
 class CommonDataTestBase : SqsIntegrationTestBase() {
 
   @Autowired
@@ -56,6 +58,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
   lateinit var store: ResidentialLocation
   lateinit var cswap: VirtualResidentialLocation
   lateinit var tap: VirtualResidentialLocation
+  lateinit var leedsWing: ResidentialLocation
   lateinit var linkedTransaction: LinkedTransaction
 
   @BeforeEach
@@ -93,6 +96,32 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
           signedOperationCapacity = 10,
           whenUpdated = LocalDateTime.now(clock),
           updatedBy = SYSTEM_USERNAME,
+        ),
+      ),
+    )
+
+    // Create a new wing in Leeds prison
+    leedsWing = repository.saveAndFlush(
+      CreateWingRequest(
+        prisonId = "LEI",
+        wingCode = "A",
+        numberOfCellsPerSection = 3,
+        numberOfLandings = 2,
+        numberOfSpurs = 0,
+        defaultCellCapacity = 1,
+        wingDescription = "Wing A",
+      ).toEntity(
+        createInDraft = false,
+        createdBy = "TEST_USER",
+        clock = clock,
+        linkedTransaction = linkedTransactionRepository.saveAndFlush(
+          LinkedTransaction(
+            prisonId = "LEI",
+            transactionType = TransactionType.LOCATION_CREATE,
+            transactionDetail = "Initial Data Load for Leeds",
+            transactionInvokedBy = EXPECTED_USERNAME,
+            txStartTime = LocalDateTime.now(clock).minusDays(1),
+          ),
         ),
       ),
     )

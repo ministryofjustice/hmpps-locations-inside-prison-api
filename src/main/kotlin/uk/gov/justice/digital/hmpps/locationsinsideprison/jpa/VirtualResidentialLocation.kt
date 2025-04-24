@@ -80,6 +80,7 @@ open class VirtualResidentialLocation(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
+    includePendingChange: Boolean,
   ): LocationDto = super.toDto(
     includeChildren = includeChildren,
     includeParent = includeParent,
@@ -89,6 +90,7 @@ open class VirtualResidentialLocation(
     useHistoryForUpdate = useHistoryForUpdate,
     countCells = false,
     formatLocalName = formatLocalName,
+    includePendingChange = includePendingChange,
   ).copy(
     capacity = CapacityDto(
       maxCapacity = getMaxCapacity(),

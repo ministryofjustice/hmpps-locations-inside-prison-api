@@ -86,7 +86,7 @@ class EventPublishAndAuditService(
     location: Location,
     source: InformationSource,
   ) {
-    if (location.status != DerivedLocationStatus.DRAFT) {
+    if (location.status != DerivedLocationStatus.DRAFT && !location.locked) {
       snsService.publishDomainEvent(
         eventType = event,
         description = "${location.getKey()} ${event.description}",
