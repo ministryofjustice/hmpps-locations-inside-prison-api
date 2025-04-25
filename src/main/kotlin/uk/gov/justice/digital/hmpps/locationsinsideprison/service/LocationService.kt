@@ -23,6 +23,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationPrefixDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -153,7 +154,7 @@ class LocationService(
     return LocationPrefixDto(locationPrefix)
   }
 
-  fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> = cellsInGroup(prisonId, groupName, cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true))
+  fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> = cellsInGroup(prisonId, groupName, cellLocationRepository.findAllByPrisonIdAndStatus(prisonId, LocationStatus.ACTIVE))
     .toMutableList()
     .map { it.toDto() }
     .sortedWith(NaturalOrderComparator())
@@ -193,7 +194,6 @@ class LocationService(
     } else {
       results.sortedBy { it.getKey() }
     }
-    return results
   }
 
   fun getLocationsByPrisonAndNonResidentialUsageType(
@@ -259,7 +259,7 @@ class LocationService(
       parentLocation = parentLocation,
       code = request.code,
       prisonId = request.prisonId,
-    ) // check that code doesn't clash with existing location
+    ) // check that code doesn't clash with the existing location
 
     val linkedTransaction = createLinkedTransaction(
       prisonId = request.prisonId,
@@ -267,7 +267,9 @@ class LocationService(
       "Create residential location ${request.code} in prison ${request.prisonId} under ${parentLocation?.getKey() ?: "top level"}",
     )
 
-    val locationToCreate = request.toNewEntity(getUsername(), clock, linkedTransaction = linkedTransaction)
+    val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(request.prisonId)
+
+    val locationToCreate = request.toNewEntity(getUsername(), clock, linkedTransaction = linkedTransaction, createInDraft = certificationApprovalRequired)
     parentLocation?.let { locationToCreate.setParent(it) }
 
     val capacityChanged = request.isCell() && request.capacity != null
@@ -277,7 +279,7 @@ class LocationService(
     log.info("Created Residential Location [${createdLocation.getKey()}]")
     trackLocationUpdate(createdLocation, "Created Residential Location")
 
-    return createdLocation.toDto(includeParent = capacityChanged).also {
+    return createdLocation.toDto(includeParent = capacityChanged && !certificationApprovalRequired, includePendingChange = certificationApprovalRequired).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }
@@ -305,7 +307,7 @@ class LocationService(
       parentLocation = parentLocation,
       code = request.code,
       prisonId = request.prisonId,
-    ) // check that code doesn't clash with existing location
+    ) // check that code doesn't clash with the existing location
 
     val linkedTransaction = createLinkedTransaction(
       prisonId = request.prisonId,
@@ -339,7 +341,12 @@ class LocationService(
       "Create wing ${createWingRequest.wingCode} in prison ${createWingRequest.prisonId}",
     )
 
-    val wing = createWingRequest.toEntity(getUsername(), clock, linkedTransaction)
+    val wing = createWingRequest.toEntity(
+      createInDraft = activePrisonService.isCertificationApprovalRequired(createWingRequest.prisonId),
+      createdBy = getUsername(),
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
     return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
@@ -525,12 +532,6 @@ class LocationService(
       throw PermanentlyDeactivatedUpdateNotAllowedException(locCapChange.getKey())
     }
 
-    val trackingTx = linkedTransaction ?: createLinkedTransaction(
-      prisonId = locCapChange.prisonId,
-      TransactionType.CAPACITY_CHANGE,
-      "Capacity of ${locCapChange.getKey()} changed from ${locCapChange.calcWorkingCapacity()} to $workingCapacity",
-    )
-
     val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
     if (maxCapacity < prisoners.size) {
       throw CapacityException(
@@ -540,6 +541,18 @@ class LocationService(
       )
     }
 
+    val pendingChange = activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId) && locCapChange.getDerivedMaxCapacity(true) != maxCapacity
+
+    val trackingTx = linkedTransaction ?: createLinkedTransaction(
+      prisonId = locCapChange.prisonId,
+      type = if (pendingChange) TransactionType.PENDING_CELL_CHANGE else TransactionType.CAPACITY_CHANGE,
+      detail = if (pendingChange) {
+        "Pending max capacity change for ${locCapChange.getKey()} from ${locCapChange.capacity?.maxCapacity} to $maxCapacity"
+      } else {
+        "Capacities for ${locCapChange.getKey()} w/c changed from ${locCapChange.calcWorkingCapacity()} to $workingCapacity and max capacity changed from ${locCapChange.capacity?.maxCapacity} to $maxCapacity"
+      },
+    )
+
     locCapChange.setCapacity(
       maxCapacity = maxCapacity,
       workingCapacity = workingCapacity,
@@ -548,17 +561,30 @@ class LocationService(
       linkedTransaction = trackingTx,
     )
 
-    telemetryClient.trackEvent(
-      "Capacity updated",
-      mapOf(
-        "id" to id.toString(),
-        "key" to locCapChange.getKey(),
-        "maxCapacity" to maxCapacity.toString(),
-        "workingCapacity" to workingCapacity.toString(),
-      ),
-      null,
-    )
-    return locCapChange.toDto(includeParent = true, includeNonResidential = false).also {
+    if (pendingChange) {
+      telemetryClient.trackEvent(
+        "Pending capacity change",
+        mapOf(
+          "id" to id.toString(),
+          "key" to locCapChange.getKey(),
+          "maxCapacity" to maxCapacity.toString(),
+        ),
+        null,
+      )
+    } else {
+      telemetryClient.trackEvent(
+        "Capacity updated",
+        mapOf(
+          "id" to id.toString(),
+          "key" to locCapChange.getKey(),
+          "maxCapacity" to maxCapacity.toString(),
+          "workingCapacity" to workingCapacity.toString(),
+        ),
+        null,
+      )
+    }
+
+    return locCapChange.toDto(includeParent = !pendingChange, includePendingChange = pendingChange, includeNonResidential = false).also {
       trackingTx.txEndTime = LocalDateTime.now(clock)
     }
   }
@@ -572,7 +598,7 @@ class LocationService(
       throw PermanentlyDeactivatedUpdateNotAllowedException(cell.getKey())
     }
 
-    // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialists cell types
+    // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialist cell types
     if (specialistCellTypes.isEmpty() && cell.accommodationType == AccommodationType.NORMAL_ACCOMMODATION && cell.getWorkingCapacity() == 0) {
       throw CapacityException(
         cell.getKey(),
@@ -844,10 +870,10 @@ class LocationService(
         if (!location.isPermanentlyDeactivated()) {
           if (location is Cell) {
             with(capacityChange) {
-              if (location.getMaxCapacity() != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
+              if (location.getMaxCapacity(includePendingChange = true) != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
                 try {
                   val oldWorkingCapacity = location.getWorkingCapacity()
-                  val oldMaxCapacity = location.getMaxCapacity()
+                  val oldMaxCapacity = location.getMaxCapacity(includePendingChange = true)
                   updateCellCapacity(
                     location.id!!,
                     maxCapacity = maxCapacity,
@@ -1166,7 +1192,7 @@ class LocationService(
       )
       .filter { !it.isPermanentlyDeactivated() }
       .filter { it.isLocationShownOnResidentialSummary() }
-      .map { it.toDto(countInactiveCells = true, countCells = true) }
+      .map { it.toDto(countInactiveCells = true, countCells = true, includePendingChange = activePrisonService.isCertificationApprovalRequired(prisonId)) }
       .sortedWith(NaturalOrderComparator())
 
     val subLocationTypes = calculateSubLocationDescription(locations)
@@ -1216,7 +1242,7 @@ class LocationService(
     }
 
     return (
-      startLocation?.cellLocations() ?: cellLocationRepository.findAllByPrisonIdAndActive(prisonId, false)
+      startLocation?.cellLocations() ?: cellLocationRepository.findAllByPrisonIdAndStatus(prisonId, LocationStatus.INACTIVE)
       )
       .filter { it.isTemporarilyDeactivated() }
       .map { it.toDto() }
@@ -1241,7 +1267,7 @@ class LocationService(
       residentialLocationRepository.findOneByPrisonIdAndId(prisonId, locationId)?.cellLocations()
         ?: throw LocationNotFoundException(locationId.toString())
     } else {
-      cellLocationRepository.findAllByPrisonIdAndActive(prisonId, true)
+      cellLocationRepository.findAllByPrisonIdAndStatus(prisonId, LocationStatus.ACTIVE)
     }
 
     val cellsWithCapacity = cellsInGroup(

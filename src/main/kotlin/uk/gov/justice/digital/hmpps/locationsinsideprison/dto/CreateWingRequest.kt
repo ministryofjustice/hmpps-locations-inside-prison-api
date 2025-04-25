@@ -49,11 +49,13 @@ data class CreateWingRequest(
   val defaultCellCapacity: Int = 1,
 ) {
 
-  fun toEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction): ResidentialLocation {
+  fun toEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false): ResidentialLocation {
+    val status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE
     val wing = ResidentialLocation(
       prisonId = prisonId,
       code = wingCode,
       locationType = LocationType.WING,
+      status = status,
       pathHierarchy = wingCode,
       localName = wingDescription,
       orderWithinParentLocation = 1,
@@ -69,6 +71,7 @@ data class CreateWingRequest(
           prisonId = prisonId,
           code = "$spurNumber",
           locationType = LocationType.SPUR,
+          status = status,
           pathHierarchy = "$wingCode-$spurNumber",
           localName = "Spur $spurNumber on Wing $wingCode",
           orderWithinParentLocation = spurNumber,
@@ -88,6 +91,7 @@ data class CreateWingRequest(
             prisonId = prisonId,
             code = "$landingNumber",
             locationType = LocationType.SPUR,
+            status = status,
             pathHierarchy = "${spur.getPathHierarchy()}-$landingNumber",
             localName = "Landing $landingNumber on Spur ${spur.getCode()}",
             orderWithinParentLocation = landingNumber,
@@ -108,6 +112,7 @@ data class CreateWingRequest(
           prisonId = prisonId,
           code = code,
           pathHierarchy = "${leaf.getPathHierarchy()}-$code",
+          status = status,
           localName = "Cell $cellNumber on ${leaf.getCode()}",
           accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
           orderWithinParentLocation = cellNumber,

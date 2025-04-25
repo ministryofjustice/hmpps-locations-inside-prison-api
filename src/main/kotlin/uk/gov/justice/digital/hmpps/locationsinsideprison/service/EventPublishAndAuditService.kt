@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import org.springframework.stereotype.Service
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
@@ -85,16 +86,18 @@ class EventPublishAndAuditService(
     location: Location,
     source: InformationSource,
   ) {
-    snsService.publishDomainEvent(
-      eventType = event,
-      description = "${location.getKey()} ${event.description}",
-      occurredAt = LocalDateTime.now(clock),
-      additionalInformation = AdditionalInformation(
-        id = location.id,
-        key = location.getKey(),
-        source = source,
-      ),
-    )
+    if (location.status != DerivedLocationStatus.DRAFT && !location.locked) {
+      snsService.publishDomainEvent(
+        eventType = event,
+        description = "${location.getKey()} ${event.description}",
+        occurredAt = LocalDateTime.now(clock),
+        additionalInformation = AdditionalInformation(
+          id = location.id,
+          key = location.getKey(),
+          source = source,
+        ),
+      )
+    }
   }
 
   fun auditEvent(

@@ -66,6 +66,41 @@ class PrisonConfigurationResource(
     status: ResidentialStatus,
   ) = prisonConfigurationService.updateResiLocationServiceActiveStatus(prisonId, status)
 
+  @PutMapping("/{prisonId}/certification-approval-required/{approvalProcessStatus}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('LOCATION_CONFIG_ADMIN')")
+  @Operation(
+    summary = "Update the certification approval process for a prison",
+    description = "Requires role LOCATION_ADMIN",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns configuration",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CONFIG_ADMIN role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun updateCertificationApprovalProcessForPrison(
+    @Schema(description = "Prison ID", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
+    @PathVariable
+    prisonId: String,
+    @Schema(description = "Activate/Deactivate the certification approval process for this prison", example = "ACTIVE", required = true)
+    @PathVariable
+    approvalProcessStatus: ResidentialStatus,
+  ) = prisonConfigurationService.updateCertificationApprovalProcess(prisonId, approvalProcessStatus)
+
   @GetMapping("/{prisonId}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('LOCATION_CONFIG_ADMIN')")

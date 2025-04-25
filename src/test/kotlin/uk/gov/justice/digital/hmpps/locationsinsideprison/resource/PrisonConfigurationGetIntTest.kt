@@ -5,7 +5,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
@@ -90,7 +89,6 @@ class PrisonConfigurationGetIntTest : SqsIntegrationTestBase() {
     @Nested
     inner class HappyPath {
       @Test
-      @Sql("classpath:repository/insert-prison-signed-operation-capacity.sql")
       fun `can retrieve Signed Operation Capacity`() {
         webTestClient.get().uri("/signed-op-cap/MDI")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
@@ -99,8 +97,8 @@ class PrisonConfigurationGetIntTest : SqsIntegrationTestBase() {
           .expectBody().json(
             """
               {
-                "signedOperationCapacity": 130,
-                "updatedBy": "USER",
+                "signedOperationCapacity": 200,
+                "updatedBy": "LOCATIONS_INSIDE_PRISON_API",
                 "prisonId": "MDI",
                 "whenUpdated": "2023-12-05T12:34:56"
               }

@@ -28,7 +28,7 @@ data class LocationTest(
   val accommodationTypes: List<AccommodationType>? = null,
   val specialistCellTypes: List<SpecialistCellType>? = null,
   val usedFor: List<UsedForType>? = null,
-  val status: LocationStatus? = null,
+  val status: DerivedLocationStatus? = null,
   val convertedCellType: ConvertedCellType? = null,
   val otherConvertedCellType: String? = null,
   val active: Boolean? = true,

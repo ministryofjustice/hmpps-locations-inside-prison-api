@@ -95,7 +95,8 @@ class PrisonConfigurationResourceTest : SqsIntegrationTestBase() {
               {
                 "prisonId": "$prisonId",
                 "resiLocationServiceActive": "INACTIVE",
-                "includeSegregationInRollCount": "INACTIVE"
+                "includeSegregationInRollCount": "INACTIVE",
+                "certificationApprovalRequired": "INACTIVE"
               }
             """.trimIndent(),
             JsonCompareMode.STRICT,
@@ -177,7 +178,8 @@ class PrisonConfigurationResourceTest : SqsIntegrationTestBase() {
               {
                 "prisonId": "$prisonId",
                 "resiLocationServiceActive": "ACTIVE",
-                "includeSegregationInRollCount": "INACTIVE"
+                "includeSegregationInRollCount": "INACTIVE",
+                "certificationApprovalRequired": "INACTIVE"
               }
             """.trimIndent(),
             JsonCompareMode.STRICT,
@@ -192,7 +194,8 @@ class PrisonConfigurationResourceTest : SqsIntegrationTestBase() {
               {
                 "prisonId": "$prisonId",
                 "resiLocationServiceActive": "INACTIVE",
-                "includeSegregationInRollCount": "INACTIVE"
+                "includeSegregationInRollCount": "INACTIVE",
+                "certificationApprovalRequired": "INACTIVE"
               }
             """.trimIndent(),
             JsonCompareMode.STRICT,
@@ -209,7 +212,43 @@ class PrisonConfigurationResourceTest : SqsIntegrationTestBase() {
               {
                 "prisonId": "$prisonId",
                 "resiLocationServiceActive": "INACTIVE",
-                "includeSegregationInRollCount": "INACTIVE"
+                "includeSegregationInRollCount": "INACTIVE",
+                "certificationApprovalRequired": "INACTIVE"
+              }
+            """.trimIndent(),
+            JsonCompareMode.STRICT,
+          )
+      }
+
+      @Test
+      fun `can update certification approval process`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/certification-approval-required/ACTIVE")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "prisonId": "$prisonId",
+                "resiLocationServiceActive": "INACTIVE",
+                "includeSegregationInRollCount": "INACTIVE",
+                "certificationApprovalRequired": "ACTIVE"
+              }
+            """.trimIndent(),
+            JsonCompareMode.STRICT,
+          )
+
+        webTestClient.put().uri("/prison-configuration/$prisonId/certification-approval-required/INACTIVE")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "prisonId": "$prisonId",
+                "resiLocationServiceActive": "INACTIVE",
+                "includeSegregationInRollCount": "INACTIVE",
+                "certificationApprovalRequired": "INACTIVE"
               }
             """.trimIndent(),
             JsonCompareMode.STRICT,

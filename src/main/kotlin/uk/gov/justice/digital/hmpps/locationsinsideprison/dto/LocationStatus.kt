@@ -5,6 +5,22 @@ enum class LocationStatus(
 ) {
   ACTIVE("Active"),
   INACTIVE("Inactive"),
-  NON_RESIDENTIAL("Non-residential"),
   ARCHIVED("Archived"),
+  DRAFT("Draft"),
+}
+
+enum class DerivedLocationStatus(
+  val description: String,
+) {
+  ACTIVE("Active"),
+  INACTIVE("Inactive"),
+  ARCHIVED("Archived"),
+  DRAFT("Draft"),
+
+  NON_RESIDENTIAL("Non-residential"),
+
+  LOCKED_ACTIVE("Active (Locked)"),
+  LOCKED_INACTIVE("Inactive (Locked)"),
+  LOCKED_DRAFT("Draft (Locked)"),
+  LOCKED_NON_RESIDENTIAL("Non-residential (Locked)"),
 }

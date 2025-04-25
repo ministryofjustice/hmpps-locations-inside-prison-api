@@ -15,6 +15,7 @@ class PrisonConfiguration(
   var signedOperationCapacity: Int,
   var resiLocationServiceActive: Boolean = false,
   var includeSegregationInRollCount: Boolean = false,
+  var certificationApprovalRequired: Boolean = false,
   var whenUpdated: LocalDateTime,
   var updatedBy: String,
 ) {
@@ -29,6 +30,7 @@ class PrisonConfiguration(
     prisonId = prisonId,
     resiLocationServiceActive = convertToStatus(resiLocationServiceActive),
     includeSegregationInRollCount = convertToStatus(includeSegregationInRollCount),
+    certificationApprovalRequired = convertToStatus(certificationApprovalRequired),
   )
 
   private fun convertToStatus(active: Boolean) = when (active) {
@@ -47,5 +49,5 @@ class PrisonConfiguration(
 
   override fun hashCode(): Int = prisonId.hashCode()
 
-  override fun toString(): String = "PrisonConfiguration(includeSegregationInRollCount=$includeSegregationInRollCount, resiLocationServiceActive=$resiLocationServiceActive, signedOperationCapacity=$signedOperationCapacity, prisonId='$prisonId')"
+  override fun toString(): String = "PrisonConfiguration(prisonId='$prisonId', signedOperationCapacity=$signedOperationCapacity, resiLocationServiceActive=$resiLocationServiceActive, includeSegregationInRollCount=$includeSegregationInRollCount, certificationApprovalRequired=$certificationApprovalRequired)"
 }

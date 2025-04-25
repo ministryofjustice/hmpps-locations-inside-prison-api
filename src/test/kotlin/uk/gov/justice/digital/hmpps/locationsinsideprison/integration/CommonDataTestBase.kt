@@ -2,6 +2,9 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
+import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -10,6 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
@@ -18,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
@@ -25,10 +30,14 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildVi
 import java.time.LocalDateTime
 
 const val EXPECTED_USERNAME = "A_TEST_USER"
+
 class CommonDataTestBase : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: LocationRepository
+
+  @Autowired
+  lateinit var configurationRepository: PrisonConfigurationRepository
 
   @Autowired
   lateinit var linkedTransactionRepository: LinkedTransactionRepository
@@ -49,6 +58,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
   lateinit var store: ResidentialLocation
   lateinit var cswap: VirtualResidentialLocation
   lateinit var tap: VirtualResidentialLocation
+  lateinit var leedsWing: ResidentialLocation
   lateinit var linkedTransaction: LinkedTransaction
 
   @BeforeEach
@@ -56,6 +66,65 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     prisonerSearchMockServer.resetAll()
     prisonRegisterMockServer.resetAll()
     repository.deleteAll()
+    configurationRepository.deleteAll()
+
+    configurationRepository.saveAllAndFlush(
+      listOf(
+        PrisonConfiguration(
+          prisonId = "MDI",
+          signedOperationCapacity = 200,
+          resiLocationServiceActive = true,
+          whenUpdated = LocalDateTime.now(clock),
+          updatedBy = SYSTEM_USERNAME,
+        ),
+        PrisonConfiguration(
+          prisonId = "LEI",
+          signedOperationCapacity = 200,
+          resiLocationServiceActive = true,
+          certificationApprovalRequired = true,
+          whenUpdated = LocalDateTime.now(clock),
+          updatedBy = SYSTEM_USERNAME,
+        ),
+        PrisonConfiguration(
+          prisonId = "ZZGHI",
+          signedOperationCapacity = 0,
+          whenUpdated = LocalDateTime.now(clock),
+          updatedBy = SYSTEM_USERNAME,
+        ),
+        PrisonConfiguration(
+          prisonId = "NMI",
+          signedOperationCapacity = 10,
+          whenUpdated = LocalDateTime.now(clock),
+          updatedBy = SYSTEM_USERNAME,
+        ),
+      ),
+    )
+
+    // Create a new wing in Leeds prison
+    leedsWing = repository.saveAndFlush(
+      CreateWingRequest(
+        prisonId = "LEI",
+        wingCode = "A",
+        numberOfCellsPerSection = 3,
+        numberOfLandings = 2,
+        numberOfSpurs = 0,
+        defaultCellCapacity = 1,
+        wingDescription = "Wing A",
+      ).toEntity(
+        createInDraft = false,
+        createdBy = "TEST_USER",
+        clock = clock,
+        linkedTransaction = linkedTransactionRepository.saveAndFlush(
+          LinkedTransaction(
+            prisonId = "LEI",
+            transactionType = TransactionType.LOCATION_CREATE,
+            transactionDetail = "Initial Data Load for Leeds",
+            transactionInvokedBy = EXPECTED_USERNAME,
+            txStartTime = LocalDateTime.now(clock).minusDays(1),
+          ),
+        ),
+      ),
+    )
 
     linkedTransaction = linkedTransactionRepository.saveAndFlush(
       LinkedTransaction(
@@ -165,7 +234,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     inactiveCellB3001 = repository.save(
       buildCell(
         pathHierarchy = "B-A-001",
-        active = false,
+        status = LocationStatus.INACTIVE,
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
@@ -178,8 +247,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         pathHierarchy = "Z-1-003",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
         certification = Certification(certified = true, capacityOfCertifiedCell = 2),
-        active = false,
-        archived = true,
+        status = LocationStatus.ARCHIVED,
         linkedTransaction = linkedTransaction,
       ),
     )

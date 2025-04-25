@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import java.time.Clock
@@ -78,6 +79,7 @@ fun generateWingLocation(localName: String?) = ResidentialLocation(
   code = "A",
   prisonId = "MDI",
   locationType = LocationType.WING,
+  status = LocationStatus.ACTIVE,
   localName = localName,
   pathHierarchy = "MDI-A",
   createdBy = "user",
@@ -89,6 +91,7 @@ fun generateCellLocation() = Cell(
   code = "001",
   prisonId = "MDI",
   locationType = LocationType.CELL,
+  status = LocationStatus.ACTIVE,
   pathHierarchy = "MDI-001",
   createdBy = "user",
   whenCreated = LocalDateTime.now(),

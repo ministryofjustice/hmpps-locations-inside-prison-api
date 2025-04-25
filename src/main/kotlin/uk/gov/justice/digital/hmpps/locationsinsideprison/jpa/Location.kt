@@ -21,6 +21,7 @@ import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ChangeHistory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
@@ -41,7 +42,7 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
-val DATE_FORMAT = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
 @Entity
 @DiscriminatorColumn(name = "location_type_discriminator")
@@ -61,6 +62,10 @@ abstract class Location(
 
   open val prisonId: String,
 
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(insertable = false, updatable = false, nullable = true, name = "prisonId")
+  private val prisonConfiguration: PrisonConfiguration? = null,
+
   @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST])
   @JoinColumn(name = "parent_id")
   private var parent: Location? = null,
@@ -71,8 +76,9 @@ abstract class Location(
 
   open var orderWithinParentLocation: Int? = null,
 
-  private var active: Boolean = true,
-  private var archived: Boolean = false,
+  @Enumerated(EnumType.STRING)
+  open var status: LocationStatus,
+
   private var archivedReason: String? = null,
   open var deactivatedDate: LocalDateTime? = null,
   @Enumerated(EnumType.STRING)
@@ -125,6 +131,8 @@ abstract class Location(
 
   open fun getParent(): Location? = parent
 
+  fun isCertificationApprovalProcessRequired() = prisonConfiguration?.certificationApprovalRequired == true
+
   private fun findArchivedParent(): Location? {
     fun findArchivedLocation(location: Location?): Location? {
       if (location == null) {
@@ -162,14 +170,18 @@ abstract class Location(
 
   abstract fun findDeactivatedLocationInHierarchy(): Location?
   abstract fun hasDeactivatedParent(): Boolean
-  open fun isActive() = active && !isPermanentlyDeactivated()
-  open fun isArchived() = archived
+
+  open fun isActive() = status == LocationStatus.ACTIVE && !isPermanentlyDeactivated()
+  open fun isArchived() = status == LocationStatus.ARCHIVED
+  private fun isDraft() = status == LocationStatus.DRAFT
+  open fun isLocked() = false
+
   open fun isResidentialRoomOrConvertedCell() = false
   open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent()
+
   open fun isDeactivatedByParent() = isActive() && hasDeactivatedParent()
   open fun isTemporarilyDeactivated() = !isActiveAndAllParentsActive() && !isPermanentlyDeactivated()
-  open fun isPermanentlyDeactivated() = findArchivedLocationInHierarchy()?.archived == true
-
+  open fun isPermanentlyDeactivated() = findArchivedLocationInHierarchy()?.status == LocationStatus.ARCHIVED
   fun addChildLocation(childLocation: Location): Location {
     childLocation.parent = this
     childLocations.add(childLocation)
@@ -330,6 +342,7 @@ abstract class Location(
     useHistoryForUpdate: Boolean = false,
     countCells: Boolean = false,
     formatLocalName: Boolean = false,
+    includePendingChange: Boolean = false,
   ): LocationDto {
     val topHistoryEntry = if (useHistoryForUpdate) {
       history.maxByOrNull { it.amendedDate }
@@ -340,7 +353,8 @@ abstract class Location(
     return LocationDto(
       id = id!!,
       code = getCode(),
-      status = getStatus(),
+      status = getDerivedStatus(),
+      locked = isLocked(),
       locationType = getDerivedLocationType(),
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
@@ -469,7 +483,7 @@ abstract class Location(
     },
     prisoners = mapOfPrisoners[getPathHierarchy()] ?: emptyList(),
     deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
-    status = getStatus(),
+    status = getDerivedStatus(),
     isLeafLevel = isLeafLevel(),
     accommodationType = (this as? Cell)?.accommodationType,
     subLocations = this.childLocations.filter { !it.isPermanentlyDeactivated() }
@@ -490,17 +504,19 @@ abstract class Location(
     null
   }
 
-  fun getStatus(ignoreParentStatus: Boolean = false): LocationStatus = if ((ignoreParentStatus && isActive()) || isActiveAndAllParentsActive()) {
+  fun getDerivedStatus(ignoreParentStatus: Boolean = false): DerivedLocationStatus = if ((ignoreParentStatus && isActive()) || isActiveAndAllParentsActive()) {
     if (isConvertedCell()) {
-      LocationStatus.NON_RESIDENTIAL
+      if (isLocked()) DerivedLocationStatus.LOCKED_NON_RESIDENTIAL else DerivedLocationStatus.NON_RESIDENTIAL
     } else {
-      LocationStatus.ACTIVE
+      if (isLocked()) DerivedLocationStatus.LOCKED_ACTIVE else DerivedLocationStatus.ACTIVE
     }
   } else {
     if (isPermanentlyDeactivated()) {
-      LocationStatus.ARCHIVED
+      DerivedLocationStatus.ARCHIVED
+    } else if (isDraft()) {
+      if (isLocked()) DerivedLocationStatus.LOCKED_DRAFT else DerivedLocationStatus.DRAFT
     } else {
-      LocationStatus.INACTIVE
+      if (isLocked()) DerivedLocationStatus.LOCKED_INACTIVE else DerivedLocationStatus.INACTIVE
     }
   }
 
@@ -642,7 +658,7 @@ abstract class Location(
 
       if (addHistory(
           LocationAttribute.STATUS,
-          getStatus(ignoreParentStatus = true).description,
+          getDerivedStatus(ignoreParentStatus = true).description,
           LocationStatus.INACTIVE.description,
           userOrSystemInContext,
           amendedDate,
@@ -698,7 +714,7 @@ abstract class Location(
       }
 
       if (isActive()) {
-        this.active = false
+        this.status = LocationStatus.INACTIVE
         this.deactivatedDate = deactivatedDate
         this.deactivatedBy = userOrSystemInContext
         log.info("Temporarily Deactivated Location [${getKey()}]")
@@ -831,7 +847,7 @@ abstract class Location(
       val amendedDate = LocalDateTime.now(clock)
       addHistory(
         LocationAttribute.STATUS,
-        this.getStatus().description,
+        this.getDerivedStatus().description,
         LocationStatus.ARCHIVED.description,
         userOrSystemInContext,
         amendedDate,
@@ -846,8 +862,7 @@ abstract class Location(
         linkedTransaction,
       )
 
-      this.archived = true
-      this.active = false
+      this.status = LocationStatus.ARCHIVED
       this.deactivatedDate = deactivatedDate
       this.deactivatedReason = null
       this.proposedReactivationDate = null
@@ -896,7 +911,7 @@ abstract class Location(
     val capacityAdjusted = maxCapacity != null || workingCapacity != null
     if (this is Cell && capacityAdjusted) {
       setCapacity(
-        maxCapacity = maxCapacity ?: getMaxCapacity() ?: 0,
+        maxCapacity = maxCapacity ?: getMaxCapacity(includePendingChange = true) ?: 0,
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
         userOrSystemInContext = userOrSystemInContext,
         clock = clock,
@@ -910,7 +925,7 @@ abstract class Location(
       val amendedDate = LocalDateTime.now(clock)
       addHistory(
         LocationAttribute.STATUS,
-        this.getStatus().description,
+        this.getDerivedStatus().description,
         LocationStatus.ACTIVE.description,
         userOrSystemInContext,
         amendedDate,
@@ -933,7 +948,7 @@ abstract class Location(
         linkedTransaction,
       )
 
-      this.active = true
+      this.status = LocationStatus.ACTIVE
       this.deactivatedReason = null
       this.deactivatedDate = null
       this.deactivationReasonDescription = null

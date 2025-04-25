@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualLocationCode.entries
 import java.time.Clock
@@ -34,11 +35,12 @@ open class VirtualResidentialLocation(
   code: String,
   pathHierarchy: String,
   prisonId: String,
+  status: LocationStatus,
   parent: Location? = null,
   localName: String? = null,
   comments: String? = null,
   orderWithinParentLocation: Int? = 1,
-  active: Boolean = true,
+  pendingChange: PendingLocationChange? = null,
   deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
@@ -48,7 +50,6 @@ open class VirtualResidentialLocation(
   locationType: LocationType = LocationType.AREA,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.OTHER_USE,
   capacity: Capacity? = null,
-
 ) : ResidentialLocation(
   id = id,
   code = code,
@@ -58,7 +59,7 @@ open class VirtualResidentialLocation(
   localName = localName,
   comments = comments,
   orderWithinParentLocation = orderWithinParentLocation,
-  active = active,
+  status = status,
   deactivatedDate = deactivatedDate,
   deactivatedReason = deactivatedReason,
   proposedReactivationDate = proposedReactivationDate,
@@ -79,6 +80,7 @@ open class VirtualResidentialLocation(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
+    includePendingChange: Boolean,
   ): LocationDto = super.toDto(
     includeChildren = includeChildren,
     includeParent = includeParent,
@@ -88,6 +90,7 @@ open class VirtualResidentialLocation(
     useHistoryForUpdate = useHistoryForUpdate,
     countCells = false,
     formatLocalName = formatLocalName,
+    includePendingChange = includePendingChange,
   ).copy(
     capacity = CapacityDto(
       maxCapacity = getMaxCapacity(),

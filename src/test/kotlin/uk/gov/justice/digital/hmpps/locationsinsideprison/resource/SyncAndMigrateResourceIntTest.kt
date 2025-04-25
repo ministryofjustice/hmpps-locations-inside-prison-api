@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisDeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
@@ -132,8 +133,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       buildCell(
         prisonId = "ZZGHI",
         pathHierarchy = "B-1-013",
-        archived = true,
-        active = false,
+        status = LocationStatus.ARCHIVED,
         linkedTransaction = linkedTransaction,
       ),
     )

@@ -67,143 +67,62 @@ class LocationResourceIntTest : CommonDataTestBase() {
 
       @Test
       fun `can retrieve details of a page of locations`() {
-        webTestClient.get().uri("/locations?size=14&sort=pathHierarchy,asc")
+        webTestClient.get().uri("/locations?size=1&sort=pathHierarchy,desc")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
             // language=json
             """
-              {
-                "totalPages": 2,
-                "totalElements": 17,
-                "first": true,
-                "last": false,
-                "size": 14,
-                "content": [
-                  {
-                    "prisonId": "NMI",
-                    "code": "A",
-                    "pathHierarchy": "A",
-                    "locationType": "WING",
-                    "localName": "WING A",
-                    "key": "NMI-A"
-                  }, 
-                  {
-                    "prisonId": "NMI",
-                    "code": "1",
-                    "pathHierarchy": "A-1",
-                    "locationType": "LANDING",
-                    "localName": "LANDING A",
-                    "key": "NMI-A-1"
-                  }, 
-                  {
-                    "prisonId": "NMI",
-                    "code": "001",
-                    "pathHierarchy": "A-1-001",
-                    "locationType": "CELL",
-                    "key": "NMI-A-1-001"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "B",
-                    "pathHierarchy": "B",
-                    "locationType": "WING",
-                    "key": "MDI-B"
-                   },
-                  {
-                    "prisonId": "MDI",
-                    "code": "A",
-                    "pathHierarchy": "B-A",
-                    "locationType": "LANDING",
-                    "key": "MDI-B-A"
-                  },                   {
-                    "prisonId": "MDI",
-                    "code": "001",
-                    "pathHierarchy": "B-A-001",
-                    "locationType": "CELL",
-                    "key": "MDI-B-A-001"
-                   },
+            {
+              "content": [
+                {
+                  "key": "MDI-Z-VISIT",
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "ignoreWorkingCapacity": false,
+                  "usage": [
                     {
-                    "prisonId": "MDI",
-                    "code": "CSWAP",
-                    "pathHierarchy": "CSWAP",
-                    "locationType": "AREA",
-                    "localName": "Cell Swap",
-                    "key": "MDI-CSWAP"
-                  }, 
-                    {
-                    "prisonId": "MDI",
-                    "code": "TAP",
-                    "pathHierarchy": "TAP",
-                    "locationType": "AREA",
-                    "localName": "Temp Absentee Prisoner",
-                    "key": "MDI-TAP"
-                  }, 
-                   {
-                    "prisonId": "MDI",
-                    "code": "Z",
-                    "pathHierarchy": "Z",
-                    "locationType": "WING",
-                    "key": "MDI-Z"
-                   },
-                  {
-                    "prisonId": "MDI",
-                    "code": "1",
-                    "pathHierarchy": "Z-1",
-                    "locationType": "LANDING",
-                    "key": "MDI-Z-1"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "001",
-                    "pathHierarchy": "Z-1-001",
-                    "locationType": "CELL",
-                    "key": "MDI-Z-1-001"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "002",
-                    "pathHierarchy": "Z-1-002",
-                    "locationType": "CELL",
-                    "key": "MDI-Z-1-002"
-                  }, 
-                  {
-                    "prisonId": "MDI",
-                    "code": "003",
-                    "pathHierarchy": "Z-1-003",
-                    "locationType": "CELL",
-                    "key": "MDI-Z-1-003"
-                  },
-                  {
-                    "prisonId": "MDI",
-                    "code": "01S",
-                    "pathHierarchy": "Z-1-01S",
-                    "locationType": "STORE",
-                    "key": "MDI-Z-1-01S"
-                  }
-                ],
-                "number": 0,
+                      "usageType": "VISIT",
+                      "capacity": 15,
+                      "sequence": 1
+                    }
+                  ],
+                  "orderWithinParentLocation": 99,
+                  "active": true,
+                  "permanentlyDeactivated": false,
+                  "lastModifiedBy": "DIFFERENT_USER",
+                  "lastModifiedDate": "2023-12-04T12:34:56"
+                }
+              ],
+              "pageable": {
+                "pageNumber": 0,
+                "pageSize": 1,
                 "sort": {
                   "empty": false,
-                  "sorted": true,
-                  "unsorted": false
+                  "unsorted": false,
+                  "sorted": true
                 },
-                "numberOfElements": 14,
-                "pageable": {
-                  "offset": 0,
-                  "sort": {
-                    "empty": false,
-                    "sorted": true,
-                    "unsorted": false
-                  },
-                  "pageSize": 14,
-                  "pageNumber": 0,
-                  "paged": true,
-                  "unpaged": false
-                },
-                "empty": false
-              }
+                "offset": 0,
+                "paged": true,
+                "unpaged": false
+              },
+              "last": false,
+              "totalElements": 26,
+              "totalPages": 26,
+              "first": true,
+              "size": 1,
+              "number": 0,
+              "sort": {
+                "empty": false,
+                "unsorted": false,
+                "sorted": true
+              },
+              "numberOfElements": 1,
+              "empty": false
+            }
 
               """,
             JsonCompareMode.LENIENT,
