@@ -93,7 +93,7 @@ data class CreateWingRequest(
             locationType = LocationType.SPUR,
             status = status,
             pathHierarchy = "${spur.getPathHierarchy()}-$landingNumber",
-            localName = "Landing $landingNumber on Spur ${spur.getCode()}",
+            localName = "Landing $landingNumber on ${if ((numberOfSpurs ?: 0) > 0) "Spur " + spur.getCode() else "Wing " + wing.getCode()}",
             orderWithinParentLocation = landingNumber,
             createdBy = createdBy,
             whenCreated = LocalDateTime.now(clock),
