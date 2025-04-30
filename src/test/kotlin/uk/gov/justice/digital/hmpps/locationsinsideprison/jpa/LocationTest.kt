@@ -91,6 +91,7 @@ fun generateCellLocation() = Cell(
   code = "001",
   prisonId = "MDI",
   locationType = LocationType.CELL,
+  cellMark = "1",
   status = LocationStatus.ACTIVE,
   pathHierarchy = "MDI-001",
   createdBy = "user",

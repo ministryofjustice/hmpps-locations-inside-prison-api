@@ -5,6 +5,8 @@ import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -13,7 +15,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import java.time.Clock
 import java.time.LocalDateTime
 
@@ -49,6 +50,10 @@ data class CreateWingRequest(
   val defaultCellCapacity: Int = 1,
 ) {
 
+  companion object {
+    val log: Logger = LoggerFactory.getLogger(this::class.java)
+  }
+
   fun toEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false): ResidentialLocation {
     val status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE
     val wing = ResidentialLocation(
@@ -63,7 +68,7 @@ data class CreateWingRequest(
       whenCreated = LocalDateTime.now(clock),
       childLocations = mutableListOf(),
     )
-    LocationService.log.info("Created Wing [${wing.getKey()}]")
+    log.info("Created Wing [${wing.getKey()}]")
 
     numberOfSpurs?.let { numberOfSpurs ->
       for (spurNumber in 1..numberOfSpurs) {
@@ -80,7 +85,7 @@ data class CreateWingRequest(
           childLocations = mutableListOf(),
         )
         wing.addChildLocation(spur)
-        LocationService.log.info("Created Spur [${spur.getKey()}]")
+        log.info("Created Spur [${spur.getKey()}]")
       }
     }
 
@@ -100,7 +105,7 @@ data class CreateWingRequest(
             childLocations = mutableListOf(),
           )
           spur.addChildLocation(landing)
-          LocationService.log.info("Created Landing [${landing.getKey()}]")
+          log.info("Created Landing [${landing.getKey()}]")
         }
       }
     }
@@ -111,6 +116,7 @@ data class CreateWingRequest(
         val cell = Cell(
           prisonId = prisonId,
           code = code,
+          cellMark = "$wingCode-$cellNumber",
           pathHierarchy = "${leaf.getPathHierarchy()}-$code",
           status = status,
           localName = "Cell $cellNumber on ${leaf.getCode()}",
@@ -130,7 +136,7 @@ data class CreateWingRequest(
         )
         cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction = linkedTransaction)
         leaf.addChildLocation(cell)
-        LocationService.log.info("Created Cell [${cell.getKey()}]")
+        log.info("Created Cell [${cell.getKey()}]")
       }
     }
     return wing

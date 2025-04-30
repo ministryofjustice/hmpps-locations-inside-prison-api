@@ -214,6 +214,7 @@ class LocationRepositoryTest : TestBase() {
     val now = LocalDateTime.now(clock)
     val location = Cell(
       code = pathHierarchy.split("-").last(),
+      cellMark = pathHierarchy.split("-").last(),
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
       locationType = LocationType.CELL,

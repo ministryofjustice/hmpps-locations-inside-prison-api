@@ -137,6 +137,7 @@ class LocationServiceTest {
       Cell(
         id = UUID.randomUUID(),
         code = "code",
+        cellMark = "code",
         pathHierarchy = "ph",
         prisonId = "MDI",
         parent = null,

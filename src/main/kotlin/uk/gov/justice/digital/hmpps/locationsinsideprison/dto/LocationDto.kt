@@ -45,6 +45,9 @@ data class Location(
   @Schema(description = "Location Code", example = "001", required = true)
   val code: String,
 
+  @Schema(description = "Cell mark", example = "A1", required = false)
+  val cellMark: String? = null,
+
   @Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
   val pathHierarchy: String,
 
@@ -440,6 +443,11 @@ data class CreateResidentialLocationRequest(
   @field:Size(max = 12, message = "Code must be up to 12 characters")
   val code: String,
 
+  @Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1)
+  @field:Size(min = 1, message = "Mark cannot be blank")
+  @field:Size(max = 12, message = "Mark must be up to 12 characters")
+  val cellMark: String? = null,
+
   @Schema(description = "Accommodation Type", required = false, example = "NORMAL_ACCOMMODATION")
   val accommodationType: AccommodationType,
 
@@ -480,6 +488,7 @@ data class CreateResidentialLocationRequest(
       val location = CellJPA(
         prisonId = prisonId,
         code = code,
+        cellMark = cellMark,
         locationType = locationType.baseType,
         pathHierarchy = code,
         localName = localName,

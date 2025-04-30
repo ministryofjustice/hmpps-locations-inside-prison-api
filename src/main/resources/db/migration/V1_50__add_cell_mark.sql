@@ -1,0 +1,1 @@
+ALTER TABLE location add column cell_mark varchar(12) DEFAULT NULL;
