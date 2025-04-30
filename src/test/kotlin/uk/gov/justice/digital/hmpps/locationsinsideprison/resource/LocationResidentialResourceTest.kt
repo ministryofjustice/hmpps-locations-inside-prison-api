@@ -577,6 +577,79 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
+
+      @Test
+      fun `can create a cell below a top level location`() {
+        webTestClient.post().uri("/locations/create-cells")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(createLandingRequest.copy(newLocationType = ResidentialStructuralType.WING, newLevelDescription = "Wing J"))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "${createLandingRequest.prisonId}",
+              "code": "${createLandingRequest.newLevelCode}",
+              "pathHierarchy": "${createLandingRequest.newLevelCode}",
+              "locationType": "WING",
+              "status": "DRAFT",
+              "key": "${createLandingRequest.prisonId}-${createLandingRequest.newLevelCode}",
+              "localName": "Wing J",
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "specialistCellTypes": [
+                "ACCESSIBLE_CELL"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ],
+              "capacity": {
+                "maxCapacity": 1,
+                "workingCapacity": 0
+              },
+              "certification": {
+                "certified": false,
+                "capacityOfCertifiedCell": 1
+              },
+              "childLocations": [
+                {
+                  "key": "MDI-J-001",
+                  "cellMark": "J-001",
+                  "locationType": "CELL",
+                  "capacity": {
+                    "maxCapacity": 1,
+                    "workingCapacity": 0
+                  },
+                  "oldWorkingCapacity": 1,
+                  "certification": {
+                    "certified": false,
+                    "capacityOfCertifiedCell": 1
+                  },
+                  "accommodationTypes": [
+                    "NORMAL_ACCOMMODATION"
+                  ],
+                  "specialistCellTypes": [
+                    "ACCESSIBLE_CELL"
+                  ],
+                  "usedFor": [
+                    "STANDARD_ACCOMMODATION"
+                  ],
+                  "status": "DRAFT",
+                  "inCellSanitation": true,
+                  "level": 2,
+                  "leafLevel": true
+                }
+              ]
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
     }
   }
 
