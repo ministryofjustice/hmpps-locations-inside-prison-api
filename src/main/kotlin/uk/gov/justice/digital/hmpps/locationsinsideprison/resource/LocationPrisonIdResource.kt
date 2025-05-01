@@ -159,7 +159,7 @@ class LocationPrisonIdResource(
     includeVirtualLocations: Boolean = false,
     @Schema(description = "Include temporarily inactive locations", example = "false", required = false)
     @RequestParam(name = "includeInactive", required = false, defaultValue = "false")
-    includeInactive: Boolean = false
+    includeInactive: Boolean = false,
   ): List<PrisonHierarchyDto> = locationService.getPrisonResidentialHierarchy(prisonId = prisonId, includeVirtualLocations = includeVirtualLocations, maxLevel = maxLevel, includeInactive = includeInactive)
 
   @GetMapping("/prison/{prisonId}/residential-first-level")
