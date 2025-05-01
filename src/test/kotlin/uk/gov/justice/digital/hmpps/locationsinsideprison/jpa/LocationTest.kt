@@ -73,9 +73,25 @@ class LocationTest {
     assertThat(child2?.name).isEqualTo("Landing B-2")
     assertThat(child2?.key).isEqualTo("2")
   }
+
+  @Test
+  fun `toPrisonHierarchyDto handles includeInactive flag`() {
+    val wing = generateWingLocation("Wing A")
+    val activeCell = generateCellLocation()
+    wing.addChildLocation(activeCell)
+    val inactiveCell = generateCellLocation().also { it.status == LocationStatus.INACTIVE }
+    wing.addChildLocation(inactiveCell)
+
+    val locationWithNoInactive = wing.toPrisonHierarchyDto(includeInactive = false)
+    assertThat { locationWithNoInactive.subLocations.orEmpty().size == 1 }
+
+    val locationWithInactive = wing.toPrisonHierarchyDto(includeInactive = true)
+    assertThat { locationWithInactive.subLocations.orEmpty().size == 2 }
+  }
 }
 
 fun generateWingLocation(localName: String?) = ResidentialLocation(
+  id = UUID.randomUUID(),
   code = "A",
   prisonId = "MDI",
   locationType = LocationType.WING,
@@ -88,6 +104,7 @@ fun generateWingLocation(localName: String?) = ResidentialLocation(
 )
 
 fun generateCellLocation() = Cell(
+  id = UUID.randomUUID(),
   code = "001",
   prisonId = "MDI",
   locationType = LocationType.CELL,

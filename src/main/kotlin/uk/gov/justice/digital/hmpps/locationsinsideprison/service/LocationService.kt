@@ -145,7 +145,7 @@ class LocationService(
         (it.isStructural() || (includeVirtualLocations && it.isVirtualResidentialLocation()))
     }
     .map {
-      it.toPrisonHierarchyDto(maxLevel)
+      it.toPrisonHierarchyDto(maxLevel, includeInactive)
     }
     .sortedWith(NaturalOrderComparator())
 
