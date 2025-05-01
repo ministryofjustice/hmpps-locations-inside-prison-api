@@ -82,7 +82,7 @@ class LocationTest {
     wing.addChildLocation(activeLanding)
     val activeCell = generateCellLocation()
     activeLanding.addChildLocation(activeCell)
-    val inactiveCell = generateCellLocation().also { it.status == LocationStatus.INACTIVE }
+    val inactiveCell = generateCellLocation().also { it.status = LocationStatus.INACTIVE }
     activeLanding.addChildLocation(inactiveCell)
 
     val inactiveLanding = generateLandingLocation("Landing 2").also { it.status = LocationStatus.INACTIVE }
@@ -94,7 +94,7 @@ class LocationTest {
 
     val locationWithInactive = wing.toPrisonHierarchyDto(includeInactive = true)
     assertThat(locationWithInactive.subLocations.orEmpty().size).isEqualTo(2)
-    assertThat(locationWithNoInactive.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(2)
+    assertThat(locationWithInactive.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(2)
   }
 }
 
