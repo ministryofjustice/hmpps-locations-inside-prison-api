@@ -77,16 +77,24 @@ class LocationTest {
   @Test
   fun `toPrisonHierarchyDto handles includeInactive flag`() {
     val wing = generateWingLocation("Wing A")
+
+    val activeLanding = generateLandingLocation("Landing 1")
+    wing.addChildLocation(activeLanding)
     val activeCell = generateCellLocation()
-    wing.addChildLocation(activeCell)
+    activeLanding.addChildLocation(activeCell)
     val inactiveCell = generateCellLocation().also { it.status == LocationStatus.INACTIVE }
-    wing.addChildLocation(inactiveCell)
+    activeLanding.addChildLocation(inactiveCell)
+
+    val inactiveLanding = generateLandingLocation("Landing 2").also { it.status = LocationStatus.INACTIVE }
+    wing.addChildLocation(inactiveLanding)
 
     val locationWithNoInactive = wing.toPrisonHierarchyDto(includeInactive = false)
-    assertThat { locationWithNoInactive.subLocations.orEmpty().size == 1 }
+    assertThat(locationWithNoInactive.subLocations.orEmpty().size).isEqualTo(1)
+    assertThat(locationWithNoInactive.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(1)
 
     val locationWithInactive = wing.toPrisonHierarchyDto(includeInactive = true)
-    assertThat { locationWithInactive.subLocations.orEmpty().size == 2 }
+    assertThat(locationWithInactive.subLocations.orEmpty().size).isEqualTo(2)
+    assertThat(locationWithNoInactive.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(2)
   }
 }
 
@@ -98,6 +106,19 @@ fun generateWingLocation(localName: String?) = ResidentialLocation(
   status = LocationStatus.ACTIVE,
   localName = localName,
   pathHierarchy = "MDI-A",
+  createdBy = "user",
+  whenCreated = LocalDateTime.now(),
+  childLocations = mutableListOf(),
+)
+
+fun generateLandingLocation(localName: String?) = ResidentialLocation(
+  id = UUID.randomUUID(),
+  code = "1",
+  prisonId = "MDI",
+  locationType = LocationType.LANDING,
+  status = LocationStatus.ACTIVE,
+  localName = localName,
+  pathHierarchy = "MDI-A-1",
   createdBy = "user",
   whenCreated = LocalDateTime.now(),
   childLocations = mutableListOf(),
