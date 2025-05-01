@@ -75,7 +75,7 @@ class LocationTest {
   }
 
   @Test
-  fun `toPrisonHierarchyDto handles includeInactive flag`() {
+  fun `toPrisonHierarchyDto handles includeInactive flag when set to false`() {
     val wing = generateWingLocation("Wing A")
 
     val activeLanding = generateLandingLocation("Landing 1")
@@ -88,13 +88,28 @@ class LocationTest {
     val inactiveLanding = generateLandingLocation("Landing 2").also { it.status = LocationStatus.INACTIVE }
     wing.addChildLocation(inactiveLanding)
 
-    val locationWithNoInactive = wing.toPrisonHierarchyDto(includeInactive = false)
-    assertThat(locationWithNoInactive.subLocations.orEmpty().size).isEqualTo(1)
-    assertThat(locationWithNoInactive.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(1)
+    val prisonHierarchyDto = wing.toPrisonHierarchyDto(includeInactive = false)
+    assertThat(prisonHierarchyDto.subLocations.orEmpty().size).isEqualTo(1)
+    assertThat(prisonHierarchyDto.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(1)
+  }
 
-    val locationWithInactive = wing.toPrisonHierarchyDto(includeInactive = true)
-    assertThat(locationWithInactive.subLocations.orEmpty().size).isEqualTo(2)
-    assertThat(locationWithInactive.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(2)
+  @Test
+  fun `toPrisonHierarchyDto handles includeInactive flag when set to true`() {
+    val wing = generateWingLocation("Wing A")
+
+    val activeLanding = generateLandingLocation("Landing 1")
+    wing.addChildLocation(activeLanding)
+    val activeCell = generateCellLocation()
+    activeLanding.addChildLocation(activeCell)
+    val inactiveCell = generateCellLocation().also { it.status = LocationStatus.INACTIVE }
+    activeLanding.addChildLocation(inactiveCell)
+
+    val inactiveLanding = generateLandingLocation("Landing 2").also { it.status = LocationStatus.INACTIVE }
+    wing.addChildLocation(inactiveLanding)
+
+    val prisonHierarchyDto = wing.toPrisonHierarchyDto(includeInactive = true)
+    assertThat(prisonHierarchyDto.subLocations.orEmpty().size).isEqualTo(2)
+    assertThat(prisonHierarchyDto.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(2)
   }
 }
 
