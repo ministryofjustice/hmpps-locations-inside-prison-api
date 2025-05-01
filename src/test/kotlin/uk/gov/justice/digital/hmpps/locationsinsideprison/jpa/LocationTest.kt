@@ -73,9 +73,48 @@ class LocationTest {
     assertThat(child2?.name).isEqualTo("Landing B-2")
     assertThat(child2?.key).isEqualTo("2")
   }
+
+  @Test
+  fun `toPrisonHierarchyDto handles includeInactive flag when set to false`() {
+    val wing = generateWingLocation("Wing A")
+
+    val activeLanding = generateLandingLocation("Landing 1")
+    wing.addChildLocation(activeLanding)
+    val activeCell = generateCellLocation()
+    activeLanding.addChildLocation(activeCell)
+    val inactiveCell = generateCellLocation().also { it.status = LocationStatus.INACTIVE }
+    activeLanding.addChildLocation(inactiveCell)
+
+    val inactiveLanding = generateLandingLocation("Landing 2").also { it.status = LocationStatus.INACTIVE }
+    wing.addChildLocation(inactiveLanding)
+
+    val prisonHierarchyDto = wing.toPrisonHierarchyDto(includeInactive = false)
+    assertThat(prisonHierarchyDto.subLocations.orEmpty().size).isEqualTo(1)
+    assertThat(prisonHierarchyDto.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(1)
+  }
+
+  @Test
+  fun `toPrisonHierarchyDto handles includeInactive flag when set to true`() {
+    val wing = generateWingLocation("Wing A")
+
+    val activeLanding = generateLandingLocation("Landing 1")
+    wing.addChildLocation(activeLanding)
+    val activeCell = generateCellLocation()
+    activeLanding.addChildLocation(activeCell)
+    val inactiveCell = generateCellLocation().also { it.status = LocationStatus.INACTIVE }
+    activeLanding.addChildLocation(inactiveCell)
+
+    val inactiveLanding = generateLandingLocation("Landing 2").also { it.status = LocationStatus.INACTIVE }
+    wing.addChildLocation(inactiveLanding)
+
+    val prisonHierarchyDto = wing.toPrisonHierarchyDto(includeInactive = true)
+    assertThat(prisonHierarchyDto.subLocations.orEmpty().size).isEqualTo(2)
+    assertThat(prisonHierarchyDto.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(2)
+  }
 }
 
 fun generateWingLocation(localName: String?) = ResidentialLocation(
+  id = UUID.randomUUID(),
   code = "A",
   prisonId = "MDI",
   locationType = LocationType.WING,
@@ -87,7 +126,21 @@ fun generateWingLocation(localName: String?) = ResidentialLocation(
   childLocations = mutableListOf(),
 )
 
+fun generateLandingLocation(localName: String?) = ResidentialLocation(
+  id = UUID.randomUUID(),
+  code = "1",
+  prisonId = "MDI",
+  locationType = LocationType.LANDING,
+  status = LocationStatus.ACTIVE,
+  localName = localName,
+  pathHierarchy = "MDI-A-1",
+  createdBy = "user",
+  whenCreated = LocalDateTime.now(),
+  childLocations = mutableListOf(),
+)
+
 fun generateCellLocation() = Cell(
+  id = UUID.randomUUID(),
   code = "001",
   prisonId = "MDI",
   locationType = LocationType.CELL,

@@ -157,7 +157,10 @@ class LocationPrisonIdResource(
     @Schema(description = "Include virtual locations such as CSWAP and RECP", example = "false", required = false)
     @RequestParam(name = "includeVirtualLocations", required = false, defaultValue = "false")
     includeVirtualLocations: Boolean = false,
-  ): List<PrisonHierarchyDto> = locationService.getPrisonResidentialHierarchy(prisonId = prisonId, includeVirtualLocations = includeVirtualLocations, maxLevel = maxLevel)
+    @Schema(description = "Include temporarily inactive locations", example = "false", required = false)
+    @RequestParam(name = "includeInactive", required = false, defaultValue = "false")
+    includeInactive: Boolean = false,
+  ): List<PrisonHierarchyDto> = locationService.getPrisonResidentialHierarchy(prisonId = prisonId, includeVirtualLocations = includeVirtualLocations, maxLevel = maxLevel, includeInactive = includeInactive)
 
   @GetMapping("/prison/{prisonId}/residential-first-level")
   @ResponseStatus(HttpStatus.OK)
