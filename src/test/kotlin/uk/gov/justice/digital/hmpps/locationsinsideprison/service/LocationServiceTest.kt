@@ -432,4 +432,68 @@ class LocationServiceTest {
     val attributes = service.getCellAttributes(UUID.randomUUID())
     Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code = SpecialistCellType.CAT_A, description = SpecialistCellType.CAT_A.description)))
   }
+
+  //getPrisonResidentialHierarchy
+  @Test
+  fun `should return non perm disabled locations when includeInactive is true`() {
+    val prisonId = "MDI"
+    val locations = createTestLocations()
+
+    whenever(residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)).thenReturn(locations)
+
+    val result =  service.getPrisonResidentialHierarchy(prisonId = prisonId, includeInactive = true)
+
+    // status is lost when the dto is mapped so can't explicitly check for it
+    Assertions.assertThat(result).hasSize(2)
+  }
+
+  @Test
+  fun `should not return non perm disabled locations when includeInactive is false`() {
+    val prisonId = "MDI"
+    val locations = createTestLocations()
+    whenever(residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)).thenReturn(locations)
+
+    val result =  service.getPrisonResidentialHierarchy(prisonId = prisonId, includeInactive = false)
+
+    // status is lost when the dto is mapped so can't explicitly check for it
+    Assertions.assertThat(result).hasSize(1)
+  }
+  private fun createTestLocations(): List<ResidentialLocation> {
+    return listOf(
+      ResidentialLocation(
+        id = UUID.randomUUID(),
+        code = "R1",
+        pathHierarchy = "PH1",
+        locationType = LocationType.WING,
+        prisonId = "MDI",
+        parent = null,
+        localName = "Residential 1",
+        comments = "Test comment 1",
+        orderWithinParentLocation = 1,
+        status = LocationStatus.ACTIVE,
+        deactivatedDate = LocalDateTime.now(),
+        proposedReactivationDate = null,
+        createdBy = "Test User",
+        childLocations = mutableListOf(),
+        whenCreated = LocalDateTime.now()
+      ),
+      ResidentialLocation(
+        id = UUID.randomUUID(),
+        code = "R2",
+        pathHierarchy = "PH2",
+        locationType = LocationType.WING,
+        prisonId = "MDI",
+        parent = null,
+        localName = "Residential 2",
+        comments = "Test comment 2",
+        orderWithinParentLocation = 2,
+        status = LocationStatus.INACTIVE,
+        deactivatedDate = LocalDateTime.now(),
+        proposedReactivationDate = null,
+        createdBy = "Test User",
+        childLocations = mutableListOf(),
+        whenCreated = LocalDateTime.now()
+      )
+    )
+  }
 }
