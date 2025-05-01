@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
@@ -348,6 +349,48 @@ class LocationService(
       linkedTransaction = linkedTransaction,
     )
     return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  @Transactional
+  fun createCells(createCellsRequest: CellInitialisationRequest): LocationDTO {
+    val parentLocation = createCellsRequest.parentLocation?.let {
+      locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
+    }
+
+    checkParentValid(
+      parentLocation = parentLocation,
+      code = createCellsRequest.newLevelCode,
+      prisonId = createCellsRequest.prisonId,
+    ) // check that code doesn't clash with the existing location
+
+    val linkedTransaction = createLinkedTransaction(
+      prisonId = createCellsRequest.prisonId,
+      TransactionType.LOCATION_CREATE,
+      "Created ${createCellsRequest.newLocationType} ${createCellsRequest.parentLocation} in prison ${createCellsRequest.prisonId}",
+    )
+
+    val newLocation = createCellsRequest.createLocation(
+      createdBy = getUsername(),
+      clock = clock,
+    )
+    parentLocation?.let { newLocation.setParent(it) }
+    residentialLocationRepository.save(newLocation)
+
+    log.info("Created location ${newLocation.getKey()}")
+
+    if (createCellsRequest.cells.isNotEmpty()) {
+      val cells = createCellsRequest.creatCells(
+        createdBy = getUsername(),
+        clock = clock,
+        linkedTransaction = linkedTransaction,
+        location = newLocation,
+      )
+      log.info("Created ${cells.size} cells under location ${newLocation.getKey()}")
+    }
+
+    return locationRepository.save(newLocation).toDto(includeChildren = true, includeNonResidential = false).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }

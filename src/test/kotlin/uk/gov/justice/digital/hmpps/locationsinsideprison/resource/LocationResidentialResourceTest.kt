@@ -7,12 +7,15 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NewCellRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
@@ -450,6 +453,202 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 """,
             JsonCompareMode.LENIENT,
           )
+      }
+    }
+  }
+
+  @DisplayName("POST /locations/create-cells")
+  @Nested
+  inner class CreateCellsTest {
+
+    var createLandingRequest = CellInitialisationRequest(
+      prisonId = "MDI",
+      newLevelCode = "J",
+      newLocationType = ResidentialStructuralType.LANDING,
+      newLevelDescription = "Landing J",
+      inCellSanitation = true,
+      cellsUsedFor = setOf(UsedForType.STANDARD_ACCOMMODATION),
+      cells = setOf(
+        NewCellRequest(
+          code = "001",
+          cellMark = "J-001",
+          maxCapacity = 1,
+          workingCapacity = 1,
+          capacityNormalAccommodation = 1,
+          specialistCellTypes = setOf(SpecialistCellType.ACCESSIBLE_CELL),
+        ),
+      ),
+    )
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.post().uri("/locations/create-cells")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"prisonId": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `duplicate location is rejected`() {
+        webTestClient.post().uri("/locations/create-cells")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createLandingRequest.copy(parentLocation = wingZ.id, newLevelCode = landingZ1.getCode())))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can create a landing and a cell`() {
+        webTestClient.post().uri("/locations/create-cells")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(createLandingRequest.copy(parentLocation = wingZ.id))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "${createLandingRequest.prisonId}",
+              "code": "${createLandingRequest.newLevelCode}",
+              "pathHierarchy": "${wingZ.getCode()}-${createLandingRequest.newLevelCode}",
+              "locationType": "LANDING",
+              "status": "DRAFT",
+              "key": "${createLandingRequest.prisonId}-${wingZ.getCode()}-${createLandingRequest.newLevelCode}",
+              "localName": "Landing J",
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "specialistCellTypes": [
+                "ACCESSIBLE_CELL"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ],
+              "capacity": {
+                "maxCapacity": 1,
+                "workingCapacity": 0
+              },
+              "certification": {
+                "certified": false,
+                "capacityOfCertifiedCell": 1
+              },
+              "childLocations": [
+                {
+                  "key": "MDI-Z-J-001",
+                  "cellMark": "J-001",
+                  "locationType": "CELL",
+                  "capacity": {
+                    "maxCapacity": 1,
+                    "workingCapacity": 0
+                  },
+                  "oldWorkingCapacity": 1,
+                  "certification": {
+                    "certified": false,
+                    "capacityOfCertifiedCell": 1
+                  },
+                  "accommodationTypes": [
+                    "NORMAL_ACCOMMODATION"
+                  ],
+                  "specialistCellTypes": [
+                    "ACCESSIBLE_CELL"
+                  ],
+                  "usedFor": [
+                    "STANDARD_ACCOMMODATION"
+                  ],
+                  "status": "DRAFT",
+                  "inCellSanitation": true,
+                  "level": 3,
+                  "leafLevel": true
+                }
+              ]
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
+      fun `can create a cell below a top level location`() {
+        webTestClient.post().uri("/locations/create-cells")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(createLandingRequest.copy(newLocationType = ResidentialStructuralType.WING, newLevelDescription = "Wing J"))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "${createLandingRequest.prisonId}",
+              "code": "${createLandingRequest.newLevelCode}",
+              "pathHierarchy": "${createLandingRequest.newLevelCode}",
+              "locationType": "WING",
+              "status": "DRAFT",
+              "key": "${createLandingRequest.prisonId}-${createLandingRequest.newLevelCode}",
+              "localName": "Wing J",
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "specialistCellTypes": [
+                "ACCESSIBLE_CELL"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ],
+              "capacity": {
+                "maxCapacity": 1,
+                "workingCapacity": 0
+              },
+              "certification": {
+                "certified": false,
+                "capacityOfCertifiedCell": 1
+              },
+              "childLocations": [
+                {
+                  "key": "MDI-J-001",
+                  "cellMark": "J-001",
+                  "locationType": "CELL",
+                  "capacity": {
+                    "maxCapacity": 1,
+                    "workingCapacity": 0
+                  },
+                  "oldWorkingCapacity": 1,
+                  "certification": {
+                    "certified": false,
+                    "capacityOfCertifiedCell": 1
+                  },
+                  "accommodationTypes": [
+                    "NORMAL_ACCOMMODATION"
+                  ],
+                  "specialistCellTypes": [
+                    "ACCESSIBLE_CELL"
+                  ],
+                  "usedFor": [
+                    "STANDARD_ACCOMMODATION"
+                  ],
+                  "status": "DRAFT",
+                  "inCellSanitation": true,
+                  "level": 2,
+                  "leafLevel": true
+                }
+              ]
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
     }
   }

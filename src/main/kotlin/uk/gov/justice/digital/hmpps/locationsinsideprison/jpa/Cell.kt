@@ -46,6 +46,8 @@ class Cell(
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
   capacity: Capacity? = null,
 
+  private var cellMark: String? = null,
+
   @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
   private var certification: Certification? = null,
 
@@ -550,6 +552,7 @@ class Cell(
     convertedCellType = convertedCellType,
     otherConvertedCellType = otherConvertedCellType,
     inCellSanitation = inCellSanitation,
+    cellMark = cellMark,
   )
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(

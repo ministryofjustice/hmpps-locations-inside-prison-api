@@ -79,6 +79,7 @@ fun buildCell(
   val cell = Cell(
     prisonId = prisonId,
     code = pathHierarchy.split("-").last(),
+    cellMark = pathHierarchy.split("-").last(),
     status = if (status == LocationStatus.ARCHIVED) LocationStatus.INACTIVE else status,
     pathHierarchy = pathHierarchy,
     createdBy = EXPECTED_USERNAME,
