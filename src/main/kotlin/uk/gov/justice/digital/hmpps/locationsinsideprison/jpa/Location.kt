@@ -457,6 +457,7 @@ abstract class Location(
       fullLocationPath = getPathHierarchy(),
       localName = getDerivedLocalName(true),
       level = getLevel(),
+      status = status,
       subLocations = subLocations.ifEmpty { null },
     )
   }
