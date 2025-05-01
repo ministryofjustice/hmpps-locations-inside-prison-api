@@ -442,22 +442,23 @@ class LocationServiceTest {
     whenever(residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)).thenReturn(locations)
 
     val result = service.getPrisonResidentialHierarchy(prisonId = prisonId, includeInactive = true)
-
-    // status is lost when the dto is mapped so can't explicitly check for it
     Assertions.assertThat(result).hasSize(2)
+    Assertions.assertThat(result[0].status).isEqualTo(LocationStatus.ACTIVE)
+    Assertions.assertThat(result[1].status).isEqualTo(LocationStatus.INACTIVE)
   }
 
   @Test
   fun `should not return non perm disabled locations when includeInactive is false`() {
     val prisonId = "MDI"
     val locations = createTestLocations()
+
     whenever(residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)).thenReturn(locations)
 
     val result = service.getPrisonResidentialHierarchy(prisonId = prisonId, includeInactive = false)
-
-    // status is lost when the dto is mapped so can't explicitly check for it
     Assertions.assertThat(result).hasSize(1)
+    Assertions.assertThat(result[0].status).isEqualTo(LocationStatus.ACTIVE)
   }
+
   private fun createTestLocations(): List<ResidentialLocation> = listOf(
     ResidentialLocation(
       id = UUID.randomUUID(),
