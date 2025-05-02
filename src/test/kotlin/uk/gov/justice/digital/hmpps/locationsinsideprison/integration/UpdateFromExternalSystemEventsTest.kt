@@ -57,7 +57,7 @@ class UpdateFromExternalSystemEventsTest: CommonDataTestBase() {
   @DisplayName("Location temporarily deactivated event")
   inner class CreateVisit {
     private val messageId = UUID.randomUUID().toString()
-    private val key = "MDI-A-1"
+    private val key = "NMI-A-1"
     private val updateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
       messageId = messageId,
       eventType = "LocationTemporarilyDeactivated",
