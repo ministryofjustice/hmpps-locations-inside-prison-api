@@ -11,7 +11,7 @@ data class UpdateFromExternalSystemEvent(
   val messageAttributes: Map<String, Any?> = emptyMap(),
   val who: String? = null,
 ) {
-  fun toTemplarilyDeactivateLocationByKeyRequest(): TemplarilyDeactivateLocationByKeyRequest {
+  fun toTemporarilyDeactivateLocationByKeyRequest(): TemporarilyDeactivateLocationByKeyRequest {
     val mapper = ObjectMapper().registerModule(KotlinModule.Builder().build()).registerModule(JavaTimeModule())
     return mapper.convertValue(this.messageAttributes, TemplarilyDeactivateLocationByKeyRequest::class.java)
   }
