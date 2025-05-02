@@ -13,6 +13,6 @@ data class UpdateFromExternalSystemEvent(
 ) {
   fun toTemporarilyDeactivateLocationByKeyRequest(): TemporarilyDeactivateLocationByKeyRequest {
     val mapper = ObjectMapper().registerModule(KotlinModule.Builder().build()).registerModule(JavaTimeModule())
-    return mapper.convertValue(this.messageAttributes, TemplarilyDeactivateLocationByKeyRequest::class.java)
+    return mapper.convertValue(this.messageAttributes, TemporarilyDeactivateLocationByKeyRequest::class.java)
   }
 }
