@@ -645,6 +645,32 @@ data class TemporaryDeactivationLocationRequest(
 )
 
 /**
+ * Request format temporarily deactivating a location by key
+ */
+@Schema(description = "Request to temporarily deactivate a location by key")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class TemplarilyDeactivateLocationByKeyRequest(
+  @Schema(description = "Prison ID", example = "MDI", required = true)
+  val prisonId: String,
+  @Schema(description = "Business Key for a location", example = "MDI-A", required = true)
+  val key: String,
+  @Schema(description = "Reason for temporary deactivation", example = "MOTHBALLED", required = true)
+  val deactivationReason: DeactivatedReason,
+  @Schema(
+    description = "Additional information on deactivation, for OTHER DeactivatedReason must be provided",
+    example = "Window broken",
+    required = false,
+  )
+  @field:Size(max = 255, message = "Other deactivation reason cannot be more than 255 characters")
+  val deactivationReasonDescription: String? = null,
+  @Schema(description = "Estimated reactivation date", example = "2025-01-05", required = false)
+  val proposedReactivationDate: LocalDate? = null,
+  @Schema(description = "Planet FM reference number", example = "23423TH/5", required = false)
+  @field:Size(max = 60, message = "Planet FM reference number cannot be more than 60 characters")
+  val planetFmReference: String? = null,
+)
+
+/**
  * Request format permanently deactivating a location
  */
 @Schema(description = "Request to permanently deactivate a location")
