@@ -56,27 +56,6 @@ class UpdateFromExternalSystemEventsTest: CommonDataTestBase() {
   @Nested
   @DisplayName("Location temporarily deactivated event")
   inner class CreateVisit {
-    private val messageId = UUID.randomUUID().toString()
-    private val key = "${landingN1.prisonId}-${landingN1.getPathHierarchy()}"
-    private val updateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
-      messageId = messageId,
-      eventType = "LocationTemporarilyDeactivated",
-      messageAttributes = mapOf(
-        "key" to key,
-        "deactivationReason" to "DAMAGED",
-        "deactivationReasonDescription" to "Window broken",
-        "proposedReactivationDate" to "2025-01-05",
-        "planetFmReference" to "23423TH/5",
-      ),
-    )
-    private val invalidUpdateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
-      messageId = UUID.randomUUID().toString(),
-      eventType = "LocationTemporarilyDeactivated",
-      messageAttributes = mapOf(
-        "invalidField" to "OPEN",
-      ),
-    )
-
     @Test
     fun `will process an event`() {
       prisonerSearchMockServer.stubSearchByLocations(
@@ -87,6 +66,19 @@ class UpdateFromExternalSystemEventsTest: CommonDataTestBase() {
         false, // Return no results as this will cause deactivate to fail
       )
 
+      val messageId = UUID.randomUUID().toString()
+      val key = "${landingN1.prisonId}-${landingN1.getPathHierarchy()}"
+      val updateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
+        messageId = messageId,
+        eventType = "LocationTemporarilyDeactivated",
+        messageAttributes = mapOf(
+          "key" to key,
+          "deactivationReason" to "DAMAGED",
+          "deactivationReasonDescription" to "Window broken",
+          "proposedReactivationDate" to "2025-01-05",
+          "planetFmReference" to "23423TH/5",
+        ),
+      )
       val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
       queueSqsClient.sendMessage(
         SendMessageRequest.builder().queueUrl(queueUrl).messageBody(message).build(),
@@ -101,6 +93,13 @@ class UpdateFromExternalSystemEventsTest: CommonDataTestBase() {
 
     @Test
     fun `will throw an exception if message attributes are invalid`() {
+      val invalidUpdateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
+        messageId = UUID.randomUUID().toString(),
+        eventType = "LocationTemporarilyDeactivated",
+        messageAttributes = mapOf(
+          "invalidField" to "OPEN",
+        ),
+      )
       val message = objectMapper.writeValueAsString(invalidUpdateFromExternalSystemEvent)
       queueSqsClient.sendMessage(
         SendMessageRequest.builder().queueUrl(queueUrl).messageBody(message).build(),
