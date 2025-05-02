@@ -84,7 +84,7 @@ class UpdateFromExternalSystemEventsTest: CommonDataTestBase() {
         listOf(
           landingN1.getPathHierarchy(),
         ),
-        false,
+        false, // Return no results as this will cause deactivate to fail
       )
 
       val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
