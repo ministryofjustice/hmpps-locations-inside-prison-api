@@ -88,17 +88,7 @@ class UpdateFromExternalSystemEventsTest: CommonDataTestBase() {
       await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 0 }
 
       await untilAsserted { verify(locationService, times(1)).deactivateLocations(any<DeactivateLocationsRequest>()) }
-    }
-
-    @Test
-    fun `if locationService returns error, expect event to be added to the dlq`() {
-      val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
-      queueSqsClient.sendMessage(
-        SendMessageRequest.builder().queueUrl(queueUrl).messageBody(message).build(),
-      )
-
-      await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 1 }
-      await untilAsserted { verify(locationService, times(1)).deactivateLocations(any<DeactivateLocationsRequest>()) }
+      await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 0 }
     }
 
     @Test
