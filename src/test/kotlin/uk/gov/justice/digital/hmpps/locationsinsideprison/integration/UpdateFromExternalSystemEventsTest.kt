@@ -57,7 +57,7 @@ class UpdateFromExternalSystemEventsTest: CommonDataTestBase() {
   @DisplayName("Location temporarily deactivated event")
   inner class CreateVisit {
     private val messageId = UUID.randomUUID().toString()
-    private val key = "NMI-A-1"
+    private val key = "${landingN1.prisonId}-${landingN1.getPathHierarchy()}"
     private val updateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
       messageId = messageId,
       eventType = "LocationTemporarilyDeactivated",
@@ -79,6 +79,14 @@ class UpdateFromExternalSystemEventsTest: CommonDataTestBase() {
 
     @Test
     fun `will process an event`() {
+      prisonerSearchMockServer.stubSearchByLocations(
+        landingN1.prisonId,
+        listOf(
+          landingN1.getPathHierarchy(),
+        ),
+        false,
+      )
+
       val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
       queueSqsClient.sendMessage(
         SendMessageRequest.builder().queueUrl(queueUrl).messageBody(message).build(),
