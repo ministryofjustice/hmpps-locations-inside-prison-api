@@ -8,8 +8,8 @@ import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
@@ -653,10 +653,10 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     }
   }
 
-  @DisplayName("POST /locations/create-wing")
+  @DisplayName("POST /locations/create-entire-wing")
   @Nested
   inner class CreateWingTest {
-    var createWingRequest = CreateWingRequest(
+    var createEntireWingRequest = CreateEntireWingRequest(
       prisonId = "MDI",
       wingCode = "Y",
       wingDescription = "Y Wing",
@@ -670,7 +670,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     inner class Validation {
       @Test
       fun `access client error bad data`() {
-        webTestClient.post().uri("/locations/create-wing")
+        webTestClient.post().uri("/locations/create-entire-wing")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"prisonId": ""}""")
@@ -680,10 +680,10 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `duplicate location is rejected`() {
-        webTestClient.post().uri("/locations/create-wing")
+        webTestClient.post().uri("/locations/create-entire-wing")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(createWingRequest.copy(wingCode = "Z")))
+          .bodyValue(jsonString(createEntireWingRequest.copy(wingCode = "Z")))
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -693,10 +693,10 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     inner class HappyPath {
       @Test
       fun `can create an entire wing with 4 spurs, 2 landings, and 2 cells per landing`() {
-        webTestClient.post().uri("/locations/create-wing")
+        webTestClient.post().uri("/locations/create-entire-wing")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(createWingRequest)
+          .bodyValue(createEntireWingRequest)
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(
@@ -731,10 +731,10 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `can create an entire wing with 2 landings, 2 cells per landing`() {
-        webTestClient.post().uri("/locations/create-wing")
+        webTestClient.post().uri("/locations/create-entire-wing")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(createWingRequest.copy(wingCode = "X", wingDescription = "X Wing", numberOfLandings = 2, numberOfSpurs = 0, numberOfCellsPerSection = 2, defaultCellCapacity = 2))
+          .bodyValue(createEntireWingRequest.copy(wingCode = "X", wingDescription = "X Wing", numberOfLandings = 2, numberOfSpurs = 0, numberOfCellsPerSection = 2, defaultCellCapacity = 2))
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(

@@ -483,9 +483,10 @@ data class CreateResidentialLocationRequest(
   val inCellSanitation: Boolean = false,
 ) {
 
-  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false): ResidentialLocationJPA {
+  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false, parentLocation: uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location? = null): ResidentialLocationJPA {
     val newLocation = if (isCell()) {
-      val location = CellJPA(
+      val request = this
+      return CellJPA(
         prisonId = prisonId,
         code = code,
         cellMark = cellMark,
@@ -505,18 +506,25 @@ data class CreateResidentialLocationRequest(
           certified = if (createInDraft) false else certified,
           capacityOfCertifiedCell = capacityNormalAccommodation,
         ),
-      )
-      if (location.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
-        location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction)
-      }
-      usedFor?.forEach {
-        location.addUsedFor(it, createdBy, clock, linkedTransaction)
-      }
-        ?: specialistCellTypes?.forEach {
-          location.addSpecialistCellType(it, userOrSystemInContext = createdBy, clock = clock, linkedTransaction = linkedTransaction)
+      ).apply {
+        if (request.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+          addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction)
         }
-
-      return location
+        request.usedFor?.forEach {
+          addUsedFor(it, createdBy, clock, linkedTransaction)
+        } ?: request.specialistCellTypes?.forEach {
+          addSpecialistCellType(it, userOrSystemInContext = createdBy, clock = clock, linkedTransaction = linkedTransaction)
+        }
+        parentLocation?.let { setParent(it) }
+        addHistory(
+          attributeName = LocationAttribute.LOCATION_CREATED,
+          oldValue = null,
+          newValue = getKey(),
+          amendedBy = createdBy,
+          amendedDate = LocalDateTime.now(clock),
+          linkedTransaction = linkedTransaction,
+        )
+      }
     } else if (code in getVirtualLocationCodes()) {
       VirtualResidentialLocation(
         prisonId = prisonId,
@@ -528,7 +536,17 @@ data class CreateResidentialLocationRequest(
         createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
         childLocations = mutableListOf(),
-      )
+      ).apply {
+        parentLocation?.let { setParent(it) }
+        addHistory(
+          attributeName = LocationAttribute.LOCATION_CREATED,
+          oldValue = null,
+          newValue = getKey(),
+          amendedBy = createdBy,
+          amendedDate = LocalDateTime.now(clock),
+          linkedTransaction = linkedTransaction,
+        )
+      }
     } else {
       ResidentialLocationJPA(
         prisonId = prisonId,
@@ -541,7 +559,17 @@ data class CreateResidentialLocationRequest(
         createdBy = createdBy,
         whenCreated = LocalDateTime.now(clock),
         childLocations = mutableListOf(),
-      )
+      ).apply {
+        parentLocation?.let { setParent(it) }
+        addHistory(
+          attributeName = LocationAttribute.LOCATION_CREATED,
+          oldValue = null,
+          newValue = getKey(),
+          amendedBy = createdBy,
+          amendedDate = LocalDateTime.now(clock),
+          linkedTransaction = linkedTransaction,
+        )
+      }
     }
     newLocation.addHistory(
       LocationAttribute.CODE,

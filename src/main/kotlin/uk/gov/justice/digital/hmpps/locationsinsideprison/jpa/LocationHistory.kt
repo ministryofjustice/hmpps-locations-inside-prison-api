@@ -115,6 +115,7 @@ enum class LocationAttribute(
   COMMENTS(description = "Comments"),
   ATTRIBUTES(description = "Attributes"),
   PERMANENT_DEACTIVATION(description = "Permanent deactivation"),
+  LOCATION_CREATED(description = "Location created"),
 
   // These are not recorded
   ACTIVE(description = "Active", notUsed = true),

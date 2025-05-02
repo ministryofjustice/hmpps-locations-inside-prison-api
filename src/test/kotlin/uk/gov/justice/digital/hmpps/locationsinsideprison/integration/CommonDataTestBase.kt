@@ -3,7 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
@@ -102,7 +102,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
 
     // Create a new wing in Leeds prison
     leedsWing = repository.saveAndFlush(
-      CreateWingRequest(
+      CreateEntireWingRequest(
         prisonId = "LEI",
         wingCode = "A",
         numberOfCellsPerSection = 3,
