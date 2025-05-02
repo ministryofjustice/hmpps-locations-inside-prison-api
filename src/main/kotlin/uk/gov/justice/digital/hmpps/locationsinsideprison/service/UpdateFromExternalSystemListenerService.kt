@@ -9,7 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivat
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternalSystemEvent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
 
-const val UPDATE_FROM_EXTERNAL_SYSTEM_QUEUE_CONFIG_KEY = "updatefromexternalsystemeventsqueue"
+const val UPDATE_FROM_EXTERNAL_SYSTEM_QUEUE_CONFIG_KEY = "updatefromexternalsystemevents"
 
 @Service
 class UpdateFromExternalSystemListenerService(
