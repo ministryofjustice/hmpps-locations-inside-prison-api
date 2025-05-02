@@ -666,7 +666,7 @@ data class TemporaryDeactivationLocationRequest(
  */
 @Schema(description = "Request to temporarily deactivate a location by key")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-data class TemplarilyDeactivateLocationByKeyRequest(
+data class TemporarilyDeactivateLocationByKeyRequest(
   @Schema(description = "Prison ID", example = "MDI", required = true)
   val prisonId: String,
   @Schema(description = "Business Key for a location", example = "MDI-A", required = true)
