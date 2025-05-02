@@ -17,8 +17,8 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.test.context.junit.jupiter.SpringExtension
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternalSystemEvent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternalSystemEvent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
 import java.util.UUID
 
@@ -46,8 +46,8 @@ internal class UpdateFromExternalSystemListenerServiceTest {
         "deactivationReason" to "DAMAGED",
         "deactivationReasonDescription" to "Window broken",
         "proposedReactivationDate" to "2025-01-05",
-        "planetFmReference" to "23423TH/5"
-      )
+        "planetFmReference" to "23423TH/5",
+      ),
     )
     private val invalidUpdateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
       messageId = UUID.randomUUID().toString(),
