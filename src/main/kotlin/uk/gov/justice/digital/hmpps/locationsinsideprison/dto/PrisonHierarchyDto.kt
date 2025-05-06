@@ -33,6 +33,9 @@ data class PrisonHierarchyDto(
   )
   val level: Int,
 
+  @Schema(description = "Status of the location", example = "ACTIVE", required = true)
+  val status: LocationStatus,
+
   @Schema(description = "Sub residential locations", required = false)
   val subLocations: List<PrisonHierarchyDto>? = null,
 ) : SortAttribute {
