@@ -18,9 +18,10 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationPrefixDto
@@ -277,8 +278,7 @@ class LocationService(
 
     val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(request.prisonId)
 
-    val locationToCreate = request.toNewEntity(getUsername(), clock, linkedTransaction = linkedTransaction, createInDraft = certificationApprovalRequired)
-    parentLocation?.let { locationToCreate.setParent(it) }
+    val locationToCreate = request.toNewEntity(getUsername(), clock, linkedTransaction = linkedTransaction, createInDraft = certificationApprovalRequired, parentLocation = parentLocation)
 
     val capacityChanged = request.isCell() && request.capacity != null
 
@@ -323,8 +323,7 @@ class LocationService(
       "Create non-residential location ${request.code} in prison ${request.prisonId} under ${parentLocation?.getKey() ?: "top level"}",
     )
 
-    val locationToCreate = request.toNewEntity(getUsername(), clock, linkedTransaction)
-    parentLocation?.let { locationToCreate.setParent(it) }
+    val locationToCreate = request.toNewEntity(getUsername(), clock, linkedTransaction, parentLocation)
 
     val usageChanged = request.usage != null
 
@@ -339,18 +338,39 @@ class LocationService(
   }
 
   @Transactional
-  fun createWing(createWingRequest: CreateWingRequest): LocationDTO {
-    locationRepository.findOneByPrisonIdAndPathHierarchy(createWingRequest.prisonId, createWingRequest.wingCode)
-      ?.let { throw LocationAlreadyExistsException("${createWingRequest.prisonId}-${createWingRequest.wingCode}") }
+  fun createWing(request: CreateWingAndStructureRequest): LocationDTO {
+    locationRepository.findOneByPrisonIdAndPathHierarchy(request.prisonId, request.wingCode)
+      ?.let { throw LocationAlreadyExistsException("${request.prisonId}-${request.wingCode}") }
 
     val linkedTransaction = createLinkedTransaction(
-      prisonId = createWingRequest.prisonId,
+      prisonId = request.prisonId,
       TransactionType.LOCATION_CREATE,
-      "Create wing ${createWingRequest.wingCode} in prison ${createWingRequest.prisonId}",
+      "Create wing ${request.wingCode} in prison ${request.prisonId}",
     )
 
-    val wing = createWingRequest.toEntity(
-      createInDraft = activePrisonService.isCertificationApprovalRequired(createWingRequest.prisonId),
+    val wing = request.toEntity(
+      createdBy = getUsername(),
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
+    return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  @Transactional
+  fun createEntireWing(createEntireWingRequest: CreateEntireWingRequest): LocationDTO {
+    locationRepository.findOneByPrisonIdAndPathHierarchy(createEntireWingRequest.prisonId, createEntireWingRequest.wingCode)
+      ?.let { throw LocationAlreadyExistsException("${createEntireWingRequest.prisonId}-${createEntireWingRequest.wingCode}") }
+
+    val linkedTransaction = createLinkedTransaction(
+      prisonId = createEntireWingRequest.prisonId,
+      TransactionType.LOCATION_CREATE,
+      "Create wing ${createEntireWingRequest.wingCode} in prison ${createEntireWingRequest.prisonId}",
+    )
+
+    val wing = createEntireWingRequest.toEntity(
+      createInDraft = activePrisonService.isCertificationApprovalRequired(createEntireWingRequest.prisonId),
       createdBy = getUsername(),
       clock = clock,
       linkedTransaction = linkedTransaction,
@@ -375,17 +395,16 @@ class LocationService(
     val linkedTransaction = createLinkedTransaction(
       prisonId = createCellsRequest.prisonId,
       TransactionType.LOCATION_CREATE,
-      "Created ${createCellsRequest.newLocationType} ${createCellsRequest.parentLocation} in prison ${createCellsRequest.prisonId}",
+      "Created ${createCellsRequest.newLocationType} ${createCellsRequest.newLevelCode} in prison ${createCellsRequest.prisonId}",
     )
 
     val newLocation = createCellsRequest.createLocation(
       createdBy = getUsername(),
       clock = clock,
+      linkedTransaction = linkedTransaction,
+      parentLocation = parentLocation,
     )
-    parentLocation?.let { newLocation.setParent(it) }
     residentialLocationRepository.save(newLocation)
-
-    log.info("Created location ${newLocation.getKey()}")
 
     if (createCellsRequest.cells.isNotEmpty()) {
       val cells = createCellsRequest.creatCells(

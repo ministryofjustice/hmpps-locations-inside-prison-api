@@ -13,6 +13,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
@@ -67,7 +69,7 @@ data class CellInitialisationRequest(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun createLocation(createdBy: String, clock: Clock) = ResidentialLocation(
+  fun createLocation(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: Location? = null) = ResidentialLocation(
     prisonId = prisonId,
     code = newLevelCode,
     locationType = LocationType.valueOf(newLocationType.name),
@@ -77,7 +79,18 @@ data class CellInitialisationRequest(
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
     childLocations = mutableListOf(),
-  )
+  ).apply {
+    parentLocation?.let { setParent(it) }
+    addHistory(
+      attributeName = LocationAttribute.LOCATION_CREATED,
+      oldValue = null,
+      newValue = getKey(),
+      amendedBy = createdBy,
+      amendedDate = LocalDateTime.now(clock),
+      linkedTransaction = linkedTransaction,
+    )
+    log.info("Created location ${this.getKey()}")
+  }
 
   fun creatCells(
     createdBy: String,
@@ -85,7 +98,7 @@ data class CellInitialisationRequest(
     linkedTransaction: LinkedTransaction,
     location: ResidentialLocation,
   ): List<Cell> = cells.map { cell ->
-    val newCell = Cell(
+    Cell(
       prisonId = prisonId,
       code = cell.code,
       cellMark = cell.cellMark,
@@ -118,10 +131,17 @@ data class CellInitialisationRequest(
           linkedTransaction = linkedTransaction,
         )
       }
+      location.addChildLocation(this)
+      addHistory(
+        attributeName = LocationAttribute.LOCATION_CREATED,
+        oldValue = null,
+        newValue = getKey(),
+        amendedBy = createdBy,
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+      log.info("Created cell ${this.getKey()}")
     }
-    location.addChildLocation(newCell)
-    log.info("Created cell ${newCell.getKey()}")
-    newCell
   }
 }
 
@@ -167,4 +187,5 @@ enum class ResidentialStructuralType {
   WING,
   SPUR,
   LANDING,
+  CELL,
 }

@@ -26,8 +26,9 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
@@ -116,7 +117,7 @@ class LocationResidentialResource(
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(
-    summary = "Creates a residential wing with landings and cells",
+    summary = "Creates a residential wing and its structure without other locations",
     description = "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
@@ -148,11 +149,54 @@ class LocationResidentialResource(
   fun createWing(
     @RequestBody
     @Validated
-    createWingRequest: CreateWingRequest,
+    wingAndStructureRequest: CreateWingAndStructureRequest,
   ): Location = eventPublishAndAudit(
     InternalLocationDomainEventType.LOCATION_CREATED,
   ) {
-    locationService.createWing(createWingRequest)
+    locationService.createWing(wingAndStructureRequest)
+  }
+
+  @PostMapping("/create-entire-wing", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @ResponseStatus(HttpStatus.CREATED)
+  @Operation(
+    summary = "Creates a residential wing with landings and cells",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "201",
+        description = "Returns created locations",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location already exists",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun createEntireWing(
+    @RequestBody
+    @Validated
+    createEntireWingRequest: CreateEntireWingRequest,
+  ): Location = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_CREATED,
+  ) {
+    locationService.createEntireWing(createEntireWingRequest)
   }
 
   @PostMapping("/create-cells", produces = [MediaType.APPLICATION_JSON_VALUE])

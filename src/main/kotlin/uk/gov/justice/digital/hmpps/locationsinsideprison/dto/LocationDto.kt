@@ -61,6 +61,9 @@ data class Location(
   )
   val localName: String? = null,
 
+  @Schema(description = "The structure of the wing", required = false)
+  val wingStructure: List<ResidentialStructuralType>? = null,
+
   @Schema(
     description = "Additional comments that can be made about this location",
     example = "Not to be used",
@@ -483,75 +486,92 @@ data class CreateResidentialLocationRequest(
   val inCellSanitation: Boolean = false,
 ) {
 
-  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false): ResidentialLocationJPA {
-    val newLocation = if (isCell()) {
-      val location = CellJPA(
-        prisonId = prisonId,
-        code = code,
-        cellMark = cellMark,
-        locationType = locationType.baseType,
-        pathHierarchy = code,
-        localName = localName,
-        status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE,
-        residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-        createdBy = createdBy,
-        whenCreated = LocalDateTime.now(clock),
-        childLocations = mutableListOf(),
-        accommodationType = accommodationType,
-        capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
-        inCellSanitation = inCellSanitation,
-        certification =
-        CertificationJPA(
-          certified = if (createInDraft) false else certified,
-          capacityOfCertifiedCell = capacityNormalAccommodation,
-        ),
-      )
-      if (location.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
-        location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction)
+  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false, parentLocation: uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location? = null) = if (isCell()) {
+    val request = this
+    CellJPA(
+      prisonId = prisonId,
+      code = code,
+      cellMark = cellMark,
+      locationType = locationType.baseType,
+      pathHierarchy = code,
+      localName = localName,
+      status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE,
+      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+      createdBy = createdBy,
+      whenCreated = LocalDateTime.now(clock),
+      childLocations = mutableListOf(),
+      accommodationType = accommodationType,
+      capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
+      inCellSanitation = inCellSanitation,
+      certification =
+      CertificationJPA(
+        certified = if (createInDraft) false else certified,
+        capacityOfCertifiedCell = capacityNormalAccommodation,
+      ),
+    ).apply {
+      if (request.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+        addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction)
       }
-      usedFor?.forEach {
-        location.addUsedFor(it, createdBy, clock, linkedTransaction)
+      request.usedFor?.forEach {
+        addUsedFor(it, createdBy, clock, linkedTransaction)
+      } ?: request.specialistCellTypes?.forEach {
+        addSpecialistCellType(it, userOrSystemInContext = createdBy, clock = clock, linkedTransaction = linkedTransaction)
       }
-        ?: specialistCellTypes?.forEach {
-          location.addSpecialistCellType(it, userOrSystemInContext = createdBy, clock = clock, linkedTransaction = linkedTransaction)
-        }
-
-      return location
-    } else if (code in getVirtualLocationCodes()) {
-      VirtualResidentialLocation(
-        prisonId = prisonId,
-        code = code,
-        pathHierarchy = code,
-        localName = localName,
-        status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE,
-        capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
-        createdBy = createdBy,
-        whenCreated = LocalDateTime.now(clock),
-        childLocations = mutableListOf(),
-      )
-    } else {
-      ResidentialLocationJPA(
-        prisonId = prisonId,
-        code = code,
-        locationType = locationType.baseType,
-        pathHierarchy = code,
-        status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE,
-        localName = localName,
-        residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
-        createdBy = createdBy,
-        whenCreated = LocalDateTime.now(clock),
-        childLocations = mutableListOf(),
+      parentLocation?.let { setParent(it) }
+      addHistory(
+        attributeName = LocationAttribute.LOCATION_CREATED,
+        oldValue = null,
+        newValue = getKey(),
+        amendedBy = createdBy,
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
       )
     }
-    newLocation.addHistory(
-      LocationAttribute.CODE,
-      null,
-      code,
-      createdBy,
-      LocalDateTime.now(clock),
-      linkedTransaction,
-    )
-    return newLocation
+  } else if (code in getVirtualLocationCodes()) {
+    VirtualResidentialLocation(
+      prisonId = prisonId,
+      code = code,
+      pathHierarchy = code,
+      localName = localName,
+      status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE,
+      capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
+      createdBy = createdBy,
+      whenCreated = LocalDateTime.now(clock),
+      childLocations = mutableListOf(),
+    ).apply {
+      parentLocation?.let { setParent(it) }
+      addHistory(
+        attributeName = LocationAttribute.LOCATION_CREATED,
+        oldValue = null,
+        newValue = getKey(),
+        amendedBy = createdBy,
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+    }
+  } else {
+    ResidentialLocationJPA(
+      prisonId = prisonId,
+      code = code,
+      locationType = locationType.baseType,
+      pathHierarchy = code,
+      status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE,
+      localName = localName,
+      residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
+      createdBy = createdBy,
+      whenCreated = LocalDateTime.now(clock),
+      childLocations = mutableListOf(),
+    ).apply {
+      parentLocation?.let { setParent(it) }
+      addHistory(
+        attributeName = LocationAttribute.LOCATION_CREATED,
+        oldValue = null,
+        newValue = getKey(),
+        amendedBy = createdBy,
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+    }
   }
 
   fun isCell() = locationType == ResidentialLocationType.CELL
@@ -592,33 +612,30 @@ data class CreateNonResidentialLocationRequest(
   val usage: Set<NonResidentialUsageDto>? = null,
 ) {
 
-  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction): NonResidentialLocationJPA {
-    val location = NonResidentialLocationJPA(
-      id = null,
-      prisonId = prisonId,
-      code = code,
-      locationType = locationType.baseType,
-      pathHierarchy = code,
-      status = LocationStatus.ACTIVE,
-      localName = localName,
-      createdBy = createdBy,
-      whenCreated = LocalDateTime.now(clock),
-      childLocations = mutableListOf(),
-    )
+  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location? = null) = NonResidentialLocationJPA(
+    id = null,
+    prisonId = prisonId,
+    code = code,
+    locationType = locationType.baseType,
+    pathHierarchy = code,
+    status = LocationStatus.ACTIVE,
+    localName = localName,
+    createdBy = createdBy,
+    whenCreated = LocalDateTime.now(clock),
+    childLocations = mutableListOf(),
+  ).apply {
     usage?.forEach { usage ->
-      location.addUsage(usage.usageType, usage.capacity, usage.sequence)
+      addUsage(usage.usageType, usage.capacity, usage.sequence)
     }
-
-    location.addHistory(
-      LocationAttribute.CODE,
-      null,
-      code,
-      createdBy,
-      LocalDateTime.now(clock),
-      linkedTransaction,
+    parentLocation?.let { setParent(it) }
+    addHistory(
+      attributeName = LocationAttribute.LOCATION_CREATED,
+      oldValue = null,
+      newValue = getKey(),
+      amendedBy = createdBy,
+      amendedDate = LocalDateTime.now(clock),
+      linkedTransaction = linkedTransaction,
     )
-
-    return location
   }
 }
 
