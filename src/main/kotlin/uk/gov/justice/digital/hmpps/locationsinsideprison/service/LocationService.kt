@@ -323,8 +323,7 @@ class LocationService(
       "Create non-residential location ${request.code} in prison ${request.prisonId} under ${parentLocation?.getKey() ?: "top level"}",
     )
 
-    val locationToCreate = request.toNewEntity(getUsername(), clock, linkedTransaction)
-    parentLocation?.let { locationToCreate.setParent(it) }
+    val locationToCreate = request.toNewEntity(getUsername(), clock, linkedTransaction, parentLocation)
 
     val usageChanged = request.usage != null
 
