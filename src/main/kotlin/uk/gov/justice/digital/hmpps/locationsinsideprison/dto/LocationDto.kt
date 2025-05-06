@@ -61,6 +61,9 @@ data class Location(
   )
   val localName: String? = null,
 
+  @Schema(description = "The structure of the wing", required = false)
+  val wingStructure: List<ResidentialStructuralType>? = null,
+
   @Schema(
     description = "Additional comments that can be made about this location",
     example = "Not to be used",

@@ -21,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationPrefixDto
@@ -333,6 +334,27 @@ class LocationService(
     trackLocationUpdate(createdLocation, "Created Non-Residential Location")
 
     return createdLocation.toDto(includeParent = usageChanged).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  @Transactional
+  fun createWing(request: CreateWingAndStructureRequest): LocationDTO {
+    locationRepository.findOneByPrisonIdAndPathHierarchy(request.prisonId, request.wingCode)
+      ?.let { throw LocationAlreadyExistsException("${request.prisonId}-${request.wingCode}") }
+
+    val linkedTransaction = createLinkedTransaction(
+      prisonId = request.prisonId,
+      TransactionType.LOCATION_CREATE,
+      "Create wing ${request.wingCode} in prison ${request.prisonId}",
+    )
+
+    val wing = request.toEntity(
+      createdBy = getUsername(),
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
+    return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }

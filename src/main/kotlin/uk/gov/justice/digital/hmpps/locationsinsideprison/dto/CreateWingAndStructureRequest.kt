@@ -34,7 +34,7 @@ data class CreateWingAndStructureRequest(
   ),
 ) {
 
-  fun toEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction): ResidentialLocation = ResidentialLocation(
+  fun toEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction) = ResidentialLocation(
     prisonId = prisonId,
     code = wingCode,
     locationType = LocationType.valueOf(wingStructure.first().name),
@@ -45,6 +45,7 @@ data class CreateWingAndStructureRequest(
     whenCreated = LocalDateTime.now(clock),
     childLocations = mutableListOf(),
   ).apply {
+    setStructure(wingStructure)
     addHistory(
       attributeName = LocationAttribute.LOCATION_CREATED,
       oldValue = null,

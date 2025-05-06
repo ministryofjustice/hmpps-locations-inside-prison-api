@@ -10,6 +10,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
@@ -653,9 +654,119 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
     }
   }
 
-  @DisplayName("POST /locations/create-entire-wing")
+  @DisplayName("POST /locations/create-wing")
   @Nested
   inner class CreateWingTest {
+    var createWingAndStructure = CreateWingAndStructureRequest(
+      prisonId = "MDI",
+      wingCode = "Y",
+      wingDescription = "Y Wing",
+      wingStructure = listOf(ResidentialStructuralType.WING, ResidentialStructuralType.LANDING, ResidentialStructuralType.CELL),
+    )
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.post().uri("/locations/create-wing")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"prisonId": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `duplicate location is rejected`() {
+        webTestClient.post().uri("/locations/create-wing")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createWingAndStructure.copy(wingCode = "Z")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can create a wing with a 3 tier structure`() {
+        webTestClient.post().uri("/locations/create-wing")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(createWingAndStructure)
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "MDI",
+              "code": "Y",
+              "pathHierarchy": "Y",
+              "locationType": "WING",
+              "status":"DRAFT",
+              "key": "MDI-Y",
+              "localName": "Y Wing",
+              "wingStructure": [
+                "WING",
+                "LANDING",
+                "CELL"
+              ],
+              "capacity": {
+                "maxCapacity": 0,
+                "workingCapacity": 0
+              }
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
+      fun `can create a wing with a 4 tier structure`() {
+        webTestClient.post().uri("/locations/create-wing")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(createWingAndStructure.copy(wingStructure = listOf(ResidentialStructuralType.WING, ResidentialStructuralType.LANDING, ResidentialStructuralType.SPUR, ResidentialStructuralType.CELL)))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "MDI",
+              "code": "Y",
+              "pathHierarchy": "Y",
+              "locationType": "WING",
+              "status":"DRAFT",
+              "key": "MDI-Y",
+              "localName": "Y Wing",
+              "wingStructure": [
+                "WING",
+                "LANDING",
+                "SPUR",
+                "CELL"
+              ],
+              "capacity": {
+                "maxCapacity": 0,
+                "workingCapacity": 0
+              }
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+    }
+  }
+
+  @DisplayName("POST /locations/create-entire-wing")
+  @Nested
+  inner class CreateEntireWingTest {
     var createEntireWingRequest = CreateEntireWingRequest(
       prisonId = "MDI",
       wingCode = "Y",

@@ -12,10 +12,12 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
+import java.io.File.separator
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -51,6 +53,8 @@ open class ResidentialLocation(
   open var capacity: Capacity? = null,
 
   private var locked: Boolean = false,
+
+  private var residentialStructure: String? = null,
 
 ) : Location(
   id = id,
@@ -140,6 +144,12 @@ open class ResidentialLocation(
     updatedBy = userOrSystemInContext
     whenUpdated = LocalDateTime.now(clock)
   }
+
+  fun setStructure(wingStructure: List<ResidentialStructuralType>) {
+    this.residentialStructure = wingStructure.joinToString(separator = ",") { it.name }
+  }
+
+  private fun getStructure(): List<ResidentialStructuralType> = this.residentialStructure?.split(",")?.map { ResidentialStructuralType.valueOf(it.trim()) } ?: emptyList()
 
   open fun sendForApproval(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
     fun traverseAndLock(location: ResidentialLocation) {
@@ -372,6 +382,8 @@ open class ResidentialLocation(
     formatLocalName = formatLocalName,
     includePendingChange = includePendingChange,
   ).copy(
+
+    wingStructure = getStructure(),
 
     capacity = CapacityDto(
       maxCapacity = getDerivedMaxCapacity(includePendingChange),
