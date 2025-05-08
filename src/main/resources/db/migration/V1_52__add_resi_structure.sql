@@ -1,0 +1,1 @@
+ALTER TABLE location add column residential_structure varchar(150) DEFAULT NULL;

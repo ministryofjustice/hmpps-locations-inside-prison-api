@@ -12,6 +12,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
@@ -20,7 +21,7 @@ import java.time.LocalDateTime
 
 @Schema(description = "Request to create a wing")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-data class CreateWingRequest(
+data class CreateEntireWingRequest(
   @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
   @field:Size(min = 3, message = "Prison ID cannot be blank")
   @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
@@ -67,12 +68,21 @@ data class CreateWingRequest(
       createdBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
       childLocations = mutableListOf(),
-    )
-    log.info("Created Wing [${wing.getKey()}]")
+    ).apply {
+      addHistory(
+        attributeName = LocationAttribute.LOCATION_CREATED,
+        oldValue = null,
+        newValue = getKey(),
+        amendedBy = createdBy,
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+      log.info("Created Wing [${this.getKey()}]")
+    }
 
     numberOfSpurs?.let { numberOfSpurs ->
       for (spurNumber in 1..numberOfSpurs) {
-        val spur = ResidentialLocation(
+        ResidentialLocation(
           prisonId = prisonId,
           code = "$spurNumber",
           locationType = LocationType.SPUR,
@@ -83,16 +93,25 @@ data class CreateWingRequest(
           createdBy = createdBy,
           whenCreated = LocalDateTime.now(clock),
           childLocations = mutableListOf(),
-        )
-        wing.addChildLocation(spur)
-        log.info("Created Spur [${spur.getKey()}]")
+        ).apply {
+          wing.addChildLocation(this)
+          addHistory(
+            attributeName = LocationAttribute.LOCATION_CREATED,
+            oldValue = null,
+            newValue = getKey(),
+            amendedBy = createdBy,
+            amendedDate = LocalDateTime.now(clock),
+            linkedTransaction = linkedTransaction,
+          )
+          log.info("Created Spur [${this.getKey()}]")
+        }
       }
     }
 
     wing.findAllLeafLocations().forEach { spur ->
       numberOfLandings?.let { numberOfLandings ->
         for (landingNumber in 1..numberOfLandings) {
-          val landing = ResidentialLocation(
+          ResidentialLocation(
             prisonId = prisonId,
             code = "$landingNumber",
             locationType = LocationType.SPUR,
@@ -103,9 +122,19 @@ data class CreateWingRequest(
             createdBy = createdBy,
             whenCreated = LocalDateTime.now(clock),
             childLocations = mutableListOf(),
-          )
-          spur.addChildLocation(landing)
-          log.info("Created Landing [${landing.getKey()}]")
+          ).apply {
+            spur.addChildLocation(this)
+
+            addHistory(
+              attributeName = LocationAttribute.LOCATION_CREATED,
+              oldValue = null,
+              newValue = getKey(),
+              amendedBy = createdBy,
+              amendedDate = LocalDateTime.now(clock),
+              linkedTransaction = linkedTransaction,
+            )
+            log.info("Created Landing [${this.getKey()}]")
+          }
         }
       }
     }
@@ -113,7 +142,7 @@ data class CreateWingRequest(
     wing.findAllLeafLocations().forEach { leaf ->
       for (cellNumber in 1..numberOfCellsPerSection) {
         val code = "%03d".format(cellNumber)
-        val cell = Cell(
+        Cell(
           prisonId = prisonId,
           code = code,
           cellMark = "$wingCode-$cellNumber",
@@ -133,10 +162,20 @@ data class CreateWingRequest(
             certified = true,
             capacityOfCertifiedCell = defaultCellCapacity,
           ),
-        )
-        cell.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction = linkedTransaction)
-        leaf.addChildLocation(cell)
-        log.info("Created Cell [${cell.getKey()}]")
+        ).apply {
+          addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction = linkedTransaction)
+          leaf.addChildLocation(this)
+
+          addHistory(
+            attributeName = LocationAttribute.LOCATION_CREATED,
+            oldValue = null,
+            newValue = getKey(),
+            amendedBy = createdBy,
+            amendedDate = LocalDateTime.now(clock),
+            linkedTransaction = linkedTransaction,
+          )
+          log.info("Created Cell [${this.getKey()}]")
+        }
       }
     }
     return wing
