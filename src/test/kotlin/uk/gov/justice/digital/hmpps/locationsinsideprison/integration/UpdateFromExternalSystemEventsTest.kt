@@ -12,9 +12,11 @@ import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
@@ -23,6 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternal
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.UPDATE_FROM_EXTERNAL_SYSTEM_QUEUE_CONFIG_KEY
+import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import uk.gov.justice.hmpps.sqs.HmppsQueueService
 import uk.gov.justice.hmpps.sqs.MissingQueueException
 import uk.gov.justice.hmpps.sqs.countAllMessagesOnQueue
@@ -33,6 +36,9 @@ import java.util.UUID
 class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
   @Autowired
   private lateinit var hmppsQueueService: HmppsQueueService
+
+  @MockitoBean
+  lateinit var hmppsAuthenticationHolder: HmppsAuthenticationHolder
 
   @MockitoSpyBean
   lateinit var locationService: LocationService
@@ -49,8 +55,12 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
   fun getNumberOfMessagesCurrentlyOnDlq(): Int = queueSqsDlqClient.countAllMessagesOnQueue(dlqUrl).get()
 
   @BeforeEach
-  fun `clear queues`() {
+  fun setup() {
     Mockito.reset(locationService)
+    Mockito.reset(hmppsAuthenticationHolder)
+
+    whenever(hmppsAuthenticationHolder.username).thenReturn("User 1")
+
     queueSqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(queueUrl).build())
     queueSqsDlqClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(dlqUrl).build())
   }
