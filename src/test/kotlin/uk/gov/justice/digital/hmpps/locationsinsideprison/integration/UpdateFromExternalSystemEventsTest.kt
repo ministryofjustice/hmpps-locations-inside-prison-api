@@ -57,7 +57,7 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
 
   @Nested
   @DisplayName("Location temporarily deactivated event")
-  inner class UpdateFromExternalSystemListenerServiceTest {
+  inner class LocationTemporarilyDeactivatedEventTests {
     @Test
     fun `will process an event`() {
       prisonerSearchMockServer.stubSearchByLocations(
