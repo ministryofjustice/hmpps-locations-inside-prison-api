@@ -29,7 +29,7 @@ import java.util.UUID
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
-class UpdateFromExternalSystemEventsTest: CommonDataTestBase() {
+class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
   @Autowired
   private lateinit var hmppsQueueService: HmppsQueueService
 
