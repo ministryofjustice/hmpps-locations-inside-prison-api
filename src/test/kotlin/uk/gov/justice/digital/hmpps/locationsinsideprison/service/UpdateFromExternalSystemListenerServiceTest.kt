@@ -35,7 +35,7 @@ internal class UpdateFromExternalSystemListenerServiceTest {
 
   @Nested
   @DisplayName("Location temporarily deactivated event")
-  inner class CreateVisit {
+  inner class LocationTemporarilyDeactivatedEventTests {
     private val messageId = UUID.randomUUID().toString()
     private val key = "MDI-A-1"
     private val updateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
@@ -114,7 +114,7 @@ internal class UpdateFromExternalSystemListenerServiceTest {
   }
 
   @Test
-  fun `will throw an an exception when invalid visit write event passed in`() {
+  fun `will throw an an exception when an invalid event passed in`() {
     val messageId = UUID.randomUUID().toString()
     val message = """
     {

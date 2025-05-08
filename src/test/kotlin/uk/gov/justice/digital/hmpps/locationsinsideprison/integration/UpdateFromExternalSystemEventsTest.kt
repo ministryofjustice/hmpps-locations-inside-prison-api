@@ -57,7 +57,7 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
 
   @Nested
   @DisplayName("Location temporarily deactivated event")
-  inner class CreateVisit {
+  inner class UpdateFromExternalSystemListenerServiceTest {
     @Test
     fun `will process an event`() {
       prisonerSearchMockServer.stubSearchByLocations(
@@ -124,7 +124,7 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
   }
 
   @Test
-  fun `will write an invalid visit write event to the dlq`() {
+  fun `will write an invalid event to the dlq`() {
     val messageId = UUID.randomUUID().toString()
     val message = """
     {
