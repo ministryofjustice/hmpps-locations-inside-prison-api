@@ -1,7 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase
@@ -23,7 +23,7 @@ class PrisonConfigurationRepositoryTest : TestBase() {
   @Autowired
   lateinit var repository: PrisonConfigurationRepository
 
-  @BeforeEach
+  @AfterEach
   fun cleanUp() {
     repository.deleteAll()
   }
