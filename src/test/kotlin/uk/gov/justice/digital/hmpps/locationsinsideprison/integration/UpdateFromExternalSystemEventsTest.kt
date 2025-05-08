@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito
 import org.mockito.kotlin.any
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
@@ -49,6 +50,7 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
 
   @BeforeEach
   fun `clear queues`() {
+    Mockito.reset(locationService)
     queueSqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(queueUrl).build())
     queueSqsDlqClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(dlqUrl).build())
   }
@@ -86,9 +88,9 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
 
       await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 1 }
       await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 0 }
+      await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 0 }
 
       await untilAsserted { verify(locationService, times(1)).deactivateLocations(any<DeactivateLocationsRequest>()) }
-      await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 0 }
     }
 
     @Test
