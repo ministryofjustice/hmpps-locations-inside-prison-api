@@ -73,6 +73,3 @@ sonar-project.properties
 
 #Helm
 **/Chart.lock
-
-# Local development env file
-.env
