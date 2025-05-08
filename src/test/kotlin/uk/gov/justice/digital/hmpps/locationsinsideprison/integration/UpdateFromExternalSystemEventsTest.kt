@@ -72,9 +72,7 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
     fun `will process an event`() {
       prisonerSearchMockServer.stubSearchByLocations(
         landingN1.prisonId,
-        listOf(
-          landingN1.getPathHierarchy(),
-        ),
+        landingN1.cellLocations().map { it.getPathHierarchy() },
         false, // Return no results as this will cause deactivate to fail
       )
 
