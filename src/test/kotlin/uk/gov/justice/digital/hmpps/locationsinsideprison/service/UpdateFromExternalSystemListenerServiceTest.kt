@@ -37,33 +37,22 @@ internal class UpdateFromExternalSystemListenerServiceTest {
   @DisplayName("Location temporarily deactivated event")
   inner class LocationTemporarilyDeactivatedEventTests {
     private val messageId = UUID.randomUUID().toString()
-    private val key = "MDI-A-1"
+    private val id: UUID? = UUID.randomUUID()
     private val updateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
       messageId = messageId,
       eventType = "LocationTemporarilyDeactivated",
       messageAttributes = mapOf(
-        "key" to key,
+        "id" to id,
         "deactivationReason" to "DAMAGED",
         "deactivationReasonDescription" to "Window broken",
         "proposedReactivationDate" to "2025-01-05",
         "planetFmReference" to "23423TH/5",
       ),
     )
-    private val invalidUpdateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
-      messageId = UUID.randomUUID().toString(),
-      eventType = "LocationTemporarilyDeactivated",
-      messageAttributes = mapOf(
-        "invalidField" to "OPEN",
-      ),
-    )
     val location: Location? = mock()
-    val id: UUID? = UUID.randomUUID()
 
     @Test
     fun `will process the event`() {
-      whenever(locationService.getLocationByKey(key)).thenReturn(location)
-      whenever(location?.id).thenReturn(id)
-
       val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
 
       assertDoesNotThrow {
@@ -73,24 +62,8 @@ internal class UpdateFromExternalSystemListenerServiceTest {
     }
 
     @Test
-    fun `will throw an exception if getLocationByKey returns an error`() {
-      val exceptionMessage = "Could not get location by key"
-      whenever(locationService.getLocationByKey(key)).thenThrow(MockitoException(exceptionMessage))
-
-      val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
-
-      val exception = assertThrows<Exception> {
-        updateFromExternalSystemListenerService.onEventReceived(message)
-      }
-      assertThat(exception.message).contains(exceptionMessage)
-      verify(locationService, times(0)).deactivateLocations(any<DeactivateLocationsRequest>())
-    }
-
-    @Test
     fun `will throw an exception if deactivateLocations returns an error`() {
       val exceptionMessage = "Could not deactivate locations"
-      whenever(locationService.getLocationByKey(key)).thenReturn(location)
-      whenever(location?.id).thenReturn(id)
       whenever(locationService.deactivateLocations(any<DeactivateLocationsRequest>())).thenThrow(MockitoException(exceptionMessage))
 
       val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
@@ -103,12 +76,18 @@ internal class UpdateFromExternalSystemListenerServiceTest {
 
     @Test
     fun `will throw an exception if message attributes are invalid`() {
+      val invalidUpdateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
+        messageId = UUID.randomUUID().toString(),
+        eventType = "LocationTemporarilyDeactivated",
+        messageAttributes = mapOf(
+          "invalidField" to "invalidValue",
+        ),
+      )
       val message = objectMapper.writeValueAsString(invalidUpdateFromExternalSystemEvent)
 
       assertThrows<Exception> {
         updateFromExternalSystemListenerService.onEventReceived(message)
       }
-      verify(locationService, times(0)).getLocationByKey(any<String>(), any<Boolean>(), any<Boolean>())
       verify(locationService, times(0)).deactivateLocations(any<DeactivateLocationsRequest>())
     }
   }

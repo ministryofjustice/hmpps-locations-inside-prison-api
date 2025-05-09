@@ -77,12 +77,11 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
       )
 
       val messageId = UUID.randomUUID().toString()
-      val key = "${landingN1.prisonId}-${landingN1.getPathHierarchy()}"
       val updateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
         messageId = messageId,
         eventType = "LocationTemporarilyDeactivated",
         messageAttributes = mapOf(
-          "key" to key,
+          "id" to landingN1.id,
           "deactivationReason" to "DAMAGED",
           "deactivationReasonDescription" to "Window broken",
           "proposedReactivationDate" to "2025-01-05",

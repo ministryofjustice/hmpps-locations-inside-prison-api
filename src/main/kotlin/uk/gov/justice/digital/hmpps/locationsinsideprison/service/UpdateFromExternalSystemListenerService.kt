@@ -29,17 +29,18 @@ class UpdateFromExternalSystemListenerService(
       val sqsMessage = objectMapper.readValue(rawMessage, UpdateFromExternalSystemEvent::class.java)
       when (sqsMessage.eventType) {
         "LocationTemporarilyDeactivated" -> {
-          val temporarilyDeactivateLocationByKeyRequest = sqsMessage.toTemporarilyDeactivateLocationByKeyRequest()
-          val key = temporarilyDeactivateLocationByKeyRequest.key
-          val location = locationService.getLocationByKey(key) ?: throw Exception("No location found for key: $key")
-          val temporaryDeactivationLocationRequest = TemporaryDeactivationLocationRequest(
-            deactivationReason = temporarilyDeactivateLocationByKeyRequest.deactivationReason,
-            deactivationReasonDescription = temporarilyDeactivateLocationByKeyRequest.deactivationReasonDescription,
-            proposedReactivationDate = temporarilyDeactivateLocationByKeyRequest.proposedReactivationDate,
-            planetFmReference = temporarilyDeactivateLocationByKeyRequest.planetFmReference,
-          )
-          locationService.deactivateLocations(DeactivateLocationsRequest(mapOf(location.id to temporaryDeactivationLocationRequest)))
-          LOG.info("Location temporarily deactivated: $key (${location.id})")
+          val event = sqsMessage.toUpdateFromExternalSystemDeactivateEvent()
+          val temporaryDeactivationLocationRequest = event.let {
+            TemporaryDeactivationLocationRequest(
+              deactivationReason = it.deactivationReason,
+              deactivationReasonDescription = it.deactivationReasonDescription,
+              proposedReactivationDate = it.proposedReactivationDate,
+              planetFmReference = it.planetFmReference,
+            )
+          }
+          val deactivateLocationsRequest = DeactivateLocationsRequest(mapOf(event.id to temporaryDeactivationLocationRequest))
+          locationService.deactivateLocations(deactivateLocationsRequest)
+          LOG.info("Location temporarily deactivated: ${event.id}")
         }
         else -> throw Exception("Cannot process event of type ${sqsMessage.eventType}")
       }
