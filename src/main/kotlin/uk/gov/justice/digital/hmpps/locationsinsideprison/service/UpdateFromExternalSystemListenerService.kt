@@ -42,7 +42,6 @@ class UpdateFromExternalSystemListenerService(
           val deactivateLocationsRequest = DeactivateLocationsRequest(mapOf(event.id to temporaryDeactivationLocationRequest))
           val result = locationService.deactivateLocations(deactivateLocationsRequest)
           deactivate(result)
-          LOG.info("Location temporarily deactivated: ${event.id}")
         }
         else -> throw Exception("Cannot process event of type ${sqsMessage.eventType}")
       }
