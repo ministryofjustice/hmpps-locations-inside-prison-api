@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOperationCapacityService
 
 @RestController
@@ -119,9 +118,7 @@ class SignedOperationCapacityResource(
     signedOperationCapacityValidRequest: SignedOperationCapacityValidRequest,
   ): ResponseEntity<SignedOperationCapacityDto> {
     val saveSignedOperationalCapacity = signedOperationCapacityService.saveSignedOperationalCapacity(signedOperationCapacityValidRequest)
-    val response = publishSignedOpCapChange(
-      InternalLocationDomainEventType.SIGNED_OP_CAP_AMENDED,
-    ) {
+    val response = publishSignedOpCapChange {
       saveSignedOperationalCapacity.signedOperationCapacityDto
     }
 

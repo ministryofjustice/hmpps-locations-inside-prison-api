@@ -25,4 +25,49 @@ class ManageUsersApiMockServer : WireMockServer(WIREMOCK_PORT) {
       ),
     )
   }
+
+  fun stubLookupUserCaseload(
+    username: String = "request-user",
+    activeCaseload: String = "LEI",
+    otherCaseloads: List<String> = emptyList(),
+  ) {
+    val otherCaseloadJson: String = otherCaseloads.joinToString { ",{\"id\": \"$it\", \"name\": \"$it\"}" }
+    val payload = """
+        {
+          "username": "$username",
+          "active": true,
+          "accountType": "GENERAL",
+          "activeCaseload": { "id": "$activeCaseload", "name": "$activeCaseload" },
+          "caseloads": [
+            {
+              "id": "$activeCaseload",
+              "name": "$activeCaseload"
+            }
+             $otherCaseloadJson
+          ]
+        }
+    """.trimIndent()
+    stubFor(
+      get("/prisonusers/$username/caseloads")
+        .willReturn(
+          aResponse()
+            .withHeader("Content-Type", "application/json")
+            .withBody(payload).withStatus(200),
+        ),
+    )
+  }
+
+  fun stubLookupUsersRoles(username: String = "request-user", roles: List<String> = emptyList()) {
+    stubFor(
+      get("/users/$username/roles")
+        .willReturn(
+          aResponse()
+            .withHeader("Content-Type", "application/json")
+            .withBody(mapper.writeValueAsBytes(roles.map { RolesResponse(it) })).withStatus(200),
+        ),
+    )
+  }
+  data class RolesResponse(
+    val roleCode: String,
+  )
 }
