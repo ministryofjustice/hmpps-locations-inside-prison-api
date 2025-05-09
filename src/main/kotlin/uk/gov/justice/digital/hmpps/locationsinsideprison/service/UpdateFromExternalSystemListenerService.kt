@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternalSystemEvent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EventBaseResource
 
 const val UPDATE_FROM_EXTERNAL_SYSTEM_QUEUE_CONFIG_KEY = "updatefromexternalsystemevents"
 
@@ -15,7 +16,7 @@ const val UPDATE_FROM_EXTERNAL_SYSTEM_QUEUE_CONFIG_KEY = "updatefromexternalsyst
 class UpdateFromExternalSystemListenerService(
   private val objectMapper: ObjectMapper,
   private val locationService: LocationService,
-) {
+): EventBaseResource() {
   private companion object {
     val LOG: Logger = LoggerFactory.getLogger(this::class.java)
   }
@@ -39,7 +40,8 @@ class UpdateFromExternalSystemListenerService(
             )
           }
           val deactivateLocationsRequest = DeactivateLocationsRequest(mapOf(event.id to temporaryDeactivationLocationRequest))
-          locationService.deactivateLocations(deactivateLocationsRequest)
+          val result = locationService.deactivateLocations(deactivateLocationsRequest)
+          deactivate(result)
           LOG.info("Location temporarily deactivated: ${event.id}")
         }
         else -> throw Exception("Cannot process event of type ${sqsMessage.eventType}")
