@@ -16,7 +16,7 @@ const val UPDATE_FROM_EXTERNAL_SYSTEM_QUEUE_CONFIG_KEY = "updatefromexternalsyst
 class UpdateFromExternalSystemListenerService(
   private val objectMapper: ObjectMapper,
   private val locationService: LocationService,
-): EventBaseResource() {
+) : EventBaseResource() {
   private companion object {
     val LOG: Logger = LoggerFactory.getLogger(this::class.java)
   }
