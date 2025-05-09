@@ -151,7 +151,7 @@
             "sortable": true,
             "visible": "true",
             "defaultsort": false,
-            "default": "${activeCaseloadId}",
+
             "filter": {
               "type": "multiselect",
               "mandatory": false,
@@ -181,7 +181,7 @@
           {
             "name": "$ref:tx_start_time",
             "display": "Transaction time",
-            "formula": "format_date(${tx_start_time}, 'dd/MM/yyyy hh:mm')",
+            "formula": "format_date(${tx_start_time}, 'dd/MM/yyyy HH:mm')",
             "sortable": true,
             "visible": "true",
             "defaultsort": true,
