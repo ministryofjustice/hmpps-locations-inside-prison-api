@@ -3,10 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import io.swagger.v3.oas.annotations.media.Schema
-import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
 import java.time.LocalDate
 import java.util.UUID
 
