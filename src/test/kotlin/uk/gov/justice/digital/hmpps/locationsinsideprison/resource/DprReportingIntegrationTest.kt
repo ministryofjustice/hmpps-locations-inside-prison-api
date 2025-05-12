@@ -19,7 +19,7 @@ class DprReportingIntegrationTest : CommonDataTestBase() {
   @BeforeEach
   override fun setUp() {
     super.setUp()
-    manageUsersApiMockServer.stubLookupUsersRoles(REQUESTING_USER, listOf("MANAGE_RES_LOCATIONS_OP_CAP"))
+    manageUsersApiMockServer.stubLookupUsersRoles(REQUESTING_USER, listOf("REPORTING_LOCATION_INFORMATION"))
     manageUsersApiMockServer.stubLookupUserCaseload(REQUESTING_USER, "LEI", listOf("MDI"))
   }
 
@@ -125,11 +125,11 @@ class DprReportingIntegrationTest : CommonDataTestBase() {
             """
            {
               "id": "transactions",
-              "name": "Transactions for locations",
-              "description": "List of transactions in locations",
+              "name": "Location transaction reports",
+              "description": "Reports detailing transactions made to internal locations",
               "variant": {
                 "id": "residential",
-                "name": "Transactions for residential locations",
+                "name": "Residential location transactions",
                 "resourceName": "reports/transactions/residential",
                 "description": "Details each transaction that has occurred in a residential location",
                 "printable": true
