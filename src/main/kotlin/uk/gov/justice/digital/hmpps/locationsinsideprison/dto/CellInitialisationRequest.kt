@@ -8,23 +8,22 @@ import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest.Companion.log
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService.Companion.log
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.*
 
-@Schema(description = "Request to a parent location and cell locations below it")
+@Schema(description = "Request to a create location and cell locations below it")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CellInitialisationRequest(
   @Schema(
@@ -41,20 +40,16 @@ data class CellInitialisationRequest(
   val prisonId: String,
 
   @Schema(
-    description = "Parent location under which the structure and cells should be created, if not specified then will add to the top level of the prison",
+    description = "Parent location under which the structure and/or cells should be created, if not specified then will add to the top level of the prison, is specified but no `newLevelAboveCells` is specified then cells will be created under this location",
     required = false,
   )
   val parentLocation: UUID? = null,
 
-  @Schema(description = "Code assigned to the new structural location", example = "1", required = true)
-  @field:Size(max = 12, message = "Max of 12 characters")
-  val newLevelCode: String,
-  @Schema(description = "Alternative description to display for location", example = "Landing A", required = false)
-  @field:Size(max = 80, message = "Max of 80 characters")
-  val newLevelDescription: String?,
-
-  @Schema(description = "Parent location type", example = "LANDING", required = false, defaultValue = "LANDING")
-  val newLocationType: ResidentialStructuralType = ResidentialStructuralType.LANDING,
+  @Schema(
+    description = "The location to create above the cells, this is normally a landing or spur, if the location where cells should be created under already exists then leave null",
+    required = false,
+  )
+  val newLevelAboveCells: LevelAboveCells? = null,
 
   @Schema(description = "Used For Types for all cells", required = false)
   val cellsUsedFor: Set<UsedForType>? = null,
@@ -67,29 +62,6 @@ data class CellInitialisationRequest(
 
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
-  }
-
-  fun createLocation(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: Location? = null) = ResidentialLocation(
-    prisonId = prisonId,
-    code = newLevelCode,
-    locationType = LocationType.valueOf(newLocationType.name),
-    status = LocationStatus.DRAFT,
-    pathHierarchy = newLevelCode,
-    localName = newLevelDescription,
-    createdBy = createdBy,
-    whenCreated = LocalDateTime.now(clock),
-    childLocations = mutableListOf(),
-  ).apply {
-    parentLocation?.let { setParent(it) }
-    addHistory(
-      attributeName = LocationAttribute.LOCATION_CREATED,
-      oldValue = null,
-      newValue = getKey(),
-      amendedBy = createdBy,
-      amendedDate = LocalDateTime.now(clock),
-      linkedTransaction = linkedTransaction,
-    )
-    log.info("Created location ${this.getKey()}")
   }
 
   fun creatCells(
@@ -144,8 +116,42 @@ data class CellInitialisationRequest(
     }
   }
 }
+data class LevelAboveCells(
+  @Schema(description = "Code assigned to the new structural location", example = "1", required = true)
+  @field:Size(max = 12, message = "Max of 12 characters")
+  val levelCode: String,
+  @Schema(description = "Alternative description to display for location", example = "Landing A", required = false)
+  @field:Size(max = 80, message = "Max of 80 characters")
+  val levelLocalName: String?,
 
-class NewCellRequest(
+  @Schema(description = "Parent location type", example = "LANDING", required = false, defaultValue = "LANDING")
+  val locationType: ResidentialStructuralType = ResidentialStructuralType.LANDING,
+) {
+  fun createLocation(prisonId: String, createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: ResidentialLocation? = null) = ResidentialLocation(
+    prisonId = prisonId,
+    code = levelCode,
+    locationType = LocationType.valueOf(locationType.name),
+    status = LocationStatus.DRAFT,
+    pathHierarchy = levelCode,
+    localName = levelLocalName,
+    createdBy = createdBy,
+    whenCreated = LocalDateTime.now(clock),
+    childLocations = mutableListOf(),
+  ).apply {
+    parentLocation?.let { setParent(it) }
+    addHistory(
+      attributeName = LocationAttribute.LOCATION_CREATED,
+      oldValue = null,
+      newValue = getKey(),
+      amendedBy = createdBy,
+      amendedDate = LocalDateTime.now(clock),
+      linkedTransaction = linkedTransaction,
+    )
+    log.info("Created location ${this.getKey()}")
+  }
+}
+
+data class NewCellRequest(
   @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be up to 12 characters")
@@ -154,7 +160,7 @@ class NewCellRequest(
   @Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1)
   @field:Size(min = 1, message = "Mark cannot be blank")
   @field:Size(max = 12, message = "Mark must be up to 12 characters")
-  val cellMark: String?,
+  val cellMark: String? = null,
 
   @Schema(
     description = "Accommodation Type",
