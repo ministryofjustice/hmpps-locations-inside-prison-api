@@ -17,9 +17,14 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.test.context.junit.jupiter.SpringExtension
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternalSystemEvent
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationIsNotACellException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import java.time.LocalDateTime
 import java.util.UUID
 
 @ExtendWith(SpringExtension::class)
@@ -37,7 +42,7 @@ internal class UpdateFromExternalSystemListenerServiceTest {
   @DisplayName("Location temporarily deactivated event")
   inner class LocationTemporarilyDeactivatedEventTests {
     private val messageId = UUID.randomUUID().toString()
-    private val id: UUID? = UUID.randomUUID()
+    private val id: UUID = UUID.randomUUID()
     private val updateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
       messageId = messageId,
       eventType = "LocationTemporarilyDeactivated",
@@ -49,7 +54,25 @@ internal class UpdateFromExternalSystemListenerServiceTest {
         "planetFmReference" to "23423TH/5",
       ),
     )
-    val location: Location? = mock()
+    val cellLocation = Location(
+      id = id,
+      prisonId = "MDI",
+      code = "001",
+      pathHierarchy = "A-1-001",
+      locationType = LocationType.CELL,
+      status = DerivedLocationStatus.ACTIVE,
+      topLevelId = UUID.randomUUID(),
+      level = 3,
+      leafLevel = true,
+      parentId = UUID.randomUUID(),
+      lastModifiedBy = "TEST_USER",
+      lastModifiedDate = LocalDateTime.now(),
+    )
+
+    @BeforeEach
+    internal fun setUp() {
+      whenever(locationService.getLocationById(id)).thenReturn(cellLocation)
+    }
 
     @Test
     fun `will process the event`() {
@@ -59,6 +82,28 @@ internal class UpdateFromExternalSystemListenerServiceTest {
         updateFromExternalSystemListenerService.onEventReceived(message)
       }
       verify(locationService, times(1)).deactivateLocations(any<DeactivateLocationsRequest>())
+    }
+
+    @Test
+    fun `throw exception when no location not found`() {
+      whenever(locationService.getLocationById(id)).thenReturn(null)
+
+      val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
+
+      assertThrows<LocationNotFoundException> {
+        updateFromExternalSystemListenerService.onEventReceived(message)
+      }
+    }
+
+    @Test
+    fun `throw exception when no location is not a cell`() {
+      whenever(locationService.getLocationById(id)).thenReturn(cellLocation.copy(locationType = LocationType.WING))
+
+      val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
+
+      assertThrows<LocationIsNotACellException> {
+        updateFromExternalSystemListenerService.onEventReceived(message)
+      }
     }
 
     @Test

@@ -7,8 +7,11 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternalSystemEvent
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EventBaseResource
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationIsNotACellException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 
 const val UPDATE_FROM_EXTERNAL_SYSTEM_QUEUE_CONFIG_KEY = "updatefromexternalsystemevents"
 
@@ -38,6 +41,13 @@ class UpdateFromExternalSystemListenerService(
               proposedReactivationDate = it.proposedReactivationDate,
               planetFmReference = it.planetFmReference,
             )
+          }
+          val location = locationService.getLocationById(event.id)
+          if (location == null) {
+            throw LocationNotFoundException(event.id.toString())
+          }
+          if (location.locationType != LocationType.CELL) {
+            throw LocationIsNotACellException(location.getKey())
           }
           val deactivateLocationsRequest = DeactivateLocationsRequest(mapOf(event.id to temporaryDeactivationLocationRequest))
           deactivate(locationService.deactivateLocations(deactivateLocationsRequest))
