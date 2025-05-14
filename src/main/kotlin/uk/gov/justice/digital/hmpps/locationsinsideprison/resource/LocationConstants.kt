@@ -40,7 +40,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationServic
 )
 class LocationConstants(
   private val locationService: LocationService,
-) : EventBaseResource() {
+) : EventBase() {
 
   @GetMapping("/location-type")
   @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
