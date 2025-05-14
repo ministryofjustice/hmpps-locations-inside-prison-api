@@ -383,40 +383,66 @@ class LocationService(
   @Transactional
   fun createCells(createCellsRequest: CellInitialisationRequest): LocationDTO {
     val parentLocation = createCellsRequest.parentLocation?.let {
-      locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
+      residentialLocationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
     }
 
-    checkParentValid(
-      parentLocation = parentLocation,
-      code = createCellsRequest.newLevelCode,
-      prisonId = createCellsRequest.prisonId,
-    ) // check that code doesn't clash with the existing location
+    createCellsRequest.newLevelAboveCells?.let {
+      checkParentValid(
+        parentLocation = parentLocation,
+        code = it.levelCode,
+        prisonId = createCellsRequest.prisonId,
+      ) // check that code doesn't clash with the existing location
+    }
 
-    val linkedTransaction = createLinkedTransaction(
+    if (createCellsRequest.newLevelAboveCells == null && parentLocation == null) {
+      throw ValidationException("Either a parent location or new level above cells must be provided")
+    }
+
+    val linkedTransaction = createCellsRequest.newLevelAboveCells?.let {
+      createLinkedTransaction(
+        prisonId = createCellsRequest.prisonId,
+        TransactionType.LOCATION_CREATE,
+        "Creating locations ${it.locationType} ${it.levelCode} in prison ${createCellsRequest.prisonId}",
+      )
+    } ?: createLinkedTransaction(
       prisonId = createCellsRequest.prisonId,
       TransactionType.LOCATION_CREATE,
-      "Created ${createCellsRequest.newLocationType} ${createCellsRequest.newLevelCode} in prison ${createCellsRequest.prisonId}",
+      "Creating cells ${createCellsRequest.cells.joinToString { it.code }} in prison ${createCellsRequest.prisonId}",
     )
 
-    val newLocation = createCellsRequest.createLocation(
-      createdBy = getUsername(),
-      clock = clock,
-      linkedTransaction = linkedTransaction,
-      parentLocation = parentLocation,
-    )
-    residentialLocationRepository.save(newLocation)
+    val newLocation = createCellsRequest.newLevelAboveCells?.let {
+      residentialLocationRepository.save(
+        it.createLocation(
+          prisonId = createCellsRequest.prisonId,
+          createdBy = getUsername(),
+          clock = clock,
+          linkedTransaction = linkedTransaction,
+          parentLocation = parentLocation,
+        ),
+      )
+    }
 
-    if (createCellsRequest.cells.isNotEmpty()) {
+    val parentAboveCells = newLocation ?: parentLocation!!
+
+    createCellsRequest.cells.let {
+      it.forEach { cell ->
+        // check that code doesn't clash with the existing location
+        checkParentValid(
+          parentLocation = parentAboveCells,
+          code = cell.code,
+          prisonId = createCellsRequest.prisonId,
+        )
+      }
       val cells = createCellsRequest.creatCells(
         createdBy = getUsername(),
         clock = clock,
         linkedTransaction = linkedTransaction,
-        location = newLocation,
+        location = parentAboveCells,
       )
-      log.info("Created ${cells.size} cells under location ${newLocation.getKey()}")
+      log.info("Created ${cells.size} cells under location ${parentAboveCells.getKey()}")
     }
 
-    return locationRepository.save(newLocation).toDto(includeChildren = true, includeNonResidential = false).also {
+    return residentialLocationRepository.save(parentAboveCells).toDto(includeChildren = true, includeNonResidential = false).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }

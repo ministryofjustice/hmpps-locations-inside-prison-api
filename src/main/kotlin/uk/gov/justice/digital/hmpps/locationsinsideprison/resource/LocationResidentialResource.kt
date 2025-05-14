@@ -150,11 +150,7 @@ class LocationResidentialResource(
     @RequestBody
     @Validated
     wingAndStructureRequest: CreateWingAndStructureRequest,
-  ): Location = eventPublishAndAudit(
-    InternalLocationDomainEventType.LOCATION_CREATED,
-  ) {
-    locationService.createWing(wingAndStructureRequest)
-  }
+  ): Location = locationService.createWing(wingAndStructureRequest)
 
   @PostMapping("/create-entire-wing", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -236,11 +232,7 @@ class LocationResidentialResource(
     @RequestBody
     @Validated
     createCellsRequest: CellInitialisationRequest,
-  ): Location = eventPublishAndAudit(
-    InternalLocationDomainEventType.LOCATION_CREATED,
-  ) {
-    locationService.createCells(createCellsRequest)
-  }
+  ): Location = locationService.createCells(createCellsRequest)
 
   @PostMapping("/residential", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
