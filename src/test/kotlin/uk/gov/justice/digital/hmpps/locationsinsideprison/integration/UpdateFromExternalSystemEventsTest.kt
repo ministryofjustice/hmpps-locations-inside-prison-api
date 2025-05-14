@@ -107,7 +107,7 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
           buildList {
             add(InternalLocationDomainEventType.LOCATION_DEACTIVATED.value to cell1.getKey())
             addAll(parentLocations.map { parentLocation -> InternalLocationDomainEventType.LOCATION_AMENDED.value to parentLocation.getKey() })
-          }
+          },
         )
       }
     }
