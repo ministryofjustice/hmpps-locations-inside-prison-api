@@ -138,6 +138,24 @@ internal class UpdateFromExternalSystemListenerServiceTest {
   }
 
   @Test
+  fun `will handle a test event passed in`() {
+    val messageId = UUID.randomUUID().toString()
+    val message = """
+    {
+      "messageId" : "$messageId",
+      "eventType" : "TestEvent",
+      "description" : null,
+      "messageAttributes" : {},
+      "who" : "automated-test-client"
+    }
+    """
+
+    assertDoesNotThrow {
+      updateFromExternalSystemListenerService.onEventReceived(message)
+    }
+  }
+
+  @Test
   fun `will throw an an exception when an invalid event passed in`() {
     val messageId = UUID.randomUUID().toString()
     val message = """

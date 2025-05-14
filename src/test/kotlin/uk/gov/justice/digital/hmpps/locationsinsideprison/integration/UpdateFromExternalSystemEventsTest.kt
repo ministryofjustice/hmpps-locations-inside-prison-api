@@ -171,6 +171,27 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
   }
 
   @Test
+  fun `will handle a test event`() {
+    val messageId = UUID.randomUUID().toString()
+    val message = """
+    {
+      "messageId" : "$messageId",
+      "eventType" : "TestEvent",
+      "description" : null,
+      "messageAttributes" : {}
+    }
+    """
+
+    queueSqsClient.sendMessage(
+      SendMessageRequest.builder().queueUrl(queueUrl).messageBody(message).build(),
+    )
+
+    await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 1 }
+    await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 0 }
+    await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 0 }
+  }
+
+  @Test
   fun `will write an invalid event to the dlq`() {
     val messageId = UUID.randomUUID().toString()
     val message = """

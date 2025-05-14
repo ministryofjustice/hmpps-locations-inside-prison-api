@@ -31,6 +31,7 @@ class UpdateFromExternalSystemListenerService(
       LOG.info("Received update from external system event: $rawMessage")
       val sqsMessage = objectMapper.readValue(rawMessage, UpdateFromExternalSystemEvent::class.java)
       when (sqsMessage.eventType) {
+        "TestEvent" -> {} // This exists so we can run tests to make sure the queue can be written to without performing any other actions
         "LocationTemporarilyDeactivated" -> {
           val event = sqsMessage.toUpdateFromExternalSystemDeactivateEvent()
           val temporaryDeactivationLocationRequest = event.let {
