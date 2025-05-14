@@ -424,22 +424,28 @@ class LocationService(
 
     val parentAboveCells = newLocation ?: parentLocation!!
 
-    createCellsRequest.cells.let {
-      it.forEach { cell ->
+    createCellsRequest.cells.let { cells ->
+      cells.forEach { cell ->
         // check that code doesn't clash with the existing location
         checkParentValid(
           parentLocation = parentAboveCells,
           code = cell.code,
           prisonId = createCellsRequest.prisonId,
         )
+
+        val specialistCellTypesAffectingCapacity = cell.specialistCellTypes?.filter { it.affectsCapacity }
+        if (!specialistCellTypesAffectingCapacity.isNullOrEmpty() && !(cell.capacityNormalAccommodation == 0 && cell.workingCapacity == 0)) {
+          throw ValidationException("Specialist cell types: $specialistCellTypesAffectingCapacity cannot be used with CNA or working capacity of 0")
+        }
       }
-      val cells = createCellsRequest.creatCells(
+
+      val createdCells = createCellsRequest.createCells(
         createdBy = getUsername(),
         clock = clock,
         linkedTransaction = linkedTransaction,
         location = parentAboveCells,
       )
-      log.info("Created ${cells.size} cells under location ${parentAboveCells.getKey()}")
+      log.info("Created ${createdCells.size} cells under location ${parentAboveCells.getKey()}")
     }
 
     return residentialLocationRepository.save(parentAboveCells).toDto(includeChildren = true, includeNonResidential = false).also {
