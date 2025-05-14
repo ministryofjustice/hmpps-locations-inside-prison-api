@@ -16,11 +16,10 @@ abstract class EventBaseResource {
   private lateinit var eventPublishAndAuditService: EventPublishAndAuditService
 
   protected fun publishSignedOpCapChange(
-    event: InternalLocationDomainEventType,
     function: () -> SignedOperationCapacityDto,
   ) = function().also { signedOpCap ->
     eventPublishAndAuditService.signedOpCapEvent(
-      eventType = event,
+      eventType = InternalLocationDomainEventType.SIGNED_OP_CAP_AMENDED,
       signedOperationCapacity = signedOpCap,
       auditData = signedOpCap,
     )
@@ -75,7 +74,7 @@ abstract class EventBaseResource {
 
   protected fun update(updatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> = auditAndEmit(InternalLocationDomainEventType.LOCATION_AMENDED, updatedLocations)
 
-  protected fun auditAndEmit(eventType: InternalLocationDomainEventType, locations: Map<InternalLocationDomainEventType, List<Location>>): List<Location> {
+  private fun auditAndEmit(eventType: InternalLocationDomainEventType, locations: Map<InternalLocationDomainEventType, List<Location>>): List<Location> {
     eventPublish { locations }
     locations[eventType]?.forEach {
       audit(it.getKey()) { it.copy(childLocations = null, parentLocation = null) }
