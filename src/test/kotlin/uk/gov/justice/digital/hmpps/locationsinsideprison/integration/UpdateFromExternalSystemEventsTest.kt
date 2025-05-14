@@ -71,6 +71,38 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
     @Test
     fun `will process an event`() {
       prisonerSearchMockServer.stubSearchByLocations(
+        cell1.prisonId,
+        listOf(cell1.getPathHierarchy()),
+        false, // Return no results as this will cause deactivate to fail
+      )
+
+      val messageId = UUID.randomUUID().toString()
+      val updateFromExternalSystemEvent = UpdateFromExternalSystemEvent(
+        messageId = messageId,
+        eventType = "LocationTemporarilyDeactivated",
+        messageAttributes = mapOf(
+          "id" to cell1.id,
+          "deactivationReason" to "DAMAGED",
+          "deactivationReasonDescription" to "Window broken",
+          "proposedReactivationDate" to "2025-01-05",
+          "planetFmReference" to "23423TH/5",
+        ),
+      )
+      val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
+      queueSqsClient.sendMessage(
+        SendMessageRequest.builder().queueUrl(queueUrl).messageBody(message).build(),
+      )
+
+      await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 1 }
+      await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 0 }
+      await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 0 }
+
+      await untilAsserted { verify(locationService, times(1)).deactivateLocations(any<DeactivateLocationsRequest>()) }
+    }
+
+    @Test
+    fun `will throw an exception if location is not a cell`() {
+      prisonerSearchMockServer.stubSearchByLocations(
         landingN1.prisonId,
         landingN1.cellLocations().map { it.getPathHierarchy() },
         false, // Return no results as this will cause deactivate to fail
@@ -93,11 +125,13 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
         SendMessageRequest.builder().queueUrl(queueUrl).messageBody(message).build(),
       )
 
-      await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 1 }
-      await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 0 }
-      await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 0 }
-
-      await untilAsserted { verify(locationService, times(1)).deactivateLocations(any<DeactivateLocationsRequest>()) }
+      await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 1 }
+      await untilAsserted {
+        verify(
+          locationService,
+          times(0),
+        ).deactivateLocations(any<DeactivateLocationsRequest>())
+      }
     }
 
     @Test
@@ -115,12 +149,6 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
       )
 
       await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 1 }
-      await untilAsserted {
-        verify(
-          locationService,
-          times(0),
-        ).getLocationByKey(any<String>(), any<Boolean>(), any<Boolean>())
-      }
       await untilAsserted {
         verify(
           locationService,
