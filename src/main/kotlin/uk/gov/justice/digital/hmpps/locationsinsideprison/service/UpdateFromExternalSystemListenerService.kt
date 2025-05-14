@@ -28,7 +28,6 @@ class UpdateFromExternalSystemListenerService(
   fun onEventReceived(
     rawMessage: String,
   ) {
-    try {
       LOG.info("Received update from external system event: $rawMessage")
       val sqsMessage = objectMapper.readValue(rawMessage, UpdateFromExternalSystemEvent::class.java)
       when (sqsMessage.eventType) {
@@ -54,9 +53,5 @@ class UpdateFromExternalSystemListenerService(
         }
         else -> throw Exception("Cannot process event of type ${sqsMessage.eventType}")
       }
-    } catch (e: Exception) {
-      LOG.error("Error processing update from external system event", e)
-      throw e
-    }
   }
 }
