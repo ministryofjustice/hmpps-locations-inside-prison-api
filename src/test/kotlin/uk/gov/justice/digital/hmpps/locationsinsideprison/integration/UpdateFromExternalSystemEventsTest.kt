@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 
+import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.kotlin.await
 import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilAsserted
@@ -23,6 +24,7 @@ import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternalSystemEvent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.UPDATE_FROM_EXTERNAL_SYSTEM_QUEUE_CONFIG_KEY
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
@@ -98,6 +100,16 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
       await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 0 }
 
       await untilAsserted { verify(locationService, times(1)).deactivateLocations(any<DeactivateLocationsRequest>()) }
+
+      val parentLocations = cell1.getParentLocations()
+      getDomainEvents(parentLocations.size + 1).let {
+        assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrderElementsOf(
+          buildList {
+            add(InternalLocationDomainEventType.LOCATION_DEACTIVATED.value to cell1.getKey())
+            addAll(parentLocations.map { parentLocation -> InternalLocationDomainEventType.LOCATION_AMENDED.value to parentLocation.getKey() })
+          }
+        )
+      }
     }
 
     @Test
