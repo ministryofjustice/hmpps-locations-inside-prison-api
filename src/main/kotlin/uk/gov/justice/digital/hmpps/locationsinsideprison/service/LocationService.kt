@@ -118,7 +118,7 @@ class LocationService(
 
   @Transactional
   fun deleteLocation(id: UUID): LocationDTO = locationRepository.findById(id).getOrNull()?.also { locationToDelete ->
-    val locationsAffected = locationToDelete.findSubLocations().plus(locationToDelete)
+    val locationsAffected = locationToDelete.findSubLocations(true).plus(locationToDelete)
     if (!locationsAffected.all { it.isDraft() }) {
       throw ValidationException("Cannot delete locations that are not in DRAFT state")
     }

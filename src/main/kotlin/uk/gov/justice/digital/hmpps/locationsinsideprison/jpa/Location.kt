@@ -288,14 +288,17 @@ abstract class Location(
 
   fun countCellAndNonResLocations() = leafResidentialLocations().count()
 
-  fun findSubLocations(): List<Location> {
+  fun findSubLocations(parentsAfterChildren: Boolean = false): List<Location> {
     val subLocations = mutableListOf<Location>()
 
     fun traverse(location: Location) {
+      if (!parentsAfterChildren && this != location) {
+        subLocations.add(location)
+      }
       for (childLocation in location.childLocations) {
         traverse(childLocation)
       }
-      if (this != location) {
+      if (parentsAfterChildren && this != location) {
         subLocations.add(location)
       }
     }
