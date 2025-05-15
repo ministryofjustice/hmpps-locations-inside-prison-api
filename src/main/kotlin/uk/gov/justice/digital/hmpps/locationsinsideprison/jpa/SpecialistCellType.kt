@@ -7,15 +7,21 @@ import io.swagger.v3.oas.annotations.media.Schema
 @JsonInclude(JsonInclude.Include.NON_NULL)
 enum class SpecialistCellType(
   val description: String,
+  val affectsCapacity: Boolean = false,
   val additionalInformation: String? = null,
   val sequence: Int = 99,
 ) {
-  ACCESSIBLE_CELL("Accessible cell", "Also known as wheelchair accessible or Disability and Discrimination Act (DDA) compliant", 1),
-  BIOHAZARD_DIRTY_PROTEST("Biohazard / dirty protest cell", "Previously known as a dirty protest cell", 2),
-  CSU("Care and separation cell", sequence = 3),
+  ACCESSIBLE_CELL("Accessible cell", additionalInformation = "Also known as wheelchair accessible or Disability and Discrimination Act (DDA) compliant", sequence = 1),
+  BIOHAZARD_DIRTY_PROTEST(
+    "Biohazard / dirty protest cell",
+    additionalInformation = "Previously known as a dirty protest cell",
+    sequence = 2,
+    affectsCapacity = true,
+  ),
+  CSU("Care and separation cell", sequence = 3, affectsCapacity = true),
   CAT_A("Cat A cell", sequence = 4),
   CONSTANT_SUPERVISION("Constant supervision cell", sequence = 5),
-  DRY("Dry cell", sequence = 6),
+  DRY("Dry cell", sequence = 6, affectsCapacity = true),
   ESCAPE_LIST("Escape list cell", sequence = 7),
   ISOLATION_DISEASES("Isolation cell for communicable diseases", sequence = 8),
   LISTENER_CRISIS("Listener / crisis cell", sequence = 9),

@@ -54,8 +54,13 @@ data class CellInitialisationRequest(
   @Schema(description = "Used For Types for all cells", required = false)
   val cellsUsedFor: Set<UsedForType>? = null,
 
-  @Schema(description = "In-cell sanitation for all cells", required = false, defaultValue = "true")
-  val inCellSanitation: Boolean = true,
+  @Schema(
+    description = "Accommodation Type for all cells",
+    required = false,
+    defaultValue = "NORMAL_ACCOMMODATION",
+    example = "NORMAL_ACCOMMODATION",
+  )
+  val accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 
   val cells: Set<NewCellRequest>,
 ) {
@@ -64,19 +69,19 @@ data class CellInitialisationRequest(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun creatCells(
+  fun createCells(
     createdBy: String,
     clock: Clock,
     linkedTransaction: LinkedTransaction,
     location: ResidentialLocation,
-  ): List<Cell> = cells.map { cell ->
+  ) = cells.map { cell ->
     Cell(
       prisonId = prisonId,
       code = cell.code,
       cellMark = cell.cellMark,
       pathHierarchy = "${location.getPathHierarchy()}-${cell.code}",
       status = LocationStatus.DRAFT,
-      accommodationType = cell.accommodationType,
+      accommodationType = accommodationType,
       createdBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
       childLocations = mutableListOf(),
@@ -85,7 +90,7 @@ data class CellInitialisationRequest(
         workingCapacity = cell.workingCapacity,
       ),
       certification = Certification(capacityOfCertifiedCell = cell.capacityNormalAccommodation),
-      inCellSanitation = inCellSanitation,
+      inCellSanitation = cell.inCellSanitation,
     ).apply {
       cell.specialistCellTypes?.forEach {
         addSpecialistCellType(
@@ -162,14 +167,6 @@ data class NewCellRequest(
   @field:Size(max = 12, message = "Mark must be up to 12 characters")
   val cellMark: String? = null,
 
-  @Schema(
-    description = "Accommodation Type",
-    required = false,
-    defaultValue = "NORMAL_ACCOMMODATION",
-    example = "NORMAL_ACCOMMODATION",
-  )
-  val accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
-
   @Schema(description = "CNA value", required = false, defaultValue = "0")
   @field:Max(value = 99, message = "CNA cannot be greater than 99")
   @field:PositiveOrZero(message = "CNA cannot be less than 0")
@@ -187,6 +184,9 @@ data class NewCellRequest(
 
   @Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: Set<SpecialistCellType>? = null,
+
+  @Schema(description = "In-cell sanitation for cell", required = false, defaultValue = "true")
+  val inCellSanitation: Boolean = true,
 )
 
 enum class ResidentialStructuralType {
