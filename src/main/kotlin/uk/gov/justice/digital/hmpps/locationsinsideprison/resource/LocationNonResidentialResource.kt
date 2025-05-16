@@ -38,7 +38,7 @@ import java.util.*
 )
 class LocationNonResidentialResource(
   private val locationService: LocationService,
-) : EventBaseResource() {
+) : EventBase() {
 
   @GetMapping("/prison/{prisonId}/non-residential")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")

@@ -37,7 +37,7 @@ import java.util.UUID
 )
 class LocationPrisonIdResource(
   private val locationService: LocationService,
-) : EventBaseResource() {
+) : EventBase() {
 
   @GetMapping("/prison/{prisonId}")
   @ResponseStatus(HttpStatus.OK)

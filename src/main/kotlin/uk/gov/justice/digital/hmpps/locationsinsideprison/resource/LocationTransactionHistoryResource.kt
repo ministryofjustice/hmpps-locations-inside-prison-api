@@ -26,7 +26,7 @@ import java.util.UUID
 )
 class LocationTransactionHistoryResource(
   private val locationService: LocationService,
-) : EventBaseResource() {
+) : EventBase() {
 
   @GetMapping("/{txId}")
   @ResponseStatus(HttpStatus.OK)

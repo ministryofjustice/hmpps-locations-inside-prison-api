@@ -49,7 +49,7 @@ import java.util.*
 )
 class LocationResidentialResource(
   private val locationService: LocationService,
-) : EventBaseResource() {
+) : EventBase() {
   @GetMapping("/residential-summary/{prisonId}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")

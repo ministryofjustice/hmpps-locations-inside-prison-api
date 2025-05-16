@@ -30,7 +30,7 @@ import java.util.*
 )
 class LocationTransformResource(
   private val locationService: LocationService,
-) : EventBaseResource() {
+) : EventBase() {
 
   @PutMapping("/{id}/used-for-type", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")

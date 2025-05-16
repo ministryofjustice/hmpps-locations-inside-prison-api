@@ -10,7 +10,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSou
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
-abstract class EventBaseResource {
+abstract class EventBase {
 
   @Autowired
   private lateinit var eventPublishAndAuditService: EventPublishAndAuditService

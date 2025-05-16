@@ -44,7 +44,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 )
 class LocationResource(
   private val locationService: LocationService,
-) : EventBaseResource() {
+) : EventBase() {
 
   @GetMapping("/{id}")
   @ResponseStatus(HttpStatus.OK)

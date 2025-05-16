@@ -35,7 +35,7 @@ import java.util.*
 )
 class BulkUpdateResource(
   private val locationService: LocationService,
-) : EventBaseResource() {
+) : EventBase() {
 
   @PutMapping("deactivate/temporary")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
