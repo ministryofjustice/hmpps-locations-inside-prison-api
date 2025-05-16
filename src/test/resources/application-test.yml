@@ -40,8 +40,8 @@ hmpps.sqs:
       subscribeTopicId: domainevents
       subscribeFilter: '{"eventType":[ {"prefix": "location.inside.prison"} ] }'
     updatefromexternalsystemevents:
-      queueName: update_from_external_system_events_queue
-      dlqName: update_from_external_system_events_dlq
+      queueName: ${random.uuid}
+      dlqName: ${random.uuid}
   topics:
     domainevents:
       arn: arn:aws:sns:eu-west-2:000000000000:${random.uuid}
