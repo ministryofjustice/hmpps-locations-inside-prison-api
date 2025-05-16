@@ -7,7 +7,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
@@ -25,15 +24,15 @@ class CertificationService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun requestApproval(locationApprovalRequest: LocationApprovalRequest): Location {
+  fun requestApproval(locationApprovalRequest: LocationApprovalRequest): ApprovalRequest {
     TODO("Not yet implemented")
   }
 
-  fun approveCertificationRequest(approveCertificationRequest: ApproveCertificationRequest): Location {
+  fun approveCertificationRequest(approveCertificationRequest: ApproveCertificationRequest): ApprovalRequest {
     TODO("Not yet implemented")
   }
 
-  fun rejectCertificationRequest(rejectCertificationRequest: RejectCertificationRequest): Location {
+  fun rejectCertificationRequest(rejectCertificationRequest: RejectCertificationRequest): ApprovalRequest {
     TODO("Not yet implemented")
   }
 }
@@ -48,13 +47,20 @@ data class LocationApprovalRequest(
 @Schema(description = "Approve the certification request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ApproveCertificationRequest(
-  @Schema(description = "Approval request reference, the Id related the approval request reference", example = "1", required = true)
-  val approvalRequestReference: Long,
+  @Schema(description = "Approval request reference", required = true)
+  val approvalRequestReference: UUID,
 )
 
 @Schema(description = "Reject the certification request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class RejectCertificationRequest(
-  @Schema(description = "Approval request reference, the Id related the approval request reference", example = "1", required = true)
-  val approvalRequestReference: Long,
+  @Schema(description = "Approval request reference", required = true)
+  val approvalRequestReference: UUID,
+)
+
+@Schema(description = "Approval request")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ApprovalRequest(
+  @Schema(description = "Approval request reference", required = true)
+  val approvalRequestReference: UUID,
 )
