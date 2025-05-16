@@ -27,7 +27,7 @@ import java.util.UUID
 )
 class CellAttributesResource(
   private val locationService: LocationService,
-) : EventBaseResource() {
+) : EventBase() {
   @GetMapping("/{id}/attributes")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @ResponseStatus(HttpStatus.OK)

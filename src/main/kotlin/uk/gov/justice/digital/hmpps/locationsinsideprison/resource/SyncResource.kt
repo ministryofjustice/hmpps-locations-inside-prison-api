@@ -35,7 +35,7 @@ import java.util.*
 @PreAuthorize("hasRole('ROLE_SYNC_LOCATIONS') and hasAuthority('SCOPE_write')")
 class SyncResource(
   private val syncService: SyncService,
-) : EventBaseResource() {
+) : EventBase() {
 
   @GetMapping("/id/{id}")
   @ResponseStatus(HttpStatus.OK)

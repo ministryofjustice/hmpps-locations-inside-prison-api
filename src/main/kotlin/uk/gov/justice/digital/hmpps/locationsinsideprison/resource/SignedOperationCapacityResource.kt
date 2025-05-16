@@ -31,7 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOperatio
 class SignedOperationCapacityResource(
   private val signedOperationCapacityService: SignedOperationCapacityService,
 
-) : EventBaseResource() {
+) : EventBase() {
 
   @GetMapping("/{prisonId}")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')") // todo Need create a New Role?
