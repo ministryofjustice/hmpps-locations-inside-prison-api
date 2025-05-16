@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
@@ -116,6 +115,36 @@ class LocationService(
   )
 
   fun getTransaction(txId: UUID) = linkedTransactionRepository.findById(txId).getOrNull()?.toDto()
+
+  @Transactional
+  fun deleteLocation(id: UUID): LocationDTO = locationRepository.findById(id).getOrNull()?.also { locationToDelete ->
+    val locationsAffected = locationToDelete.findSubLocations(true).plus(locationToDelete)
+    if (!locationsAffected.all { it.isDraft() }) {
+      throw ValidationException("Cannot delete locations that are not in DRAFT state")
+    }
+
+    val locationsToDelete = locationsAffected.map { it.getKey() }
+    val tx = createLinkedTransaction(
+      prisonId = locationToDelete.prisonId,
+      type = TransactionType.DELETE,
+      detail = "Deleted locations: $locationsToDelete",
+    )
+
+    locationsAffected.forEach {
+      locationRepository.deleteLocationById(it.id!!)
+    }
+
+    log.info("Deleted locations: $locationsToDelete")
+    telemetryClient.trackEvent(
+      "Deleted Locations",
+      mapOf(
+        "locations" to locationsToDelete.joinToString(","),
+      ),
+      null,
+    )
+    tx.txEndTime = LocalDateTime.now(clock)
+  }?.toDto()
+    ?: throw LocationNotFoundException(id.toString())
 
   fun getLocationByPrison(prisonId: String): List<LocationDTO> = locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
     .filter { !it.isPermanentlyDeactivated() }
@@ -349,28 +378,6 @@ class LocationService(
     )
 
     val wing = request.toEntity(
-      createdBy = getUsername(),
-      clock = clock,
-      linkedTransaction = linkedTransaction,
-    )
-    return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
-    }
-  }
-
-  @Transactional
-  fun createEntireWing(createEntireWingRequest: CreateEntireWingRequest): LocationDTO {
-    locationRepository.findOneByPrisonIdAndPathHierarchy(createEntireWingRequest.prisonId, createEntireWingRequest.wingCode)
-      ?.let { throw LocationAlreadyExistsException("${createEntireWingRequest.prisonId}-${createEntireWingRequest.wingCode}") }
-
-    val linkedTransaction = createLinkedTransaction(
-      prisonId = createEntireWingRequest.prisonId,
-      TransactionType.LOCATION_CREATE,
-      "Create wing ${createEntireWingRequest.wingCode} in prison ${createEntireWingRequest.prisonId}",
-    )
-
-    val wing = createEntireWingRequest.toEntity(
-      createInDraft = activePrisonService.isCertificationApprovalRequired(createEntireWingRequest.prisonId),
       createdBy = getUsername(),
       clock = clock,
       linkedTransaction = linkedTransaction,

@@ -173,7 +173,7 @@ abstract class Location(
 
   open fun isActive() = status == LocationStatus.ACTIVE && !isPermanentlyDeactivated()
   open fun isArchived() = status == LocationStatus.ARCHIVED
-  private fun isDraft() = status == LocationStatus.DRAFT
+  fun isDraft() = status == LocationStatus.DRAFT
   open fun isLocked() = false
 
   open fun isResidentialRoomOrConvertedCell() = false
@@ -288,15 +288,18 @@ abstract class Location(
 
   fun countCellAndNonResLocations() = leafResidentialLocations().count()
 
-  fun findSubLocations(): List<Location> {
+  fun findSubLocations(parentsAfterChildren: Boolean = false): List<Location> {
     val subLocations = mutableListOf<Location>()
 
     fun traverse(location: Location) {
-      if (this != location) {
+      if (!parentsAfterChildren && this != location) {
         subLocations.add(location)
       }
       for (childLocation in location.childLocations) {
         traverse(childLocation)
+      }
+      if (parentsAfterChildren && this != location) {
+        subLocations.add(location)
       }
     }
 
