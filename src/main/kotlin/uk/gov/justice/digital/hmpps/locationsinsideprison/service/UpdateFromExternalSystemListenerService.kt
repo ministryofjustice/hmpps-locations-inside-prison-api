@@ -42,10 +42,7 @@ class UpdateFromExternalSystemListenerService(
             planetFmReference = it.planetFmReference,
           )
         }
-        val location = locationService.getLocationById(event.id)
-        if (location == null) {
-          throw LocationNotFoundException(event.id.toString())
-        }
+        val location = locationService.getLocationById(event.id) ?: throw LocationNotFoundException(event.id.toString())
         if (location.locationType != LocationType.CELL) {
           throw LocationIsNotACellException(location.getKey())
         }
