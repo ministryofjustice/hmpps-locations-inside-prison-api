@@ -1,15 +1,17 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.microsoft.applicationinsights.TelemetryClient
+import io.swagger.v3.oas.annotations.media.Schema
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationApprovalRequest
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
+import java.util.*
 
 @Service
 @Transactional(readOnly = true)
@@ -36,6 +38,23 @@ class CertificationService(
   }
 }
 
-class RejectCertificationRequest
+@Schema(description = "Request to approve a location or set of locations and cells below it")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class LocationApprovalRequest(
+  @Schema(description = "Location Id of location requiring approval for being certified", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+  val locationId: UUID,
+)
 
-class ApproveCertificationRequest
+@Schema(description = "Approve the certification request")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ApproveCertificationRequest(
+  @Schema(description = "Approval request reference, the Id related the approval request reference", example = "1", required = true)
+  val approvalRequestReference: Long,
+)
+
+@Schema(description = "Reject the certification request")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class RejectCertificationRequest(
+  @Schema(description = "Approval request reference, the Id related the approval request reference", example = "1", required = true)
+  val approvalRequestReference: Long,
+)
