@@ -143,7 +143,7 @@ class LocationService(
       null,
     )
     tx.txEndTime = LocalDateTime.now(clock)
-  }?.toDto()
+  }?.toDto(includeChildren = true)
     ?: throw LocationNotFoundException(id.toString())
 
   fun getLocationByPrison(prisonId: String): List<LocationDTO> = locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)

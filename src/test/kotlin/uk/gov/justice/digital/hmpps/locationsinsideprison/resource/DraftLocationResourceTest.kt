@@ -556,6 +556,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           .expectStatus().isNoContent
 
         assertThat(repository.findById(cell1.id!!)).isEmpty
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
 
       @Test
@@ -567,6 +569,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           .expectStatus().isNoContent
 
         assertThat(repository.findById(landing1.id!!)).isEmpty
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
 
       @Test
@@ -577,6 +581,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           .expectStatus().isNoContent
 
         assertThat(repository.findById(draftWing.id!!)).isEmpty
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
     }
   }
