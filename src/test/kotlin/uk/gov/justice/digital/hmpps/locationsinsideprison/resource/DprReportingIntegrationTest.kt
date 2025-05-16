@@ -19,7 +19,7 @@ class DprReportingIntegrationTest : CommonDataTestBase() {
   @BeforeEach
   override fun setUp() {
     super.setUp()
-    manageUsersApiMockServer.stubLookupUsersRoles(REQUESTING_USER, listOf("REPORTING_LOCATION_INFORMATION"))
+    manageUsersApiMockServer.stubLookupUsersRoles(REQUESTING_USER, listOf("MANAGE_RES_LOCATIONS_OP_CAP"))
     manageUsersApiMockServer.stubLookupUserCaseload(REQUESTING_USER, "LEI", listOf("MDI"))
   }
 

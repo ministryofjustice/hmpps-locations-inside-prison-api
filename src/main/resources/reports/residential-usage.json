@@ -25,7 +25,7 @@
             {
               "match": [
                 "${role}",
-                "REPORTING_LOCATION_INFORMATION"
+                "MANAGE_RES_LOCATIONS_OP_CAP"
               ]
             }
           ]
@@ -53,12 +53,16 @@
       "id": "residential",
       "name": "Residential location transactions",
       "datasource": "dataSource",
-      "query": "select  tx.prison_id, tx.tx_start_time, tx.transaction_type, (CASE tx.transaction_type\n           WHEN 'LOCATION_CREATE' THEN 'Created location'\n           WHEN 'LOCATION_UPDATE' THEN 'Updated location'\n           WHEN 'CAPACITY_CHANGE' THEN 'Capacity change'\n           WHEN 'CELL_TYPE_CHANGES' THEN 'Cell type change'\n           WHEN 'DEACTIVATION' THEN 'Deactivation'\n           WHEN 'PERMANENT_DEACTIVATION' THEN 'Permanent deactivation'\n           WHEN 'REACTIVATION' THEN 'Reactivation'\n           WHEN 'CELL_CONVERTION_TO_ROOM' THEN 'Cell conversion to room'\n           WHEN 'ROOM_CONVERTION_TO_CELL' THEN 'Room conversion to cell'\n           WHEN 'SIGNED_OP_CAP' THEN 'Signed operational capacity'\n           WHEN 'RESI_SERVICE_ACTIVATION' THEN 'Residential service activation'\n WHEN 'APPROVAL_PROCESS_ACTIVATION' THEN 'Certification approval activated'\n          ELSE 'Unknown transaction type' END) as transaction_description, tx.transaction_detail, tx.transaction_invoked_by,\n  (select COUNT(distinct location_id) FROM location_history lh where lh.linked_transaction_id = tx.id ) number_locations_affected,\n(SELECT STRING_AGG (distinct l.path_hierarchy,', ') FROM location_history lh join location l on l.id = lh.location_id where lh.linked_transaction_id = tx.id) locations_affected\nfrom linked_transaction tx join prison_configuration p on p.prison_id = tx.prison_id and p.resi_location_service_active = true\n where tx.transaction_type  NOT IN ('SYNC', 'DELETE')",
+      "query": "select  tx.prison_id, p.resi_location_service_active, tx.tx_start_time, tx.transaction_type, (CASE tx.transaction_type\n           WHEN 'LOCATION_CREATE' THEN 'Created location'\n           WHEN 'LOCATION_UPDATE' THEN 'Updated location'\n           WHEN 'CAPACITY_CHANGE' THEN 'Capacity change'\n           WHEN 'CELL_TYPE_CHANGES' THEN 'Cell type change'\n           WHEN 'DEACTIVATION' THEN 'Deactivation'\n           WHEN 'PERMANENT_DEACTIVATION' THEN 'Permanent deactivation'\n           WHEN 'REACTIVATION' THEN 'Reactivation'\n           WHEN 'CELL_CONVERTION_TO_ROOM' THEN 'Cell conversion to room'\n           WHEN 'ROOM_CONVERTION_TO_CELL' THEN 'Room conversion to cell'\n           WHEN 'SIGNED_OP_CAP' THEN 'Signed operational capacity'\n           WHEN 'RESI_SERVICE_ACTIVATION' THEN 'Residential service activation'\n WHEN 'APPROVAL_PROCESS_ACTIVATION' THEN 'Certification approval activated'\n          ELSE 'Unknown transaction type' END) as transaction_description, tx.transaction_detail, tx.transaction_invoked_by,\n  (select COUNT(distinct location_id) FROM location_history lh where lh.linked_transaction_id = tx.id ) number_locations_affected,\n(SELECT STRING_AGG (distinct l.path_hierarchy,', ') FROM location_history lh join location l on l.id = lh.location_id where lh.linked_transaction_id = tx.id) locations_affected\nfrom linked_transaction tx left join prison_configuration p on p.prison_id = tx.prison_id\n where tx.transaction_type  NOT IN ('SYNC', 'DELETE')",
       "schema": {
         "field": [
           {
             "name": "prison_id",
             "type": "string"
+          },
+          {
+            "name": "resi_location_service_active",
+            "type": "boolean"
           },
           {
             "name": "tx_start_time",
@@ -107,26 +111,6 @@
           }
         ]
       }
-    },
-    {
-      "id": "prisons",
-      "name": "Prison active",
-      "datasource": "dataSource",
-      "query": "SELECT prison_id, prison_id as description FROM prison_configuration where resi_location_service_active = true",
-      "schema": {
-        "field": [
-          {
-            "name": "prison_id",
-            "display": "Prison code",
-            "type": "string"
-          },
-          {
-            "name": "description",
-            "display": "Prison",
-            "type": "string"
-          }
-        ]
-      }
     }
   ],
   "report": [
@@ -152,29 +136,41 @@
             "sortable": true,
             "visible": "true",
             "defaultsort": false,
-
             "filter": {
-              "type": "multiselect",
-              "mandatory": false,
-              "dynamicoptions": {
-                "maximumOptions": 120,
-                "returnAsStaticOptions": true,
-                "dataset": "prisons",
-                "name": "prison_id",
-                "display": "description"
-              }
+              "type" : "caseloads",
+              "mandatory": false
+            }
+          },
+          {
+            "name": "$ref:resi_location_service_active",
+            "display": "Resi active",
+            "sortable": true,
+            "visible": "true",
+            "defaultsort": false,
+            "filter": {
+              "type": "radio",
+              "staticoptions": [
+                {
+                  "name": "true",
+                  "display": "Active"
+                },
+                {
+                  "name": "false",
+                  "display": "Inactive"
+                }
+              ]
             }
           },
           {
             "name": "$ref:transaction_type",
-            "display": "Tx code",
+            "display": "Transaction type",
             "sortable": false,
             "visible": "false",
             "defaultsort": false
           },
           {
             "name": "$ref:transaction_description",
-            "display": "Transaction type",
+            "display": "Transaction description",
             "sortable": false,
             "visible": "true",
             "defaultsort": false
