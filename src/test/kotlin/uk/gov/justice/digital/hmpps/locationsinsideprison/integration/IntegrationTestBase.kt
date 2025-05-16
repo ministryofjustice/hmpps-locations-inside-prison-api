@@ -90,6 +90,66 @@ abstract class IntegrationTestBase : TestBase() {
   )
 
   protected fun endpointRequiresAuthorisation(
+    endpoint: WebTestClient.RequestBodyUriSpec,
+    uri: String,
+    bodyJson: Any,
+    requiredRole: String? = null,
+    requiredScope: String? = null,
+  ): List<DynamicTest> = buildList {
+    val request = endpoint.uri(uri).header("Content-Type", "application/json")
+      .bodyValue(jsonString(bodyJson))
+
+    add(
+      DynamicTest.dynamicTest("access forbidden with no authority") {
+        request
+          .header(HttpHeaders.AUTHORIZATION, null)
+          .exchange()
+          .expectStatus().isUnauthorized
+      },
+    )
+
+    add(
+      DynamicTest.dynamicTest("access forbidden with no role") {
+        request
+          .headers(setAuthorisation())
+          .exchange()
+          .expectStatus().isForbidden
+      },
+    )
+
+    requiredRole?.let {
+      add(
+        DynamicTest.dynamicTest("access forbidden with wrong role") {
+          request
+            .headers(setAuthorisation(roles = listOf("ROLE_INCORRECT")))
+            .exchange()
+            .expectStatus().isForbidden
+        },
+      )
+
+      requiredScope?.let {
+        add(
+          DynamicTest.dynamicTest("access forbidden with right role, but wrong scope") {
+            request
+              .headers(setAuthorisation(roles = listOf("ROLE_$requiredRole"), scopes = listOf("incorrect")))
+              .exchange()
+              .expectStatus().isForbidden
+          },
+        )
+
+        add(
+          DynamicTest.dynamicTest("access forbidden with right scope, but wrong role") {
+            request
+              .headers(setAuthorisation(roles = listOf("ROLE_INCORRECT"), scopes = listOf(requiredScope)))
+              .exchange()
+              .expectStatus().isForbidden
+          },
+        )
+      }
+    }
+  }
+
+  protected fun endpointRequiresAuthorisation(
     endpoint: WebTestClient.RequestHeadersSpec<*>,
     requiredRole: String? = null,
     requiredScope: String? = null,
