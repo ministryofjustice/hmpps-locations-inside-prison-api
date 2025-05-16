@@ -177,7 +177,7 @@ class DprReportingIntegrationTest : CommonDataTestBase() {
 
         @Test
         fun `returns a page of the report`() {
-          webTestClient.get().uri(url)
+          webTestClient.get().uri("$url?filters.service_active=Y&filters.transaction_type=LOCATION_CREATE")
             .headers(setAuthorisation(user = REQUESTING_USER, roles = listOf(systemRole), scopes = listOf("read")))
             .header("Content-Type", "application/json")
             .exchange()
@@ -189,7 +189,7 @@ class DprReportingIntegrationTest : CommonDataTestBase() {
         fun `returns no data when user does not have the caseload`() {
           manageUsersApiMockServer.stubLookupUserCaseload(REQUESTING_USER, "BXI", listOf("BXI"))
 
-          webTestClient.get().uri(url)
+          webTestClient.get().uri("$url?filters.service_active=Y&filters.transaction_type=LOCATION_CREATE")
             .headers(setAuthorisation(user = REQUESTING_USER, roles = listOf(systemRole), scopes = listOf("read")))
             .header("Content-Type", "application/json")
             .exchange()
