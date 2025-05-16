@@ -22,7 +22,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.buildEventsToPublishOnUpdate
-import java.util.*
 
 @RestController
 @Validated
@@ -33,7 +32,7 @@ import java.util.*
 )
 class LocationKeyResource(
   private val locationService: LocationService,
-) : EventBaseResource() {
+) : EventBase() {
   @GetMapping("/key/{key}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
