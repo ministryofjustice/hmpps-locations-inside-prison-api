@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
@@ -116,6 +115,36 @@ class LocationService(
   )
 
   fun getTransaction(txId: UUID) = linkedTransactionRepository.findById(txId).getOrNull()?.toDto()
+
+  @Transactional
+  fun deleteLocation(id: UUID): LocationDTO = locationRepository.findById(id).getOrNull()?.also { locationToDelete ->
+    val locationsAffected = locationToDelete.findSubLocations(true).plus(locationToDelete)
+    if (!locationsAffected.all { it.isDraft() }) {
+      throw ValidationException("Cannot delete locations that are not in DRAFT state")
+    }
+
+    val locationsToDelete = locationsAffected.map { it.getKey() }
+    val tx = createLinkedTransaction(
+      prisonId = locationToDelete.prisonId,
+      type = TransactionType.DELETE,
+      detail = "Deleted locations: $locationsToDelete",
+    )
+
+    locationsAffected.forEach {
+      locationRepository.deleteLocationById(it.id!!)
+    }
+
+    log.info("Deleted locations: $locationsToDelete")
+    telemetryClient.trackEvent(
+      "Deleted Locations",
+      mapOf(
+        "locations" to locationsToDelete.joinToString(","),
+      ),
+      null,
+    )
+    tx.txEndTime = LocalDateTime.now(clock)
+  }?.toDto()
+    ?: throw LocationNotFoundException(id.toString())
 
   fun getLocationByPrison(prisonId: String): List<LocationDTO> = locationRepository.findAllByPrisonIdOrderByPathHierarchy(prisonId)
     .filter { !it.isPermanentlyDeactivated() }
@@ -359,64 +388,74 @@ class LocationService(
   }
 
   @Transactional
-  fun createEntireWing(createEntireWingRequest: CreateEntireWingRequest): LocationDTO {
-    locationRepository.findOneByPrisonIdAndPathHierarchy(createEntireWingRequest.prisonId, createEntireWingRequest.wingCode)
-      ?.let { throw LocationAlreadyExistsException("${createEntireWingRequest.prisonId}-${createEntireWingRequest.wingCode}") }
-
-    val linkedTransaction = createLinkedTransaction(
-      prisonId = createEntireWingRequest.prisonId,
-      TransactionType.LOCATION_CREATE,
-      "Create wing ${createEntireWingRequest.wingCode} in prison ${createEntireWingRequest.prisonId}",
-    )
-
-    val wing = createEntireWingRequest.toEntity(
-      createInDraft = activePrisonService.isCertificationApprovalRequired(createEntireWingRequest.prisonId),
-      createdBy = getUsername(),
-      clock = clock,
-      linkedTransaction = linkedTransaction,
-    )
-    return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
-    }
-  }
-
-  @Transactional
   fun createCells(createCellsRequest: CellInitialisationRequest): LocationDTO {
     val parentLocation = createCellsRequest.parentLocation?.let {
-      locationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
+      residentialLocationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
     }
 
-    checkParentValid(
-      parentLocation = parentLocation,
-      code = createCellsRequest.newLevelCode,
-      prisonId = createCellsRequest.prisonId,
-    ) // check that code doesn't clash with the existing location
+    createCellsRequest.newLevelAboveCells?.let {
+      checkParentValid(
+        parentLocation = parentLocation,
+        code = it.levelCode,
+        prisonId = createCellsRequest.prisonId,
+      ) // check that code doesn't clash with the existing location
+    }
 
-    val linkedTransaction = createLinkedTransaction(
+    if (createCellsRequest.newLevelAboveCells == null && parentLocation == null) {
+      throw ValidationException("Either a parent location or new level above cells must be provided")
+    }
+
+    val linkedTransaction = createCellsRequest.newLevelAboveCells?.let {
+      createLinkedTransaction(
+        prisonId = createCellsRequest.prisonId,
+        TransactionType.LOCATION_CREATE,
+        "Creating locations ${it.locationType} ${it.levelCode} in prison ${createCellsRequest.prisonId}",
+      )
+    } ?: createLinkedTransaction(
       prisonId = createCellsRequest.prisonId,
       TransactionType.LOCATION_CREATE,
-      "Created ${createCellsRequest.newLocationType} ${createCellsRequest.newLevelCode} in prison ${createCellsRequest.prisonId}",
+      "Creating cells ${createCellsRequest.cells.joinToString { it.code }} in prison ${createCellsRequest.prisonId}",
     )
 
-    val newLocation = createCellsRequest.createLocation(
-      createdBy = getUsername(),
-      clock = clock,
-      linkedTransaction = linkedTransaction,
-      parentLocation = parentLocation,
-    )
-    residentialLocationRepository.save(newLocation)
+    val newLocation = createCellsRequest.newLevelAboveCells?.let {
+      residentialLocationRepository.save(
+        it.createLocation(
+          prisonId = createCellsRequest.prisonId,
+          createdBy = getUsername(),
+          clock = clock,
+          linkedTransaction = linkedTransaction,
+          parentLocation = parentLocation,
+        ),
+      )
+    }
 
-    if (createCellsRequest.cells.isNotEmpty()) {
-      val cells = createCellsRequest.creatCells(
+    val parentAboveCells = newLocation ?: parentLocation!!
+
+    createCellsRequest.cells.let { cells ->
+      cells.forEach { cell ->
+        // check that code doesn't clash with the existing location
+        checkParentValid(
+          parentLocation = parentAboveCells,
+          code = cell.code,
+          prisonId = createCellsRequest.prisonId,
+        )
+
+        val specialistCellTypesAffectingCapacity = cell.specialistCellTypes?.filter { it.affectsCapacity }
+        if (!specialistCellTypesAffectingCapacity.isNullOrEmpty() && !(cell.capacityNormalAccommodation == 0 && cell.workingCapacity == 0)) {
+          throw ValidationException("Specialist cell types: $specialistCellTypesAffectingCapacity cannot be used with CNA or working capacity of 0")
+        }
+      }
+
+      val createdCells = createCellsRequest.createCells(
         createdBy = getUsername(),
         clock = clock,
         linkedTransaction = linkedTransaction,
-        location = newLocation,
+        location = parentAboveCells,
       )
-      log.info("Created ${cells.size} cells under location ${newLocation.getKey()}")
+      log.info("Created ${createdCells.size} cells under location ${parentAboveCells.getKey()}")
     }
 
-    return locationRepository.save(newLocation).toDto(includeChildren = true, includeNonResidential = false).also {
+    return residentialLocationRepository.save(parentAboveCells).toDto(includeChildren = true, includeNonResidential = false).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }

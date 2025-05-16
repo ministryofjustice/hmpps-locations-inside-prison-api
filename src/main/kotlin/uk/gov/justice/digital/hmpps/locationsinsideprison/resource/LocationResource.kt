@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
@@ -401,4 +402,48 @@ class LocationResource(
       defaultValue = "false",
     ) cascadeReactivation: Boolean = false,
   ): LocationDTO = reactivate(locationService.reactivateLocations(ReactivateLocationsRequest(mapOf(id to ReactivationDetail(cascadeReactivation = cascadeReactivation))))).first()
+
+  @DeleteMapping("/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Delete a draft location",
+    description = "Requires role ROLE_MAINTAIN_LOCATIONS and write scope, only locations marked as DRAFT can be deleted",
+    responses = [
+      ApiResponse(
+        responseCode = "204",
+        description = "Deleted location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the ROLE_MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun deleteLocations(
+    @Schema(description = "Location UUID to remove", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+    @PathVariable id: UUID,
+  ) {
+    eventPublishAndAudit(
+      InternalLocationDomainEventType.LOCATION_DELETED,
+    ) {
+      locationService.deleteLocation(id)
+    }
+  }
 }
