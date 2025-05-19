@@ -12,7 +12,9 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CertificationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import java.util.*
@@ -64,7 +66,87 @@ class CertificationResource(
     @RequestBody
     @Validated
     locationApprovalRequest: LocationApprovalRequest,
-  ): Location = certificationService.requestApproval(
+  ): CertificationApprovalRequestDto = certificationService.requestApproval(
     locationApprovalRequest = locationApprovalRequest,
+  )
+
+  @PutMapping("/location/approve")
+  @PreAuthorize("hasRole('ROLE_LOCATION_CERTIFICATION')")
+  @Operation(
+    summary = "Approves a certification request for a location",
+    description = "Requires role LOCATION_CERTIFICATION",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the approval request status",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CERTIFICATION role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Approval request not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun approveCertificationRequest(
+    @RequestBody
+    @Validated
+    approveCertificationRequest: ApproveCertificationRequestDto,
+  ): CertificationApprovalRequestDto = certificationService.approveCertificationRequest(
+    approveCertificationRequest = approveCertificationRequest,
+  )
+
+  @PutMapping("/location/reject")
+  @PreAuthorize("hasRole('ROLE_LOCATION_CERTIFICATION')")
+  @Operation(
+    summary = "Rejects a certification request for a location",
+    description = "Requires role LOCATION_CERTIFICATION",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the approval request status",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CERTIFICATION role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Approval request not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun rejectCertificationRequest(
+    @RequestBody
+    @Validated
+    rejectCertificationRequest: RejectCertificationRequestDto,
+  ): CertificationApprovalRequestDto = certificationService.rejectCertificationRequest(
+    rejectCertificationRequest = rejectCertificationRequest,
   )
 }

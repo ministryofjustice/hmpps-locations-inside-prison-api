@@ -27,4 +27,5 @@ enum class ErrorCode(val errorCode: Int) {
   OtherReasonNotProvidedForDeactivation(118),
   DuplicateLocalNameAtSameLevel(119),
   LocationCannotByUpdatedAsConvertedCell(120),
+  ApprovalRequestNotFound(121),
 }
