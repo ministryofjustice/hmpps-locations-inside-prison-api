@@ -207,6 +207,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(ApprovalRequestNotFoundException::class)
+  fun handleApprovalRequestNotFound(e: ApprovalRequestNotFoundException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Approval request not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.ApprovalRequestNotFound,
+          userMessage = "Approval not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(TransactionNotFoundException::class)
   fun handleTransactionNotFound(e: TransactionNotFoundException): ResponseEntity<ErrorResponse?>? {
     log.debug("Transaction not found exception caught: {}", e.message)
@@ -428,3 +443,4 @@ class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, Lis
 class DuplicateLocalNameForSameHierarchyException(key: String, topLocationKey: String) : ValidationException("$key already the same local name in this hierarchy $topLocationKey")
 class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated as it is active")
 class LocationIsNotACellException(key: String) : Exception("$key: Location must be a cell in order to perform this operation")
+class ApprovalRequestNotFoundException(id: String) : Exception("There is no approval request found $id")
