@@ -965,6 +965,10 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 "code": "${aCell.getCode()}",
                 "pathHierarchy": "${aCell.getPathHierarchy()}",
                 "capacity": {
+                  "maxCapacity": ${aCell.getMaxCapacity()},
+                  "workingCapacity": ${aCell.getWorkingCapacity()}
+                },
+                "pendingCapacity": {
                   "maxCapacity": $incMaxCap,
                   "workingCapacity": ${aCell.getWorkingCapacity()}
                 },

@@ -648,8 +648,12 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               "key": "LEI-A-1-010",
               "inCellSanitation": true,
               "capacity": {
-                "maxCapacity": 2,
+                "maxCapacity": 0,
                 "workingCapacity": 0
+              },
+              "pendingCapacity": {
+                "maxCapacity": 2,
+                "workingCapacity": 2
               },
               "certification": {
                 "certified": false,
