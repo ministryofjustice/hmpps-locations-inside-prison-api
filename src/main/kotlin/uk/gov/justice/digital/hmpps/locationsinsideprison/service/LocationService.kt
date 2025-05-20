@@ -316,7 +316,7 @@ class LocationService(
     log.info("Created Residential Location [${createdLocation.getKey()}]")
     trackLocationUpdate(createdLocation, "Created Residential Location")
 
-    return createdLocation.toDto(includeParent = capacityChanged && !certificationApprovalRequired, includePendingChange = certificationApprovalRequired).also {
+    return createdLocation.toDto(includeParent = capacityChanged && !certificationApprovalRequired).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }
@@ -455,7 +455,10 @@ class LocationService(
       log.info("Created ${createdCells.size} cells under location ${parentAboveCells.getKey()}")
     }
 
-    return residentialLocationRepository.save(parentAboveCells).toDto(includeChildren = true, includeNonResidential = false).also {
+    return residentialLocationRepository.save(parentAboveCells).toDto(
+      includeChildren = true,
+      includeNonResidential = false,
+    ).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }
@@ -649,7 +652,7 @@ class LocationService(
       )
     }
 
-    val pendingChange = activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId) && locCapChange.getDerivedMaxCapacity(true) != maxCapacity
+    val pendingChange = activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId) && locCapChange.calcMaxCapacity(true) != maxCapacity
 
     val trackingTx = linkedTransaction ?: createLinkedTransaction(
       prisonId = locCapChange.prisonId,
@@ -692,7 +695,7 @@ class LocationService(
       )
     }
 
-    return locCapChange.toDto(includeParent = !pendingChange, includePendingChange = pendingChange, includeNonResidential = false).also {
+    return locCapChange.toDto(includeParent = !pendingChange, includeNonResidential = false).also {
       trackingTx.txEndTime = LocalDateTime.now(clock)
     }
   }
@@ -1300,7 +1303,7 @@ class LocationService(
       )
       .filter { !it.isPermanentlyDeactivated() }
       .filter { it.isLocationShownOnResidentialSummary() }
-      .map { it.toDto(countInactiveCells = true, countCells = true, includePendingChange = activePrisonService.isCertificationApprovalRequired(prisonId)) }
+      .map { it.toDto(countInactiveCells = true, countCells = true) }
       .sortedWith(NaturalOrderComparator())
 
     val subLocationTypes = calculateSubLocationDescription(locations)

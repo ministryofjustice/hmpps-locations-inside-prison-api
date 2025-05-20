@@ -171,8 +171,12 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "STANDARD_ACCOMMODATION"
               ],
               "capacity": {
-                "maxCapacity": 1,
+                "maxCapacity": 0,
                 "workingCapacity": 0
+              },
+              "pendingCapacity": {
+                "maxCapacity": 1,
+                "workingCapacity": 1
               },
               "certification": {
                 "certified": false,
@@ -184,10 +188,13 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   "cellMark": "J-001",
                   "locationType": "CELL",
                   "capacity": {
-                    "maxCapacity": 1,
+                    "maxCapacity": 0,
                     "workingCapacity": 0
                   },
-                  "oldWorkingCapacity": 1,
+                  "pendingCapacity": {
+                    "maxCapacity": 1,
+                    "workingCapacity": 1
+                  },
                   "certification": {
                     "certified": false,
                     "capacityOfCertifiedCell": 1
@@ -245,8 +252,12 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "STANDARD_ACCOMMODATION"
               ],
               "capacity": {
-                "maxCapacity": 1,
+                "maxCapacity": 0,
                 "workingCapacity": 0
+              },
+              "pendingCapacity": {
+                "maxCapacity": 1,
+                "workingCapacity": 1
               },
               "certification": {
                 "certified": false,
@@ -258,10 +269,13 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   "cellMark": "J-001",
                   "locationType": "CELL",
                   "capacity": {
-                    "maxCapacity": 1,
+                    "maxCapacity": 0,
                     "workingCapacity": 0
                   },
-                  "oldWorkingCapacity": 1,
+                  "pendingCapacity": {
+                    "maxCapacity": 1,
+                    "workingCapacity": 1
+                  },
                   "certification": {
                     "certified": false,
                     "capacityOfCertifiedCell": 1
@@ -320,8 +334,12 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "STANDARD_ACCOMMODATION"
               ],
               "capacity": {
-                "maxCapacity": 5,
+                "maxCapacity": 4,
                 "workingCapacity": 4
+              },
+              "pendingCapacity": {
+                "maxCapacity": 5,
+                "workingCapacity": 5
               },
               "certification": {
                 "certified": true,
@@ -343,7 +361,15 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 {
                   "key": "MDI-Z-1-010",
                   "status": "DRAFT",
-                  "inCellSanitation": true
+                  "inCellSanitation": true,
+                  "capacity": {
+                    "maxCapacity": 0,
+                    "workingCapacity": 0
+                  },
+                  "pendingCapacity": {
+                    "maxCapacity": 1,
+                    "workingCapacity": 1
+                  }
                 }  
               ]
             }

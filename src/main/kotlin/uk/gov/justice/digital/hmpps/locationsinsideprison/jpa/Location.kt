@@ -180,7 +180,7 @@ abstract class Location(
   open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent()
 
   open fun isDeactivatedByParent() = isActive() && hasDeactivatedParent()
-  open fun isTemporarilyDeactivated() = !isActiveAndAllParentsActive() && !isPermanentlyDeactivated()
+  open fun isTemporarilyDeactivated() = !isActiveAndAllParentsActive() && !isPermanentlyDeactivated() && !isDraft()
   open fun isPermanentlyDeactivated() = findArchivedLocationInHierarchy()?.status == LocationStatus.ARCHIVED
   fun addChildLocation(childLocation: Location): Location {
     childLocation.parent = this
@@ -345,7 +345,6 @@ abstract class Location(
     useHistoryForUpdate: Boolean = false,
     countCells: Boolean = false,
     formatLocalName: Boolean = false,
-    includePendingChange: Boolean = false,
   ): LocationDto {
     val topHistoryEntry = if (useHistoryForUpdate) {
       history.maxByOrNull { it.amendedDate }
