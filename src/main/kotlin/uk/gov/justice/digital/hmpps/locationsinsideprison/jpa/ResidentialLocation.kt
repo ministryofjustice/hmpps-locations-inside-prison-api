@@ -17,7 +17,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityExcep
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
-import java.io.File.separator
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -101,11 +100,11 @@ open class ResidentialLocation(
   fun getWorkingCapacityIgnoreParent(): Int = cellLocations().filter { it.isActive() }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
-  fun calcWorkingCapacity(): Int = cellLocations().filter { it.isActiveAndAllParentsActive() }
+  fun calcWorkingCapacity(includeDraft: Boolean = false): Int = cellLocations().filter { it.isActiveAndAllParentsActive() || (includeDraft && it.isDraft()) }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
-  fun getDerivedMaxCapacity(includePendingChange: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-    .sumOf { it.getMaxCapacity(includePendingChange) ?: 0 }
+  fun calcMaxCapacity(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
+    .sumOf { it.getMaxCapacity(includePendingOrDraft) ?: 0 }
 
   private fun getCapacityOfCertifiedCell(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .sumOf { it.getCapacityOfCertifiedCell() ?: 0 }
@@ -114,6 +113,8 @@ open class ResidentialLocation(
     .any { it.isCertified() }
 
   override fun isLocked() = locked
+
+  private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.isDraft() || it.isLocked() }
 
   fun lock(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
     val oldStatus = getDerivedStatus(ignoreParentStatus = true).description
@@ -370,7 +371,6 @@ open class ResidentialLocation(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
-    includePendingChange: Boolean,
   ): LocationDto = super.toDto(
     includeChildren = includeChildren,
     includeParent = includeParent,
@@ -380,15 +380,23 @@ open class ResidentialLocation(
     useHistoryForUpdate = useHistoryForUpdate,
     countCells = countCells,
     formatLocalName = formatLocalName,
-    includePendingChange = includePendingChange,
   ).copy(
 
     wingStructure = getStructure(),
 
     capacity = CapacityDto(
-      maxCapacity = getDerivedMaxCapacity(includePendingChange),
+      maxCapacity = calcMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),
     ),
+
+    pendingCapacity = if (isDraft() || isLocked() || hasPendingChangesBelowThisLevel()) {
+      CapacityDto(
+        maxCapacity = calcMaxCapacity(true),
+        workingCapacity = calcWorkingCapacity(true),
+      )
+    } else {
+      null
+    },
 
     certification = CertificationDto(
       certified = hasCertifiedCells(),
@@ -416,7 +424,7 @@ open class ResidentialLocation(
 
     ignoreWorkingCapacity = true,
     capacity = CapacityDto(
-      maxCapacity = getDerivedMaxCapacity(),
+      maxCapacity = calcMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),
     ),
 
@@ -456,7 +464,7 @@ open class ResidentialLocation(
 
   override fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation = super.toResidentialPrisonerLocation(mapOfPrisoners).copy(
     capacity = CapacityDto(
-      maxCapacity = getDerivedMaxCapacity(),
+      maxCapacity = calcMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),
     ),
     certified = hasCertifiedCells(),
