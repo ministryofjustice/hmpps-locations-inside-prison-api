@@ -947,7 +947,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           .header("Content-Type", "application/json")
           .bodyValue(
             jsonString(
-              uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+              CapacityDto(
                 workingCapacity = aCell.getWorkingCapacity() ?: 0,
                 maxCapacity = incMaxCap,
               ),
@@ -975,14 +975,14 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 "certification": {
                   "certified": true
                 },
-                "status": "LOCKED_ACTIVE"
+                "status": "ACTIVE"
 
               }
           """,
             JsonCompareMode.LENIENT,
           )
 
-        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(0)
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(1)
       }
     }
   }

@@ -72,7 +72,7 @@ class Cell(
   private var otherConvertedCellType: String? = null,
 
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
-  private var pendingChange: PendingLocationChange? = null,
+  var pendingChange: PendingLocationChange? = null,
 
   var inCellSanitation: Boolean? = null,
 
@@ -220,12 +220,13 @@ class Cell(
   }
 
   fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+    val amendedDate = LocalDateTime.now(clock)
     addHistory(
       LocationAttribute.STATUS,
       this.getDerivedStatus().description,
       LocationStatus.ACTIVE.description,
       userOrSystemInContext,
-      LocalDateTime.now(clock),
+      amendedDate,
       linkedTransaction,
     )
     convertedCellType = null
@@ -240,16 +241,16 @@ class Cell(
 
     specialistCellTypes?.let { updateSpecialistCellTypes(specialistCellTypes = it, clock = clock, userOrSystemInContext = userOrSystemInContext, linkedTransaction = linkedTransaction) }
 
-    setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext, clock, linkedTransaction)
+    setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext = userOrSystemInContext, amendedDate = amendedDate, linkedTransaction = linkedTransaction)
     if (hasDeactivatedParent()) {
       reactivate(userOrSystemInContext, clock, linkedTransaction)
     }
     this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
     this.updatedBy = userOrSystemInContext
-    this.whenUpdated = LocalDateTime.now(clock)
+    this.whenUpdated = amendedDate
   }
 
-  override fun setCapacity(maxCapacity: Int, workingCapacity: Int, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+  override fun setCapacity(maxCapacity: Int, workingCapacity: Int, userOrSystemInContext: String, amendedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
     if (!(isPermanentlyDeactivated() || isTemporarilyDeactivated()) && workingCapacity == 0 && accommodationType == AccommodationType.NORMAL_ACCOMMODATION && specialistCellTypes.isEmpty()) {
       throw CapacityException(
         getKey(),
@@ -262,9 +263,8 @@ class Cell(
         pendingChange = PendingLocationChange()
       }
       pendingChange?.let { it.capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = getWorkingCapacity() ?: 0) }
-      lock(clock, userOrSystemInContext, linkedTransaction)
     } else {
-      super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, clock, linkedTransaction)
+      super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, amendedDate, linkedTransaction)
     }
   }
 
@@ -502,25 +502,47 @@ class Cell(
     }
   }
 
-  override fun approve(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+  override fun approve(
+    approvedDate: LocalDateTime,
+    approvedBy: String,
+    linkedTransaction: LinkedTransaction,
+    comments: String?,
+  ) {
+    super.approve(approvedDate, approvedBy, linkedTransaction, comments)
+
     pendingChange?.let { pending ->
-      pending.capacity?.let { cap ->
-        setCapacity(
-          maxCapacity = cap.maxCapacity,
-          workingCapacity = cap.workingCapacity,
-          userOrSystemInContext,
-          clock,
-          linkedTransaction,
-        )
-      }
+      applyPendingChanges(pending, approvedBy, approvedDate, linkedTransaction)
     }
     pendingChange = null
-    unlock(clock, userOrSystemInContext, linkedTransaction)
   }
 
-  override fun reject(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+  override fun hasPendingChanges() = super.hasPendingChanges() || pendingChange != null
+
+  private fun applyPendingChanges(
+    pending: PendingLocationChange,
+    approvedBy: String,
+    approvedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    pending.capacity?.let { cap ->
+      setCapacity(
+        maxCapacity = cap.maxCapacity,
+        workingCapacity = cap.workingCapacity,
+        userOrSystemInContext = approvedBy,
+        amendedDate = approvedDate,
+        linkedTransaction = linkedTransaction,
+      )
+    }
+  }
+
+  override fun reject(
+    rejectedDate: LocalDateTime,
+    rejectedBy: String,
+    linkedTransaction: LinkedTransaction,
+    comments: String?,
+  ) {
+    super.reject(rejectedDate, rejectedBy, linkedTransaction, comments)
     pendingChange = null
-    unlock(clock, userOrSystemInContext, linkedTransaction)
   }
 
   override fun toDto(

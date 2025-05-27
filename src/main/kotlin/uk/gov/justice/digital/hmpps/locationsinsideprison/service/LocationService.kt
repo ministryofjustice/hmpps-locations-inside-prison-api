@@ -668,7 +668,7 @@ class LocationService(
       maxCapacity = maxCapacity,
       workingCapacity = workingCapacity,
       userOrSystemInContext = getUsername(),
-      clock = clock,
+      amendedDate = LocalDateTime.now(clock),
       linkedTransaction = trackingTx,
     )
 
@@ -827,7 +827,6 @@ class LocationService(
             planetFmReference = planetFmReference,
             proposedReactivationDate = proposedReactivationDate,
             userOrSystemInContext = getUsername(),
-            clock = clock,
             deactivatedLocations = deactivatedLocations,
             linkedTransaction = linkedTransaction,
           )

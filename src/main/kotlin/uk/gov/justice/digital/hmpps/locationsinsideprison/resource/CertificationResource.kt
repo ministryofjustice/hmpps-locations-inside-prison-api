@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CertificationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import java.util.*
@@ -148,5 +149,45 @@ class CertificationResource(
     rejectCertificationRequest: RejectCertificationRequestDto,
   ): CertificationApprovalRequestDto = certificationService.rejectCertificationRequest(
     rejectCertificationRequest = rejectCertificationRequest,
+  )
+
+  @PutMapping("/location/withdraw")
+  @PreAuthorize("hasRole('ROLE_LOCATION_CERTIFICATION')")
+  @Operation(
+    summary = "Withdraw a certification request for a location",
+    description = "Requires role LOCATION_CERTIFICATION",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the approval request status",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CERTIFICATION role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Approval request not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun withdrawCertificationRequest(
+    @RequestBody
+    @Validated
+    withdrawCertificationRequest: WithdrawCertificationRequestDto,
+  ): CertificationApprovalRequestDto = certificationService.withdrawCertificationRequest(
+    withdrawCertificationRequest = withdrawCertificationRequest,
   )
 }

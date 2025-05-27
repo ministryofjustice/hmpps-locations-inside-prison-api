@@ -176,6 +176,8 @@ abstract class Location(
   fun isDraft() = status == LocationStatus.DRAFT
   open fun isLocked() = false
 
+  open fun hasPendingChanges() = isDraft()
+
   open fun isResidentialRoomOrConvertedCell() = false
   open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent()
 
@@ -634,7 +636,6 @@ abstract class Location(
           deactivationReasonDescription = upsert.comments,
           proposedReactivationDate = upsert.proposedReactivationDate,
           userOrSystemInContext = updatedBy,
-          clock = clock,
           linkedTransaction = linkedTransaction,
         )
       } else {
@@ -651,13 +652,12 @@ abstract class Location(
     planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
-    clock: Clock,
     deactivatedLocations: MutableSet<Location>? = null,
   ): Boolean {
     var dataChanged = false
 
     if (!isPermanentlyDeactivated()) {
-      val amendedDate = LocalDateTime.now(clock)
+      val amendedDate = deactivatedDate
 
       if (addHistory(
           LocationAttribute.STATUS,
@@ -677,7 +677,7 @@ abstract class Location(
           getWorkingCapacityIgnoreParent().toString(),
           "0",
           userOrSystemInContext,
-          LocalDateTime.now(clock),
+          amendedDate,
           linkedTransaction,
         )
       }
@@ -744,7 +744,6 @@ abstract class Location(
                 planetFmReference = planetFmReference,
                 proposedReactivationDate = proposedReactivationDate,
                 userOrSystemInContext = userOrSystemInContext,
-                clock = clock,
                 deactivatedLocations = deactivatedLocations,
               )
             ) {
@@ -878,7 +877,7 @@ abstract class Location(
 
       if (this is ResidentialLocation) {
         this.cellLocations().filter { !it.isConvertedCell() }.forEach { cellLocation ->
-          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, userOrSystemInContext, clock, linkedTransaction)
+          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, userOrSystemInContext, amendedDate = amendedDate, linkedTransaction)
           cellLocation.deCertifyCell(userOrSystemInContext, clock, linkedTransaction)
         }
       }
@@ -910,14 +909,14 @@ abstract class Location(
     } else {
       null
     }
-
+    val amendedDate = LocalDateTime.now(clock)
     val capacityAdjusted = maxCapacity != null || workingCapacity != null
     if (this is Cell && capacityAdjusted) {
       setCapacity(
         maxCapacity = maxCapacity ?: getMaxCapacity(includePendingChange = true) ?: 0,
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
         userOrSystemInContext = userOrSystemInContext,
-        clock = clock,
+        amendedDate = amendedDate,
         linkedTransaction = linkedTransaction,
       )
       amendedLocations?.add(this)
@@ -925,7 +924,6 @@ abstract class Location(
     }
 
     if (isTemporarilyDeactivated()) {
-      val amendedDate = LocalDateTime.now(clock)
       addHistory(
         LocationAttribute.STATUS,
         this.getDerivedStatus().description,

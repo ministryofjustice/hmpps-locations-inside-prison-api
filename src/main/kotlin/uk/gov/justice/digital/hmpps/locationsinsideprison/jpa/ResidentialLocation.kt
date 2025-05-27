@@ -6,7 +6,9 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
+import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
+import jakarta.validation.ValidationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -54,6 +56,9 @@ open class ResidentialLocation(
   private var locked: Boolean = false,
 
   private var residentialStructure: String? = null,
+
+  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  private val approvalRequests: MutableList<CertificationApprovalRequest> = mutableListOf(),
 
 ) : Location(
   id = id,
@@ -114,36 +119,36 @@ open class ResidentialLocation(
 
   override fun isLocked() = locked
 
-  private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.isDraft() || it.isLocked() }
+  private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingChanges() }
 
-  fun lock(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+  private fun lock(lockTime: LocalDateTime, lockingUser: String, linkedTransaction: LinkedTransaction) {
     val oldStatus = getDerivedStatus(ignoreParentStatus = true).description
     locked = true
     addHistory(
       LocationAttribute.STATUS,
       oldStatus,
       getDerivedStatus(ignoreParentStatus = true).description,
-      userOrSystemInContext,
-      LocalDateTime.now(clock),
+      lockingUser,
+      lockTime,
       linkedTransaction,
     )
-    updatedBy = userOrSystemInContext
-    whenUpdated = LocalDateTime.now(clock)
+    updatedBy = lockingUser
+    whenUpdated = lockTime
   }
 
-  fun unlock(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+  protected fun unlock(unlockTime: LocalDateTime, unlockingUser: String, linkedTransaction: LinkedTransaction) {
     val oldStatus = getDerivedStatus(ignoreParentStatus = true).description
     locked = false
     addHistory(
       LocationAttribute.STATUS,
       oldStatus,
       getDerivedStatus(ignoreParentStatus = true).description,
-      userOrSystemInContext,
-      LocalDateTime.now(clock),
+      unlockingUser,
+      unlockTime,
       linkedTransaction,
     )
-    updatedBy = userOrSystemInContext
-    whenUpdated = LocalDateTime.now(clock)
+    updatedBy = unlockingUser
+    whenUpdated = unlockTime
   }
 
   fun setStructure(wingStructure: List<ResidentialStructuralType>) {
@@ -152,42 +157,62 @@ open class ResidentialLocation(
 
   private fun getStructure(): List<ResidentialStructuralType> = this.residentialStructure?.split(",")?.map { ResidentialStructuralType.valueOf(it.trim()) } ?: emptyList()
 
-  open fun sendForApproval(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+  fun requestApproval(requestedDate: LocalDateTime, requestedBy: String, linkedTransaction: LinkedTransaction): CertificationApprovalRequest {
     fun traverseAndLock(location: ResidentialLocation) {
-      location.lock(clock, userOrSystemInContext, linkedTransaction)
+      location.lock(requestedDate, requestedBy, linkedTransaction)
       location.childLocations.filterIsInstance<ResidentialLocation>().forEach { traverseAndLock(it) }
     }
     traverseAndLock(this)
+    val approvalRequest = CertificationApprovalRequest(
+      location = this,
+      locationKey = this.getKey(),
+      requestedBy = requestedBy,
+      requestedDate = requestedDate,
+    )
+    approvalRequests.add(approvalRequest)
+    return approvalRequest
   }
 
-  open fun approve(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+  open fun approve(
+    approvedDate: LocalDateTime,
+    approvedBy: String,
+    linkedTransaction: LinkedTransaction,
+    comments: String? = null,
+  ) {
     fun traverseAndUnlock(location: ResidentialLocation) {
       if (location.isLocked()) {
-        location.unlock(clock, userOrSystemInContext, linkedTransaction)
-        location.temporarilyDeactivate(
-          deactivationReasonDescription = "Approved pending activation",
-          deactivatedReason = DeactivatedReason.OTHER,
-          deactivatedDate = LocalDateTime.now(clock),
-          linkedTransaction = linkedTransaction,
-          userOrSystemInContext = userOrSystemInContext,
-          clock = clock,
-        )
+        location.unlock(approvedDate, approvedBy, linkedTransaction)
         location.childLocations.filterIsInstance<ResidentialLocation>().forEach { traverseAndUnlock(it) }
       } else {
-        throw IllegalStateException("Cannot approve location ${location.getKey()} when its not locked")
+        throw ValidationException("Cannot approve location ${location.getKey()} when its not locked")
       }
     }
 
     traverseAndUnlock(this)
+
+    if (isDraft()) {
+      temporarilyDeactivate(
+        deactivationReasonDescription = "Approved pending activation",
+        deactivatedReason = DeactivatedReason.OTHER,
+        deactivatedDate = approvedDate,
+        linkedTransaction = linkedTransaction,
+        userOrSystemInContext = approvedBy,
+      )
+    }
   }
 
-  open fun reject(clock: Clock, userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+  open fun reject(
+    rejectedDate: LocalDateTime,
+    rejectedBy: String,
+    linkedTransaction: LinkedTransaction,
+    comments: String? = null,
+  ) {
     fun traverseAndUnlock(location: ResidentialLocation) {
       if (location.isLocked()) {
-        location.unlock(clock, userOrSystemInContext, linkedTransaction)
+        location.unlock(rejectedDate, rejectedBy, linkedTransaction)
         location.childLocations.filterIsInstance<ResidentialLocation>().forEach { traverseAndUnlock(it) }
       } else {
-        throw IllegalStateException("Cannot reject location ${location.getKey()} when its not in locked")
+        throw ValidationException("Cannot reject location ${location.getKey()} when its not in locked")
       }
     }
 
@@ -389,7 +414,7 @@ open class ResidentialLocation(
       workingCapacity = calcWorkingCapacity(),
     ),
 
-    pendingCapacity = if (isDraft() || isLocked() || hasPendingChangesBelowThisLevel()) {
+    pendingCapacity = if (hasPendingChanges() || hasPendingChangesBelowThisLevel()) {
       CapacityDto(
         maxCapacity = calcMaxCapacity(true),
         workingCapacity = calcWorkingCapacity(true),
@@ -474,7 +499,7 @@ open class ResidentialLocation(
     maxCapacity: Int = 0,
     workingCapacity: Int = 0,
     userOrSystemInContext: String,
-    clock: Clock,
+    amendedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
     if (isCell() || isVirtualResidentialLocation()) {
@@ -504,7 +529,7 @@ open class ResidentialLocation(
         capacity?.maxCapacity?.toString() ?: "None",
         maxCapacity.toString(),
         userOrSystemInContext,
-        LocalDateTime.now(clock),
+        amendedDate,
         linkedTransaction,
       )
       addHistory(
@@ -512,7 +537,7 @@ open class ResidentialLocation(
         capacity?.workingCapacity?.let { calcWorkingCapacity().toString() } ?: "None",
         workingCapacity.toString(),
         userOrSystemInContext,
-        LocalDateTime.now(clock),
+        amendedDate,
         linkedTransaction,
       )
 
@@ -524,7 +549,7 @@ open class ResidentialLocation(
       }
 
       this.updatedBy = userOrSystemInContext
-      this.whenUpdated = LocalDateTime.now(clock)
+      this.whenUpdated = amendedDate
     } else {
       log.warn("Capacity cannot be set, not a cell or virtual location")
     }

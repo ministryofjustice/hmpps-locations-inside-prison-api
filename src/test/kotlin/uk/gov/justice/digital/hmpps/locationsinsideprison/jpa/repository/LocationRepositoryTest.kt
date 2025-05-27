@@ -103,7 +103,7 @@ class LocationRepositoryTest : TestBase() {
     assertThat(location.findAllLeafLocations()).containsExactlyInAnyOrder(cell001L1, cell002L1, cell002L2, adjRoom)
     location.findAllLeafLocations().forEach {
       if (it is Cell) {
-        it.setCapacity(workingCapacity = 2, maxCapacity = 2, userOrSystemInContext = "test", clock = clock, linkedTransaction = linkedTransaction)
+        it.setCapacity(workingCapacity = 2, maxCapacity = 2, userOrSystemInContext = "test", amendedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
         it.certifyCell(userOrSystemInContext = "test", clock = clock, linkedTransaction = linkedTransaction)
       }
     }

@@ -41,7 +41,7 @@ data class CertificationApprovalRequestDto(
     fun from(approvalRequest: CertificationApprovalRequest): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
       id = approvalRequest.id!!,
       locationId = approvalRequest.location.id!!,
-      locationKey = approvalRequest.location.getKey(),
+      locationKey = approvalRequest.locationKey,
       status = approvalRequest.status,
       requestedBy = approvalRequest.requestedBy,
       requestedDate = approvalRequest.requestedDate,
@@ -58,8 +58,8 @@ data class ApproveCertificationRequestDto(
   @Schema(description = "Approval request reference", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
   val approvalRequestReference: UUID,
 
-  @Schema(description = "Comments about the approval", required = false)
-  val comments: String? = null,
+  @Schema(description = "Comments about the approval", required = true)
+  val comments: String,
 )
 
 @Schema(description = "Request to reject a certification request")
@@ -68,6 +68,16 @@ data class RejectCertificationRequestDto(
   @Schema(description = "Approval request reference", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
   val approvalRequestReference: UUID,
 
-  @Schema(description = "Comments about the rejection", required = false)
-  val comments: String? = null,
+  @Schema(description = "Comments about the rejection", required = true)
+  val comments: String,
+)
+
+@Schema(description = "Request to withdraw a certification request")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class WithdrawCertificationRequestDto(
+  @Schema(description = "Approval request reference", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+  val approvalRequestReference: UUID,
+
+  @Schema(description = "Comments about the withdrawal", required = true)
+  val comments: String,
 )

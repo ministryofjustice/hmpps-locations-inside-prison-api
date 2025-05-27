@@ -23,7 +23,10 @@ class CertificationApprovalRequest(
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "location_id")
-  val location: Location,
+  val location: ResidentialLocation,
+
+  @Column(nullable = false)
+  val locationKey: String,
 
   @Column(nullable = false)
   val requestedBy: String,
@@ -44,17 +47,44 @@ class CertificationApprovalRequest(
   @Column(nullable = true)
   var comments: String? = null,
 ) {
-  fun approve(approvedBy: String, comments: String?, approvedDate: LocalDateTime) {
+  fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+    location.approve(
+      approvedDate = approvedDate,
+      approvedBy = approvedBy,
+      linkedTransaction = linkedTransaction,
+      comments = comments,
+    )
     this.status = ApprovalRequestStatus.APPROVED
     this.approvedOrRejectedBy = approvedBy
     this.approvedOrRejectedDate = approvedDate
     this.comments = comments
   }
 
-  fun reject(rejectedBy: String, comments: String?, rejectedDate: LocalDateTime) {
+  fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+    location.reject(
+      rejectedDate = rejectedDate,
+      rejectedBy = rejectedBy,
+      linkedTransaction = linkedTransaction,
+      comments = comments,
+    )
+
     this.status = ApprovalRequestStatus.REJECTED
     this.approvedOrRejectedBy = rejectedBy
     this.approvedOrRejectedDate = rejectedDate
+    this.comments = comments
+  }
+
+  fun withdraw(withdrawnBy: String, withdrawnDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+    location.reject(
+      rejectedDate = withdrawnDate,
+      rejectedBy = withdrawnBy,
+      linkedTransaction = linkedTransaction,
+      comments = comments,
+    )
+
+    this.status = ApprovalRequestStatus.WITHDRAWN
+    this.approvedOrRejectedBy = withdrawnBy
+    this.approvedOrRejectedDate = withdrawnDate
     this.comments = comments
   }
 }
@@ -63,4 +93,5 @@ enum class ApprovalRequestStatus {
   PENDING,
   APPROVED,
   REJECTED,
+  WITHDRAWN,
 }

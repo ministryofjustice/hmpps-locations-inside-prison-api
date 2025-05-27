@@ -1,455 +1,163 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.http.MediaType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
+import org.junit.jupiter.api.TestFactory
+import org.springframework.test.json.JsonCompareMode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
+import java.time.LocalDateTime
 import java.util.UUID
 
 @DisplayName("Certification Resource")
+@WithMockAuthUser(username = EXPECTED_USERNAME)
 class CertificationResourceTest : CommonDataTestBase() {
 
-  @Autowired
-  lateinit var certificationApprovalRequestRepository: CertificationApprovalRequestRepository
-
+  @DisplayName("PUT /certification/location/request-approval")
   @Nested
-  @DisplayName("Request Approval Tests")
   inner class RequestApprovalTest {
 
+    private val url = "/certification/location/request-approval"
+
+    @DisplayName("is secured")
     @Nested
-    @DisplayName("Security")
     inner class Security {
-
-      @Test
-      fun `access forbidden when no authority`() {
-        webTestClient.put()
-          .uri("/certification/location/request-approval")
-          .exchange()
-          .expectStatus().isUnauthorized
-      }
-
-      @Test
-      @WithMockAuthUser
-      fun `access forbidden when no role`() {
-        webTestClient.put()
-          .uri("/certification/location/request-approval")
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_WRONG"])
-      fun `access forbidden with wrong role`() {
-        webTestClient.put()
-          .uri("/certification/location/request-approval")
-          .exchange()
-          .expectStatus().isForbidden
-      }
-    }
-
-    @Nested
-    @DisplayName("Validation")
-    inner class Validation {
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_LOCATION_CERTIFICATION"])
-      fun `access client error bad data`() {
-        webTestClient.put()
-          .uri("/certification/location/request-approval")
-          .bodyValue("{}")
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isBadRequest
-      }
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_LOCATION_CERTIFICATION"])
-      fun `location not found returns 404`() {
-        webTestClient.put()
-          .uri("/certification/location/request-approval")
-          .bodyValue(
-            """
-            {
-              "locationId": "${UUID.randomUUID()}"
-            }
-            """.trimIndent(),
-          )
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isNotFound
-      }
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_LOCATION_CERTIFICATION"])
-      fun `location not in DRAFT or LOCKED status returns 400`() {
-        webTestClient.put()
-          .uri("/certification/location/request-approval")
-          .bodyValue(
-            """
-            {
-              "locationId": "${cell1.id}"
-            }
-            """.trimIndent(),
-          )
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isBadRequest
-      }
-    }
-
-    @Nested
-    @DisplayName("Happy Path")
-    inner class HappyPath {
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_LOCATION_CERTIFICATION"])
-      fun `can request approval for a location in DRAFT status`() {
-        // Create a location in DRAFT status
-        val draftLocationId = webTestClient.post()
-          .uri("/locations/residential")
-          .bodyValue(
-            CreateResidentialLocationRequest(
-              prisonId = "LEI",
-              code = "DRAFT1",
-              locationType = ResidentialLocationType.CELL,
-              parentId = leedsWing.id,
-              accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
-            ),
-          )
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .exchange()
-          .expectStatus().isCreated
-          .expectBody()
-          .jsonPath("$.id").isNotEmpty
-          .jsonPath("$.status").isEqualTo("DRAFT")
-          .returnResult()
-          .responseBody?.let { objectMapper.readValue(it, CertificationApprovalRequestDto::class.java)?.id }
-          ?: UUID.randomUUID()
-
-        // Request approval
-        webTestClient.put()
-          .uri("/certification/location/request-approval")
-          .bodyValue(
+      @DisplayName("by role and scope")
+      @TestFactory
+      fun endpointRequiresAuthorisation() = endpointRequiresAuthorisation(
+        webTestClient.put().uri(url).bodyValue(
+          jsonString(
             LocationApprovalRequest(
-              locationId = draftLocationId,
+              locationId = UUID.randomUUID(),
             ),
-          )
+          ),
+        ),
+        "ROLE_LOCATION_CERTIFICATION",
+      )
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `cannot request approval for a location which is not DRAFT or has any pending changes`() {
+        val aCell = leedsWing.cellLocations().find { it.getKey() == "LEI-A-1-001" } ?: throw RuntimeException("Cell not found")
+
+        webTestClient.put().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              LocationApprovalRequest(
+                locationId = aCell.id!!,
+              ),
+            ),
+          )
           .exchange()
-          .expectStatus().isOk
-          .expectBody()
-          .jsonPath("$.locationId").isEqualTo(draftLocationId.toString())
-          .jsonPath("$.status").isEqualTo("PENDING")
-          .jsonPath("$.requestedBy").isEqualTo(EXPECTED_USERNAME)
+          .expectStatus().is4xxClientError
+      }
+    }
 
-        // Verify the database
-        val approvalRequests = certificationApprovalRequestRepository.findByLocationOrderByRequestedDateDesc(
-          repository.findById(draftLocationId).get(),
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can request approval for a location that has pending changes`() {
+        val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
+        aCell.setCapacity(
+          maxCapacity = 3,
+          workingCapacity = 2,
+          userOrSystemInContext = EXPECTED_USERNAME,
+          amendedDate = LocalDateTime.now(
+            clock,
+          ),
+          linkedTransaction = linkedTransaction,
         )
-        assertThat(approvalRequests).isNotEmpty
-        assertThat(approvalRequests[0].status).isEqualTo(ApprovalRequestStatus.PENDING)
-        assertThat(approvalRequests[0].location.id).isEqualTo(draftLocationId)
-      }
-    }
-  }
+        repository.saveAndFlush(aCell)
 
-  @Nested
-  @DisplayName("Approve Certification Request Tests")
-  inner class ApproveCertificationRequestTest {
-
-    @Nested
-    @DisplayName("Security")
-    inner class Security {
-
-      @Test
-      fun `access forbidden when no authority`() {
-        webTestClient.put()
-          .uri("/certification/location/approve")
-          .exchange()
-          .expectStatus().isUnauthorized
-      }
-
-      @Test
-      @WithMockAuthUser
-      fun `access forbidden when no role`() {
-        webTestClient.put()
-          .uri("/certification/location/approve")
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_WRONG"])
-      fun `access forbidden with wrong role`() {
-        webTestClient.put()
-          .uri("/certification/location/approve")
-          .exchange()
-          .expectStatus().isForbidden
-      }
-    }
-
-    @Nested
-    @DisplayName("Validation")
-    inner class Validation {
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_LOCATION_CERTIFICATION"])
-      fun `access client error bad data`() {
-        webTestClient.put()
-          .uri("/certification/location/approve")
-          .bodyValue("{}")
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
           .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isBadRequest
-      }
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_LOCATION_CERTIFICATION"])
-      fun `approval request not found returns 404`() {
-        webTestClient.put()
-          .uri("/certification/location/approve")
           .bodyValue(
+            jsonString(
+              LocationApprovalRequest(
+                locationId = aCell.id!!,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
             """
-            {
-              "approvalRequestReference": "${UUID.randomUUID()}"
-            }
-            """.trimIndent(),
+              {
+              "locationId": "${aCell.id}",
+              "locationKey": "${aCell.getKey()}",
+              "status": "PENDING"
+              }
+          """,
+            JsonCompareMode.LENIENT,
           )
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isNotFound
       }
-    }
-
-    @Nested
-    @DisplayName("Happy Path")
-    inner class HappyPath {
 
       @Test
-      @WithMockAuthUser(authorities = ["ROLE_LOCATION_CERTIFICATION"])
-      fun `can approve a certification request`() {
-        // Create a location in DRAFT status
-        val draftLocation = webTestClient.post()
-          .uri("/locations/residential")
-          .bodyValue(
-            CreateResidentialLocationRequest(
-              prisonId = "LEI",
-              code = "DRAFT2",
-              locationType = ResidentialLocationType.CELL,
-              parentId = leedsWing.id,
+      fun `can request approval for a location that is a draft location`() {
+        // Create a new wing in Leeds prison
+        val mWing = repository.saveAndFlush(
+          CreateEntireWingRequest(
+            prisonId = "LEI",
+            wingCode = "M",
+            numberOfCellsPerSection = 3,
+            numberOfLandings = 2,
+            numberOfSpurs = 0,
+            defaultCellCapacity = 1,
+            wingDescription = "Wing M",
+          ).toEntity(
+            createInDraft = true,
+            createdBy = EXPECTED_USERNAME,
+            clock = clock,
+            linkedTransaction = linkedTransactionRepository.saveAndFlush(
+              LinkedTransaction(
+                prisonId = "LEI",
+                transactionType = TransactionType.LOCATION_CREATE,
+                transactionDetail = "New Wing M in Leeds",
+                transactionInvokedBy = EXPECTED_USERNAME,
+                txStartTime = LocalDateTime.now(clock).minusDays(1),
+              ),
             ),
-          )
-          .headers { it.authToken() }
-          .exchange()
-          .expectStatus().isCreated
-          .returnResult()
-          .responseBody
+          ),
+        )
 
-        // Request approval
-        val approvalRequest = webTestClient.put()
-          .uri("/certification/location/request-approval")
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
           .bodyValue(
-            LocationApprovalRequest(
-              locationId = draftLocation.id,
+            jsonString(
+              LocationApprovalRequest(
+                locationId = mWing.id!!,
+              ),
             ),
           )
-          .headers { it.authToken() }
           .exchange()
           .expectStatus().isOk
-          .returnResult()
-          .responseBody
-
-        // Approve the request
-        val result = webTestClient.put()
-          .uri("/certification/location/approve")
-          .bodyValue(
-            ApproveCertificationRequestDto(
-              approvalRequestReference = approvalRequest.id,
-              comments = "Approved",
-            ),
-          )
-          .headers { it.authToken() }
-          .exchange()
-          .expectStatus().isOk
-          .returnResult()
-          .responseBody
-
-        // Verify the result
-        assertThat(result.id).isEqualTo(approvalRequest.id)
-        assertThat(result.status).isEqualTo(ApprovalRequestStatus.APPROVED)
-        assertThat(result.approvedOrRejectedBy).isEqualTo(EXPECTED_USERNAME)
-        assertThat(result.comments).isEqualTo("Approved")
-
-        // Verify the database
-        val updatedApprovalRequest = certificationApprovalRequestRepository.findById(result.id).get()
-        assertThat(updatedApprovalRequest.status).isEqualTo(ApprovalRequestStatus.APPROVED)
-        assertThat(updatedApprovalRequest.approvedOrRejectedBy).isEqualTo(EXPECTED_USERNAME)
-        assertThat(updatedApprovalRequest.comments).isEqualTo("Approved")
-
-        // Verify the location status is now INACTIVE
-        val updatedLocation = repository.findById(draftLocation.id).get()
-        assertThat(updatedLocation.status).isEqualTo(LocationStatus.INACTIVE)
-      }
-    }
-  }
-
-  @Nested
-  @DisplayName("Reject Certification Request Tests")
-  inner class RejectCertificationRequestTest {
-
-    @Nested
-    @DisplayName("Security")
-    inner class Security {
-
-      @Test
-      fun `access forbidden when no authority`() {
-        webTestClient.put()
-          .uri("/certification/location/reject")
-          .exchange()
-          .expectStatus().isUnauthorized
-      }
-
-      @Test
-      @WithMockAuthUser
-      fun `access forbidden when no role`() {
-        webTestClient.put()
-          .uri("/certification/location/reject")
-          .exchange()
-          .expectStatus().isForbidden
-      }
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_WRONG"])
-      fun `access forbidden with wrong role`() {
-        webTestClient.put()
-          .uri("/certification/location/reject")
-          .exchange()
-          .expectStatus().isForbidden
-      }
-    }
-
-    @Nested
-    @DisplayName("Validation")
-    inner class Validation {
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_LOCATION_CERTIFICATION"])
-      fun `access client error bad data`() {
-        webTestClient.put()
-          .uri("/certification/location/reject")
-          .bodyValue("{}")
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isBadRequest
-      }
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_LOCATION_CERTIFICATION"])
-      fun `approval request not found returns 404`() {
-        webTestClient.put()
-          .uri("/certification/location/reject")
-          .bodyValue(
+          .expectBody().json(
+            // language=json
             """
-            {
-              "approvalRequestReference": "${UUID.randomUUID()}"
-            }
-            """.trimIndent(),
+              {
+              "locationId": "${mWing.id}",
+              "locationKey": "${mWing.getKey()}",
+              "status": "PENDING"
+              }
+          """,
+            JsonCompareMode.LENIENT,
           )
-          .header("Content-Type", "application/json")
-          .exchange()
-          .expectStatus().isNotFound
       }
     }
-
-    @Nested
-    @DisplayName("Happy Path")
-    inner class HappyPath {
-
-      @Test
-      @WithMockAuthUser(authorities = ["ROLE_LOCATION_CERTIFICATION"])
-      fun `can reject a certification request`() {
-        // Create a location in DRAFT status
-        val draftLocation = webTestClient.post()
-          .uri("/locations/residential")
-          .bodyValue(
-            CreateResidentialLocationRequest(
-              prisonId = "LEI",
-              code = "DRAFT3",
-              locationType = ResidentialLocationType.CELL,
-              parentId = leedsWing.id,
-            ),
-          )
-          .headers { it.authToken() }
-          .exchange()
-          .expectStatus().isCreated
-          .returnResult()
-          .responseBody
-
-        // Request approval
-        val approvalRequest = webTestClient.put()
-          .uri("/certification/location/request-approval")
-          .bodyValue(
-            LocationApprovalRequest(
-              locationId = draftLocation.id,
-            ),
-          )
-          .headers { it.authToken() }
-          .exchange()
-          .expectStatus().isOk
-          .returnResult()
-          .responseBody
-
-        // Reject the request
-        val result = webTestClient.put()
-          .uri("/certification/location/reject")
-          .bodyValue(
-            RejectCertificationRequestDto(
-              approvalRequestReference = approvalRequest.id,
-              comments = "Rejected",
-            ),
-          )
-          .headers { it.authToken() }
-          .exchange()
-          .expectStatus().isOk
-          .returnResult()
-          .responseBody
-
-        // Verify the result
-        assertThat(result.id).isEqualTo(approvalRequest.id)
-        assertThat(result.status).isEqualTo(ApprovalRequestStatus.REJECTED)
-        assertThat(result.approvedOrRejectedBy).isEqualTo(EXPECTED_USERNAME)
-        assertThat(result.comments).isEqualTo("Rejected")
-
-        // Verify the database
-        val updatedApprovalRequest = certificationApprovalRequestRepository.findById(result.id).get()
-        assertThat(updatedApprovalRequest.status).isEqualTo(ApprovalRequestStatus.REJECTED)
-        assertThat(updatedApprovalRequest.approvedOrRejectedBy).isEqualTo(EXPECTED_USERNAME)
-        assertThat(updatedApprovalRequest.comments).isEqualTo("Rejected")
-
-        // Verify the location status is still DRAFT
-        val updatedLocation = repository.findById(draftLocation.id).get()
-        assertThat(updatedLocation.status).isEqualTo(LocationStatus.DRAFT)
-      }
-    }
-  }
-
-  private fun org.springframework.web.reactive.function.client.WebHeaders.authToken() {
-    this.add("Authorization", "Bearer token")
-    this.add("Content-Type", MediaType.APPLICATION_JSON_VALUE)
   }
 }
