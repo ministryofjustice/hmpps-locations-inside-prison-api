@@ -222,6 +222,36 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(LockedLocationCannotBeUpdatedException::class)
+  fun handleLockedLocationCannotBeUpdated(e: LockedLocationCannotBeUpdatedException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Location LOCKED: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.LockedLocationCannotBeUpdated,
+          userMessage = "Location LOCKED and cannot be updated: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(PendingApprovalAlreadyExistsException::class)
+  fun handlePendingApprovalAlreadyExistsException(e: PendingApprovalAlreadyExistsException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Location already pending an approval: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.ApprovalRequestAlreadyExists,
+          userMessage = "Pending approval already exist for this location: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(TransactionNotFoundException::class)
   fun handleTransactionNotFound(e: TransactionNotFoundException): ResponseEntity<ErrorResponse?>? {
     log.debug("Transaction not found exception caught: {}", e.message)
@@ -444,3 +474,5 @@ class DuplicateLocalNameForSameHierarchyException(key: String, topLocationKey: S
 class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated as it is active")
 class LocationIsNotACellException(key: String) : Exception("$key: Location must be a cell in order to perform this operation")
 class ApprovalRequestNotFoundException(id: String) : Exception("There is no approval request found $id")
+class LockedLocationCannotBeUpdatedException(key: String) : Exception("Location $key cannot be updated as it is locked")
+class PendingApprovalAlreadyExistsException(key: String) : Exception("Location $key already has a pending approval request")

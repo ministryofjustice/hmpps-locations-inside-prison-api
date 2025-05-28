@@ -18,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LockedLocationCannotBeUpdatedException
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -257,6 +258,9 @@ class Cell(
         "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
         ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
       )
+    }
+    if (isLocked()) {
+      throw LockedLocationCannotBeUpdatedException(getKey())
     }
     if (isCertificationApprovalProcessRequired() && getMaxCapacity(includePendingChange = true) != maxCapacity) {
       if (pendingChange == null) {

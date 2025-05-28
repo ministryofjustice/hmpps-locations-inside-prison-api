@@ -10,11 +10,14 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonData
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
+import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationTransformResourceTest : CommonDataTestBase() {
@@ -833,6 +836,53 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .expectBody(ErrorResponse::class.java)
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(106)
+      }
+
+      @Test
+      fun `cannot change a locations capacity once it is locked`() {
+        val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
+        val requestedDate = LocalDateTime.now(clock)
+        aCell.setCapacity(
+          maxCapacity = 3,
+          workingCapacity = 2,
+          userOrSystemInContext = EXPECTED_USERNAME,
+          amendedDate = requestedDate,
+          linkedTransaction = linkedTransaction,
+        )
+        repository.saveAndFlush(aCell)
+
+        webTestClient.put().uri("/certification/location/request-approval")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              LocationApprovalRequest(
+                locationId = aCell.id!!,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        prisonerSearchMockServer.stubSearchByLocations(aCell.prisonId, listOf(aCell.getPathHierarchy()), false)
+
+        assertThat(
+          webTestClient.put().uri("/locations/${aCell.id}/capacity")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              jsonString(
+                CapacityDto(
+                  workingCapacity = 2,
+                  maxCapacity = 2,
+                ),
+              ),
+            )
+            .exchange()
+            .expectStatus().isEqualTo(409)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.LockedLocationCannotBeUpdated.errorCode)
       }
     }
 

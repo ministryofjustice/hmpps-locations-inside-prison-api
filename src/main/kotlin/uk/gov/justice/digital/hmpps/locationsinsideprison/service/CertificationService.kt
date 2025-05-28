@@ -21,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedT
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
 import java.time.LocalDateTime
@@ -48,6 +49,9 @@ class CertificationService(
       throw ValidationException("Location must be in DRAFT or have pending changes to request approval")
     }
 
+    if (location.isLocked()) {
+      throw PendingApprovalAlreadyExistsException(location.getKey())
+    }
     val username = getUsername()
     val now = LocalDateTime.now(clock)
 

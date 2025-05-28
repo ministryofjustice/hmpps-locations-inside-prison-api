@@ -28,4 +28,6 @@ enum class ErrorCode(val errorCode: Int) {
   DuplicateLocalNameAtSameLevel(119),
   LocationCannotByUpdatedAsConvertedCell(120),
   ApprovalRequestNotFound(121),
+  LockedLocationCannotBeUpdated(122),
+  ApprovalRequestAlreadyExists(123),
 }

@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -61,6 +62,50 @@ class CertificationResourceTest : CommonDataTestBase() {
           )
           .exchange()
           .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot request approval for a location which has already been sent for approval`() {
+        val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
+        val requestedDate = LocalDateTime.now(clock)
+        aCell.setCapacity(
+          maxCapacity = 3,
+          workingCapacity = 2,
+          userOrSystemInContext = EXPECTED_USERNAME,
+          amendedDate = requestedDate,
+          linkedTransaction = linkedTransaction,
+        )
+        repository.saveAndFlush(aCell)
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              LocationApprovalRequest(
+                locationId = aCell.id!!,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        assertThat(
+          webTestClient.put().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              jsonString(
+                LocationApprovalRequest(
+                  locationId = aCell.id!!,
+                ),
+              ),
+            )
+            .exchange()
+            .expectStatus().isEqualTo(409)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.ApprovalRequestAlreadyExists.errorCode)
       }
     }
 
