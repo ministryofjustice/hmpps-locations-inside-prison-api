@@ -3,12 +3,12 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.microsoft.applicationinsights.TelemetryClient
 import io.swagger.v3.oas.annotations.media.Schema
-import jakarta.validation.ValidationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApprovalResponse
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
@@ -20,6 +20,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Certifi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotInPendingStatusException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
@@ -43,29 +45,25 @@ class CertificationService(
 
   fun requestApproval(locationApprovalRequest: LocationApprovalRequest): CertificationApprovalRequestDto {
     val location = residentialLocationRepository.findById(locationApprovalRequest.locationId)
-      .orElseThrow { LocationNotFoundException("Location not found: ${locationApprovalRequest.locationId}") }
+      .orElseThrow { LocationNotFoundException(locationApprovalRequest.locationId.toString()) }
 
     if (!location.hasPendingChanges()) {
-      throw ValidationException("Location must be in DRAFT or have pending changes to request approval")
+      throw LocationDoesNotRequireApprovalException(location.getKey())
     }
 
-    if (location.isLocked()) {
+    if (location.isLocationLocked()) {
       throw PendingApprovalAlreadyExistsException(location.getKey())
     }
     val username = getUsername()
     val now = LocalDateTime.now(clock)
 
-    val linkedTransaction = LinkedTransaction(
-      prisonId = location.prisonId,
-      transactionType = TransactionType.REQUEST_CERTIFICATION_APPROVAL,
-      transactionDetail = "Requesting approval for location ${location.getKey()}",
-      transactionInvokedBy = username,
-      txStartTime = now,
+    val linkedTransaction = createLinkedTransaction(
+      TransactionType.REQUEST_CERTIFICATION_APPROVAL,
+      location.prisonId,
+      "Requesting approval for location ${location.getKey()}",
+      now,
+      username,
     )
-    linkedTransactionRepository.save(linkedTransaction).also {
-      log.info("Created linked transaction: $it")
-    }
-
     val approvalRequest = location.requestApproval(requestedBy = username, requestedDate = now, linkedTransaction = linkedTransaction)
     certificationApprovalRequestRepository.save(approvalRequest)
     telemetryClient.trackEvent(
@@ -83,26 +81,26 @@ class CertificationService(
     return CertificationApprovalRequestDto.from(approvalRequest)
   }
 
-  fun approveCertificationRequest(approveCertificationRequest: ApproveCertificationRequestDto): CertificationApprovalRequestDto {
+  fun approveCertificationRequest(approveCertificationRequest: ApproveCertificationRequestDto): ApprovalResponse {
     val approvalRequest = certificationApprovalRequestRepository.findById(approveCertificationRequest.approvalRequestReference)
-      .orElseThrow { ApprovalRequestNotFoundException("Approval request not found: ${approveCertificationRequest.approvalRequestReference}") }
+      .orElseThrow { ApprovalRequestNotFoundException(approveCertificationRequest.approvalRequestReference) }
 
     if (approvalRequest.status != ApprovalRequestStatus.PENDING) {
-      throw ValidationException("Approval request is not in PENDING status")
+      throw ApprovalRequestNotInPendingStatusException(approveCertificationRequest.approvalRequestReference)
     }
 
     val username = getUsername()
     val now = LocalDateTime.now(clock)
-
     val location = approvalRequest.location
-    val linkedTransaction = LinkedTransaction(
-      prisonId = location.prisonId,
-      transactionType = TransactionType.APPROVE_CERTIFICATION_REQUEST,
-      transactionDetail = "Approval for approval request ${approveCertificationRequest.approvalRequestReference} for ${location.getKey()}",
-      transactionInvokedBy = username,
-      txStartTime = now,
-    )
 
+    val linkedTransaction = createLinkedTransaction(
+      TransactionType.APPROVE_CERTIFICATION_REQUEST,
+      location.prisonId,
+      "Approval for approval request ${approveCertificationRequest.approvalRequestReference} for ${location.getKey()}",
+      now,
+      username,
+    )
+    val newLocation = location.isDraft()
     approvalRequest.approve(
       approvedBy = username,
       approvedDate = now,
@@ -122,29 +120,33 @@ class CertificationService(
     )
 
     log.info("Certification approval approved for location ${location.getKey()} by $username")
-    return CertificationApprovalRequestDto.from(approvalRequest)
+    return ApprovalResponse(
+      newLocation = newLocation,
+      location = location.toDto(includeChildren = true, includeParent = true),
+      approvalRequest = CertificationApprovalRequestDto.from(approvalRequest),
+    )
   }
 
-  fun rejectCertificationRequest(rejectCertificationRequest: RejectCertificationRequestDto): CertificationApprovalRequestDto {
+  fun rejectCertificationRequest(rejectCertificationRequest: RejectCertificationRequestDto): ApprovalResponse {
     val approvalRequest = certificationApprovalRequestRepository.findById(rejectCertificationRequest.approvalRequestReference)
-      .orElseThrow { ApprovalRequestNotFoundException("Approval request not found: ${rejectCertificationRequest.approvalRequestReference}") }
+      .orElseThrow { ApprovalRequestNotFoundException(rejectCertificationRequest.approvalRequestReference) }
 
     if (approvalRequest.status != ApprovalRequestStatus.PENDING) {
-      throw ValidationException("Approval request is not in PENDING status")
+      throw ApprovalRequestNotInPendingStatusException(rejectCertificationRequest.approvalRequestReference)
     }
 
     val now = LocalDateTime.now(clock)
     val location = approvalRequest.location
     val transactionInvokedBy = getUsername()
 
-    val linkedTransaction = LinkedTransaction(
-      prisonId = location.prisonId,
-      transactionType = TransactionType.REJECT_CERTIFICATION_REQUEST,
-      transactionDetail = "Rejection of approval request ${rejectCertificationRequest.approvalRequestReference} for ${location.getKey()}",
-      transactionInvokedBy = transactionInvokedBy,
-      txStartTime = now,
+    val linkedTransaction = createLinkedTransaction(
+      TransactionType.REJECT_CERTIFICATION_REQUEST,
+      location.prisonId,
+      "Rejection of approval request ${rejectCertificationRequest.approvalRequestReference} for ${location.getKey()}",
+      now,
+      transactionInvokedBy,
     )
-
+    val newLocation = location.isDraft()
     approvalRequest.reject(
       rejectedBy = transactionInvokedBy,
       rejectedDate = now,
@@ -164,30 +166,35 @@ class CertificationService(
     )
 
     log.info("Certification rejected for location ${location.getKey()} by $transactionInvokedBy")
-    return CertificationApprovalRequestDto.from(approvalRequest)
+    return ApprovalResponse(
+      newLocation = newLocation,
+      location = location.toDto(includeChildren = !newLocation, includeParent = !newLocation),
+      approvalRequest = CertificationApprovalRequestDto.from(approvalRequest),
+    )
   }
 
-  fun withdrawCertificationRequest(withdrawCertificationRequest: WithdrawCertificationRequestDto): CertificationApprovalRequestDto {
-    val withdrawalRequest = certificationApprovalRequestRepository.findById(withdrawCertificationRequest.approvalRequestReference)
-      .orElseThrow { ApprovalRequestNotFoundException("Approval request not found: ${withdrawCertificationRequest.approvalRequestReference}") }
+  fun withdrawCertificationRequest(withdrawCertificationRequest: WithdrawCertificationRequestDto): ApprovalResponse {
+    val approvalRequest = certificationApprovalRequestRepository.findById(withdrawCertificationRequest.approvalRequestReference)
+      .orElseThrow { ApprovalRequestNotFoundException(withdrawCertificationRequest.approvalRequestReference) }
 
-    if (withdrawalRequest.status != ApprovalRequestStatus.PENDING) {
-      throw ValidationException("Approval request is not in PENDING status")
+    if (approvalRequest.status != ApprovalRequestStatus.PENDING) {
+      throw ApprovalRequestNotInPendingStatusException(withdrawCertificationRequest.approvalRequestReference)
     }
 
     val now = LocalDateTime.now(clock)
-    val location = withdrawalRequest.location
+    val location = approvalRequest.location
     val transactionInvokedBy = getUsername()
+    val newLocation = location.isDraft()
 
-    val linkedTransaction = LinkedTransaction(
-      prisonId = location.prisonId,
-      transactionType = TransactionType.WITHDRAW_CERTIFICATION_REQUEST,
-      transactionDetail = "Withdrawal of approval request ${withdrawCertificationRequest.approvalRequestReference} for ${location.getKey()}",
-      transactionInvokedBy = transactionInvokedBy,
-      txStartTime = now,
+    val linkedTransaction = createLinkedTransaction(
+      TransactionType.WITHDRAW_CERTIFICATION_REQUEST,
+      location.prisonId,
+      "Withdrawal of approval request ${withdrawCertificationRequest.approvalRequestReference} for ${location.getKey()}",
+      now,
+      transactionInvokedBy,
     )
 
-    withdrawalRequest.withdraw(
+    approvalRequest.withdraw(
       withdrawnBy = transactionInvokedBy,
       withdrawnDate = now,
       linkedTransaction = linkedTransaction,
@@ -200,14 +207,34 @@ class CertificationService(
         "locationId" to location.id.toString(),
         "locationKey" to location.getKey(),
         "withdrawnBy" to transactionInvokedBy,
-        "approvalRequestId" to withdrawalRequest.id.toString(),
+        "approvalRequestId" to approvalRequest.id.toString(),
       ),
       null,
     )
 
     log.info("Certification withdrawn for location ${location.getKey()} by $transactionInvokedBy")
-    return CertificationApprovalRequestDto.from(withdrawalRequest)
+    return ApprovalResponse(
+      newLocation = newLocation,
+      location = location.toDto(includeChildren = !newLocation, includeParent = !newLocation),
+      approvalRequest = CertificationApprovalRequestDto.from(approvalRequest),
+    )
   }
+
+  private fun createLinkedTransaction(
+    transactionType: TransactionType,
+    prisonId: String,
+    detail: String,
+    now: LocalDateTime,
+    transactionInvokedBy: String,
+  ): LinkedTransaction = linkedTransactionRepository.save(
+    LinkedTransaction(
+      prisonId = prisonId,
+      transactionType = transactionType,
+      transactionDetail = detail,
+      transactionInvokedBy = transactionInvokedBy,
+      txStartTime = now,
+    ),
+  )
 
   private fun getUsername() = authenticationHolder.username ?: SYSTEM_USERNAME
 }

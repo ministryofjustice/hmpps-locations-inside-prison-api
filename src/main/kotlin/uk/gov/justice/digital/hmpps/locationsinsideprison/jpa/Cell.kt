@@ -232,7 +232,7 @@ class Cell(
     )
     convertedCellType = null
     otherConvertedCellType = null
-    certifyCell(userOrSystemInContext, clock, linkedTransaction)
+    certifyCell(userOrSystemInContext, amendedDate, linkedTransaction)
 
     setAccommodationTypeForCell(accommodationType.mapsTo, userOrSystemInContext, clock, linkedTransaction)
 
@@ -259,7 +259,7 @@ class Cell(
         ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
       )
     }
-    if (isLocked()) {
+    if (isLocationLocked()) {
       throw LockedLocationCannotBeUpdatedException(getKey())
     }
     if (isCertificationApprovalProcessRequired() && getMaxCapacity(includePendingChange = true) != maxCapacity) {
@@ -272,7 +272,11 @@ class Cell(
     }
   }
 
-  fun certifyCell(userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+  fun certifyCell(
+    updated: String,
+    updatedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+  ) {
     val oldCertification = getCertifiedSummary(this.certification)
     if (certification != null) {
       certification?.setCertification(true, certification?.capacityOfCertifiedCell ?: 0)
@@ -284,13 +288,13 @@ class Cell(
       LocationAttribute.CERTIFICATION,
       oldCertification,
       getCertifiedSummary(this.certification),
-      userOrSystemInContext,
-      LocalDateTime.now(clock),
+      updated,
+      updatedDate,
       linkedTransaction,
     )
 
-    this.updatedBy = userOrSystemInContext
-    this.whenUpdated = LocalDateTime.now(clock)
+    this.updatedBy = updated
+    this.whenUpdated = updatedDate
   }
 
   fun deCertifyCell(userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
@@ -506,29 +510,14 @@ class Cell(
     }
   }
 
-  override fun approve(
-    approvedDate: LocalDateTime,
-    approvedBy: String,
-    linkedTransaction: LinkedTransaction,
-    comments: String?,
-  ) {
-    super.approve(approvedDate, approvedBy, linkedTransaction, comments)
-
-    pendingChange?.let { pending ->
-      applyPendingChanges(pending, approvedBy, approvedDate, linkedTransaction)
-    }
-    pendingChange = null
-  }
-
   override fun hasPendingChanges() = super.hasPendingChanges() || pendingChange != null
 
-  private fun applyPendingChanges(
-    pending: PendingLocationChange,
+  override fun applyPendingChanges(
     approvedBy: String,
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
-    pending.capacity?.let { cap ->
+    pendingChange?.capacity?.let { cap ->
       setCapacity(
         maxCapacity = cap.maxCapacity,
         workingCapacity = cap.workingCapacity,
@@ -537,15 +526,15 @@ class Cell(
         linkedTransaction = linkedTransaction,
       )
     }
+
+    if (isDraft()) {
+      certifyCell(approvedBy, approvedDate, linkedTransaction)
+    }
+
+    clearPendingChanges()
   }
 
-  override fun reject(
-    rejectedDate: LocalDateTime,
-    rejectedBy: String,
-    linkedTransaction: LinkedTransaction,
-    comments: String?,
-  ) {
-    super.reject(rejectedDate, rejectedBy, linkedTransaction, comments)
+  override fun clearPendingChanges() {
     pendingChange = null
   }
 

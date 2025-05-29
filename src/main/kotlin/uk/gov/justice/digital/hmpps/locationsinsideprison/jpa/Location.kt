@@ -174,8 +174,7 @@ abstract class Location(
   open fun isActive() = status == LocationStatus.ACTIVE && !isPermanentlyDeactivated()
   open fun isArchived() = status == LocationStatus.ARCHIVED
   fun isDraft() = status == LocationStatus.DRAFT
-  open fun isLocked() = false
-
+  open fun isLocationLocked() = false
   open fun hasPendingChanges() = isDraft()
 
   open fun isResidentialRoomOrConvertedCell() = false
@@ -358,7 +357,7 @@ abstract class Location(
       id = id!!,
       code = getCode(),
       status = getDerivedStatus(),
-      locked = isLocked(),
+      locked = isLocationLocked(),
       locationType = getDerivedLocationType(),
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
@@ -511,17 +510,17 @@ abstract class Location(
 
   fun getDerivedStatus(ignoreParentStatus: Boolean = false): DerivedLocationStatus = if ((ignoreParentStatus && isActive()) || isActiveAndAllParentsActive()) {
     if (isConvertedCell()) {
-      if (isLocked()) DerivedLocationStatus.LOCKED_NON_RESIDENTIAL else DerivedLocationStatus.NON_RESIDENTIAL
+      if (isLocationLocked()) DerivedLocationStatus.LOCKED_NON_RESIDENTIAL else DerivedLocationStatus.NON_RESIDENTIAL
     } else {
-      if (isLocked()) DerivedLocationStatus.LOCKED_ACTIVE else DerivedLocationStatus.ACTIVE
+      if (isLocationLocked()) DerivedLocationStatus.LOCKED_ACTIVE else DerivedLocationStatus.ACTIVE
     }
   } else {
     if (isPermanentlyDeactivated()) {
       DerivedLocationStatus.ARCHIVED
     } else if (isDraft()) {
-      if (isLocked()) DerivedLocationStatus.LOCKED_DRAFT else DerivedLocationStatus.DRAFT
+      if (isLocationLocked()) DerivedLocationStatus.LOCKED_DRAFT else DerivedLocationStatus.DRAFT
     } else {
-      if (isLocked()) DerivedLocationStatus.LOCKED_INACTIVE else DerivedLocationStatus.INACTIVE
+      if (isLocationLocked()) DerivedLocationStatus.LOCKED_INACTIVE else DerivedLocationStatus.INACTIVE
     }
   }
 
@@ -716,7 +715,7 @@ abstract class Location(
         dataChanged = true
       }
 
-      if (isActive()) {
+      if (isActive() || isDraft()) {
         this.status = LocationStatus.INACTIVE
         this.deactivatedDate = deactivatedDate
         this.deactivatedBy = userOrSystemInContext
@@ -960,7 +959,11 @@ abstract class Location(
       this.deactivatedBy = null
 
       if (this is Cell && !isConvertedCell()) {
-        certifyCell(userOrSystemInContext = userOrSystemInContext, clock = clock, linkedTransaction = linkedTransaction)
+        certifyCell(
+          updated = userOrSystemInContext,
+          updatedDate = amendedDate,
+          linkedTransaction = linkedTransaction,
+        )
         this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
       }
 

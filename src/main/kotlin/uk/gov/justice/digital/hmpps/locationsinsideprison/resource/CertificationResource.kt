@@ -17,6 +17,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationAppro
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CertificationService
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import java.util.*
 
@@ -107,9 +108,21 @@ class CertificationResource(
     @RequestBody
     @Validated
     approveCertificationRequest: ApproveCertificationRequestDto,
-  ): CertificationApprovalRequestDto = certificationService.approveCertificationRequest(
-    approveCertificationRequest = approveCertificationRequest,
-  )
+  ): CertificationApprovalRequestDto {
+    val response = certificationService.approveCertificationRequest(
+      approveCertificationRequest = approveCertificationRequest,
+    )
+    eventPublishAndAudit(
+      if (response.newLocation) {
+        InternalLocationDomainEventType.LOCATION_CREATED
+      } else {
+        InternalLocationDomainEventType.LOCATION_AMENDED
+      },
+    ) {
+      response.location
+    }
+    return response.approvalRequest
+  }
 
   @PutMapping("/location/reject")
   @PreAuthorize("hasRole('ROLE_LOCATION_CERTIFICATION')")
@@ -147,9 +160,19 @@ class CertificationResource(
     @RequestBody
     @Validated
     rejectCertificationRequest: RejectCertificationRequestDto,
-  ): CertificationApprovalRequestDto = certificationService.rejectCertificationRequest(
-    rejectCertificationRequest = rejectCertificationRequest,
-  )
+  ): CertificationApprovalRequestDto {
+    val response = certificationService.rejectCertificationRequest(
+      rejectCertificationRequest = rejectCertificationRequest,
+    )
+    if (!response.newLocation) {
+      eventPublishAndAudit(
+        InternalLocationDomainEventType.LOCATION_AMENDED,
+      ) {
+        response.location
+      }
+    }
+    return response.approvalRequest
+  }
 
   @PutMapping("/location/withdraw")
   @PreAuthorize("hasRole('ROLE_LOCATION_CERTIFICATION')")
@@ -187,7 +210,17 @@ class CertificationResource(
     @RequestBody
     @Validated
     withdrawCertificationRequest: WithdrawCertificationRequestDto,
-  ): CertificationApprovalRequestDto = certificationService.withdrawCertificationRequest(
-    withdrawCertificationRequest = withdrawCertificationRequest,
-  )
+  ): CertificationApprovalRequestDto {
+    val response = certificationService.withdrawCertificationRequest(
+      withdrawCertificationRequest = withdrawCertificationRequest,
+    )
+    if (!response.newLocation) {
+      eventPublishAndAudit(
+        InternalLocationDomainEventType.LOCATION_AMENDED,
+      ) {
+        response.location
+      }
+    }
+    return response.approvalRequest
+  }
 }

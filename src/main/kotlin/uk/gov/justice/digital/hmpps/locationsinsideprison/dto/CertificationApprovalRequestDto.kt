@@ -81,3 +81,11 @@ data class WithdrawCertificationRequestDto(
   @Schema(description = "Comments about the withdrawal", required = true)
   val comments: String,
 )
+
+@Schema(description = "Response from approving/rejecting a certification request")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ApprovalResponse(
+  val newLocation: Boolean = false,
+  val location: Location,
+  val approvalRequest: CertificationApprovalRequestDto,
+)

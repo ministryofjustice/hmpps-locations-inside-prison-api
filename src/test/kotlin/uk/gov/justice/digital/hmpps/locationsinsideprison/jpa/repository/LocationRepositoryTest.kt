@@ -32,7 +32,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.*
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -104,7 +103,11 @@ class LocationRepositoryTest : TestBase() {
     location.findAllLeafLocations().forEach {
       if (it is Cell) {
         it.setCapacity(workingCapacity = 2, maxCapacity = 2, userOrSystemInContext = "test", amendedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
-        it.certifyCell(userOrSystemInContext = "test", clock = clock, linkedTransaction = linkedTransaction)
+        it.certifyCell(
+          updated = "test",
+          updatedDate = LocalDateTime.now(clock),
+          linkedTransaction = linkedTransaction,
+        )
       }
     }
 

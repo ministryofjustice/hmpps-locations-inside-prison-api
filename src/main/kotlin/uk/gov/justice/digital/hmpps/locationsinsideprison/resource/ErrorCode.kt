@@ -30,4 +30,8 @@ enum class ErrorCode(val errorCode: Int) {
   ApprovalRequestNotFound(121),
   LockedLocationCannotBeUpdated(122),
   ApprovalRequestAlreadyExists(123),
+  OnlyDraftLocationsCanBeDeleted(errorCode = 124),
+  ApprovalRequestNotInPendingStatus(errorCode = 125),
+  LocationDoesNotRequireApproval(errorCode = 126),
+  LocationCannotBeUnlockedWhenNotLocked(errorCode = 127),
 }

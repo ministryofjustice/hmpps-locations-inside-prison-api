@@ -447,21 +447,75 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(LocationCannotBeDeletedWhenNotDraftException::class)
+  fun handleLocationCannotBeDeletedWhenNotDraftException(e: LocationCannotBeDeletedWhenNotDraftException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Delete not allowed for non DRAFT locations: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.OnlyDraftLocationsCanBeDeleted,
+          userMessage = "DRAFT locations only can be deleted: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(ApprovalRequestNotInPendingStatusException::class)
+  fun handleApprovalRequestNotInPendingStatusException(e: ApprovalRequestNotInPendingStatusException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Approval request is not in PENDING: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.ApprovalRequestNotInPendingStatus,
+          userMessage = "Approval must be pending to approve/reject: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(LocationCannotBeUnlockedWhenNotLockedException::class)
+  fun handleLocationCannotBeUnlockedWhenNotLockedException(e: LocationCannotBeUnlockedWhenNotLockedException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Unable to unlock a location that is not locked: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.LocationCannotBeUnlockedWhenNotLocked,
+          userMessage = "Cannot unlock a non-locked location: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(LocationDoesNotRequireApprovalException::class)
+  fun handleLocationDoesNotRequireApprovalException(e: LocationDoesNotRequireApprovalException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Location does not require approval: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.LocationDoesNotRequireApproval,
+          userMessage = "Location does not require approval: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
   companion object {
     private val log = LoggerFactory.getLogger(this::class.java)
   }
 }
 
 class PrisonNotFoundException(id: String) : Exception("There is no prison found for ID = $id")
-
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
-
 class TransactionNotFoundException(txId: UUID) : Exception("There is no transaction found for txId = $txId")
-
 class LocationPrefixNotFoundException(id: String) : Exception("Location prefix not found for $id")
-
 class SignedOperationCapacityNotFoundException(prisonId: String) : Exception("There is no signed operation capacity found for prison ID = $prisonId")
-
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class ReasonForDeactivationMustBeProvidedException(key: String) : Exception("De-activating location $key requires a reason when using OTHER reason type")
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
@@ -470,9 +524,13 @@ class CapacityException(val key: String, override val message: String, val error
 class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationException("Location $key cannot be updated as has been permanently deactivated")
 class UpdateNotAllowedAsConvertedCellException(key: String) : ValidationException("Location $key cannot be updated as has been converted to non-res cell")
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
-class DuplicateLocalNameForSameHierarchyException(key: String, topLocationKey: String) : ValidationException("$key already the same local name in this hierarchy $topLocationKey")
+class DuplicateLocalNameForSameHierarchyException(localName: String, topLocationKey: String) : ValidationException("Same local name $localName in this hierarchy $topLocationKey")
 class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated as it is active")
 class LocationIsNotACellException(key: String) : Exception("$key: Location must be a cell in order to perform this operation")
-class ApprovalRequestNotFoundException(id: String) : Exception("There is no approval request found $id")
+class ApprovalRequestNotFoundException(approvalRequestId: UUID) : Exception("Approval request $approvalRequestId not found")
 class LockedLocationCannotBeUpdatedException(key: String) : Exception("Location $key cannot be updated as it is locked")
 class PendingApprovalAlreadyExistsException(key: String) : Exception("Location $key already has a pending approval request")
+class LocationCannotBeDeletedWhenNotDraftException(key: String) : Exception("Location $key cannot be deleted when not DRAFT")
+class ApprovalRequestNotInPendingStatusException(approvalRequestId: UUID) : Exception("Approval request $approvalRequestId is not in PENDING status")
+class LocationDoesNotRequireApprovalException(key: String) : Exception("Location $key does not need to be approved")
+class LocationCannotBeUnlockedWhenNotLockedException(key: String) : Exception("Location $key cannot be unlocked as it is not locked")

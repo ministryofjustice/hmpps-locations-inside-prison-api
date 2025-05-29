@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -15,13 +16,13 @@ import java.util.UUID
 
 @Entity
 @Table(name = "certification_approval_request")
-class CertificationApprovalRequest(
+open class CertificationApprovalRequest(
   @Id
   @GeneratedUuidV7
   @Column(name = "id", updatable = false, nullable = false)
   val id: UUID? = null,
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
   @JoinColumn(name = "location_id")
   val location: ResidentialLocation,
 
@@ -52,7 +53,6 @@ class CertificationApprovalRequest(
       approvedDate = approvedDate,
       approvedBy = approvedBy,
       linkedTransaction = linkedTransaction,
-      comments = comments,
     )
     this.status = ApprovalRequestStatus.APPROVED
     this.approvedOrRejectedBy = approvedBy
@@ -65,7 +65,6 @@ class CertificationApprovalRequest(
       rejectedDate = rejectedDate,
       rejectedBy = rejectedBy,
       linkedTransaction = linkedTransaction,
-      comments = comments,
     )
 
     this.status = ApprovalRequestStatus.REJECTED
@@ -79,7 +78,6 @@ class CertificationApprovalRequest(
       rejectedDate = withdrawnDate,
       rejectedBy = withdrawnBy,
       linkedTransaction = linkedTransaction,
-      comments = comments,
     )
 
     this.status = ApprovalRequestStatus.WITHDRAWN

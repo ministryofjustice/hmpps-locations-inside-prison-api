@@ -8,7 +8,6 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
-import jakarta.validation.ValidationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -17,6 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeUnlockedWhenNotLockedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
 import java.time.Clock
@@ -117,13 +117,21 @@ open class ResidentialLocation(
   private fun hasCertifiedCells(): Boolean = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .any { it.isCertified() }
 
-  override fun isLocked() = locked
+  override fun isLocationLocked() = locked
+
+  private fun lockLocation() {
+    this.locked = true
+  }
+
+  private fun unlockLocation() {
+    this.locked = false
+  }
 
   private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingChanges() }
 
   private fun lock(lockTime: LocalDateTime, lockingUser: String, linkedTransaction: LinkedTransaction) {
     val oldStatus = getDerivedStatus(ignoreParentStatus = true).description
-    locked = true
+    lockLocation()
     addHistory(
       LocationAttribute.STATUS,
       oldStatus,
@@ -136,9 +144,9 @@ open class ResidentialLocation(
     whenUpdated = lockTime
   }
 
-  protected fun unlock(unlockTime: LocalDateTime, unlockingUser: String, linkedTransaction: LinkedTransaction) {
+  private fun unlock(unlockTime: LocalDateTime, unlockingUser: String, linkedTransaction: LinkedTransaction) {
     val oldStatus = getDerivedStatus(ignoreParentStatus = true).description
-    locked = false
+    unlockLocation()
     addHistory(
       LocationAttribute.STATUS,
       oldStatus,
@@ -173,22 +181,38 @@ open class ResidentialLocation(
     return approvalRequest
   }
 
-  open fun approve(
+  private fun traverseAndUnlock(
+    unlockedDate: LocalDateTime,
+    unlockedBy: String,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    if (isLocationLocked()) {
+      unlock(unlockedDate, unlockedBy, linkedTransaction)
+      childLocations.filterIsInstance<ResidentialLocation>().forEach { it.traverseAndUnlock(unlockedDate, unlockedBy, linkedTransaction) }
+    } else {
+      throw LocationCannotBeUnlockedWhenNotLockedException(getKey())
+    }
+  }
+
+  open fun applyPendingChanges(
+    approvedBy: String,
+    approvedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    childLocations.filterIsInstance<ResidentialLocation>().forEach { it.applyPendingChanges(approvedDate = approvedDate, approvedBy = approvedBy, linkedTransaction = linkedTransaction) }
+  }
+
+  open fun clearPendingChanges() {
+    childLocations.filterIsInstance<ResidentialLocation>().forEach { it.clearPendingChanges() }
+  }
+
+  fun approve(
     approvedDate: LocalDateTime,
     approvedBy: String,
     linkedTransaction: LinkedTransaction,
-    comments: String? = null,
   ) {
-    fun traverseAndUnlock(location: ResidentialLocation) {
-      if (location.isLocked()) {
-        location.unlock(approvedDate, approvedBy, linkedTransaction)
-        location.childLocations.filterIsInstance<ResidentialLocation>().forEach { traverseAndUnlock(it) }
-      } else {
-        throw ValidationException("Cannot approve location ${location.getKey()} when its not locked")
-      }
-    }
-
-    traverseAndUnlock(this)
+    traverseAndUnlock(approvedDate, approvedBy, linkedTransaction)
+    applyPendingChanges(approvedDate = approvedDate, approvedBy = approvedBy, linkedTransaction = linkedTransaction)
 
     if (isDraft()) {
       temporarilyDeactivate(
@@ -201,22 +225,13 @@ open class ResidentialLocation(
     }
   }
 
-  open fun reject(
+  fun reject(
     rejectedDate: LocalDateTime,
     rejectedBy: String,
     linkedTransaction: LinkedTransaction,
-    comments: String? = null,
   ) {
-    fun traverseAndUnlock(location: ResidentialLocation) {
-      if (location.isLocked()) {
-        location.unlock(rejectedDate, rejectedBy, linkedTransaction)
-        location.childLocations.filterIsInstance<ResidentialLocation>().forEach { traverseAndUnlock(it) }
-      } else {
-        throw ValidationException("Cannot reject location ${location.getKey()} when its not in locked")
-      }
-    }
-
-    traverseAndUnlock(this)
+    traverseAndUnlock(rejectedDate, rejectedBy, linkedTransaction)
+    clearPendingChanges()
   }
 
   private fun getAttributes(): Set<ResidentialAttribute> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
