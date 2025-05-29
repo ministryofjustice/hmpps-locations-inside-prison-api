@@ -104,7 +104,7 @@ class LocationRepositoryTest : TestBase() {
       if (it is Cell) {
         it.setCapacity(workingCapacity = 2, maxCapacity = 2, userOrSystemInContext = "test", amendedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
         it.certifyCell(
-          updated = "test",
+          cellUpdatedBy = "test",
           updatedDate = LocalDateTime.now(clock),
           linkedTransaction = linkedTransaction,
         )

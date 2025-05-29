@@ -960,7 +960,7 @@ abstract class Location(
 
       if (this is Cell && !isConvertedCell()) {
         certifyCell(
-          updated = userOrSystemInContext,
+          cellUpdatedBy = userOrSystemInContext,
           updatedDate = amendedDate,
           linkedTransaction = linkedTransaction,
         )

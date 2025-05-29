@@ -273,7 +273,7 @@ class Cell(
   }
 
   fun certifyCell(
-    updated: String,
+    cellUpdatedBy: String,
     updatedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
@@ -288,12 +288,12 @@ class Cell(
       LocationAttribute.CERTIFICATION,
       oldCertification,
       getCertifiedSummary(this.certification),
-      updated,
+      cellUpdatedBy,
       updatedDate,
       linkedTransaction,
     )
 
-    this.updatedBy = updated
+    this.updatedBy = cellUpdatedBy
     this.whenUpdated = updatedDate
   }
 
