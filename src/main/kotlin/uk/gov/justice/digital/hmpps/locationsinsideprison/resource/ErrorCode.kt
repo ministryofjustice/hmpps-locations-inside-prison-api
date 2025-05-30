@@ -27,4 +27,11 @@ enum class ErrorCode(val errorCode: Int) {
   OtherReasonNotProvidedForDeactivation(118),
   DuplicateLocalNameAtSameLevel(119),
   LocationCannotByUpdatedAsConvertedCell(120),
+  ApprovalRequestNotFound(121),
+  LockedLocationCannotBeUpdated(122),
+  ApprovalRequestAlreadyExists(123),
+  OnlyDraftLocationsCanBeDeleted(errorCode = 124),
+  ApprovalRequestNotInPendingStatus(errorCode = 125),
+  LocationDoesNotRequireApproval(errorCode = 126),
+  LocationCannotBeUnlockedWhenNotLocked(errorCode = 127),
 }
