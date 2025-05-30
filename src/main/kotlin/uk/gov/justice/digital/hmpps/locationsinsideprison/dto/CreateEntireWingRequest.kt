@@ -114,7 +114,7 @@ data class CreateEntireWingRequest(
           ResidentialLocation(
             prisonId = prisonId,
             code = "$landingNumber",
-            locationType = LocationType.SPUR,
+            locationType = LocationType.LANDING,
             status = status,
             pathHierarchy = "${spur.getPathHierarchy()}-$landingNumber",
             localName = "Landing $landingNumber on ${if ((numberOfSpurs ?: 0) > 0) "Spur " + spur.getCode() else "Wing " + wing.getCode()}",
@@ -159,7 +159,7 @@ data class CreateEntireWingRequest(
             workingCapacity = defaultCellCapacity,
           ),
           certification = Certification(
-            certified = true,
+            certified = status != LocationStatus.DRAFT,
             capacityOfCertifiedCell = defaultCellCapacity,
           ),
         ).apply {

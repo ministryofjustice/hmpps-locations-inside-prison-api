@@ -2874,7 +2874,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
           deactivatedDate = LocalDateTime.now(clock),
           proposedReactivationDate = proposedReactivationDate,
           userOrSystemInContext = EXPECTED_USERNAME,
-          clock = clock,
           linkedTransaction = linkedTransaction,
         )
         repository.save(landingZ1)
