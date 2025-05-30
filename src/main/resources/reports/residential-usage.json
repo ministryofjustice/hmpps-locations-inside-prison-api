@@ -89,7 +89,7 @@
             "filter": {
               "type": "multiselect",
               "mandatory": true,
-              "default": "LOCATION_CREATE,LOCATION_UPDATE,CAPACITY_CHANGE,CELL_TYPE_CHANGES,DEACTIVATION,PERMANENT_DEACTIVATION,REACTIVATION,CELL_CONVERTION_TO_ROOM,ROOM_CONVERTION_TO_CELL,SIGNED_OP_CAP,RESI_SERVICE_ACTIVATION,APPROVAL_PROCESS_ACTIVATION",
+              "default": "LOCATION_CREATE,LOCATION_UPDATE,CAPACITY_CHANGE,CELL_TYPE_CHANGES,DEACTIVATION,PERMANENT_DEACTIVATION,REACTIVATION,CELL_CONVERTION_TO_ROOM,ROOM_CONVERTION_TO_CELL,SIGNED_OP_CAP,RESI_SERVICE_ACTIVATION",
               "staticoptions": [
                 {"name": "LOCATION_CREATE", "display": "Created location"},
                 {"name": "LOCATION_UPDATE", "display": "Updated location"},
@@ -103,6 +103,11 @@
                 {"name": "SIGNED_OP_CAP", "display": "Signed operational capacity"},
                 {"name": "RESI_SERVICE_ACTIVATION", "display": "Residential service activation"},
                 {"name": "APPROVAL_PROCESS_ACTIVATION", "display": "Certification approval activation"},
+                {"name": "PENDING_CELL_CHANGE", "display": "Certification approval activation"},
+                {"name": "REQUEST_CERTIFICATION_APPROVAL", "display": "Request certification approval"},
+                {"name": "APPROVE_CERTIFICATION_REQUEST", "display": "Approve request"},
+                {"name": "REJECT_CERTIFICATION_REQUEST", "display": "Reject request"},
+                {"name": "WITHDRAW_CERTIFICATION_REQUEST", "display": "Withdraw request"},
                 {"name": "SYNC", "display": "NOMIS sync"},
                 {"name": "DELETE", "display": "Locations deleted"}
               ]
