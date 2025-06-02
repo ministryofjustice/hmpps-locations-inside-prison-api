@@ -174,7 +174,8 @@ abstract class Location(
   open fun isActive() = status == LocationStatus.ACTIVE && !isPermanentlyDeactivated()
   open fun isArchived() = status == LocationStatus.ARCHIVED
   fun isDraft() = status == LocationStatus.DRAFT
-  open fun isLocked() = false
+  open fun isLocationLocked() = false
+  open fun hasPendingChanges() = isDraft()
 
   open fun isResidentialRoomOrConvertedCell() = false
   open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent()
@@ -356,7 +357,7 @@ abstract class Location(
       id = id!!,
       code = getCode(),
       status = getDerivedStatus(),
-      locked = isLocked(),
+      locked = isLocationLocked(),
       locationType = getDerivedLocationType(),
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
@@ -509,17 +510,17 @@ abstract class Location(
 
   fun getDerivedStatus(ignoreParentStatus: Boolean = false): DerivedLocationStatus = if ((ignoreParentStatus && isActive()) || isActiveAndAllParentsActive()) {
     if (isConvertedCell()) {
-      if (isLocked()) DerivedLocationStatus.LOCKED_NON_RESIDENTIAL else DerivedLocationStatus.NON_RESIDENTIAL
+      if (isLocationLocked()) DerivedLocationStatus.LOCKED_NON_RESIDENTIAL else DerivedLocationStatus.NON_RESIDENTIAL
     } else {
-      if (isLocked()) DerivedLocationStatus.LOCKED_ACTIVE else DerivedLocationStatus.ACTIVE
+      if (isLocationLocked()) DerivedLocationStatus.LOCKED_ACTIVE else DerivedLocationStatus.ACTIVE
     }
   } else {
     if (isPermanentlyDeactivated()) {
       DerivedLocationStatus.ARCHIVED
     } else if (isDraft()) {
-      if (isLocked()) DerivedLocationStatus.LOCKED_DRAFT else DerivedLocationStatus.DRAFT
+      if (isLocationLocked()) DerivedLocationStatus.LOCKED_DRAFT else DerivedLocationStatus.DRAFT
     } else {
-      if (isLocked()) DerivedLocationStatus.LOCKED_INACTIVE else DerivedLocationStatus.INACTIVE
+      if (isLocationLocked()) DerivedLocationStatus.LOCKED_INACTIVE else DerivedLocationStatus.INACTIVE
     }
   }
 
@@ -634,7 +635,6 @@ abstract class Location(
           deactivationReasonDescription = upsert.comments,
           proposedReactivationDate = upsert.proposedReactivationDate,
           userOrSystemInContext = updatedBy,
-          clock = clock,
           linkedTransaction = linkedTransaction,
         )
       } else {
@@ -651,13 +651,12 @@ abstract class Location(
     planetFmReference: String? = null,
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
-    clock: Clock,
     deactivatedLocations: MutableSet<Location>? = null,
   ): Boolean {
     var dataChanged = false
 
     if (!isPermanentlyDeactivated()) {
-      val amendedDate = LocalDateTime.now(clock)
+      val amendedDate = deactivatedDate
 
       if (addHistory(
           LocationAttribute.STATUS,
@@ -677,7 +676,7 @@ abstract class Location(
           getWorkingCapacityIgnoreParent().toString(),
           "0",
           userOrSystemInContext,
-          LocalDateTime.now(clock),
+          amendedDate,
           linkedTransaction,
         )
       }
@@ -716,7 +715,7 @@ abstract class Location(
         dataChanged = true
       }
 
-      if (isActive()) {
+      if (isActive() || isDraft()) {
         this.status = LocationStatus.INACTIVE
         this.deactivatedDate = deactivatedDate
         this.deactivatedBy = userOrSystemInContext
@@ -744,7 +743,6 @@ abstract class Location(
                 planetFmReference = planetFmReference,
                 proposedReactivationDate = proposedReactivationDate,
                 userOrSystemInContext = userOrSystemInContext,
-                clock = clock,
                 deactivatedLocations = deactivatedLocations,
               )
             ) {
@@ -878,7 +876,7 @@ abstract class Location(
 
       if (this is ResidentialLocation) {
         this.cellLocations().filter { !it.isConvertedCell() }.forEach { cellLocation ->
-          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, userOrSystemInContext, clock, linkedTransaction)
+          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, userOrSystemInContext, amendedDate = amendedDate, linkedTransaction)
           cellLocation.deCertifyCell(userOrSystemInContext, clock, linkedTransaction)
         }
       }
@@ -910,14 +908,14 @@ abstract class Location(
     } else {
       null
     }
-
+    val amendedDate = LocalDateTime.now(clock)
     val capacityAdjusted = maxCapacity != null || workingCapacity != null
     if (this is Cell && capacityAdjusted) {
       setCapacity(
         maxCapacity = maxCapacity ?: getMaxCapacity(includePendingChange = true) ?: 0,
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
         userOrSystemInContext = userOrSystemInContext,
-        clock = clock,
+        amendedDate = amendedDate,
         linkedTransaction = linkedTransaction,
       )
       amendedLocations?.add(this)
@@ -925,7 +923,6 @@ abstract class Location(
     }
 
     if (isTemporarilyDeactivated()) {
-      val amendedDate = LocalDateTime.now(clock)
       addHistory(
         LocationAttribute.STATUS,
         this.getDerivedStatus().description,
@@ -962,7 +959,11 @@ abstract class Location(
       this.deactivatedBy = null
 
       if (this is Cell && !isConvertedCell()) {
-        certifyCell(userOrSystemInContext = userOrSystemInContext, clock = clock, linkedTransaction = linkedTransaction)
+        certifyCell(
+          cellUpdatedBy = userOrSystemInContext,
+          updatedDate = amendedDate,
+          linkedTransaction = linkedTransaction,
+        )
         this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
       }
 

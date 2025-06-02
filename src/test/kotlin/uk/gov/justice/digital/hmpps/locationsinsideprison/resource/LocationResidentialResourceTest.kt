@@ -968,7 +968,6 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           deactivatedReason = DeactivatedReason.MOTHBALLED,
           deactivatedDate = LocalDateTime.now(clock),
           userOrSystemInContext = EXPECTED_USERNAME,
-          clock = clock,
           linkedTransaction = linkedTransaction,
         )
 

@@ -60,6 +60,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLoc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateLocalNameForSameHierarchyException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeDeletedWhenNotDraftException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
@@ -120,7 +121,7 @@ class LocationService(
   fun deleteLocation(id: UUID): LocationDTO = locationRepository.findById(id).getOrNull()?.also { locationToDelete ->
     val locationsAffected = locationToDelete.findSubLocations(true).plus(locationToDelete)
     if (!locationsAffected.all { it.isDraft() }) {
-      throw ValidationException("Cannot delete locations that are not in DRAFT state")
+      throw LocationCannotBeDeletedWhenNotDraftException("Cannot delete locations that are not in DRAFT state")
     }
 
     val locationsToDelete = locationsAffected.map { it.getKey() }
@@ -393,12 +394,29 @@ class LocationService(
       residentialLocationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
     }
 
-    createCellsRequest.newLevelAboveCells?.let {
-      checkParentValid(
-        parentLocation = parentLocation,
-        code = it.levelCode,
-        prisonId = createCellsRequest.prisonId,
-      ) // check that code doesn't clash with the existing location
+    createCellsRequest.newLevelAboveCells?.let { newLevel ->
+      with(newLevel) {
+        // check that code doesn't clash with the existing location
+        checkParentValid(
+          parentLocation = parentLocation,
+          code = levelCode,
+          prisonId = createCellsRequest.prisonId,
+        )
+        // check that local-name is unique in this hierarchy
+        levelLocalName?.let { localName ->
+          if (findAllByPrisonIdTopParentAndLocalName(
+              prisonId = createCellsRequest.prisonId,
+              localName = localName,
+              parentLocationId = parentLocation?.id,
+            ).any()
+          ) {
+            throw DuplicateLocalNameForSameHierarchyException(
+              localName = localName,
+              topLocationKey = parentLocation?.getKey() ?: createCellsRequest.prisonId,
+            )
+          }
+        }
+      }
     }
 
     if (createCellsRequest.newLevelAboveCells == null && parentLocation == null) {
@@ -442,7 +460,11 @@ class LocationService(
 
         val specialistCellTypesAffectingCapacity = cell.specialistCellTypes?.filter { it.affectsCapacity }
         if (!specialistCellTypesAffectingCapacity.isNullOrEmpty() && !(cell.capacityNormalAccommodation == 0 && cell.workingCapacity == 0)) {
-          throw ValidationException("Specialist cell types: $specialistCellTypesAffectingCapacity cannot be used with CNA or working capacity of 0")
+          throw CapacityException(
+            cell.code,
+            "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
+            ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
+          )
         }
       }
 
@@ -668,7 +690,7 @@ class LocationService(
       maxCapacity = maxCapacity,
       workingCapacity = workingCapacity,
       userOrSystemInContext = getUsername(),
-      clock = clock,
+      amendedDate = LocalDateTime.now(clock),
       linkedTransaction = trackingTx,
     )
 
@@ -770,7 +792,7 @@ class LocationService(
             parentLocationId = location.getParent()?.id,
           ).any { it.id != id }
         ) {
-          throw DuplicateLocalNameForSameHierarchyException(key = location.getKey(), topLocationKey = topLevelLocation.getKey())
+          throw DuplicateLocalNameForSameHierarchyException(localName = localName, topLocationKey = topLevelLocation.getKey())
         }
       }
 
@@ -827,7 +849,6 @@ class LocationService(
             planetFmReference = planetFmReference,
             proposedReactivationDate = proposedReactivationDate,
             userOrSystemInContext = getUsername(),
-            clock = clock,
             deactivatedLocations = deactivatedLocations,
             linkedTransaction = linkedTransaction,
           )
