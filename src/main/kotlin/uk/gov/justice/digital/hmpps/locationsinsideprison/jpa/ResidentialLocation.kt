@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeUnlockedWhenNotLockedException
@@ -400,6 +401,38 @@ open class ResidentialLocation(
     }
 
     return this
+  }
+
+  fun toCellCertificateLocation(cellCertificate: CellCertificate): CellCertificateLocation {
+    val subLocations: List<CellCertificateLocation> = childLocations
+      .filterIsInstance<ResidentialLocation>()
+      .filter { !it.isDraft() && (it.isStructural() || it.isCell()) }
+      .map { it.toCellCertificateLocation(cellCertificate) }
+
+    return CellCertificateLocation(
+      cellCertificate = cellCertificate,
+      locationType = locationType,
+      locationCode = getCode(),
+      pathHierarchy = getPathHierarchy(),
+      localName = localName?.capitalizeWords(),
+      cellMark = if (this is Cell) {
+        cellMark
+      } else {
+        null
+      },
+      level = getLevel(),
+      status = getDerivedStatus(),
+      inCellSanitation = if (this is Cell) {
+        inCellSanitation
+      } else {
+        null
+      },
+      maxCapacity = calcMaxCapacity(),
+      workingCapacity = calcWorkingCapacity(),
+      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name },
+      subLocations = subLocations.toSortedSet(),
+    )
   }
 
   override fun toDto(

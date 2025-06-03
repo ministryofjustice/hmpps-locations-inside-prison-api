@@ -146,6 +146,7 @@ data class CreateEntireWingRequest(
           prisonId = prisonId,
           code = code,
           cellMark = "$wingCode-$cellNumber",
+          inCellSanitation = true,
           pathHierarchy = "${leaf.getPathHierarchy()}-$code",
           status = status,
           localName = "Cell $cellNumber on ${leaf.getCode()}",

@@ -35,6 +35,7 @@ class CertificationService(
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val certificationApprovalRequestRepository: CertificationApprovalRequestRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
+  private val cellCertificateService: CellCertificateService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
   private val authenticationHolder: HmppsAuthenticationHolder,
@@ -107,6 +108,9 @@ class CertificationService(
       linkedTransaction = linkedTransaction,
       comments = approveCertificationRequest.comments,
     )
+
+    // Create the cell certificate
+    cellCertificateService.createCellCertificate(location, username, now, approvalRequest)
 
     telemetryClient.trackEvent(
       "certification-approval-approved",

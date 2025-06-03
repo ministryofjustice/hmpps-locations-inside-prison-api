@@ -213,7 +213,7 @@ abstract class Location(
     return parents
   }
 
-  private fun getLevel(): Int {
+  protected fun getLevel(): Int {
     fun goUp(location: Location?, level: Int): Int {
       if (location == null) {
         return level
