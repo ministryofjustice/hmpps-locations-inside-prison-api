@@ -46,14 +46,6 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
 
     @Nested
     inner class HappyPath {
-      @Test
-      fun `can get all approval requests`() {
-        webTestClient.get().uri(url)
-          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
-          .exchange()
-          .expectStatus().isOk
-          .expectBody().jsonPath("$[0].id").isEqualTo(approvalRequestId.toString())
-      }
 
       @Test
       fun `can filter approval requests by prison ID`() {
@@ -74,12 +66,12 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
       }
 
       @Test
-      fun `can filter approval requests by prison ID and status`() {
-        webTestClient.get().uri("$url?status=PENDING")
+      fun `can filter approval requests by status and no results found`() {
+        webTestClient.get().uri("$url?status=APPROVED")
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
           .exchange()
           .expectStatus().isOk
-          .expectBody().jsonPath("$[0].id").isEqualTo(approvalRequestId.toString())
+          .expectBody().json("[]")
       }
 
       @Test

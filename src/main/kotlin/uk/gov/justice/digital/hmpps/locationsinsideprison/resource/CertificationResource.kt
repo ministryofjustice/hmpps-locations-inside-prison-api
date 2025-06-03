@@ -260,7 +260,7 @@ class CertificationResource(
     @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
     @PathVariable("prisonId")
     prisonId: String,
-    @RequestParam(name = "Filter by approval status", required = false, defaultValue = "PENDING")
+    @RequestParam(name = "status", required = false, defaultValue = "PENDING")
     status: ApprovalRequestStatus? = ApprovalRequestStatus.PENDING,
   ): List<CertificationApprovalRequestDto> = approvalRequestService.getApprovalRequests(prisonId, status)
 

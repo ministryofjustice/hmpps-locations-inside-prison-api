@@ -6,6 +6,9 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Pattern
+import jakarta.validation.constraints.Size
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
@@ -82,8 +85,12 @@ class CellCertificateResource(
     ],
   )
   fun getCellCertificatesForPrison(
-    @Parameter(description = "Prison ID", required = true)
-    @PathVariable
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
+    @NotBlank(message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
+    @PathVariable("prisonId")
     prisonId: String,
   ): List<CellCertificateDto> = cellCertificateService.getCellCertificatesForPrison(prisonId)
 
@@ -115,8 +122,12 @@ class CellCertificateResource(
     ],
   )
   fun getCurrentCellCertificateForPrison(
-    @Parameter(description = "Prison ID", required = true)
-    @PathVariable
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
+    @NotBlank(message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
+    @PathVariable("prisonId")
     prisonId: String,
-  ): CellCertificateDto? = cellCertificateService.getCurrentCellCertificateForPrison(prisonId)
+  ): CellCertificateDto = cellCertificateService.getCurrentCellCertificateForPrison(prisonId)
 }

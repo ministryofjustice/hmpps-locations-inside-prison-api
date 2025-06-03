@@ -222,6 +222,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(CurrentCellCertificateNotFoundException::class)
+  fun handleCurrentCellCertificateNotFoundException(e: CurrentCellCertificateNotFoundException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Current certificate not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.LocationNotFound,
+          userMessage = "Cell certificate not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(ApprovalRequestNotFoundException::class)
   fun handleApprovalRequestNotFound(e: ApprovalRequestNotFoundException): ResponseEntity<ErrorResponse?>? {
     log.debug("Approval request not found exception caught: {}", e.message)
@@ -550,3 +565,4 @@ class ApprovalRequestNotInPendingStatusException(approvalRequestId: UUID) : Exce
 class LocationDoesNotRequireApprovalException(key: String) : Exception("Location $key does not need to be approved")
 class LocationCannotBeUnlockedWhenNotLockedException(key: String) : Exception("Location $key cannot be unlocked as it is not locked")
 class CellCertificateNotFoundException(id: UUID) : Exception("Cell certificate with id $id not found")
+class CurrentCellCertificateNotFoundException(prisonId: String) : Exception("No current cell certificate found for prison $prisonId")

@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificateNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CurrentCellCertificateNotFoundException
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -63,6 +64,9 @@ class CellCertificateService(
   fun getCellCertificatesForPrison(prisonId: String): List<CellCertificateDto> = cellCertificateRepository.findByPrisonIdOrderByApprovedDateDesc(prisonId)
     .map { CellCertificateDto.from(it) }
 
-  fun getCurrentCellCertificateForPrison(prisonId: String): CellCertificateDto? = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(prisonId)
-    ?.let { CellCertificateDto.from(it) }
+  fun getCurrentCellCertificateForPrison(prisonId: String): CellCertificateDto {
+    val cellCertificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(prisonId)
+      ?: throw CurrentCellCertificateNotFoundException(prisonId)
+    return CellCertificateDto.from(cellCertificate)
+  }
 }
