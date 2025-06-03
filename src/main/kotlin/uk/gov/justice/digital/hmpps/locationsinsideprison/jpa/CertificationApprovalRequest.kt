@@ -20,6 +20,9 @@ open class CertificationApprovalRequest(
   @Column(name = "id", updatable = false, nullable = false)
   val id: UUID? = null,
 
+  @Column(nullable = false)
+  val prisonId: String,
+
   @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
   @JoinColumn(name = "location_id")
   val location: ResidentialLocation,

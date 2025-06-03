@@ -174,6 +174,7 @@ open class ResidentialLocation(
     traverseAndLock(this)
     val approvalRequest = CertificationApprovalRequest(
       location = this,
+      prisonId = prisonId,
       locationKey = this.getKey(),
       requestedBy = requestedBy,
       requestedDate = requestedDate,

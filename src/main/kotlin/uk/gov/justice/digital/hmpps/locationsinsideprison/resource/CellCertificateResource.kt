@@ -21,8 +21,8 @@ import java.util.UUID
 @Validated
 @RequestMapping("/cell-certificates", produces = [MediaType.APPLICATION_JSON_VALUE])
 @Tag(name = "Cell Certificates", description = "Cell Certificate Management")
-@PreAuthorize("hasRole('ROLE_VIEW_CELL_MOVEMENTS')")
-class CellCertificateController(
+@PreAuthorize("hasRole('ROLE_LOCATION_CERTIFICATION')")
+class CellCertificateResource(
   private val cellCertificateService: CellCertificateService,
 ) {
 
