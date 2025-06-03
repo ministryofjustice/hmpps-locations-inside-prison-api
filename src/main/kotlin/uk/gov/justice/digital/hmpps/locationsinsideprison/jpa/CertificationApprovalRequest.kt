@@ -9,18 +9,19 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
-import jakarta.persistence.Table
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
-@Table(name = "certification_approval_request")
 open class CertificationApprovalRequest(
   @Id
   @GeneratedUuidV7
   @Column(name = "id", updatable = false, nullable = false)
   val id: UUID? = null,
+
+  @Column(nullable = false)
+  val prisonId: String,
 
   @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
   @JoinColumn(name = "location_id")
@@ -47,6 +48,7 @@ open class CertificationApprovalRequest(
 
   @Column(nullable = true)
   var comments: String? = null,
+
 ) {
   fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
     location.approve(
