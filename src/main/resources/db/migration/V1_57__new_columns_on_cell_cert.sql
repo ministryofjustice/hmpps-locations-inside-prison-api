@@ -1,0 +1,1 @@
+ALTER TABLE cell_certificate_location add column if not exists converted_cell_type varchar(60);

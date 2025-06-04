@@ -42,7 +42,7 @@ class CellCertificateService(
         locations = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(location.prisonId)
           .filter { !it.isPermanentlyDeactivated() && !it.isDraft() && it.isStructural() }
           .map {
-            it.toCellCertificateLocation(this)
+            it.toCellCertificateLocation(this, location)
           }.toSortedSet()
 
         totalWorkingCapacity = locations.sumOf { it.workingCapacity ?: 0 }

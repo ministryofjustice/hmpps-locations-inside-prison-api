@@ -54,7 +54,9 @@ open class CellCertificate(
   @SortNatural
   @OneToMany(mappedBy = "cellCertificate", fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
   var locations: SortedSet<CellCertificateLocation> = sortedSetOf(),
-)
+) {
+  override fun toString(): String = "CellCertificate(prisonId='$prisonId', certificationApprovalRequest=$certificationApprovalRequest, current=$current)"
+}
 
 @Entity
 open class CellCertificateLocation(
@@ -64,8 +66,8 @@ open class CellCertificateLocation(
   val id: UUID? = null,
 
   @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "cell_certificate_id")
-  val cellCertificate: CellCertificate,
+  @JoinColumn(name = "cell_certificate_id", nullable = true)
+  val cellCertificate: CellCertificate? = null,
 
   @Column(nullable = false)
   val locationCode: String,
@@ -104,6 +106,10 @@ open class CellCertificateLocation(
 
   @Column(name = "specialist_cell_types", nullable = true)
   val specialistCellTypes: String? = null,
+
+  @Column(nullable = true)
+  @Enumerated(EnumType.STRING)
+  val convertedCellType: ConvertedCellType? = null,
 
   @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "parent_location_id")

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificateLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import java.time.LocalDateTime
@@ -53,7 +54,8 @@ data class CellCertificateDto(
       totalMaxCapacity = cellCertificate.totalMaxCapacity,
       totalCapacityOfCertifiedCell = cellCertificate.totalCapacityOfCertifiedCell,
       current = cellCertificate.current,
-      locations = cellCertificate.locations.map { CellCertificateLocationDto.from(it) },
+      locations = cellCertificate.locations.filter { it.level == 1 } // Only include top-level locations
+        .map { CellCertificateLocationDto.from(it) },
     )
   }
 }
@@ -85,6 +87,21 @@ data class CellCertificateLocationDto(
 
   @Schema(description = "Specialist cell types")
   val specialistCellTypes: List<SpecialistCellType>,
+
+  @Schema(description = "Local name for the location, not used in cells", example = "Houseblock A")
+  val localName: String? = null,
+
+  @Schema(description = "Level within the hierarchy", example = "3", required = true)
+  val level: Int,
+
+  @Schema(description = "Status of the location", example = "ACTIVE", required = true)
+  var status: DerivedLocationStatus,
+
+  @Schema(description = "If converted, the type of cell this location has been converted to")
+  val convertedCellType: ConvertedCellType? = null,
+
+  @Schema(description = "Sub locations within this cell certificate location")
+  val subLocations: List<CellCertificateLocationDto>? = null,
 ) {
   companion object {
     fun from(cellCertificateLocation: CellCertificateLocation): CellCertificateLocationDto = CellCertificateLocationDto(
@@ -96,6 +113,11 @@ data class CellCertificateLocationDto(
       inCellSanitation = cellCertificateLocation.inCellSanitation,
       locationType = cellCertificateLocation.locationType,
       specialistCellTypes = cellCertificateLocation.getSpecialistCellTypesAsList(),
+      localName = cellCertificateLocation.localName,
+      level = cellCertificateLocation.level,
+      status = cellCertificateLocation.status,
+      convertedCellType = cellCertificateLocation.convertedCellType,
+      subLocations = cellCertificateLocation.subLocations.map { from(it) },
     )
   }
 }

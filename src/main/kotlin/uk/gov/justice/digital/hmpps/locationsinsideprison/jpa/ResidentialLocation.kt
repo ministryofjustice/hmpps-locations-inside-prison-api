@@ -106,6 +106,9 @@ open class ResidentialLocation(
   fun getWorkingCapacityIgnoreParent(): Int = cellLocations().filter { it.isActive() }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
+  fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .sumOf { it.getWorkingCapacity() ?: 0 }
+
   fun calcWorkingCapacity(includeDraft: Boolean = false): Int = cellLocations().filter { it.isActiveAndAllParentsActive() || (includeDraft && it.isDraft()) }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
@@ -404,12 +407,13 @@ open class ResidentialLocation(
     return this
   }
 
-  fun toCellCertificateLocation(cellCertificate: CellCertificate): CellCertificateLocation {
+  fun toCellCertificateLocation(cellCertificate: CellCertificate, approvedLocation: ResidentialLocation): CellCertificateLocation {
     val subLocations: List<CellCertificateLocation> = childLocations
       .filterIsInstance<ResidentialLocation>()
-      .filter { !it.isDraft() && (it.isStructural() || it.isCell()) }
-      .map { it.toCellCertificateLocation(cellCertificate) }
+      .filter { !it.isDraft() && (it.isStructural() || it.isCell() || it.isConvertedCell()) }
+      .map { it.toCellCertificateLocation(cellCertificate, approvedLocation) }
 
+    val approvedLocationIsPartOfHierarchy = isInHierarchy(approvedLocation)
     return CellCertificateLocation(
       cellCertificate = cellCertificate,
       locationType = locationType,
@@ -429,9 +433,18 @@ open class ResidentialLocation(
         null
       },
       maxCapacity = calcMaxCapacity(),
-      workingCapacity = calcWorkingCapacity(),
+      workingCapacity = if (approvedLocationIsPartOfHierarchy) {
+        getWorkingCapacityIgnoringInactiveStatus()
+      } else {
+        calcWorkingCapacity()
+      },
       capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
       specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name },
+      convertedCellType = if (this is Cell && isConvertedCell()) {
+        convertedCellType
+      } else {
+        null
+      },
       subLocations = subLocations.toSortedSet(),
     )
   }
