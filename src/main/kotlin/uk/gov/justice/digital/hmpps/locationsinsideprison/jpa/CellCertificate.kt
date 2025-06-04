@@ -67,7 +67,7 @@ open class CellCertificateLocation(
 
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "cell_certificate_id", nullable = false)
-  val cellCertificate: CellCertificate? = null,
+  val cellCertificate: CellCertificate,
 
   @Column(nullable = false)
   val locationCode: String,
