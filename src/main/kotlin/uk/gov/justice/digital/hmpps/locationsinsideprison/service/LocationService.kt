@@ -66,6 +66,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationConta
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LockedLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
@@ -564,6 +565,10 @@ class LocationService(
     patchLocationRequest: PatchLocationRequest,
     linkedTransaction: LinkedTransaction,
   ): UpdateLocationResult {
+    if (location.isLocationLocked()) {
+      throw LockedLocationCannotBeUpdatedException(location.getKey())
+    }
+
     val (codeChanged, oldParent, parentChanged) = updateCoreLocationDetails(location, patchLocationRequest, linkedTransaction)
 
     location.update(patchLocationRequest, getUsername(), clock, linkedTransaction)

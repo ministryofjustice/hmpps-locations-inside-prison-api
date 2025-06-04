@@ -31,6 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ActiveLocationCannotBePermanentlyDeactivatedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LockedLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NaturalOrderComparator
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
@@ -450,9 +451,9 @@ abstract class Location(
 
   protected fun isInHierarchy(locationToFind: Location): Boolean {
     // Walk up the hierarchy of the location to find
-    var current: Location? = locationToFind
+    var current: Location? = this
     while (current != null) {
-      if (current.id == this.id) {
+      if (current.id == locationToFind.id) {
         return true
       }
       current = current.getParent()
@@ -548,6 +549,9 @@ abstract class Location(
   override fun hashCode(): Int = getKey().hashCode()
 
   open fun updateLocalName(localName: String?, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+    if (isLocationLocked()) {
+      throw LockedLocationCannotBeUpdatedException(getKey())
+    }
     if (!isCell()) {
       addHistory(
         LocationAttribute.LOCAL_NAME,
@@ -668,6 +672,9 @@ abstract class Location(
     var dataChanged = false
 
     if (!isPermanentlyDeactivated()) {
+      if (isLocationLocked()) {
+        throw LockedLocationCannotBeUpdatedException(getKey())
+      }
       val amendedDate = deactivatedDate
 
       if (addHistory(
@@ -791,6 +798,9 @@ abstract class Location(
     if (!isTemporarilyDeactivated()) {
       log.warn("Location [${getKey()}] is not deactivated")
     } else {
+      if (isLocationLocked()) {
+        throw LockedLocationCannotBeUpdatedException(getKey())
+      }
       val amendedDate = LocalDateTime.now(clock)
       addHistory(
         LocationAttribute.DEACTIVATION_REASON,
@@ -857,6 +867,9 @@ abstract class Location(
       if (isActiveAndAllParentsActive() && !activeLocationCanBePermDeactivated) {
         throw ActiveLocationCannotBePermanentlyDeactivatedException(getKey())
       }
+      if (isLocationLocked()) {
+        throw LockedLocationCannotBeUpdatedException(getKey())
+      }
       val amendedDate = LocalDateTime.now(clock)
       addHistory(
         LocationAttribute.STATUS,
@@ -907,6 +920,9 @@ abstract class Location(
     reactivatedLocations: MutableSet<Location>? = null,
     amendedLocations: MutableSet<Location>? = null,
   ): Boolean {
+    if (isLocationLocked()) {
+      throw LockedLocationCannotBeUpdatedException(getKey())
+    }
     this.getParent()?.reactivate(
       userOrSystemInContext = userOrSystemInContext,
       clock = clock,
