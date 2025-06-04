@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationAppro
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
@@ -96,6 +97,57 @@ class CellCertificateResourceTest : CommonDataTestBase() {
     // Get the cell certificate ID
     val certificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue("LEI")
     cellCertificateId = certificate!!.id!!
+  }
+
+  private fun getSingleCellApprovalRequestId(): UUID {
+    val aCell = repository.findOneByKey("LEI-M-1-002") as Cell
+    aCell.setCapacity(
+      maxCapacity = 3,
+      workingCapacity = 2,
+      userOrSystemInContext = EXPECTED_USERNAME,
+      amendedDate = LocalDateTime.now(
+        clock,
+      ),
+      linkedTransaction = linkedTransaction,
+    )
+    repository.saveAndFlush(aCell)
+
+    return webTestClient.put().uri("/certification/location/request-approval")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          LocationApprovalRequest(
+            locationId = aCell.id!!,
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+      .expectBody(CertificationApprovalRequestDto::class.java)
+      .returnResult().responseBody!!.id
+  }
+
+  private fun createCertificateForSingleCell(): UUID {
+    val approvalRequestId = getSingleCellApprovalRequestId()
+
+    webTestClient.put().uri("/certification/location/approve")
+      .headers(setAuthorisation(user = EXPECTED_USERNAME, roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          ApproveCertificationRequestDto(
+            approvalRequestReference = approvalRequestId,
+            comments = "Cell ok",
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+
+    // Get the cell certificate ID
+    val certificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue("LEI")
+    return certificate!!.id!!
   }
 
   @DisplayName("GET /cell-certificates/{id}")
@@ -234,6 +286,8 @@ class CellCertificateResourceTest : CommonDataTestBase() {
   inner class SuccessfulApprovalTest {
     @Test
     fun `successful approval of an approval request generates a cell certificate that captures all cells in the prison`() {
+      // generate another approval request for a single cell - this should not affect the existing certificate
+      getSingleCellApprovalRequestId()
       // Verify that the cell certificate was created with the correct data
       webTestClient.get().uri("/cell-certificates/$cellCertificateId")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -245,10 +299,44 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         .jsonPath("$.approvedBy").isEqualTo(EXPECTED_USERNAME)
         .jsonPath("$.current").isEqualTo(true)
         .jsonPath("$.locations").isArray()
+        .jsonPath("$.totalMaxCapacity").isEqualTo(12)
+        .jsonPath("$.totalWorkingCapacity").isEqualTo(12)
+        .jsonPath("$.totalCapacityOfCertifiedCell").isEqualTo(12)
         // Verify that there are locations in the response
-        .jsonPath("$.locations.length()").isNumber()
-        // Just check that at least one location exists
-        .jsonPath("$.locations[0].locationCode").exists()
+        .jsonPath("$.locations.length()").isEqualTo(2)
+        .jsonPath("$.locations[0].subLocations.length()").isEqualTo(2)
+        .jsonPath("$.locations[0].subLocations[0].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[0].subLocations[1].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[1].subLocations.length()").isEqualTo(2)
+        .jsonPath("$.locations[1].subLocations[0].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[1].subLocations[1].subLocations.length()").isEqualTo(3)
+    }
+
+    @Test
+    fun `successful approval of a single cell change generates a cell certificate that captures all cells in the prison`() {
+      val latestCertificateId = createCertificateForSingleCell()
+      // Verify that the cell certificate was created with the correct data
+      webTestClient.get().uri("/cell-certificates/$latestCertificateId")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.id").isEqualTo(latestCertificateId.toString())
+        .jsonPath("$.prisonId").isEqualTo("LEI")
+        .jsonPath("$.approvedBy").isEqualTo(EXPECTED_USERNAME)
+        .jsonPath("$.current").isEqualTo(true)
+        .jsonPath("$.locations").isArray()
+        .jsonPath("$.totalMaxCapacity").isEqualTo(14)
+        .jsonPath("$.totalWorkingCapacity").isEqualTo(12)
+        .jsonPath("$.totalCapacityOfCertifiedCell").isEqualTo(12)
+        // Verify that there are locations in the response
+        .jsonPath("$.locations.length()").isEqualTo(2)
+        .jsonPath("$.locations[0].subLocations.length()").isEqualTo(2)
+        .jsonPath("$.locations[0].subLocations[0].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[0].subLocations[1].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[1].subLocations.length()").isEqualTo(2)
+        .jsonPath("$.locations[1].subLocations[0].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[1].subLocations[1].subLocations.length()").isEqualTo(3)
     }
   }
 }
