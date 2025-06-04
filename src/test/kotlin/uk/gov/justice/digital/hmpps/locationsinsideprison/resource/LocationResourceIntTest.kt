@@ -2658,15 +2658,12 @@ class LocationResourceIntTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
-        getDomainEvents(9).let {
+        getDomainEvents(6).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "NMI-A-1-001",
             "location.inside.prison.amended" to "MDI-B-A-001",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
-            "location.inside.prison.amended" to "NMI-A-1",
-            "location.inside.prison.amended" to "NMI-A",
             "location.inside.prison.amended" to "MDI-B-A",
             "location.inside.prison.amended" to "MDI-B",
           )
