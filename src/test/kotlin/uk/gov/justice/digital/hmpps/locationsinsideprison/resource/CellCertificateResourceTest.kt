@@ -192,6 +192,7 @@ class CellCertificateResourceTest : CommonDataTestBase() {
           .jsonPath("$.prisonId").isEqualTo("LEI")
           .jsonPath("$.approvedBy").isEqualTo(EXPECTED_USERNAME)
           .jsonPath("$.current").isEqualTo(true)
+          .jsonPath("$.locations").isArray()
       }
     }
   }
@@ -220,6 +221,8 @@ class CellCertificateResourceTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
           .expectBody().jsonPath("$[0].id").isEqualTo(cellCertificateId.toString())
+          .jsonPath("$[0].current").isEqualTo(true)
+          .jsonPath("$[0].locations").doesNotExist()
       }
 
       @Test
