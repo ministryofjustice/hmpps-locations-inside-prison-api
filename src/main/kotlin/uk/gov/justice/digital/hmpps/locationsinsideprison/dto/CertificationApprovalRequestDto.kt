@@ -36,6 +36,9 @@ data class CertificationApprovalRequestDto(
 
   @Schema(description = "Comments about the approval or rejection", required = false)
   val comments: String? = null,
+
+  @Schema(description = "Locations affected by the approval", required = false)
+  val locations: List<CertificationApprovalRequestLocationDto>? = null,
 ) {
   companion object {
     fun from(approvalRequest: CertificationApprovalRequest): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
@@ -48,6 +51,7 @@ data class CertificationApprovalRequestDto(
       approvedOrRejectedBy = approvalRequest.approvedOrRejectedBy,
       approvedOrRejectedDate = approvalRequest.approvedOrRejectedDate,
       comments = approvalRequest.comments,
+      locations = approvalRequest.locations.filter { it.pathHierarchy == approvalRequest.location.getPathHierarchy() }.map { CertificationApprovalRequestLocationDto.from(it) },
     )
   }
 }

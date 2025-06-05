@@ -174,7 +174,22 @@ class CertificationResourceTest : CommonDataTestBase() {
               {
               "locationId": "${aCell.id}",
               "locationKey": "${aCell.getKey()}",
-              "status": "PENDING"
+              "status": "PENDING",
+              "locations": [
+                {
+                  "locationCode": "002",
+                  "cellMark": "A-2",
+                  "localName": "Cell 2 On 1",
+                  "pathHierarchy": "A-1-002",
+                  "level": 3,
+                  "status": "LOCKED_ACTIVE",
+                  "capacityOfCertifiedCell": 1,
+                  "workingCapacity": 1,
+                  "maxCapacity": 3,
+                  "inCellSanitation": true,
+                  "locationType": "CELL"
+                }
+              ]
               }
           """,
             JsonCompareMode.LENIENT,
@@ -203,7 +218,108 @@ class CertificationResourceTest : CommonDataTestBase() {
               {
               "locationId": "${mWing.id}",
               "locationKey": "${mWing.getKey()}",
-              "status": "PENDING"
+              "status": "PENDING",
+              "locations": [
+              {
+                "pathHierarchy": "M",
+                "level": 1,
+                "status": "LOCKED_DRAFT",
+                "capacityOfCertifiedCell": 6,
+                "workingCapacity": 6,
+                "maxCapacity": 6,
+                "locationType": "WING",
+                "subLocations": [
+                  {
+                    "pathHierarchy": "M-1",
+                    "level": 2,
+                    "status": "LOCKED_DRAFT",
+                    "capacityOfCertifiedCell": 3,
+                    "workingCapacity": 3,
+                    "maxCapacity": 3,
+                    "locationType": "LANDING",
+                    "subLocations": [
+                      {
+                        "cellMark": "M-1",
+                        "pathHierarchy": "M-1-001",
+                        "level": 3,
+                        "status": "LOCKED_DRAFT",
+                        "capacityOfCertifiedCell": 1,
+                        "workingCapacity": 1,
+                        "maxCapacity": 1,
+                        "inCellSanitation": true,
+                        "locationType": "CELL"
+                      },
+                      {
+                        "cellMark": "M-2",
+                        "pathHierarchy": "M-1-002",
+                        "level": 3,
+                        "status": "LOCKED_DRAFT",
+                        "capacityOfCertifiedCell": 1,
+                        "workingCapacity": 1,
+                        "maxCapacity": 1,
+                        "inCellSanitation": true,
+                        "locationType": "CELL"
+                      },
+                      {
+                        "cellMark": "M-3",
+                        "pathHierarchy": "M-1-003",
+                        "level": 3,
+                        "status": "LOCKED_DRAFT",
+                        "capacityOfCertifiedCell": 1,
+                        "workingCapacity": 1,
+                        "maxCapacity": 1,
+                        "inCellSanitation": true,
+                        "locationType": "CELL"
+                      }
+                    ]
+                  },
+                  {
+                    "pathHierarchy": "M-2",
+                    "level": 2,
+                    "status": "LOCKED_DRAFT",
+                    "capacityOfCertifiedCell": 3,
+                    "workingCapacity": 3,
+                    "maxCapacity": 3,
+                    "locationType": "LANDING",
+                    "subLocations": [
+                      {
+                        "cellMark": "M-1",
+                        "pathHierarchy": "M-2-001",
+                        "level": 3,
+                        "status": "LOCKED_DRAFT",
+                        "capacityOfCertifiedCell": 1,
+                        "workingCapacity": 1,
+                        "maxCapacity": 1,
+                        "inCellSanitation": true,
+                        "locationType": "CELL"
+                      },
+                      {
+                        "cellMark": "M-2",
+                        "pathHierarchy": "M-2-002",
+                        "level": 3,
+                        "status": "LOCKED_DRAFT",
+                        "capacityOfCertifiedCell": 1,
+                        "workingCapacity": 1,
+                        "maxCapacity": 1,
+                        "inCellSanitation": true,
+                        "locationType": "CELL"
+                      },
+                      {
+                        "cellMark": "M-3",
+                        "pathHierarchy": "M-2-003",
+                        "level": 3,
+                        "status": "LOCKED_DRAFT",
+                        "capacityOfCertifiedCell": 1,
+                        "workingCapacity": 1,
+                        "maxCapacity": 1,
+                        "inCellSanitation": true,
+                        "locationType": "CELL"
+                      }
+                    ]
+                  }
+                ]
+              }
+              ]
               }
           """,
             JsonCompareMode.LENIENT,

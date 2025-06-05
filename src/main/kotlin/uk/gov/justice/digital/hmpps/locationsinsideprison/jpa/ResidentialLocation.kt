@@ -449,6 +449,43 @@ open class ResidentialLocation(
     )
   }
 
+  fun toCertificationApprovalRequestLocation(certificationApprovalRequest: CertificationApprovalRequest): CertificationApprovalRequestLocation {
+    val subLocations: List<CertificationApprovalRequestLocation> = childLocations
+      .filterIsInstance<ResidentialLocation>()
+      .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
+      .map { it.toCertificationApprovalRequestLocation(certificationApprovalRequest) }
+
+    return CertificationApprovalRequestLocation(
+      certificationApprovalRequest = certificationApprovalRequest,
+      locationType = locationType,
+      locationCode = getCode(),
+      pathHierarchy = getPathHierarchy(),
+      localName = localName?.capitalizeWords(),
+      cellMark = if (this is Cell) {
+        cellMark
+      } else {
+        null
+      },
+      level = getLevel(),
+      status = getDerivedStatus(),
+      inCellSanitation = if (this is Cell) {
+        inCellSanitation
+      } else {
+        null
+      },
+      maxCapacity = calcMaxCapacity(true),
+      workingCapacity = calcWorkingCapacity(true),
+      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name },
+      convertedCellType = if (this is Cell && isConvertedCell()) {
+        convertedCellType
+      } else {
+        null
+      },
+      subLocations = subLocations.toSortedSet(),
+    )
+  }
+
   override fun toDto(
     includeChildren: Boolean,
     includeParent: Boolean,
