@@ -58,7 +58,7 @@ class CellCertificateService(
   fun getCellCertificate(id: UUID): CellCertificateDto {
     val cellCertificate = cellCertificateRepository.findById(id)
       .orElseThrow { CellCertificateNotFoundException(id) }
-    return CellCertificateDto.from(cellCertificate)
+    return CellCertificateDto.from(cellCertificate, showLocations = true)
   }
 
   fun getCellCertificatesForPrison(prisonId: String): List<CellCertificateDto> = cellCertificateRepository.findByPrisonIdOrderByApprovedDateDesc(prisonId)
@@ -67,6 +67,6 @@ class CellCertificateService(
   fun getCurrentCellCertificateForPrison(prisonId: String): CellCertificateDto {
     val cellCertificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(prisonId)
       ?: throw CurrentCellCertificateNotFoundException(prisonId)
-    return CellCertificateDto.from(cellCertificate)
+    return CellCertificateDto.from(cellCertificate, showLocations = true)
   }
 }

@@ -41,10 +41,10 @@ data class CellCertificateDto(
   val current: Boolean,
 
   @Schema(description = "Locations in the certificate", required = true)
-  val locations: List<CellCertificateLocationDto>,
+  val locations: List<CellCertificateLocationDto>? = null,
 ) {
   companion object {
-    fun from(cellCertificate: CellCertificate): CellCertificateDto = CellCertificateDto(
+    fun from(cellCertificate: CellCertificate, showLocations: Boolean = false): CellCertificateDto = CellCertificateDto(
       id = cellCertificate.id!!,
       prisonId = cellCertificate.prisonId,
       approvedBy = cellCertificate.approvedBy,
@@ -54,8 +54,12 @@ data class CellCertificateDto(
       totalMaxCapacity = cellCertificate.totalMaxCapacity,
       totalCapacityOfCertifiedCell = cellCertificate.totalCapacityOfCertifiedCell,
       current = cellCertificate.current,
-      locations = cellCertificate.locations.filter { it.level == 1 } // Only include top-level locations
-        .map { CellCertificateLocationDto.from(it) },
+      locations = if (showLocations) {
+        cellCertificate.locations.filter { it.level == 1 } // Only include top-level locations
+          .map { CellCertificateLocationDto.from(it) }
+      } else {
+        null
+      },
     )
   }
 }
