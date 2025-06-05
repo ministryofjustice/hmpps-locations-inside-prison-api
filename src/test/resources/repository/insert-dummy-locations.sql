@@ -1,3 +1,5 @@
+DELETE FROM cell_certificate cascade;
+DELETE FROM certification_approval_request;
 DELETE FROM location;
 
 INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name, residential_housing_type, when_created, when_updated, updated_by, status)

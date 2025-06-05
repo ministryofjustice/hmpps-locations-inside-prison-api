@@ -94,6 +94,8 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         PrisonConfiguration(
           prisonId = "NMI",
           signedOperationCapacity = 10,
+          resiLocationServiceActive = true,
+          certificationApprovalRequired = true,
           whenUpdated = LocalDateTime.now(clock),
           updatedBy = SYSTEM_USERNAME,
         ),
@@ -154,6 +156,10 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         linkedTransaction = linkedTransaction,
       ),
     )
+    cell1N.setCapacity(maxCapacity = 3, workingCapacity = 2, userOrSystemInContext = EXPECTED_USERNAME, amendedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
+    cell1N.requestApproval(requestedBy = EXPECTED_USERNAME, requestedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
+    cell1N = repository.saveAndFlush(cell1N)
+
     landingN1 = repository.save(
       buildResidentialLocation(
         prisonId = "NMI",
