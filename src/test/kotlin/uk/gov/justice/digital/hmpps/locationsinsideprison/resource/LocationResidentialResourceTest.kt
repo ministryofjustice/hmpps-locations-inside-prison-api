@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLoca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
@@ -239,7 +240,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "certified": false,
                     "capacityOfCertifiedCell": 0
                   },
-                  
+
                   "active": true,
                   "isResidential": true,
                   "key": "MDI-Z-2"
@@ -854,6 +855,24 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.DuplicateLocalNameAtSameLevel.errorCode)
       }
+
+      @Test
+      fun `cannot update local name of a locked location`() {
+        val aCell = repository.findOneByKey("NMI-A-1-001") as Cell
+
+        // Attempt to update the local name of the locked location
+        webTestClient.put().uri("/locations/${aCell.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(""" { "localName": "New Local Name"} """)
+          .exchange()
+          .expectStatus().isEqualTo(409)
+          .expectBody(ErrorResponse::class.java)
+          .returnResult().responseBody!!.also {
+          assertThat(it.errorCode).isEqualTo(ErrorCode.LockedLocationCannotBeUpdated.errorCode)
+          assertThat(it.userMessage).contains("Location ${aCell.getKey()} cannot be updated as it is locked")
+        }
+      }
     }
 
     @Nested
@@ -1158,6 +1177,24 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue("""{"code": ""}""")
           .exchange()
           .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot update a locked location`() {
+        val aCell = repository.findOneByKey("NMI-A-1-001") as Cell
+
+        // Attempt to update the locked location
+        webTestClient.patch().uri("/locations/residential/${aCell.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(PatchResidentialLocationRequest(comments = "Change comment")))
+          .exchange()
+          .expectStatus().isEqualTo(409)
+          .expectBody(ErrorResponse::class.java)
+          .returnResult().responseBody!!.also {
+          assertThat(it.errorCode).isEqualTo(ErrorCode.LockedLocationCannotBeUpdated.errorCode)
+          assertThat(it.userMessage).contains("Location ${aCell.getKey()} cannot be updated as it is locked")
+        }
       }
     }
 
@@ -2310,6 +2347,26 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
           .exchange()
           .expectStatus().isEqualTo(404)
+      }
+
+      @Test
+      fun `cannot convert a locked cell to non-residential cell`() {
+        val aCell = repository.findOneByKey("NMI-A-1-001") as Cell
+
+        prisonerSearchMockServer.stubSearchByLocations(aCell.prisonId, listOf(aCell.getPathHierarchy()), false)
+
+        // Attempt to convert the locked cell to a non-residential cell
+        webTestClient.put().uri("/locations/${aCell.id}/convert-cell-to-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
+          .exchange()
+          .expectStatus().isEqualTo(409)
+          .expectBody(ErrorResponse::class.java)
+          .returnResult().responseBody!!.also {
+          assertThat(it.errorCode).isEqualTo(ErrorCode.LockedLocationCannotBeUpdated.errorCode)
+          assertThat(it.userMessage).contains("Location ${aCell.getKey()} cannot be updated as it is locked")
+        }
       }
     }
 

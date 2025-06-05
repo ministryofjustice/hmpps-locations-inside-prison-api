@@ -2619,20 +2619,10 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "message": "Update failed: Max capacity (0) cannot be decreased below current cell occupancy (1)"
                   }
                 ],
-                "NMI-A-1-001": [
+                "NMI-A-1-001":[
                   {
-                    "key": "NMI-A-1-001",
-                    "message": "Max capacity from 2 ==> 4",
-                    "type": "maxCapacity",
-                    "previousValue": 2,
-                    "newValue": 4
-                  },
-                  {
-                    "key": "NMI-A-1-001",
-                    "message": "Working capacity from 2 ==> 1",
-                    "type": "workingCapacity",
-                    "previousValue": 2,
-                    "newValue": 1
+                    "key":"NMI-A-1-001",
+                    "message":"Update failed: Location NMI-A-1-001 cannot be updated as it is locked"
                   }
                 ],
                 "MDI-1-2-008": [
@@ -2668,15 +2658,12 @@ class LocationResourceIntTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
-        getDomainEvents(9).let {
+        getDomainEvents(6).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
             "location.inside.prison.amended" to "MDI-Z-1-001",
-            "location.inside.prison.amended" to "NMI-A-1-001",
             "location.inside.prison.amended" to "MDI-B-A-001",
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
-            "location.inside.prison.amended" to "NMI-A-1",
-            "location.inside.prison.amended" to "NMI-A",
             "location.inside.prison.amended" to "MDI-B-A",
             "location.inside.prison.amended" to "MDI-B",
           )

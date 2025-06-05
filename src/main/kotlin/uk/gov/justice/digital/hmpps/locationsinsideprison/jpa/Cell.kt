@@ -109,6 +109,9 @@ class Cell(
   fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
 
   fun setCapacityOfCertifiedCell(capacityOfCertifiedCell: Int, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Boolean {
+    if (isLocationLocked()) {
+      throw LockedLocationCannotBeUpdatedException(getKey())
+    }
     addHistory(
       LocationAttribute.CERTIFIED_CAPACITY,
       certification?.capacityOfCertifiedCell?.toString(),
@@ -140,6 +143,10 @@ class Cell(
   private fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+    if (isLocationLocked()) {
+      throw LockedLocationCannotBeUpdatedException(getKey())
+    }
+
     addHistory(
       LocationAttribute.STATUS,
       this.getDerivedStatus().description,
@@ -193,6 +200,9 @@ class Cell(
   override fun getUsedForValues() = this.usedFor
 
   fun updateNonResidentialCellType(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+    if (isLocationLocked()) {
+      throw LockedLocationCannotBeUpdatedException(getKey())
+    }
     addHistory(
       LocationAttribute.CONVERTED_CELL_TYPE,
       this.getConvertedCellTypeSummary(),
@@ -221,6 +231,10 @@ class Cell(
   }
 
   fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+    if (isLocationLocked()) {
+      throw LockedLocationCannotBeUpdatedException(getKey())
+    }
+
     val amendedDate = LocalDateTime.now(clock)
     addHistory(
       LocationAttribute.STATUS,
@@ -381,6 +395,9 @@ class Cell(
     clock: Clock,
     linkedTransaction: LinkedTransaction,
   ) {
+    if (isLocationLocked()) {
+      throw LockedLocationCannotBeUpdatedException(getKey())
+    }
     recordRemovedSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction)
     this.specialistCellTypes.retainAll(
       specialistCellTypes.map {

@@ -307,11 +307,15 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         .jsonPath("$.totalCapacityOfCertifiedCell").isEqualTo(12)
         // Verify that there are locations in the response
         .jsonPath("$.locations.length()").isEqualTo(2)
+        .jsonPath("$.locations[0].workingCapacity").isEqualTo(6)
         .jsonPath("$.locations[0].subLocations.length()").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[0].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].workingCapacity").isEqualTo(1)
         .jsonPath("$.locations[0].subLocations[1].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[1].workingCapacity").isEqualTo(6)
         .jsonPath("$.locations[1].subLocations.length()").isEqualTo(2)
         .jsonPath("$.locations[1].subLocations[0].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[1].subLocations[0].subLocations[0].workingCapacity").isEqualTo(1)
         .jsonPath("$.locations[1].subLocations[1].subLocations.length()").isEqualTo(3)
     }
 
@@ -330,7 +334,7 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         .jsonPath("$.current").isEqualTo(true)
         .jsonPath("$.locations").isArray()
         .jsonPath("$.totalMaxCapacity").isEqualTo(14)
-        .jsonPath("$.totalWorkingCapacity").isEqualTo(12)
+        .jsonPath("$.totalWorkingCapacity").isEqualTo(6)
         .jsonPath("$.totalCapacityOfCertifiedCell").isEqualTo(12)
         // Verify that there are locations in the response
         .jsonPath("$.locations.length()").isEqualTo(2)
