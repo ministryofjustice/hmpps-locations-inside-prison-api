@@ -175,6 +175,9 @@ class CertificationResourceTest : CommonDataTestBase() {
               "locationId": "${aCell.id}",
               "locationKey": "${aCell.getKey()}",
               "status": "PENDING",
+              "maxCapacityChange": 2,
+              "workingCapacityChange": 0,
+              "certifiedNormalAccommodationChange": 0,
               "locations": [
                 {
                   "locationCode": "002",
@@ -218,6 +221,9 @@ class CertificationResourceTest : CommonDataTestBase() {
               "locationId": "${mWing.id}",
               "locationKey": "${mWing.getKey()}",
               "status": "PENDING",
+              "maxCapacityChange": 6,
+              "workingCapacityChange": 6,
+              "certifiedNormalAccommodationChange": 6,
               "locations": [
               {
                 "pathHierarchy": "M",
@@ -499,6 +505,94 @@ class CertificationResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `can approve a location that has pending CNA changes`() {
+        webTestClient.get().uri("/locations/${cell1N.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+              "key": "${cell1N.getKey()}",
+              "capacity": {
+                "maxCapacity": 2,
+                "workingCapacity": 2
+              },
+              "pendingCapacity": {
+                "maxCapacity": 3,
+                "workingCapacity": 2
+              },
+              "certification": {
+                "certifiedNormalAccommodation": 2,
+                "certified": true
+              },
+              "status": "LOCKED_ACTIVE"
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        val approvalRequestId = certificationApprovalRequestRepository.findByLocationKeyOrderByRequestedDateDesc(cell1N.getKey()).first()
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ApproveCertificationRequestDto(
+                approvalRequestReference = approvalRequestId.id!!,
+                comments = "All OK",
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+              "locationKey": "${cell1N.getKey()}",
+              "status": "APPROVED",
+              "comments": "All OK"
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to cell1N.getKey(),
+            "location.inside.prison.amended" to landingN1.getKey(),
+            "location.inside.prison.amended" to landingN1.getParent()?.getKey(),
+          )
+        }
+
+        assertThat((repository.findOneByKey(cell1N.getKey()) as Cell).getCertifiedNormalAccommodation()).isEqualTo(3)
+
+        webTestClient.get().uri("/locations/${cell1N.id}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+              "key": "${cell1N.getKey()}",
+              "capacity": {
+                "maxCapacity": 3,
+                "workingCapacity": 2
+              },
+              "certification": {
+                "certifiedNormalAccommodation": 3,
+                "certified": true
+              },
+              "status": "ACTIVE"
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
       fun `can approve request for a single cell`() {
         webTestClient.put().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -532,6 +626,29 @@ class CertificationResourceTest : CommonDataTestBase() {
         }
 
         assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(3)
+
+        webTestClient.get().uri("/locations/key/LEI-A-1-001?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+              "key": "LEI-A-1-001",
+              "capacity": {
+                "maxCapacity": 3,
+                "workingCapacity": 1
+              },
+              "certification": {
+                "certifiedNormalAccommodation": 1,
+                "certified": true
+              },
+              "status": "ACTIVE"
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
       }
     }
   }
@@ -667,13 +784,12 @@ class CertificationResourceTest : CommonDataTestBase() {
 
   private fun getApprovalRequestId(): UUID {
     val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
+    val updatedAt = LocalDateTime.now(clock)
     aCell.setCapacity(
       maxCapacity = 3,
       workingCapacity = 2,
       userOrSystemInContext = EXPECTED_USERNAME,
-      amendedDate = LocalDateTime.now(
-        clock,
-      ),
+      amendedDate = updatedAt,
       linkedTransaction = linkedTransaction,
     )
     repository.saveAndFlush(aCell)

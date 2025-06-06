@@ -33,6 +33,7 @@ class Cell(
   pathHierarchy: String,
   locationType: LocationType = LocationType.CELL,
   prisonId: String,
+  prisonConfiguration: PrisonConfiguration? = null,
   status: LocationStatus,
   parent: Location? = null,
   localName: String? = null,
@@ -83,6 +84,7 @@ class Cell(
   pathHierarchy = pathHierarchy,
   locationType = locationType,
   prisonId = prisonId,
+  prisonConfiguration = prisonConfiguration,
   status = status,
   parent = parent,
   localName = localName,
@@ -117,7 +119,7 @@ class Cell(
       throw LockedLocationCannotBeUpdatedException(getKey())
     }
 
-    if (isCertificationApprovalProcessRequired() && getCertifiedNormalAccommodation(includePendingChange = true) != certification?.certifiedNormalAccommodation) {
+    if (isCertificationApprovalProcessRequired() && getCertifiedNormalAccommodation(includePendingChange = true) != certifiedNormalAccommodation) {
       if (pendingChange == null) {
         pendingChange = PendingLocationChange()
       }
@@ -472,8 +474,8 @@ class Cell(
     clock: Clock,
     linkedTransaction: LinkedTransaction,
   ) {
-    upsert.certification?.let {
-      with(it) {
+    upsert.certification?.let { cert ->
+      with(cert) {
         val oldCertification = if (certified) {
           "Certified"
         } else {
@@ -556,8 +558,8 @@ class Cell(
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
-    pendingChange?.let {
-      with(it) {
+    pendingChange?.let { pc ->
+      with(pc) {
         capacity?.let { cap ->
           setCapacity(
             maxCapacity = cap.maxCapacity,

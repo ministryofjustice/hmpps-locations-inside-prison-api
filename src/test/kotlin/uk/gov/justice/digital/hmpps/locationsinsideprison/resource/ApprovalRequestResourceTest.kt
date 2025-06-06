@@ -128,6 +128,9 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
                 "id": "$approvalRequestId",
                 "status": "PENDING",
                 "locationKey": "LEI-A-1-001",
+                "maxCapacityChange": 2,
+                "workingCapacityChange": 0,
+                "certifiedNormalAccommodationChange": 0,
                  "locations": [
                   {
                     "cellMark": "A-1",

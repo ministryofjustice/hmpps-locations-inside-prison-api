@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
@@ -35,6 +36,9 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var repository: LocationRepository
+
+  @Autowired
+  lateinit var certificationApprovalRequestRepository: CertificationApprovalRequestRepository
 
   @Autowired
   lateinit var configurationRepository: PrisonConfigurationRepository
@@ -68,6 +72,14 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     repository.deleteAll()
     configurationRepository.deleteAll()
 
+    val nmiConfig = PrisonConfiguration(
+      prisonId = "NMI",
+      signedOperationCapacity = 10,
+      resiLocationServiceActive = true,
+      certificationApprovalRequired = true,
+      whenUpdated = LocalDateTime.now(clock),
+      updatedBy = SYSTEM_USERNAME,
+    )
     configurationRepository.saveAllAndFlush(
       listOf(
         PrisonConfiguration(
@@ -91,14 +103,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
           whenUpdated = LocalDateTime.now(clock),
           updatedBy = SYSTEM_USERNAME,
         ),
-        PrisonConfiguration(
-          prisonId = "NMI",
-          signedOperationCapacity = 10,
-          resiLocationServiceActive = true,
-          certificationApprovalRequired = true,
-          whenUpdated = LocalDateTime.now(clock),
-          updatedBy = SYSTEM_USERNAME,
-        ),
+        nmiConfig,
       ),
     )
 
@@ -154,9 +159,11 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         prisonId = "NMI",
         residentialHousingType = ResidentialHousingType.OTHER_USE,
         linkedTransaction = linkedTransaction,
+        prisonConfiguration = nmiConfig,
       ),
     )
     cell1N.setCapacity(maxCapacity = 3, workingCapacity = 2, userOrSystemInContext = EXPECTED_USERNAME, amendedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
+    cell1N.setCertifiedNormalAccommodation(certifiedNormalAccommodation = 3, userOrSystemInContext = EXPECTED_USERNAME, updatedAt = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
     cell1N.requestApproval(requestedBy = EXPECTED_USERNAME, requestedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
     cell1N = repository.saveAndFlush(cell1N)
 
