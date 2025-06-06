@@ -72,13 +72,15 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     repository.deleteAll()
     configurationRepository.deleteAll()
 
-    val nmiConfig = PrisonConfiguration(
-      prisonId = "NMI",
-      signedOperationCapacity = 10,
-      resiLocationServiceActive = true,
-      certificationApprovalRequired = true,
-      whenUpdated = LocalDateTime.now(clock),
-      updatedBy = SYSTEM_USERNAME,
+    val nmiConfig = configurationRepository.saveAndFlush(
+      PrisonConfiguration(
+        prisonId = "NMI",
+        signedOperationCapacity = 10,
+        resiLocationServiceActive = true,
+        certificationApprovalRequired = true,
+        whenUpdated = LocalDateTime.now(clock),
+        updatedBy = SYSTEM_USERNAME,
+      ),
     )
     configurationRepository.saveAllAndFlush(
       listOf(
@@ -103,7 +105,6 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
           whenUpdated = LocalDateTime.now(clock),
           updatedBy = SYSTEM_USERNAME,
         ),
-        nmiConfig,
       ),
     )
 
