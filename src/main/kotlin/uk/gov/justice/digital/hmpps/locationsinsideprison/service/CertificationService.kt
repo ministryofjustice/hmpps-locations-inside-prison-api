@@ -82,7 +82,7 @@ class CertificationService(
     )
 
     log.info("Certification approval requested (${approvalRequest.id}) for location ${location.getKey()} by $username")
-    return CertificationApprovalRequestDto.from(approvalRequest)
+    return CertificationApprovalRequestDto.from(approvalRequest, showLocations = true)
   }
 
   fun approveCertificationRequest(approveCertificationRequest: ApproveCertificationRequestDto): ApprovalResponse {

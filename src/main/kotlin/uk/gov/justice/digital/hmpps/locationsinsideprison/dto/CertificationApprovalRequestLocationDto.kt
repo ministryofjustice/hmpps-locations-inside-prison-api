@@ -29,9 +29,6 @@ data class CertificationApprovalRequestLocationDto(
   @Schema(description = "Level in the hierarchy", example = "3", required = true)
   val level: Int,
 
-  @Schema(description = "Status of the location", example = "ACTIVE", required = true)
-  val status: DerivedLocationStatus,
-
   @Schema(description = "Capacity of certified cell", example = "2", required = false)
   val capacityOfCertifiedCell: Int? = null,
 
@@ -64,7 +61,6 @@ data class CertificationApprovalRequestLocationDto(
       localName = location.localName,
       pathHierarchy = location.pathHierarchy,
       level = location.level,
-      status = location.status,
       capacityOfCertifiedCell = location.capacityOfCertifiedCell,
       workingCapacity = location.workingCapacity,
       maxCapacity = location.maxCapacity,

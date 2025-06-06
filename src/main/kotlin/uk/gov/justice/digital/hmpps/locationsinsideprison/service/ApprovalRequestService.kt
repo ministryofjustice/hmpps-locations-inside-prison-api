@@ -27,6 +27,6 @@ class ApprovalRequestService(
     val request = certificationApprovalRequestRepository.findById(id)
       .orElseThrow { ApprovalRequestNotFoundException(id) }
 
-    return CertificationApprovalRequestDto.from(request)
+    return CertificationApprovalRequestDto.from(request, showLocations = true)
   }
 }

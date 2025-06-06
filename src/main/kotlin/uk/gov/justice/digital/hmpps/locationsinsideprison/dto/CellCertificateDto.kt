@@ -98,9 +98,6 @@ data class CellCertificateLocationDto(
   @Schema(description = "Level within the hierarchy", example = "3", required = true)
   val level: Int,
 
-  @Schema(description = "Status of the location", example = "ACTIVE", required = true)
-  var status: DerivedLocationStatus,
-
   @Schema(description = "If converted, the type of cell this location has been converted to")
   val convertedCellType: ConvertedCellType? = null,
 
@@ -119,7 +116,6 @@ data class CellCertificateLocationDto(
       specialistCellTypes = cellCertificateLocation.getSpecialistCellTypesAsList(),
       localName = cellCertificateLocation.localName,
       level = cellCertificateLocation.level,
-      status = cellCertificateLocation.status,
       convertedCellType = cellCertificateLocation.convertedCellType,
       subLocations = cellCertificateLocation.subLocations.map { from(it) },
     )

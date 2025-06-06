@@ -426,7 +426,6 @@ open class ResidentialLocation(
         null
       },
       level = getLevel(),
-      status = getDerivedStatus(),
       inCellSanitation = if (this is Cell) {
         inCellSanitation
       } else {
@@ -467,7 +466,6 @@ open class ResidentialLocation(
         null
       },
       level = getLevel(),
-      status = getDerivedStatus(),
       inCellSanitation = if (this is Cell) {
         inCellSanitation
       } else {

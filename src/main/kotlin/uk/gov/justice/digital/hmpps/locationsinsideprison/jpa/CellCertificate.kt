@@ -13,7 +13,6 @@ import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import org.hibernate.Hibernate
 import org.hibernate.annotations.SortNatural
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
 import java.util.SortedSet
@@ -83,10 +82,6 @@ open class CellCertificateLocation(
 
   @Column(nullable = false)
   val level: Int,
-
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  var status: DerivedLocationStatus,
 
   @Column(nullable = true)
   val capacityOfCertifiedCell: Int? = null,

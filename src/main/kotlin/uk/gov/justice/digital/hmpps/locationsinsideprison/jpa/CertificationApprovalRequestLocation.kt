@@ -11,7 +11,6 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.util.SortedSet
 import java.util.UUID
@@ -41,10 +40,6 @@ open class CertificationApprovalRequestLocation(
 
   @Column(nullable = false)
   val level: Int,
-
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  var status: DerivedLocationStatus,
 
   @Column(nullable = true)
   val capacityOfCertifiedCell: Int? = null,

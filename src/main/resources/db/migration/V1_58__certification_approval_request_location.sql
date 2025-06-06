@@ -6,7 +6,6 @@ CREATE TABLE certification_approval_request_location (
   local_name VARCHAR(255),
   path_hierarchy VARCHAR(255) NOT NULL,
   level INT NOT NULL,
-  status VARCHAR(40) NOT NULL,
   capacity_of_certified_cell INT,
   working_capacity INT,
   max_capacity INT,
@@ -21,3 +20,5 @@ CREATE TABLE certification_approval_request_location (
 
 CREATE INDEX idx_cert_approval_req_loc_req_id ON certification_approval_request_location(certification_approval_request_id);
 CREATE INDEX idx_cert_approval_req_loc_parent_id ON certification_approval_request_location(parent_location_id);
+
+ALTER TABLE cell_certificate_location DROP status

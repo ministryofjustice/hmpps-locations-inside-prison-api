@@ -41,7 +41,7 @@ data class CertificationApprovalRequestDto(
   val locations: List<CertificationApprovalRequestLocationDto>? = null,
 ) {
   companion object {
-    fun from(approvalRequest: CertificationApprovalRequest): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
+    fun from(approvalRequest: CertificationApprovalRequest, showLocations: Boolean = false): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
       id = approvalRequest.id!!,
       locationId = approvalRequest.location.id!!,
       locationKey = approvalRequest.locationKey,
@@ -51,7 +51,11 @@ data class CertificationApprovalRequestDto(
       approvedOrRejectedBy = approvalRequest.approvedOrRejectedBy,
       approvedOrRejectedDate = approvalRequest.approvedOrRejectedDate,
       comments = approvalRequest.comments,
-      locations = approvalRequest.locations.filter { it.pathHierarchy == approvalRequest.location.getPathHierarchy() }.map { CertificationApprovalRequestLocationDto.from(it) },
+      locations = if (showLocations) {
+        approvalRequest.locations.filter { it.pathHierarchy == approvalRequest.location.getPathHierarchy() }.map { CertificationApprovalRequestLocationDto.from(it) }
+      } else {
+        null
+      },
     )
   }
 }
