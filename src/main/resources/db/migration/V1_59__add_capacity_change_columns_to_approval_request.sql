@@ -6,7 +6,6 @@ ALTER TABLE certification_approval_request
 ALTER TABLE cell_certificate_location
     DROP status;
 
-
 ALTER TABLE certification
     RENAME COLUMN capacity_of_certified_cell TO certified_normal_accommodation;
 ALTER TABLE cell_certificate

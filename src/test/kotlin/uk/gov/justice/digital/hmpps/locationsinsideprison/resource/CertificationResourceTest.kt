@@ -366,7 +366,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                  "workingCapacity": 6
               },
               "certification": {
-                "certifiedNormalAccommodation": 6,
+                "certifiedNormalAccommodation": 0,
                 "certified": false
               },
               "status": "DRAFT"

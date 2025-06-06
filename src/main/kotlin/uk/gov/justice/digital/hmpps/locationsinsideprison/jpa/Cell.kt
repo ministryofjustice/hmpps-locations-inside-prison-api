@@ -106,18 +106,40 @@ class Cell(
     capacity?.maxCapacity
   }
 
-  fun getCertifiedNormalAccommodation() = certification?.certifiedNormalAccommodation
+  fun getCertifiedNormalAccommodation(includePendingChange: Boolean = false) = if (includePendingChange) {
+    pendingChange?.certifiedNormalAccommodation ?: certification?.certifiedNormalAccommodation
+  } else {
+    certification?.certifiedNormalAccommodation
+  }
 
-  fun setCertifiedNormalAccommodation(certifiedNormalAccommodation: Int, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Boolean {
+  fun setCertifiedNormalAccommodation(certifiedNormalAccommodation: Int, userOrSystemInContext: String, updatedAt: LocalDateTime, linkedTransaction: LinkedTransaction): Boolean {
     if (isLocationLocked()) {
       throw LockedLocationCannotBeUpdatedException(getKey())
     }
+
+    if (isCertificationApprovalProcessRequired() && getCertifiedNormalAccommodation(includePendingChange = true) != certification?.certifiedNormalAccommodation) {
+      if (pendingChange == null) {
+        pendingChange = PendingLocationChange()
+      }
+      pendingChange?.let { it.certifiedNormalAccommodation = certifiedNormalAccommodation }
+    } else {
+      if (setCna(certifiedNormalAccommodation, userOrSystemInContext, updatedAt, linkedTransaction)) return true
+    }
+    return false
+  }
+
+  private fun setCna(
+    certifiedNormalAccommodation: Int,
+    userOrSystemInContext: String,
+    updatedAt: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+  ): Boolean {
     addHistory(
       LocationAttribute.CERTIFIED_CAPACITY,
       certification?.certifiedNormalAccommodation?.toString(),
       certifiedNormalAccommodation.toString(),
       userOrSystemInContext,
-      LocalDateTime.now(clock),
+      updatedAt,
       linkedTransaction,
     )
 
@@ -534,16 +556,27 @@ class Cell(
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
-    pendingChange?.capacity?.let { cap ->
-      setCapacity(
-        maxCapacity = cap.maxCapacity,
-        workingCapacity = cap.workingCapacity,
-        userOrSystemInContext = approvedBy,
-        amendedDate = approvedDate,
-        linkedTransaction = linkedTransaction,
-      )
+    pendingChange?.let {
+      with(it) {
+        capacity?.let { cap ->
+          setCapacity(
+            maxCapacity = cap.maxCapacity,
+            workingCapacity = cap.workingCapacity,
+            userOrSystemInContext = approvedBy,
+            amendedDate = approvedDate,
+            linkedTransaction = linkedTransaction,
+          )
+        }
+        certifiedNormalAccommodation?.let { cna ->
+          setCna(
+            certifiedNormalAccommodation = cna,
+            linkedTransaction = linkedTransaction,
+            userOrSystemInContext = approvedBy,
+            updatedAt = approvedDate,
+          )
+        }
+      }
     }
-
     if (isDraft()) {
       certifyCell(approvedBy, approvedDate, linkedTransaction)
     }

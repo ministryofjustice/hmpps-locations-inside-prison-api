@@ -1,0 +1,1 @@
+ALTER TABLE pending_location_change ADD COLUMN certified_normal_accommodation INT;

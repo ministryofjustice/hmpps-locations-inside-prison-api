@@ -180,7 +180,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "certifiedNormalAccommodation": 1
+                "certifiedNormalAccommodation": 0
               },
               "childLocations": [
                 {
@@ -197,7 +197,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": false,
-                    "certifiedNormalAccommodation": 1
+                    "certifiedNormalAccommodation": 0
                   },
                   "accommodationTypes": [
                     "NORMAL_ACCOMMODATION"
@@ -261,7 +261,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "certifiedNormalAccommodation": 1
+                "certifiedNormalAccommodation": 0
               },
               "childLocations": [
                 {
@@ -278,7 +278,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": false,
-                    "certifiedNormalAccommodation": 1
+                    "certifiedNormalAccommodation": 0
                   },
                   "accommodationTypes": [
                     "NORMAL_ACCOMMODATION"
@@ -343,7 +343,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "certifiedNormalAccommodation": 5
+                "certifiedNormalAccommodation": 4
               },
               "childLocations": [
                 {

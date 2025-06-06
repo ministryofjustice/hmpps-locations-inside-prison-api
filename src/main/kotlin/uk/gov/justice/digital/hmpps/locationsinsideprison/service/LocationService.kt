@@ -1035,7 +1035,7 @@ class LocationService(
                 location.setCertifiedNormalAccommodation(
                   certifiedNormalAccommodation,
                   getUsername(),
-                  clock,
+                  LocalDateTime.now(clock),
                   linkedTransaction,
                 )
                 changes.add(CapacityChanges(key, message = "Baseline CNA from $oldCertifiedNormalAccommodation ==> $certifiedNormalAccommodation", type = "CNA", previousValue = oldCertifiedNormalAccommodation, newValue = certifiedNormalAccommodation))

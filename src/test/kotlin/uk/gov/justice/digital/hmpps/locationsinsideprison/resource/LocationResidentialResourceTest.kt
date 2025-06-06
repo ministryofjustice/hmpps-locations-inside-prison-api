@@ -658,7 +658,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "certifiedNormalAccommodation": 2
+                "certifiedNormalAccommodation": 0
               }
             }
           """,
