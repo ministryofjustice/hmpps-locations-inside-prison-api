@@ -133,7 +133,7 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
                     "cellMark": "A-1",
                     "pathHierarchy": "A-1-001",
                     "level": 3,
-                    "capacityOfCertifiedCell": 1,
+                    "certifiedNormalAccommodation": 1,
                     "workingCapacity": 1,
                     "maxCapacity": 3,
                     "inCellSanitation": true

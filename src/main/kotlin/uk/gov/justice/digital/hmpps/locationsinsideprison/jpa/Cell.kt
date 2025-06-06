@@ -106,23 +106,23 @@ class Cell(
     capacity?.maxCapacity
   }
 
-  fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
+  fun getCertifiedNormalAccommodation() = certification?.certifiedNormalAccommodation
 
-  fun setCapacityOfCertifiedCell(capacityOfCertifiedCell: Int, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Boolean {
+  fun setCertifiedNormalAccommodation(certifiedNormalAccommodation: Int, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Boolean {
     if (isLocationLocked()) {
       throw LockedLocationCannotBeUpdatedException(getKey())
     }
     addHistory(
       LocationAttribute.CERTIFIED_CAPACITY,
-      certification?.capacityOfCertifiedCell?.toString(),
-      capacityOfCertifiedCell.toString(),
+      certification?.certifiedNormalAccommodation?.toString(),
+      certifiedNormalAccommodation.toString(),
       userOrSystemInContext,
       LocalDateTime.now(clock),
       linkedTransaction,
     )
 
     if (certification != null) {
-      certification!!.capacityOfCertifiedCell = capacityOfCertifiedCell
+      certification!!.certifiedNormalAccommodation = certifiedNormalAccommodation
       return true
     }
     return false
@@ -293,9 +293,9 @@ class Cell(
   ) {
     val oldCertification = getCertifiedSummary(this.certification)
     if (certification != null) {
-      certification?.setCertification(true, certification?.capacityOfCertifiedCell ?: 0)
+      certification?.setCertification(true, certification?.certifiedNormalAccommodation ?: 0)
     } else {
-      certification = Certification(certified = true, capacityOfCertifiedCell = 0)
+      certification = Certification(certified = true, certifiedNormalAccommodation = 0)
     }
 
     addHistory(
@@ -322,17 +322,17 @@ class Cell(
     )
     addHistory(
       LocationAttribute.CERTIFIED_CAPACITY,
-      certification?.capacityOfCertifiedCell?.toString(),
-      (certification?.capacityOfCertifiedCell ?: 0).toString(),
+      certification?.certifiedNormalAccommodation?.toString(),
+      (certification?.certifiedNormalAccommodation ?: 0).toString(),
       userOrSystemInContext,
       LocalDateTime.now(clock),
       linkedTransaction,
     )
 
     if (certification != null) {
-      certification?.setCertification(false, certification?.capacityOfCertifiedCell ?: 0)
+      certification?.setCertification(false, certification?.certifiedNormalAccommodation ?: 0)
     } else {
-      certification = Certification(certified = false, capacityOfCertifiedCell = 0)
+      certification = Certification(certified = false, certifiedNormalAccommodation = 0)
     }
 
     this.updatedBy = userOrSystemInContext
@@ -459,16 +459,16 @@ class Cell(
         }
         addHistory(
           LocationAttribute.CERTIFIED_CAPACITY,
-          certification?.capacityOfCertifiedCell?.toString(),
-          capacityOfCertifiedCell.toString(),
+          certification?.certifiedNormalAccommodation?.toString(),
+          getCNA().toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
           linkedTransaction,
         )
         if (certification != null) {
-          certification?.setCertification(certified, capacityOfCertifiedCell)
+          certification?.setCertification(certified, getCNA())
         } else {
-          certification = Certification(certified = certified, capacityOfCertifiedCell = capacityOfCertifiedCell)
+          certification = Certification(certified = certified, certifiedNormalAccommodation = getCNA())
         }
 
         addHistory(

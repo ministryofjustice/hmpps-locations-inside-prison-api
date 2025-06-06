@@ -115,8 +115,8 @@ open class ResidentialLocation(
   fun calcMaxCapacity(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
     .sumOf { it.getMaxCapacity(includePendingOrDraft) ?: 0 }
 
-  private fun getCapacityOfCertifiedCell(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-    .sumOf { it.getCapacityOfCertifiedCell() ?: 0 }
+  private fun getCertifiedNormalAccommodation(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .sumOf { it.getCertifiedNormalAccommodation() ?: 0 }
 
   private fun hasCertifiedCells(): Boolean = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .any { it.isCertified() }
@@ -181,7 +181,13 @@ open class ResidentialLocation(
       locationKey = this.getKey(),
       requestedBy = requestedBy,
       requestedDate = requestedDate,
-    )
+      maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
+      workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
+      certifiedNormalAccommodationChange = getCertifiedNormalAccommodation(),
+    ).apply {
+      locations = sortedSetOf(toCertificationApprovalRequestLocation(this))
+    }
+
     approvalRequests.add(approvalRequest)
     return approvalRequest
   }
@@ -437,7 +443,7 @@ open class ResidentialLocation(
       } else {
         calcWorkingCapacity()
       },
-      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+      certifiedNormalAccommodation = getCertifiedNormalAccommodation(),
       specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name },
       convertedCellType = if (this is Cell && isConvertedCell()) {
         convertedCellType
@@ -473,7 +479,7 @@ open class ResidentialLocation(
       },
       maxCapacity = calcMaxCapacity(true),
       workingCapacity = calcWorkingCapacity(true),
-      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+      certifiedNormalAccommodation = getCertifiedNormalAccommodation(),
       specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name },
       convertedCellType = if (this is Cell && isConvertedCell()) {
         convertedCellType
@@ -522,7 +528,8 @@ open class ResidentialLocation(
 
     certification = CertificationDto(
       certified = hasCertifiedCells(),
-      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+      capacityOfCertifiedCell = getCertifiedNormalAccommodation(),
+      certifiedNormalAccommodation = getCertifiedNormalAccommodation(),
     ),
 
     accommodationTypes = getAccommodationTypes().map { it }.distinct().sortedBy { it.sequence },
@@ -552,7 +559,8 @@ open class ResidentialLocation(
 
     certification = CertificationDto(
       certified = hasCertifiedCells(),
-      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+      capacityOfCertifiedCell = getCertifiedNormalAccommodation(),
+      certifiedNormalAccommodation = getCertifiedNormalAccommodation(),
     ),
 
     attributes = getAttributes().map { it.attributeValue }.distinct().sortedBy { it.name },

@@ -89,7 +89,7 @@ data class CellInitialisationRequest(
         maxCapacity = cell.maxCapacity,
         workingCapacity = cell.workingCapacity,
       ),
-      certification = Certification(capacityOfCertifiedCell = cell.capacityNormalAccommodation),
+      certification = Certification(certifiedNormalAccommodation = cell.certifiedNormalAccommodation),
       inCellSanitation = cell.inCellSanitation,
     ).apply {
       cell.specialistCellTypes?.forEach {
@@ -170,7 +170,7 @@ data class NewCellRequest(
   @Schema(description = "CNA value", required = false, defaultValue = "0")
   @field:Max(value = 99, message = "CNA cannot be greater than 99")
   @field:PositiveOrZero(message = "CNA cannot be less than 0")
-  val capacityNormalAccommodation: Int = 0,
+  val certifiedNormalAccommodation: Int = 0,
 
   @Schema(description = "Max capacity of the location", example = "2", defaultValue = "0", required = false)
   @field:Max(value = 99, message = "Max capacity cannot be greater than 99")

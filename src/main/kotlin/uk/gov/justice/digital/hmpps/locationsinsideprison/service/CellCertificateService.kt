@@ -47,7 +47,7 @@ class CellCertificateService(
 
         totalWorkingCapacity = locations.sumOf { it.workingCapacity ?: 0 }
         totalMaxCapacity = locations.sumOf { it.maxCapacity ?: 0 }
-        totalCapacityOfCertifiedCell = locations.sumOf { it.capacityOfCertifiedCell ?: 0 }
+        totalCertifiedNormalAccommodation = locations.sumOf { it.certifiedNormalAccommodation ?: 0 }
       },
     )
 

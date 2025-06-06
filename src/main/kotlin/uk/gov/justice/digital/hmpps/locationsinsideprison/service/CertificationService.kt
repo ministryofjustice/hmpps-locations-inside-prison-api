@@ -65,11 +65,8 @@ class CertificationService(
       now,
       username,
     )
-    val approvalRequest = location.requestApproval(requestedBy = username, requestedDate = now, linkedTransaction = linkedTransaction)
-    // Populate the locations collection on the approval request
-    approvalRequest.locations = sortedSetOf(location.toCertificationApprovalRequestLocation(approvalRequest))
+    val approvalRequest = certificationApprovalRequestRepository.save(location.requestApproval(requestedBy = username, requestedDate = now, linkedTransaction = linkedTransaction))
 
-    certificationApprovalRequestRepository.save(approvalRequest)
     telemetryClient.trackEvent(
       "certification-approval-requested",
       mapOf(

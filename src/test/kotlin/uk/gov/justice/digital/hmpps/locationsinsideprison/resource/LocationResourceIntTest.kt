@@ -198,7 +198,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "workingCapacity": 4
               },
               "certification": {
-                "capacityOfCertifiedCell": 4
+                "certifiedNormalAccommodation": 4
               },
               "accommodationTypes": [
                 "NORMAL_ACCOMMODATION",
@@ -243,7 +243,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "workingCapacity": 4
                   },
                   "certification": {
-                    "capacityOfCertifiedCell": 4
+                    "certifiedNormalAccommodation": 4
                   },
                   "childLocations": [
                     {
@@ -259,7 +259,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       }
                     },
                     {
@@ -275,7 +275,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       }
                     },
                     {
@@ -297,7 +297,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": false,
-                    "capacityOfCertifiedCell": 0
+                    "certifiedNormalAccommodation": 0
                   },
                   
                   "active": true,
@@ -547,7 +547,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 2
+                "certifiedNormalAccommodation": 2
               },
               "changeHistory": [
                 {
@@ -1229,7 +1229,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "workingCapacity": 4
               },
               "certification": {
-                "capacityOfCertifiedCell": 4
+                "certifiedNormalAccommodation": 4
               },
               "changeHistory": [
                 {
@@ -1452,7 +1452,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "workingCapacity": 2
               },
               "certification": {
-                "capacityOfCertifiedCell": 4
+                "certifiedNormalAccommodation": 4
               },
               "childLocations": [
                 {
@@ -1840,7 +1840,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "oldWorkingCapacity": 2,
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 2
+                    "certifiedNormalAccommodation": 2
                   },
                   "accommodationTypes": [
                     "NORMAL_ACCOMMODATION"
@@ -1876,7 +1876,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "oldWorkingCapacity": 2,
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 2
+                    "certifiedNormalAccommodation": 2
                   },
                   "accommodationTypes": [
                     "CARE_AND_SEPARATION"
@@ -2146,7 +2146,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "workingCapacity": 5
               },
               "certification": {
-                "capacityOfCertifiedCell": 4
+                "certifiedNormalAccommodation": 4
               },
               "changeHistory": [
                 {
@@ -2574,7 +2574,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             jsonString(
               UpdateCapacityRequest(
                 locations = mapOf(
-                  cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, capacityOfCertifiedCell = 3),
+                  cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, certifiedNormalAccommodation = 3),
                   cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0),
                   cell1N.getKey() to CellCapacityUpdateDetail(maxCapacity = 4, workingCapacity = 1),
                   "MDI-1-2-008" to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
@@ -2685,7 +2685,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 },
                 "certification": {
                   "certified": true,
-                  "capacityOfCertifiedCell": 5
+                  "certifiedNormalAccommodation": 5
                 },
                 "childLocations": [
                   {
@@ -2702,7 +2702,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     },
                     "certification": {
                       "certified": true,
-                      "capacityOfCertifiedCell": 5
+                      "certifiedNormalAccommodation": 5
                     },
                     "childLocations": [
                       {
@@ -2713,7 +2713,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                         },
                         "certification": {
                           "certified": false,
-                          "capacityOfCertifiedCell": 0
+                          "certifiedNormalAccommodation": 0
                         }
                       },
                       {
@@ -2724,7 +2724,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                         },
                         "certification": {
                           "certified": true,
-                          "capacityOfCertifiedCell": 3
+                          "certifiedNormalAccommodation": 3
                         }
                       },
                       {
@@ -2735,7 +2735,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                         },
                         "certification": {
                           "certified": true,
-                          "capacityOfCertifiedCell": 2
+                          "certifiedNormalAccommodation": 2
                         }
                       }
                     ]
@@ -2748,7 +2748,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     },
                     "certification": {
                       "certified": false,
-                      "capacityOfCertifiedCell": 0
+                      "certifiedNormalAccommodation": 0
                     }
                   }
                 ]

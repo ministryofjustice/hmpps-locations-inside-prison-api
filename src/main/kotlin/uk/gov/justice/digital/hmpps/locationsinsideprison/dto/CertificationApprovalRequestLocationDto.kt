@@ -30,7 +30,7 @@ data class CertificationApprovalRequestLocationDto(
   val level: Int,
 
   @Schema(description = "Capacity of certified cell", example = "2", required = false)
-  val capacityOfCertifiedCell: Int? = null,
+  val certifiedNormalAccommodation: Int? = null,
 
   @Schema(description = "Working capacity", example = "2", required = false)
   val workingCapacity: Int? = null,
@@ -61,7 +61,7 @@ data class CertificationApprovalRequestLocationDto(
       localName = location.localName,
       pathHierarchy = location.pathHierarchy,
       level = location.level,
-      capacityOfCertifiedCell = location.capacityOfCertifiedCell,
+      certifiedNormalAccommodation = location.certifiedNormalAccommodation,
       workingCapacity = location.workingCapacity,
       maxCapacity = location.maxCapacity,
       inCellSanitation = location.inCellSanitation,

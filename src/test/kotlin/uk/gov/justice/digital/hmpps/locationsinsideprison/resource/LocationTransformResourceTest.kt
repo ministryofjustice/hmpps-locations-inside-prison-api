@@ -496,7 +496,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           buildCell(
             pathHierarchy = "Z-1-005",
             capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
-            certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+            certification = Certification(certified = true, certifiedNormalAccommodation = 2),
             specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
             linkedTransaction = linkedTransaction,
           ),

@@ -45,7 +45,7 @@ open class CellCertificate(
   var totalMaxCapacity: Int = 0,
 
   @Column(nullable = false)
-  var totalCapacityOfCertifiedCell: Int = 0,
+  var totalCertifiedNormalAccommodation: Int = 0,
 
   @Column(nullable = false)
   var current: Boolean = true,
@@ -84,7 +84,7 @@ open class CellCertificateLocation(
   val level: Int,
 
   @Column(nullable = true)
-  val capacityOfCertifiedCell: Int? = null,
+  val certifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
   val workingCapacity: Int? = null,

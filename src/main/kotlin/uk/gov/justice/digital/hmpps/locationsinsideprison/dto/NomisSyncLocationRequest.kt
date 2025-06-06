@@ -131,7 +131,7 @@ data class NomisSyncLocationRequest(
           certification = certification?.let {
             uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification(
               certified = it.certified,
-              capacityOfCertifiedCell = it.capacityOfCertifiedCell,
+              certifiedNormalAccommodation = it.getCNA(),
             )
           },
         )

@@ -35,7 +35,7 @@ data class CellCertificateDto(
   val totalMaxCapacity: Int,
 
   @Schema(description = "Total capacity of certified cells for the prison", example = "110", required = true)
-  val totalCapacityOfCertifiedCell: Int,
+  val totalCertifiedNormalAccommodation: Int,
 
   @Schema(description = "Whether this is the current certificate", example = "true", required = true)
   val current: Boolean,
@@ -52,7 +52,7 @@ data class CellCertificateDto(
       certificationApprovalRequestId = cellCertificate.certificationApprovalRequest.id!!,
       totalWorkingCapacity = cellCertificate.totalWorkingCapacity,
       totalMaxCapacity = cellCertificate.totalMaxCapacity,
-      totalCapacityOfCertifiedCell = cellCertificate.totalCapacityOfCertifiedCell,
+      totalCertifiedNormalAccommodation = cellCertificate.totalCertifiedNormalAccommodation,
       current = cellCertificate.current,
       locations = if (showLocations) {
         cellCertificate.locations.filter { it.level == 1 } // Only include top-level locations
@@ -75,7 +75,7 @@ data class CellCertificateLocationDto(
   val pathHierarchy: String,
 
   @Schema(description = "Capacity of certified cell", example = "2")
-  val capacityOfCertifiedCell: Int?,
+  val certifiedNormalAccommodation: Int?,
 
   @Schema(description = "Working capacity", example = "1")
   val workingCapacity: Int?,
@@ -108,7 +108,7 @@ data class CellCertificateLocationDto(
     fun from(cellCertificateLocation: CellCertificateLocation): CellCertificateLocationDto = CellCertificateLocationDto(
       locationCode = cellCertificateLocation.locationCode,
       pathHierarchy = cellCertificateLocation.pathHierarchy,
-      capacityOfCertifiedCell = cellCertificateLocation.capacityOfCertifiedCell,
+      certifiedNormalAccommodation = cellCertificateLocation.certifiedNormalAccommodation,
       workingCapacity = cellCertificateLocation.workingCapacity,
       maxCapacity = cellCertificateLocation.maxCapacity,
       inCellSanitation = cellCertificateLocation.inCellSanitation,

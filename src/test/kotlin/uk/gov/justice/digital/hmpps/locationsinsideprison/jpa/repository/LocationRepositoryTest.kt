@@ -95,7 +95,7 @@ class LocationRepositoryTest : TestBase() {
     location.findAllLeafLocations().forEach {
       if (it is Cell) {
         assertThat(it.getWorkingCapacity()).isEqualTo(1)
-        assertThat(it.getCapacityOfCertifiedCell()).isEqualTo(1)
+        assertThat(it.getCertifiedNormalAccommodation()).isEqualTo(1)
       }
     }
 
@@ -120,7 +120,7 @@ class LocationRepositoryTest : TestBase() {
     assertThat(cell2.getPathHierarchy()).isEqualTo("A-2-001")
     cell2 as Cell
     assertThat(cell2.getWorkingCapacity()).isEqualTo(2)
-    assertThat(cell2.getCapacityOfCertifiedCell()).isEqualTo(1)
+    assertThat(cell2.getCertifiedNormalAccommodation()).isEqualTo(1)
 
     val landing1Retrieved = repository.findOneByPrisonIdAndPathHierarchy(landing1.prisonId, landing1.getPathHierarchy()) ?: throw Exception("Location not found")
     cell2.setCode("003")
@@ -226,7 +226,7 @@ class LocationRepositoryTest : TestBase() {
       whenCreated = now,
       parent = parent,
       capacity = Capacity(maxCapacity = 1, workingCapacity = 1),
-      certification = Certification(certified = true, capacityOfCertifiedCell = 1),
+      certification = Certification(certified = true, certifiedNormalAccommodation = 1),
       localName = "CELL $prisonId $pathHierarchy",
       deactivatedDate = LocalDateTime.now(clock).minusYears(1),
       proposedReactivationDate = LocalDate.now(clock).minusDays(1),

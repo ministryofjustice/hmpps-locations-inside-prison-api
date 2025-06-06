@@ -460,7 +460,7 @@ class LocationService(
         )
 
         val specialistCellTypesAffectingCapacity = cell.specialistCellTypes?.filter { it.affectsCapacity }
-        if (!specialistCellTypesAffectingCapacity.isNullOrEmpty() && !(cell.capacityNormalAccommodation == 0 && cell.workingCapacity == 0)) {
+        if (!specialistCellTypesAffectingCapacity.isNullOrEmpty() && !(cell.certifiedNormalAccommodation == 0 && cell.workingCapacity == 0)) {
           throw CapacityException(
             cell.code,
             "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
@@ -1030,15 +1030,15 @@ class LocationService(
               } else {
                 changes.add(CapacityChanges(key, message = "Capacity not changed"))
               }
-              if (capacityOfCertifiedCell != null && capacityOfCertifiedCell != location.getCapacityOfCertifiedCell()) {
-                val oldCapacityOfCertifiedCell = location.getCapacityOfCertifiedCell()
-                location.setCapacityOfCertifiedCell(
-                  capacityOfCertifiedCell,
+              if (certifiedNormalAccommodation != null && certifiedNormalAccommodation != location.getCertifiedNormalAccommodation()) {
+                val oldCertifiedNormalAccommodation = location.getCertifiedNormalAccommodation()
+                location.setCertifiedNormalAccommodation(
+                  certifiedNormalAccommodation,
                   getUsername(),
                   clock,
                   linkedTransaction,
                 )
-                changes.add(CapacityChanges(key, message = "Baseline CNA from $oldCapacityOfCertifiedCell ==> $capacityOfCertifiedCell", type = "CNA", previousValue = oldCapacityOfCertifiedCell, newValue = capacityOfCertifiedCell))
+                changes.add(CapacityChanges(key, message = "Baseline CNA from $oldCertifiedNormalAccommodation ==> $certifiedNormalAccommodation", type = "CNA", previousValue = oldCertifiedNormalAccommodation, newValue = certifiedNormalAccommodation))
                 updatedCapacities.add(location)
               }
             }

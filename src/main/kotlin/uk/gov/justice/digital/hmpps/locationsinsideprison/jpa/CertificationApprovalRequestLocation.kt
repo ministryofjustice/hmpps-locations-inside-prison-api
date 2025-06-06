@@ -42,7 +42,7 @@ open class CertificationApprovalRequestLocation(
   val level: Int,
 
   @Column(nullable = true)
-  val capacityOfCertifiedCell: Int? = null,
+  val certifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
   val workingCapacity: Int? = null,

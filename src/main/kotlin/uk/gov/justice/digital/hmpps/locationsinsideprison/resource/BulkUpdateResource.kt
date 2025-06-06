@@ -192,7 +192,7 @@ class BulkUpdateResource(
 data class UpdateCapacityRequest(
   @Schema(
     description = "List of capacities to update",
-    example = "{\"TCI-A-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"capacityOfCertifiedCell\": 2 }, \"TCI-A-1-002\": { \"maxCapacity\": 3, \"workingCapacity\": 1, \"capacityOfCertifiedCell\": 1 } }",
+    example = "{\"TCI-A-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"certifiedNormalAccommodation\": 2 }, \"TCI-A-1-002\": { \"maxCapacity\": 3, \"workingCapacity\": 1, \"certifiedNormalAccommodation\": 1 } }",
   )
   val locations: Map<String, CellCapacityUpdateDetail>,
 )
@@ -252,5 +252,5 @@ data class CellCapacityUpdateDetail(
   @Schema(description = "Indicates the capacity of the certified location (cell)", example = "1", required = false)
   @field:Max(value = 99, message = "CNA cannot be greater than 99")
   @field:PositiveOrZero(message = "CNA cannot be less than 0")
-  val capacityOfCertifiedCell: Int? = null,
+  val certifiedNormalAccommodation: Int? = null,
 )

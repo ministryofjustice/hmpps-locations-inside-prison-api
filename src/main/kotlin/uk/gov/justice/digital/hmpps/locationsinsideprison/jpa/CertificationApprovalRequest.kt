@@ -52,6 +52,15 @@ open class CertificationApprovalRequest(
   @Column(nullable = true)
   var comments: String? = null,
 
+  @Column(nullable = false)
+  var certifiedNormalAccommodationChange: Int = 0,
+
+  @Column(nullable = false)
+  var workingCapacityChange: Int = 0,
+
+  @Column(nullable = false)
+  var maxCapacityChange: Int = 0,
+
   @SortNatural
   @OneToMany(mappedBy = "certificationApprovalRequest", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   var locations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),

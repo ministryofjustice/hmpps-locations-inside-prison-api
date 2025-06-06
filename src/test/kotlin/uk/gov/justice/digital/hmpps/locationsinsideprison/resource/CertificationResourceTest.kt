@@ -182,7 +182,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                   "localName": "Cell 2 On 1",
                   "pathHierarchy": "A-1-002",
                   "level": 3,
-                  "capacityOfCertifiedCell": 1,
+                  "certifiedNormalAccommodation": 1,
                   "workingCapacity": 1,
                   "maxCapacity": 3,
                   "inCellSanitation": true,
@@ -222,7 +222,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               {
                 "pathHierarchy": "M",
                 "level": 1,
-                "capacityOfCertifiedCell": 6,
+                "certifiedNormalAccommodation": 6,
                 "workingCapacity": 6,
                 "maxCapacity": 6,
                 "locationType": "WING",
@@ -230,7 +230,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                   {
                     "pathHierarchy": "M-1",
                     "level": 2,
-                    "capacityOfCertifiedCell": 3,
+                    "certifiedNormalAccommodation": 3,
                     "workingCapacity": 3,
                     "maxCapacity": 3,
                     "locationType": "LANDING",
@@ -239,7 +239,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "cellMark": "M-1",
                         "pathHierarchy": "M-1-001",
                         "level": 3,
-                        "capacityOfCertifiedCell": 1,
+                        "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
                         "maxCapacity": 1,
                         "inCellSanitation": true,
@@ -249,7 +249,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "cellMark": "M-2",
                         "pathHierarchy": "M-1-002",
                         "level": 3,
-                        "capacityOfCertifiedCell": 1,
+                        "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
                         "maxCapacity": 1,
                         "inCellSanitation": true,
@@ -259,7 +259,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "cellMark": "M-3",
                         "pathHierarchy": "M-1-003",
                         "level": 3,
-                        "capacityOfCertifiedCell": 1,
+                        "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
                         "maxCapacity": 1,
                         "inCellSanitation": true,
@@ -270,7 +270,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                   {
                     "pathHierarchy": "M-2",
                     "level": 2,
-                    "capacityOfCertifiedCell": 3,
+                    "certifiedNormalAccommodation": 3,
                     "workingCapacity": 3,
                     "maxCapacity": 3,
                     "locationType": "LANDING",
@@ -279,7 +279,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "cellMark": "M-1",
                         "pathHierarchy": "M-2-001",
                         "level": 3,
-                        "capacityOfCertifiedCell": 1,
+                        "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
                         "maxCapacity": 1,
                         "inCellSanitation": true,
@@ -289,7 +289,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "cellMark": "M-2",
                         "pathHierarchy": "M-2-002",
                         "level": 3,
-                        "capacityOfCertifiedCell": 1,
+                        "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
                         "maxCapacity": 1,
                         "inCellSanitation": true,
@@ -299,7 +299,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "cellMark": "M-3",
                         "pathHierarchy": "M-2-003",
                         "level": 3,
-                        "capacityOfCertifiedCell": 1,
+                        "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
                         "maxCapacity": 1,
                         "inCellSanitation": true,
@@ -366,7 +366,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                  "workingCapacity": 6
               },
               "certification": {
-                "capacityOfCertifiedCell": 6,
+                "certifiedNormalAccommodation": 6,
                 "certified": false
               },
               "status": "DRAFT"
@@ -428,7 +428,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                 "workingCapacity": 0
               },
               "certification": {
-                "capacityOfCertifiedCell": 6,
+                "certifiedNormalAccommodation": 6,
                 "certified": true
               },
               "status": "INACTIVE",

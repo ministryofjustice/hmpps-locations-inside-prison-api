@@ -150,7 +150,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       buildCell(
         pathHierarchy = "A-1-001",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
         prisonId = "NMI",
         residentialHousingType = ResidentialHousingType.OTHER_USE,
         linkedTransaction = linkedTransaction,
@@ -210,7 +210,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       buildCell(
         pathHierarchy = "Z-1-001",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
         linkedTransaction = linkedTransaction,
       ),
     )
@@ -218,7 +218,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       buildCell(
         pathHierarchy = "Z-1-002",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
         residentialAttributeValues = setOf(
           ResidentialAttributeValue.CAT_A,
           ResidentialAttributeValue.SAFE_CELL,
@@ -242,7 +242,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         pathHierarchy = "B-A-001",
         status = LocationStatus.INACTIVE,
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
         linkedTransaction = linkedTransaction,
       ),
@@ -252,7 +252,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       buildCell(
         pathHierarchy = "Z-1-003",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
         status = LocationStatus.ARCHIVED,
         linkedTransaction = linkedTransaction,
       ),

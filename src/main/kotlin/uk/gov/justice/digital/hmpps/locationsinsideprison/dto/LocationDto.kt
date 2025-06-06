@@ -402,9 +402,16 @@ data class Certification(
     required = false,
   )
   val certified: Boolean = false,
-  @Schema(description = "Indicates the capacity of the certified location (cell)", example = "1", required = false)
+  @Schema(description = "Old name for CNA (Certified normal accommodation)", example = "1", required = false, deprecated = true)
+  @Deprecated("Use certifiedNormalAccommodation instead")
   val capacityOfCertifiedCell: Int = 0,
+
+  @Schema(description = "CNA (Certified normal accommodation)", example = "1", required = false)
+  val certifiedNormalAccommodation: Int? = null,
 ) {
+
+  @JsonIgnore
+  fun getCNA() = certifiedNormalAccommodation ?: capacityOfCertifiedCell
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -413,14 +420,14 @@ data class Certification(
     other as Certification
 
     if (certified != other.certified) return false
-    if (capacityOfCertifiedCell != other.capacityOfCertifiedCell) return false
+    if (getCNA() != other.getCNA()) return false
 
     return true
   }
 
   override fun hashCode(): Int {
     var result = certified.hashCode()
-    result = 31 * result + capacityOfCertifiedCell
+    result = 31 * result + getCNA()
     return result
   }
 }
@@ -509,7 +516,7 @@ data class CreateResidentialLocationRequest(
       certification =
       CertificationJPA(
         certified = if (createInDraft) false else certified,
-        capacityOfCertifiedCell = capacityNormalAccommodation,
+        certifiedNormalAccommodation = capacityNormalAccommodation,
       ),
     ).apply {
       if (request.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {

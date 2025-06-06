@@ -26,7 +26,7 @@ classDiagram
     }
     class certification {
         boolean certified
-        integer capacity_of_certified_cell
+        integer certified_normal_accommodation
         integer id
     }
     class location {
@@ -279,7 +279,7 @@ class Capacity {
 }
 class Certification {
   + toDto() Certification
-   Int capacityOfCertifiedCell
+   Int certifiedNormalAccommodation
    Long? id
    Boolean certified
 }
