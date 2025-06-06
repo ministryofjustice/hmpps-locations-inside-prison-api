@@ -108,7 +108,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       prisonId = "ZZGHI",
       pathHierarchy = "B-1-001",
       capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-      certification = Certification(certified = true, capacityOfCertifiedCell = 1),
+      certification = Certification(certified = true, certifiedNormalAccommodation = 1),
       residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       linkedTransaction = linkedTransaction,
@@ -403,7 +403,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 code = "001",
                 attributes = setOf(ResidentialAttributeValue.CAT_A),
                 capacity = CapacityDTO(3, 3),
-                certification = CertificationDTO(false, 0),
+                certification = CertificationDTO(certified = false, capacityOfCertifiedCell = 0),
               ),
             ),
           )
@@ -431,7 +431,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               },
               "certification": {
                 "certified": false,
-                "capacityOfCertifiedCell": 0
+                "certifiedNormalAccommodation": 0
               }
             }
           """,
@@ -474,7 +474,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               },
               "certification": {
                 "certified": false,
-                "capacityOfCertifiedCell": 0
+                "certifiedNormalAccommodation": 0
               }
             }
           """,
@@ -535,7 +535,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 code = "012",
                 locationType = LocationType.CELL,
                 capacity = CapacityDTO(1, 1),
-                certification = CertificationDTO(true, 1),
+                certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 1),
               ),
             ),
           )
@@ -560,7 +560,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 1
+                "certifiedNormalAccommodation": 1
               }
             }
           """,
@@ -594,7 +594,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 1
+                "certifiedNormalAccommodation": 1
               }
             }
           """,
@@ -616,7 +616,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
                 locationType = LocationType.CELL,
                 capacity = CapacityDTO(1, 1),
-                certification = CertificationDTO(true, 1),
+                certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 1),
               ),
             ),
           )
@@ -641,7 +641,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 1
+                "certifiedNormalAccommodation": 1
               }
             }
           """,

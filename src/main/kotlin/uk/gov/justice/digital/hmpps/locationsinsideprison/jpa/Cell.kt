@@ -33,6 +33,7 @@ class Cell(
   pathHierarchy: String,
   locationType: LocationType = LocationType.CELL,
   prisonId: String,
+  prisonConfiguration: PrisonConfiguration? = null,
   status: LocationStatus,
   parent: Location? = null,
   localName: String? = null,
@@ -83,6 +84,7 @@ class Cell(
   pathHierarchy = pathHierarchy,
   locationType = locationType,
   prisonId = prisonId,
+  prisonConfiguration = prisonConfiguration,
   status = status,
   parent = parent,
   localName = localName,
@@ -106,23 +108,45 @@ class Cell(
     capacity?.maxCapacity
   }
 
-  fun getCapacityOfCertifiedCell() = certification?.capacityOfCertifiedCell
+  fun getCertifiedNormalAccommodation(includePendingChange: Boolean = false) = if (includePendingChange) {
+    pendingChange?.certifiedNormalAccommodation ?: certification?.certifiedNormalAccommodation
+  } else {
+    certification?.certifiedNormalAccommodation
+  }
 
-  fun setCapacityOfCertifiedCell(capacityOfCertifiedCell: Int, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Boolean {
+  fun setCertifiedNormalAccommodation(certifiedNormalAccommodation: Int, userOrSystemInContext: String, updatedAt: LocalDateTime, linkedTransaction: LinkedTransaction): Boolean {
     if (isLocationLocked()) {
       throw LockedLocationCannotBeUpdatedException(getKey())
     }
+
+    if (isCertificationApprovalProcessRequired() && getCertifiedNormalAccommodation(includePendingChange = true) != certifiedNormalAccommodation) {
+      if (pendingChange == null) {
+        pendingChange = PendingLocationChange()
+      }
+      pendingChange?.let { it.certifiedNormalAccommodation = certifiedNormalAccommodation }
+    } else {
+      if (setCna(certifiedNormalAccommodation, userOrSystemInContext, updatedAt, linkedTransaction)) return true
+    }
+    return false
+  }
+
+  private fun setCna(
+    certifiedNormalAccommodation: Int,
+    userOrSystemInContext: String,
+    updatedAt: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+  ): Boolean {
     addHistory(
       LocationAttribute.CERTIFIED_CAPACITY,
-      certification?.capacityOfCertifiedCell?.toString(),
-      capacityOfCertifiedCell.toString(),
+      certification?.certifiedNormalAccommodation?.toString(),
+      certifiedNormalAccommodation.toString(),
       userOrSystemInContext,
-      LocalDateTime.now(clock),
+      updatedAt,
       linkedTransaction,
     )
 
     if (certification != null) {
-      certification!!.capacityOfCertifiedCell = capacityOfCertifiedCell
+      certification!!.certifiedNormalAccommodation = certifiedNormalAccommodation
       return true
     }
     return false
@@ -293,9 +317,9 @@ class Cell(
   ) {
     val oldCertification = getCertifiedSummary(this.certification)
     if (certification != null) {
-      certification?.setCertification(true, certification?.capacityOfCertifiedCell ?: 0)
+      certification?.setCertification(true, certification?.certifiedNormalAccommodation ?: 0)
     } else {
-      certification = Certification(certified = true, capacityOfCertifiedCell = 0)
+      certification = Certification(certified = true, certifiedNormalAccommodation = 0)
     }
 
     addHistory(
@@ -322,17 +346,17 @@ class Cell(
     )
     addHistory(
       LocationAttribute.CERTIFIED_CAPACITY,
-      certification?.capacityOfCertifiedCell?.toString(),
-      (certification?.capacityOfCertifiedCell ?: 0).toString(),
+      certification?.certifiedNormalAccommodation?.toString(),
+      (certification?.certifiedNormalAccommodation ?: 0).toString(),
       userOrSystemInContext,
       LocalDateTime.now(clock),
       linkedTransaction,
     )
 
     if (certification != null) {
-      certification?.setCertification(false, certification?.capacityOfCertifiedCell ?: 0)
+      certification?.setCertification(false, certification?.certifiedNormalAccommodation ?: 0)
     } else {
-      certification = Certification(certified = false, capacityOfCertifiedCell = 0)
+      certification = Certification(certified = false, certifiedNormalAccommodation = 0)
     }
 
     this.updatedBy = userOrSystemInContext
@@ -450,8 +474,8 @@ class Cell(
     clock: Clock,
     linkedTransaction: LinkedTransaction,
   ) {
-    upsert.certification?.let {
-      with(it) {
+    upsert.certification?.let { cert ->
+      with(cert) {
         val oldCertification = if (certified) {
           "Certified"
         } else {
@@ -459,16 +483,16 @@ class Cell(
         }
         addHistory(
           LocationAttribute.CERTIFIED_CAPACITY,
-          certification?.capacityOfCertifiedCell?.toString(),
-          capacityOfCertifiedCell.toString(),
+          certification?.certifiedNormalAccommodation?.toString(),
+          getCNA().toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
           linkedTransaction,
         )
         if (certification != null) {
-          certification?.setCertification(certified, capacityOfCertifiedCell)
+          certification?.setCertification(certified, getCNA())
         } else {
-          certification = Certification(certified = certified, capacityOfCertifiedCell = capacityOfCertifiedCell)
+          certification = Certification(certified = certified, certifiedNormalAccommodation = getCNA())
         }
 
         addHistory(
@@ -534,16 +558,27 @@ class Cell(
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
-    pendingChange?.capacity?.let { cap ->
-      setCapacity(
-        maxCapacity = cap.maxCapacity,
-        workingCapacity = cap.workingCapacity,
-        userOrSystemInContext = approvedBy,
-        amendedDate = approvedDate,
-        linkedTransaction = linkedTransaction,
-      )
+    pendingChange?.let { pc ->
+      with(pc) {
+        capacity?.let { cap ->
+          setCapacity(
+            maxCapacity = cap.maxCapacity,
+            workingCapacity = cap.workingCapacity,
+            userOrSystemInContext = approvedBy,
+            amendedDate = approvedDate,
+            linkedTransaction = linkedTransaction,
+          )
+        }
+        certifiedNormalAccommodation?.let { cna ->
+          setCna(
+            certifiedNormalAccommodation = cna,
+            linkedTransaction = linkedTransaction,
+            userOrSystemInContext = approvedBy,
+            updatedAt = approvedDate,
+          )
+        }
+      }
     }
-
     if (isDraft()) {
       certifyCell(approvedBy, approvedDate, linkedTransaction)
     }

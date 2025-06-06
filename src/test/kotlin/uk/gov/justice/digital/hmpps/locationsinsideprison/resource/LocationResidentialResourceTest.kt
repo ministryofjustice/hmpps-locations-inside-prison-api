@@ -103,7 +103,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "workingCapacity": 4
               },
               "certification": {
-                "capacityOfCertifiedCell": 4
+                "certifiedNormalAccommodation": 4
               },
               "accommodationTypes": [
                 "NORMAL_ACCOMMODATION",
@@ -130,7 +130,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "workingCapacity": 0
               },
               "certification": {
-                "capacityOfCertifiedCell": 2
+                "certifiedNormalAccommodation": 2
               }
             }
           ]
@@ -211,7 +211,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   "workingCapacity": 4
                 },
                 "certification": {
-                  "capacityOfCertifiedCell": 4
+                  "certifiedNormalAccommodation": 4
                 },
                 "accommodationTypes": [
                   "NORMAL_ACCOMMODATION",
@@ -238,7 +238,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": false,
-                    "capacityOfCertifiedCell": 0
+                    "certifiedNormalAccommodation": 0
                   },
 
                   "active": true,
@@ -323,7 +323,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     },
                     "certification": {
                       "certified": true,
-                      "capacityOfCertifiedCell": 2
+                      "certifiedNormalAccommodation": 2
                     },
                     "accommodationTypes": [
                       "NORMAL_ACCOMMODATION"
@@ -348,7 +348,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     },
                     "certification": {
                       "certified": true,
-                      "capacityOfCertifiedCell": 2
+                      "certifiedNormalAccommodation": 2
                     },
                     "accommodationTypes": [
                       "CARE_AND_SEPARATION"
@@ -433,7 +433,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "workingCapacity": 0
                   },
                   "certification": {
-                    "capacityOfCertifiedCell": 2
+                    "certifiedNormalAccommodation": 2
                   },
                   "accommodationTypes": [
                     "NORMAL_ACCOMMODATION"
@@ -576,7 +576,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 2
+                "certifiedNormalAccommodation": 2
               },
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
@@ -658,7 +658,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "capacityOfCertifiedCell": 2
+                "certifiedNormalAccommodation": 0
               }
             }
           """,
@@ -693,7 +693,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 2
+                "certifiedNormalAccommodation": 2
               },
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
@@ -1309,7 +1309,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 },
                 "certification": {
                   "certified": true,
-                  "capacityOfCertifiedCell": 4
+                  "certifiedNormalAccommodation": 4
                 },
                 "isResidential": true,
                 "key": "MDI-B-1"
@@ -1335,7 +1335,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "capacityOfCertifiedCell": 0
+                "certifiedNormalAccommodation": 0
               },
               "childLocations": [
                  {
@@ -1377,7 +1377,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": false,
-                    "capacityOfCertifiedCell": 0
+                    "certifiedNormalAccommodation": 0
                   },
                   "childLocations": []
                 }
@@ -1404,7 +1404,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 6
+                "certifiedNormalAccommodation": 6
               },
               "childLocations": [
                 {
@@ -1420,7 +1420,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 2
+                    "certifiedNormalAccommodation": 2
                   },
                   "active": true,
                   "deactivatedByParent": false,
@@ -1438,7 +1438,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       },
                       "active": false,
                       "deactivatedByParent": false,
@@ -1463,7 +1463,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 4
+                    "certifiedNormalAccommodation": 4
                   },
                   "childLocations": [
                     {
@@ -1476,7 +1476,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       }
                     },
                     {
@@ -1489,7 +1489,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       }
                     },
                   {
@@ -1535,7 +1535,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 },
                 "certification": {
                   "certified": true,
-                  "capacityOfCertifiedCell": 4
+                  "certifiedNormalAccommodation": 4
                 },
                 "isResidential": true,
                 "key": "MDI-B-1"
@@ -1561,7 +1561,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "capacityOfCertifiedCell": 0
+                "certifiedNormalAccommodation": 0
               },
               "childLocations": [
                  {
@@ -1603,7 +1603,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": false,
-                    "capacityOfCertifiedCell": 0
+                    "certifiedNormalAccommodation": 0
                   },
                   "childLocations": []
                 }
@@ -1630,7 +1630,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 6
+                "certifiedNormalAccommodation": 6
               },
               "childLocations": [
                 {
@@ -1646,7 +1646,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 2
+                    "certifiedNormalAccommodation": 2
                   },
                   "active": true,
                   "deactivatedByParent": false,
@@ -1664,7 +1664,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       },
                       "active": false,
                       "deactivatedByParent": false,
@@ -1689,7 +1689,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 4
+                    "certifiedNormalAccommodation": 4
                   },
                   "childLocations": [
                     {
@@ -1702,7 +1702,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       }
                     },
                     {
@@ -1715,7 +1715,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       }
                     },
                   {
@@ -1773,7 +1773,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 },
                 "certification": {
                   "certified": true,
-                  "capacityOfCertifiedCell": 4
+                  "certifiedNormalAccommodation": 4
                 },
                 "isResidential": true,
                 "key": "MDI-Y"
@@ -1799,7 +1799,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "capacityOfCertifiedCell": 0
+                "certifiedNormalAccommodation": 0
               },
               "childLocations": [
                  {
@@ -1841,7 +1841,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": false,
-                    "capacityOfCertifiedCell": 0
+                    "certifiedNormalAccommodation": 0
                   },
                   "childLocations": []
                 }
@@ -1869,7 +1869,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 4
+                "certifiedNormalAccommodation": 4
               },
               "childLocations": [
                 {
@@ -2069,7 +2069,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 },
                 "certification": {
                   "certified": true,
-                  "capacityOfCertifiedCell": 4
+                  "certifiedNormalAccommodation": 4
                 },
                 "isResidential": true,
                 "key": "MDI-B-1"
@@ -2096,7 +2096,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "capacityOfCertifiedCell": 0
+                "certifiedNormalAccommodation": 0
               },
               "childLocations": [
                  {
@@ -2138,7 +2138,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": false,
-                    "capacityOfCertifiedCell": 0
+                    "certifiedNormalAccommodation": 0
                   },
                   "childLocations": []
                 }
@@ -2165,7 +2165,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 6
+                "certifiedNormalAccommodation": 6
               },
               "childLocations": [
                 {
@@ -2181,7 +2181,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 2
+                    "certifiedNormalAccommodation": 2
                   },
                   "active": true,
                   "deactivatedByParent": false,
@@ -2199,7 +2199,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       },
                       "active": false,
                       "deactivatedByParent": false,
@@ -2224,7 +2224,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 4
+                    "certifiedNormalAccommodation": 4
                   },
                   "childLocations": [
                     {
@@ -2237,7 +2237,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       }
                     },
                     {
@@ -2250,7 +2250,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 2
+                        "certifiedNormalAccommodation": 2
                       }
                     },
                    {

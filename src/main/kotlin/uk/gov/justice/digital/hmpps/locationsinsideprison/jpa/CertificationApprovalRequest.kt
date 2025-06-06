@@ -9,8 +9,11 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
+import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
+import java.util.SortedSet
 import java.util.UUID
 
 @Entity
@@ -48,6 +51,19 @@ open class CertificationApprovalRequest(
 
   @Column(nullable = true)
   var comments: String? = null,
+
+  @Column(nullable = false)
+  var certifiedNormalAccommodationChange: Int = 0,
+
+  @Column(nullable = false)
+  var workingCapacityChange: Int = 0,
+
+  @Column(nullable = false)
+  var maxCapacityChange: Int = 0,
+
+  @SortNatural
+  @OneToMany(mappedBy = "certificationApprovalRequest", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  var locations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
 
 ) {
   fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {

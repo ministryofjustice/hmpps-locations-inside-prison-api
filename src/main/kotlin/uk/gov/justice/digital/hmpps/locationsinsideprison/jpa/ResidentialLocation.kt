@@ -36,6 +36,7 @@ open class ResidentialLocation(
   pathHierarchy: String,
   locationType: LocationType,
   prisonId: String,
+  prisonConfiguration: PrisonConfiguration? = null,
   status: LocationStatus,
   parent: Location? = null,
   localName: String? = null,
@@ -67,6 +68,7 @@ open class ResidentialLocation(
   pathHierarchy = pathHierarchy,
   locationType = locationType,
   prisonId = prisonId,
+  prisonConfiguration = prisonConfiguration,
   status = status,
   parent = parent,
   localName = localName,
@@ -106,7 +108,7 @@ open class ResidentialLocation(
   fun getWorkingCapacityIgnoreParent(): Int = cellLocations().filter { it.isActive() }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
-  fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+  private fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
   fun calcWorkingCapacity(includeDraft: Boolean = false): Int = cellLocations().filter { it.isActiveAndAllParentsActive() || (includeDraft && it.isDraft()) }
@@ -115,8 +117,8 @@ open class ResidentialLocation(
   fun calcMaxCapacity(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
     .sumOf { it.getMaxCapacity(includePendingOrDraft) ?: 0 }
 
-  private fun getCapacityOfCertifiedCell(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
-    .sumOf { it.getCapacityOfCertifiedCell() ?: 0 }
+  private fun calcCertifiedNormalAccommodation(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
+    .sumOf { it.getCertifiedNormalAccommodation(includePendingOrDraft) ?: 0 }
 
   private fun hasCertifiedCells(): Boolean = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .any { it.isCertified() }
@@ -181,7 +183,13 @@ open class ResidentialLocation(
       locationKey = this.getKey(),
       requestedBy = requestedBy,
       requestedDate = requestedDate,
-    )
+      maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
+      workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
+      certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
+    ).apply {
+      locations = sortedSetOf(toCertificationApprovalRequestLocation(this))
+    }
+
     approvalRequests.add(approvalRequest)
     return approvalRequest
   }
@@ -426,7 +434,6 @@ open class ResidentialLocation(
         null
       },
       level = getLevel(),
-      status = getDerivedStatus(),
       inCellSanitation = if (this is Cell) {
         inCellSanitation
       } else {
@@ -438,7 +445,43 @@ open class ResidentialLocation(
       } else {
         calcWorkingCapacity()
       },
-      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
+      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name },
+      convertedCellType = if (this is Cell && isConvertedCell()) {
+        convertedCellType
+      } else {
+        null
+      },
+      subLocations = subLocations.toSortedSet(),
+    )
+  }
+
+  fun toCertificationApprovalRequestLocation(certificationApprovalRequest: CertificationApprovalRequest): CertificationApprovalRequestLocation {
+    val subLocations: List<CertificationApprovalRequestLocation> = childLocations
+      .filterIsInstance<ResidentialLocation>()
+      .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
+      .map { it.toCertificationApprovalRequestLocation(certificationApprovalRequest) }
+
+    return CertificationApprovalRequestLocation(
+      certificationApprovalRequest = certificationApprovalRequest,
+      locationType = locationType,
+      locationCode = getCode(),
+      pathHierarchy = getPathHierarchy(),
+      localName = localName?.capitalizeWords(),
+      cellMark = if (this is Cell) {
+        cellMark
+      } else {
+        null
+      },
+      level = getLevel(),
+      inCellSanitation = if (this is Cell) {
+        inCellSanitation
+      } else {
+        null
+      },
+      maxCapacity = calcMaxCapacity(true),
+      workingCapacity = calcWorkingCapacity(true),
+      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(true),
       specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name },
       convertedCellType = if (this is Cell && isConvertedCell()) {
         convertedCellType
@@ -487,7 +530,8 @@ open class ResidentialLocation(
 
     certification = CertificationDto(
       certified = hasCertifiedCells(),
-      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+      capacityOfCertifiedCell = calcCertifiedNormalAccommodation(),
+      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
     ),
 
     accommodationTypes = getAccommodationTypes().map { it }.distinct().sortedBy { it.sequence },
@@ -517,7 +561,8 @@ open class ResidentialLocation(
 
     certification = CertificationDto(
       certified = hasCertifiedCells(),
-      capacityOfCertifiedCell = getCapacityOfCertifiedCell(),
+      capacityOfCertifiedCell = calcCertifiedNormalAccommodation(),
+      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
     ),
 
     attributes = getAttributes().map { it.attributeValue }.distinct().sortedBy { it.name },

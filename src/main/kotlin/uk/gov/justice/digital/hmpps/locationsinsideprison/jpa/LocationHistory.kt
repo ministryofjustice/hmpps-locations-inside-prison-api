@@ -109,7 +109,7 @@ enum class LocationAttribute(
   CODE(description = "Code"),
   LOCATION_TYPE(description = "Location type"),
   RESIDENTIAL_HOUSING_TYPE(description = "Residential housing type"),
-  CERTIFIED_CAPACITY(description = "Baseline certified capacity"),
+  CERTIFIED_CAPACITY(description = "Certified normal accommodation"),
   PARENT_LOCATION(description = "Parent location"),
   ORDER_WITHIN_PARENT_LOCATION(description = "Order within parent location"),
   COMMENTS(description = "Comments"),

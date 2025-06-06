@@ -161,7 +161,7 @@ data class CreateEntireWingRequest(
           ),
           certification = Certification(
             certified = status != LocationStatus.DRAFT,
-            capacityOfCertifiedCell = defaultCellCapacity,
+            certifiedNormalAccommodation = defaultCellCapacity,
           ),
         ).apply {
           addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction = linkedTransaction)

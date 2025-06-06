@@ -65,8 +65,8 @@ class CertificationService(
       now,
       username,
     )
-    val approvalRequest = location.requestApproval(requestedBy = username, requestedDate = now, linkedTransaction = linkedTransaction)
-    certificationApprovalRequestRepository.save(approvalRequest)
+    val approvalRequest = certificationApprovalRequestRepository.save(location.requestApproval(requestedBy = username, requestedDate = now, linkedTransaction = linkedTransaction))
+
     telemetryClient.trackEvent(
       "certification-approval-requested",
       mapOf(
@@ -79,7 +79,7 @@ class CertificationService(
     )
 
     log.info("Certification approval requested (${approvalRequest.id}) for location ${location.getKey()} by $username")
-    return CertificationApprovalRequestDto.from(approvalRequest)
+    return CertificationApprovalRequestDto.from(approvalRequest, showLocations = true)
   }
 
   fun approveCertificationRequest(approveCertificationRequest: ApproveCertificationRequestDto): ApprovalResponse {

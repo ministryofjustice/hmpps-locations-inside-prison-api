@@ -304,7 +304,7 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         .jsonPath("$.locations").isArray()
         .jsonPath("$.totalMaxCapacity").isEqualTo(12)
         .jsonPath("$.totalWorkingCapacity").isEqualTo(12)
-        .jsonPath("$.totalCapacityOfCertifiedCell").isEqualTo(12)
+        .jsonPath("$.totalCertifiedNormalAccommodation").isEqualTo(12)
         // Verify that there are locations in the response
         .jsonPath("$.locations.length()").isEqualTo(2)
         .jsonPath("$.locations[0].workingCapacity").isEqualTo(6)
@@ -335,7 +335,7 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         .jsonPath("$.locations").isArray()
         .jsonPath("$.totalMaxCapacity").isEqualTo(14)
         .jsonPath("$.totalWorkingCapacity").isEqualTo(6)
-        .jsonPath("$.totalCapacityOfCertifiedCell").isEqualTo(12)
+        .jsonPath("$.totalCertifiedNormalAccommodation").isEqualTo(12)
         // Verify that there are locations in the response
         .jsonPath("$.locations.length()").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations.length()").isEqualTo(2)

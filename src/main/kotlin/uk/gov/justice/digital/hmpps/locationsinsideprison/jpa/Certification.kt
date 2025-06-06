@@ -14,12 +14,13 @@ class Certification(
   val id: Long? = null,
 
   var certified: Boolean = false,
-  var capacityOfCertifiedCell: Int = 0,
+  var certifiedNormalAccommodation: Int = 0,
 ) {
   fun toDto() = (
     CertificationDTO(
       certified = certified,
-      capacityOfCertifiedCell = capacityOfCertifiedCell,
+      capacityOfCertifiedCell = certifiedNormalAccommodation,
+      certifiedNormalAccommodation = certifiedNormalAccommodation,
     )
     )
 
@@ -30,23 +31,23 @@ class Certification(
     other as Certification
 
     if (certified != other.certified) return false
-    if (capacityOfCertifiedCell != other.capacityOfCertifiedCell) return false
+    if (certifiedNormalAccommodation != other.certifiedNormalAccommodation) return false
 
     return true
   }
 
-  fun setCertification(certified: Boolean, capacityOfCertifiedCell: Int) {
+  fun setCertification(certified: Boolean, certifiedNormalAccommodation: Int) {
     this.certified = certified
-    this.capacityOfCertifiedCell = capacityOfCertifiedCell
+    this.certifiedNormalAccommodation = certifiedNormalAccommodation
   }
 
   override fun hashCode(): Int {
     var result = certified.hashCode()
-    result = 31 * result + capacityOfCertifiedCell
+    result = 31 * result + certifiedNormalAccommodation
     return result
   }
 
-  override fun toString(): String = "Certification(certified=$certified, capacityOfCertifiedCell=$capacityOfCertifiedCell)"
+  override fun toString(): String = "Certification(certified=$certified, certifiedNormalAccommodation=$certifiedNormalAccommodation)"
 }
 
 fun getCertifiedSummary(certification: Certification?) = if (certification?.certified == true) {

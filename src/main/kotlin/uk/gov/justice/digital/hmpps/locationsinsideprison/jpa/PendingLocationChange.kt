@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
 import jakarta.persistence.CascadeType
+import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
@@ -16,4 +17,7 @@ class PendingLocationChange(
 
   @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
   var capacity: Capacity? = null,
+
+  @Column(nullable = true)
+  var certifiedNormalAccommodation: Int? = null,
 )

@@ -36,9 +36,21 @@ data class CertificationApprovalRequestDto(
 
   @Schema(description = "Comments about the approval or rejection", required = false)
   val comments: String? = null,
+
+  @Schema(description = "Change in certified normal accommodation", example = "1", required = true)
+  val certifiedNormalAccommodationChange: Int = 0,
+
+  @Schema(description = "Change in working capacity", example = "1", required = true)
+  val workingCapacityChange: Int = 0,
+
+  @Schema(description = "Change in maximum capacity", example = "1", required = true)
+  val maxCapacityChange: Int = 0,
+
+  @Schema(description = "Locations affected by the approval", required = false)
+  val locations: List<CertificationApprovalRequestLocationDto>? = null,
 ) {
   companion object {
-    fun from(approvalRequest: CertificationApprovalRequest): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
+    fun from(approvalRequest: CertificationApprovalRequest, showLocations: Boolean = false): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
       id = approvalRequest.id!!,
       locationId = approvalRequest.location.id!!,
       locationKey = approvalRequest.locationKey,
@@ -48,6 +60,14 @@ data class CertificationApprovalRequestDto(
       approvedOrRejectedBy = approvalRequest.approvedOrRejectedBy,
       approvedOrRejectedDate = approvalRequest.approvedOrRejectedDate,
       comments = approvalRequest.comments,
+      certifiedNormalAccommodationChange = approvalRequest.certifiedNormalAccommodationChange,
+      workingCapacityChange = approvalRequest.workingCapacityChange,
+      maxCapacityChange = approvalRequest.maxCapacityChange,
+      locations = if (showLocations) {
+        approvalRequest.locations.filter { it.pathHierarchy == approvalRequest.location.getPathHierarchy() }.map { CertificationApprovalRequestLocationDto.from(it) }
+      } else {
+        null
+      },
     )
   }
 }

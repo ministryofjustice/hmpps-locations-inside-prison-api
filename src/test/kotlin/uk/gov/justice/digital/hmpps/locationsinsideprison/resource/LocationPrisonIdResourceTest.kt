@@ -742,7 +742,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "oldWorkingCapacity": 2,
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 2
+                    "certifiedNormalAccommodation": 2
                   },
                   "status": "INACTIVE",
                   "active": false,
@@ -803,7 +803,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "oldWorkingCapacity": 2,
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 2
+                    "certifiedNormalAccommodation": 2
                   },
                   "status": "INACTIVE",
                   "active": false,
@@ -911,7 +911,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "oldWorkingCapacity": 2,
                   "certification": {
                     "certified": true,
-                    "capacityOfCertifiedCell": 2
+                    "certifiedNormalAccommodation": 2
                   },
                   "status": "INACTIVE",
                   "active": false,

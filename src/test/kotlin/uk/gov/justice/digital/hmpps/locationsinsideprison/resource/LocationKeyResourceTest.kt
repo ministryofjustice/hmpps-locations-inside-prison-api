@@ -127,7 +127,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                               },
                               "certification": {
                                 "certified": true,
-                                "capacityOfCertifiedCell": 2
+                                "certifiedNormalAccommodation": 2
                               },
                               "isResidential": true,
                               "key": "MDI-Z-1-001"
@@ -146,7 +146,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                               },
                               "certification": {
                                 "certified": true,
-                                "capacityOfCertifiedCell": 2
+                                "certifiedNormalAccommodation": 2
                               },
                               "isResidential": true,
                               "key": "MDI-Z-1-002"
@@ -172,7 +172,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                           },
                           "certification": {
                             "certified": true,
-                            "capacityOfCertifiedCell": 4
+                            "certifiedNormalAccommodation": 4
                           },
                           "isResidential": true,
                           "key": "MDI-Z-1"
@@ -191,7 +191,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                           },
                           "certification": {
                             "certified": false,
-                            "capacityOfCertifiedCell": 0
+                            "certifiedNormalAccommodation": 0
                           },
                           "isResidential": true,
                           "key": "MDI-Z-2"
@@ -206,7 +206,7 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                       },
                       "certification": {
                         "certified": true,
-                        "capacityOfCertifiedCell": 4
+                        "certifiedNormalAccommodation": 4
                       },
                       "isResidential": true,
                       "key": "MDI-Z"

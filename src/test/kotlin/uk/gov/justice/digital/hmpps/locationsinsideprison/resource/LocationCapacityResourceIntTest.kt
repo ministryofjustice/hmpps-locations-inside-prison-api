@@ -87,7 +87,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
       buildCell(
         pathHierarchy = "Z-1-001",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 1),
-        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
         specialistCellType = SpecialistCellType.LOCATE_FLAT_CELL,
         linkedTransaction = linkedTransaction,
       ),
@@ -96,7 +96,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
       buildCell(
         pathHierarchy = "Z-1-002",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, capacityOfCertifiedCell = 2),
+        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
         specialistCellType = SpecialistCellType.LISTENER_CRISIS,
         linkedTransaction = linkedTransaction,
       ),
@@ -105,7 +105,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
       buildCell(
         pathHierarchy = "Z-2-001",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
-        certification = Certification(certified = true, capacityOfCertifiedCell = 1),
+        certification = Certification(certified = true, certifiedNormalAccommodation = 1),
         specialistCellType = SpecialistCellType.SAFE_CELL,
         linkedTransaction = linkedTransaction,
       ),
@@ -114,7 +114,7 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
       buildCell(
         pathHierarchy = "Z-2-002",
         capacity = Capacity(maxCapacity = 1, workingCapacity = 0),
-        certification = Certification(certified = false, capacityOfCertifiedCell = 0),
+        certification = Certification(certified = false, certifiedNormalAccommodation = 0),
         linkedTransaction = linkedTransaction,
       ),
     )

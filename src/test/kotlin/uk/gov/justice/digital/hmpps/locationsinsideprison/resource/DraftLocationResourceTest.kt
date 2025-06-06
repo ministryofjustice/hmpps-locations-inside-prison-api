@@ -180,7 +180,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "capacityOfCertifiedCell": 1
+                "certifiedNormalAccommodation": 0
               },
               "childLocations": [
                 {
@@ -197,7 +197,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": false,
-                    "capacityOfCertifiedCell": 1
+                    "certifiedNormalAccommodation": 0
                   },
                   "accommodationTypes": [
                     "NORMAL_ACCOMMODATION"
@@ -261,7 +261,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "capacityOfCertifiedCell": 1
+                "certifiedNormalAccommodation": 0
               },
               "childLocations": [
                 {
@@ -278,7 +278,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   },
                   "certification": {
                     "certified": false,
-                    "capacityOfCertifiedCell": 1
+                    "certifiedNormalAccommodation": 0
                   },
                   "accommodationTypes": [
                     "NORMAL_ACCOMMODATION"
@@ -343,7 +343,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": true,
-                "capacityOfCertifiedCell": 5
+                "certifiedNormalAccommodation": 4
               },
               "childLocations": [
                 {
@@ -409,7 +409,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               },
               "certification": {
                 "certified": false,
-                "capacityOfCertifiedCell": 0
+                "certifiedNormalAccommodation": 0
               },
               "childLocations": []
             }
@@ -639,7 +639,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
         cellMark = "$aboveLevelCode-%03d".format(index - 1 + startingCellNumber),
         maxCapacity = 1,
         workingCapacity = workingCap,
-        capacityNormalAccommodation = cna,
+        certifiedNormalAccommodation = cna,
         specialistCellTypes = specialistCellTypes,
         inCellSanitation = true,
       )

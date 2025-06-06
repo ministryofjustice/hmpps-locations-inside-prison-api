@@ -48,7 +48,7 @@ BEGIN
     SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_parent_path;
 
     INSERT INTO capacity (max_capacity, working_capacity) VALUES (p_max_cap, p_working_cap) returning id INTO v_capacity_id;
-    INSERT INTO certification (certified, capacity_of_certified_cell) VALUES (p_certified, p_max_cap)  returning id INTO v_certification_id;
+    INSERT INTO certification (certified, certified_normal_accommodation) VALUES (p_certified, p_max_cap)  returning id INTO v_certification_id;
 
     INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status,
                           capacity_id, certification_id,
