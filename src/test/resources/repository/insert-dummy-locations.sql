@@ -1,6 +1,6 @@
 DELETE FROM cell_certificate cascade;
 DELETE FROM certification_approval_request_location;
-DELETE FROM pending_location_change;
+UPDATE pending_location_change set approval_request_id = null;
 DELETE FROM certification_approval_request;
 DELETE FROM location;
 
