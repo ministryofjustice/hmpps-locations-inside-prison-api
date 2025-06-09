@@ -10,6 +10,7 @@ import org.junit.jupiter.api.TestFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
@@ -38,8 +39,8 @@ class CertificationResourceTest : CommonDataTestBase() {
 
   @BeforeEach
   override fun setUp() {
-    super.setUp()
     cellCertificateRepository.deleteAll()
+    super.setUp()
     approvalRequestId = getApprovalRequestId()
 
     // Create a new wing in Leeds prison
@@ -627,7 +628,7 @@ class CertificationResourceTest : CommonDataTestBase() {
 
         assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(3)
 
-        webTestClient.get().uri("/locations/key/LEI-A-1-001?includeChildren=true")
+        webTestClient.get().uri("/locations/key/LEI-A-1-001")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -643,6 +644,67 @@ class CertificationResourceTest : CommonDataTestBase() {
               "certification": {
                 "certifiedNormalAccommodation": 1,
                 "certified": true
+              },
+              "status": "ACTIVE"
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `after approval capacity is again back into pending`() {
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ApproveCertificationRequestDto(
+                approvalRequestReference = approvalRequestId,
+                comments = "All OK",
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        Assertions.assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(3)
+
+        val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
+        prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${aCell.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              Capacity(
+                workingCapacity = aCell.getWorkingCapacity() ?: 0,
+                maxCapacity = 10,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(3)
+
+        webTestClient.get().uri("/locations/key/LEI-A-1-001")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+              "key": "LEI-A-1-001",
+              "capacity": {
+                "maxCapacity": 3,
+                "workingCapacity": 1
+              },
+              "pendingCapacity": {
+                "maxCapacity": 10,
+                "workingCapacity": 1
               },
               "status": "ACTIVE"
               }

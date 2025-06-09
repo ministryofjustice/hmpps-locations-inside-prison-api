@@ -34,8 +34,8 @@ class CellCertificateResourceTest : CommonDataTestBase() {
 
   @BeforeEach
   override fun setUp() {
-    super.setUp()
     cellCertificateRepository.deleteAll()
+    super.setUp()
 
     // Create a new wing in Leeds prison
     mWing = repository.saveAndFlush(

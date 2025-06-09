@@ -119,11 +119,17 @@ class Cell(
       throw LockedLocationCannotBeUpdatedException(getKey())
     }
 
-    if (isCertificationApprovalProcessRequired() && getCertifiedNormalAccommodation(includePendingChange = true) != certifiedNormalAccommodation) {
-      if (pendingChange == null) {
-        pendingChange = PendingLocationChange()
+    if (isCertificationApprovalProcessRequired()) {
+      if (pendingChange?.approvalRequest?.status == ApprovalRequestStatus.APPROVED) {
+        if (setCna(certifiedNormalAccommodation, userOrSystemInContext, updatedAt, linkedTransaction)) return true
+      } else {
+        if (getCertifiedNormalAccommodation(includePendingChange = true) != certifiedNormalAccommodation) {
+          if (pendingChange == null) {
+            pendingChange = PendingLocationChange()
+          }
+          pendingChange?.let { it.certifiedNormalAccommodation = certifiedNormalAccommodation }
+        }
       }
-      pendingChange?.let { it.certifiedNormalAccommodation = certifiedNormalAccommodation }
     } else {
       if (setCna(certifiedNormalAccommodation, userOrSystemInContext, updatedAt, linkedTransaction)) return true
     }
@@ -300,11 +306,19 @@ class Cell(
     if (isLocationLocked()) {
       throw LockedLocationCannotBeUpdatedException(getKey())
     }
-    if (isCertificationApprovalProcessRequired() && getMaxCapacity(includePendingChange = true) != maxCapacity) {
-      if (pendingChange == null) {
-        pendingChange = PendingLocationChange()
+    if (isCertificationApprovalProcessRequired()) {
+      if (pendingChange?.approvalRequest?.status == ApprovalRequestStatus.APPROVED) {
+        super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, amendedDate, linkedTransaction)
+      } else {
+        if (getMaxCapacity(includePendingChange = true) != maxCapacity) {
+          if (pendingChange == null) {
+            pendingChange = PendingLocationChange()
+          }
+          pendingChange?.let {
+            it.capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = getWorkingCapacity() ?: 0)
+          }
+        }
       }
-      pendingChange?.let { it.capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = getWorkingCapacity() ?: 0) }
     } else {
       super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, amendedDate, linkedTransaction)
     }
@@ -552,6 +566,10 @@ class Cell(
   }
 
   override fun hasPendingChanges() = super.hasPendingChanges() || pendingChange != null
+
+  override fun linkPendingChangesToApprovalRequest(approvalRequest: CertificationApprovalRequest) {
+    pendingChange?.let { it.approvalRequest = approvalRequest }
+  }
 
   override fun applyPendingChanges(
     approvedBy: String,

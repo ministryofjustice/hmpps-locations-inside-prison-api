@@ -188,6 +188,7 @@ open class ResidentialLocation(
       certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
     ).apply {
       locations = sortedSetOf(toCertificationApprovalRequestLocation(this))
+      linkPendingChangesToApprovalRequest(approvalRequest = this)
     }
 
     approvalRequests.add(approvalRequest)
@@ -205,6 +206,10 @@ open class ResidentialLocation(
     } else {
       throw LocationCannotBeUnlockedWhenNotLockedException(getKey())
     }
+  }
+
+  open fun linkPendingChangesToApprovalRequest(approvalRequest: CertificationApprovalRequest) {
+    childLocations.filterIsInstance<ResidentialLocation>().forEach { it.linkPendingChangesToApprovalRequest(approvalRequest = approvalRequest) }
   }
 
   open fun applyPendingChanges(
@@ -456,7 +461,7 @@ open class ResidentialLocation(
     )
   }
 
-  fun toCertificationApprovalRequestLocation(certificationApprovalRequest: CertificationApprovalRequest): CertificationApprovalRequestLocation {
+  private fun toCertificationApprovalRequestLocation(certificationApprovalRequest: CertificationApprovalRequest): CertificationApprovalRequestLocation {
     val subLocations: List<CertificationApprovalRequestLocation> = childLocations
       .filterIsInstance<ResidentialLocation>()
       .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
