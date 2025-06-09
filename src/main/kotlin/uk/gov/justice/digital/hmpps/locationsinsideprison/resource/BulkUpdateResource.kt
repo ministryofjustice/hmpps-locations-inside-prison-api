@@ -253,4 +253,11 @@ data class CellCapacityUpdateDetail(
   @field:Max(value = 99, message = "CNA cannot be greater than 99")
   @field:PositiveOrZero(message = "CNA cannot be less than 0")
   val certifiedNormalAccommodation: Int? = null,
+
+  @Schema(description = "Working capacity of the location", example = "A1-03", required = false)
+  @field:Size(max = 12, message = "Cell mark cannot be more than 12 characters")
+  val cellMark: String? = null,
+
+  @Schema(description = "Indicate that the cell as in-cell sanitation", example = "true", required = true)
+  val inCellSanitation: Boolean = true,
 )

@@ -67,41 +67,39 @@ open class CertificationApprovalRequest(
 
 ) {
   fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+    this.status = ApprovalRequestStatus.APPROVED
+    this.approvedOrRejectedBy = approvedBy
+    this.approvedOrRejectedDate = approvedDate
+    this.comments = comments
     location.approve(
       approvedDate = approvedDate,
       approvedBy = approvedBy,
       linkedTransaction = linkedTransaction,
     )
-    this.status = ApprovalRequestStatus.APPROVED
-    this.approvedOrRejectedBy = approvedBy
-    this.approvedOrRejectedDate = approvedDate
-    this.comments = comments
   }
 
   fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+    this.status = ApprovalRequestStatus.REJECTED
+    this.approvedOrRejectedBy = rejectedBy
+    this.approvedOrRejectedDate = rejectedDate
+    this.comments = comments
     location.reject(
       rejectedDate = rejectedDate,
       rejectedBy = rejectedBy,
       linkedTransaction = linkedTransaction,
     )
-
-    this.status = ApprovalRequestStatus.REJECTED
-    this.approvedOrRejectedBy = rejectedBy
-    this.approvedOrRejectedDate = rejectedDate
-    this.comments = comments
   }
 
   fun withdraw(withdrawnBy: String, withdrawnDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+    this.status = ApprovalRequestStatus.WITHDRAWN
+    this.approvedOrRejectedBy = withdrawnBy
+    this.approvedOrRejectedDate = withdrawnDate
+    this.comments = comments
     location.reject(
       rejectedDate = withdrawnDate,
       rejectedBy = withdrawnBy,
       linkedTransaction = linkedTransaction,
     )
-
-    this.status = ApprovalRequestStatus.WITHDRAWN
-    this.approvedOrRejectedBy = withdrawnBy
-    this.approvedOrRejectedDate = withdrawnDate
-    this.comments = comments
   }
 }
 

@@ -465,7 +465,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
       accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
       capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
       certified = true,
-      capacityNormalAccommodation = 2,
+      certifiedNormalAccommodation = 2,
       inCellSanitation = true,
     )
 

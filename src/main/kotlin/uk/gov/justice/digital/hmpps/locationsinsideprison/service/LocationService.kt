@@ -1041,6 +1041,9 @@ class LocationService(
                 changes.add(CapacityChanges(key, message = "Baseline CNA from $oldCertifiedNormalAccommodation ==> $certifiedNormalAccommodation", type = "CNA", previousValue = oldCertifiedNormalAccommodation, newValue = certifiedNormalAccommodation))
                 updatedCapacities.add(location)
               }
+
+              location.cellMark = cellMark
+              location.inCellSanitation = inCellSanitation
             }
           } else {
             changes.add(CapacityChanges(key, message = "Not a cell"))

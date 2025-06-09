@@ -991,7 +991,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         val aCell = leedsWing.cellLocations().find { it.getKey() == "LEI-A-1-001" } ?: throw RuntimeException("Cell not found")
         prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
 
-        val incMaxCap = aCell.getMaxCapacity()?.inc() ?: 1
+        var incMaxCap = aCell.getMaxCapacity()?.inc() ?: 1
         webTestClient.put().uri("/locations/${aCell.id}/capacity")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -1032,7 +1032,48 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
-        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(1)
+        incMaxCap += 1
+        webTestClient.put().uri("/locations/${aCell.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              CapacityDto(
+                workingCapacity = aCell.getWorkingCapacity() ?: 0,
+                maxCapacity = incMaxCap,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "key": "${aCell.getKey()}",
+                "id": "${aCell.id}",
+                "prisonId": "${aCell.prisonId}",
+                "code": "${aCell.getCode()}",
+                "pathHierarchy": "${aCell.getPathHierarchy()}",
+                "capacity": {
+                  "maxCapacity": ${aCell.getMaxCapacity()},
+                  "workingCapacity": ${aCell.getWorkingCapacity()}
+                },
+                "pendingCapacity": {
+                  "maxCapacity": $incMaxCap,
+                  "workingCapacity": ${aCell.getWorkingCapacity()}
+                },
+                "certification": {
+                  "certified": true
+                },
+                "status": "ACTIVE"
+
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(2)
       }
     }
   }

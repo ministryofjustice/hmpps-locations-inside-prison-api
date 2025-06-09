@@ -490,7 +490,9 @@ data class CreateResidentialLocationRequest(
   val specialistCellTypes: Set<SpecialistCellType>? = null,
 
   @Schema(description = "CNA value", required = false, defaultValue = "0")
-  val capacityNormalAccommodation: Int = 0,
+  @field:Max(value = 99, message = "CNA cannot be greater than 99")
+  @field:PositiveOrZero(message = "CNA cannot be less than 0")
+  val certifiedNormalAccommodation: Int = 0,
 
   @Schema(description = "In-cell sanitation", required = false, defaultValue = "false")
   val inCellSanitation: Boolean = false,
@@ -516,7 +518,7 @@ data class CreateResidentialLocationRequest(
       certification =
       CertificationJPA(
         certified = if (createInDraft) false else certified,
-        certifiedNormalAccommodation = capacityNormalAccommodation,
+        certifiedNormalAccommodation = certifiedNormalAccommodation,
       ),
     ).apply {
       if (request.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
