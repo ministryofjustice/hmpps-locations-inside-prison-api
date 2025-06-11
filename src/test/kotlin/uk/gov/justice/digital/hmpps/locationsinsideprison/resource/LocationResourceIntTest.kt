@@ -1813,7 +1813,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .bodyValue(
             jsonString(
               DeactivateLocationsRequest(
-                mapOf(
+                updatedBy = "DEACTIVATING_USER",
+                locations = mapOf(
                   cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Window smashed", proposedReactivationDate = proposedReactivationDate),
                   cell2.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.REFURBISHMENT, deactivationReasonDescription = "Fire", planetFmReference = "XXX122"),
                 ),
@@ -1848,6 +1849,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "usedFor": [
                     "STANDARD_ACCOMMODATION"
                   ],
+                  "deactivatedBy": "DEACTIVATING_USER",
+                  "lastModifiedBy": "DEACTIVATING_USER",
                   "status": "INACTIVE",
                   "active": false,
                   "deactivatedByParent": false,
@@ -1889,6 +1892,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   ],
                   "status": "INACTIVE",
                   "active": false,
+                  "deactivatedBy": "DEACTIVATING_USER",
+                  "lastModifiedBy": "DEACTIVATING_USER",
                   "deactivatedByParent": false,
                   "deactivatedDate": "$now",
                   "deactivatedReason": "REFURBISHMENT",

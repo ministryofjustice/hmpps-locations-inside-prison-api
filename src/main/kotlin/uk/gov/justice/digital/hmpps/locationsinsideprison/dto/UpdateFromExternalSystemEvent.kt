@@ -26,4 +26,5 @@ data class UpdateFromExternalSystemDeactivateEvent(
   val deactivationReasonDescription: String? = null,
   val proposedReactivationDate: LocalDate? = null,
   val planetFmReference: String? = null,
+  val updatedBy: String? = null,
 )
