@@ -20,13 +20,13 @@ class ApprovalRequestService(
       else -> certificationApprovalRequestRepository.findByPrisonIdOrderByRequestedDateDesc(prisonId)
     }
 
-    return requests.map { CertificationApprovalRequestDto.from(it) }
+    return requests.map { it.toDto() }
   }
 
   fun getApprovalRequest(id: UUID): CertificationApprovalRequestDto {
     val request = certificationApprovalRequestRepository.findById(id)
       .orElseThrow { ApprovalRequestNotFoundException(id) }
 
-    return CertificationApprovalRequestDto.from(request, showLocations = true)
+    return request.toDto(showLocations = true)
   }
 }

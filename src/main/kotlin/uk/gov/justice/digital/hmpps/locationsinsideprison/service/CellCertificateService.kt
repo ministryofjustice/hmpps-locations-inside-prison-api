@@ -27,9 +27,7 @@ class CellCertificateService(
 
   fun createCellCertificate(location: ResidentialLocation, approvedBy: String, approvedDate: LocalDateTime, approvalRequest: CertificationApprovalRequest): CellCertificateDto {
     // Mark any existing current certificates as not current
-    cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(location.prisonId)?.let { currentCertificate ->
-      currentCertificate.current = false
-    }
+    cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(location.prisonId)?.markAsNotCurrent()
 
     // Create the cell certificate
     val cellCertificate = cellCertificateRepository.save(
@@ -52,21 +50,21 @@ class CellCertificateService(
     )
 
     log.info("Created cell certificate for prison ${location.prisonId} with ID ${cellCertificate.id}")
-    return CellCertificateDto.from(cellCertificate)
+    return cellCertificate.toDto()
   }
 
   fun getCellCertificate(id: UUID): CellCertificateDto {
     val cellCertificate = cellCertificateRepository.findById(id)
       .orElseThrow { CellCertificateNotFoundException(id) }
-    return CellCertificateDto.from(cellCertificate, showLocations = true)
+    return cellCertificate.toDto(showLocations = true)
   }
 
   fun getCellCertificatesForPrison(prisonId: String): List<CellCertificateDto> = cellCertificateRepository.findByPrisonIdOrderByApprovedDateDesc(prisonId)
-    .map { CellCertificateDto.from(it) }
+    .map { it.toDto() }
 
   fun getCurrentCellCertificateForPrison(prisonId: String): CellCertificateDto {
     val cellCertificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(prisonId)
       ?: throw CurrentCellCertificateNotFoundException(prisonId)
-    return CellCertificateDto.from(cellCertificate, showLocations = true)
+    return cellCertificate.toDto(showLocations = true)
   }
 }

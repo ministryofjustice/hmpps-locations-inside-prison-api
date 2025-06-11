@@ -79,7 +79,7 @@ class CertificationService(
     )
 
     log.info("Certification approval requested (${approvalRequest.id}) for location ${location.getKey()} by $username")
-    return CertificationApprovalRequestDto.from(approvalRequest, showLocations = true)
+    return approvalRequest.toDto(showLocations = true)
   }
 
   fun approveCertificationRequest(approveCertificationRequest: ApproveCertificationRequestDto): ApprovalResponse {
@@ -127,7 +127,7 @@ class CertificationService(
     return ApprovalResponse(
       newLocation = newLocation,
       location = location.toDto(includeChildren = true, includeParent = true),
-      approvalRequest = CertificationApprovalRequestDto.from(approvalRequest),
+      approvalRequest = approvalRequest.toDto(),
     )
   }
 
@@ -173,7 +173,7 @@ class CertificationService(
     return ApprovalResponse(
       newLocation = newLocation,
       location = location.toDto(includeChildren = !newLocation, includeParent = !newLocation),
-      approvalRequest = CertificationApprovalRequestDto.from(approvalRequest),
+      approvalRequest = approvalRequest.toDto(),
     )
   }
 
@@ -220,7 +220,7 @@ class CertificationService(
     return ApprovalResponse(
       newLocation = newLocation,
       location = location.toDto(includeChildren = !newLocation, includeParent = !newLocation),
-      approvalRequest = CertificationApprovalRequestDto.from(approvalRequest),
+      approvalRequest = approvalRequest.toDto(),
     )
   }
 

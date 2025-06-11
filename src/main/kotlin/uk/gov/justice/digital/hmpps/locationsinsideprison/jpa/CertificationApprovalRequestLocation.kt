@@ -8,9 +8,9 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.util.SortedSet
 import java.util.UUID
@@ -20,53 +20,49 @@ open class CertificationApprovalRequestLocation(
   @Id
   @GeneratedUuidV7
   @Column(name = "id", updatable = false, nullable = false)
-  val id: UUID? = null,
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "certification_approval_request_id", nullable = false)
-  val certificationApprovalRequest: CertificationApprovalRequest,
+  private val id: UUID? = null,
 
   @Column(nullable = false)
-  val locationCode: String,
+  private val locationCode: String,
 
   @Column(nullable = true)
-  val cellMark: String? = null,
+  private val cellMark: String? = null,
 
   @Column(nullable = true)
-  val localName: String? = null,
+  private val localName: String? = null,
 
   @Column(nullable = false)
-  val pathHierarchy: String,
+  open val pathHierarchy: String,
 
   @Column(nullable = false)
-  val level: Int,
+  private val level: Int,
 
   @Column(nullable = true)
-  val certifiedNormalAccommodation: Int? = null,
+  private val certifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
-  val workingCapacity: Int? = null,
+  private val workingCapacity: Int? = null,
 
   @Column(nullable = true)
-  val maxCapacity: Int? = null,
+  private val maxCapacity: Int? = null,
 
   @Column(nullable = true)
-  val inCellSanitation: Boolean? = null,
+  private val inCellSanitation: Boolean? = null,
 
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
-  val locationType: LocationType,
+  private val locationType: LocationType,
 
   @Column(name = "specialist_cell_types", nullable = true)
-  val specialistCellTypes: String? = null,
+  private val specialistCellTypes: String? = null,
 
   @Column(nullable = true)
   @Enumerated(EnumType.STRING)
-  val convertedCellType: ConvertedCellType? = null,
+  private val convertedCellType: ConvertedCellType? = null,
 
   @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "parent_location_id")
-  val subLocations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
+  private val subLocations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
 
 ) : Comparable<CertificationApprovalRequestLocation> {
 
@@ -85,10 +81,25 @@ open class CertificationApprovalRequestLocation(
 
     other as CertificationApprovalRequestLocation
 
-    if (pathHierarchy != other.pathHierarchy) return false
-
-    return true
+    return pathHierarchy == other.pathHierarchy
   }
 
-  fun getSpecialistCellTypesAsList(): List<SpecialistCellType> = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) } ?: emptyList()
+  private fun getSpecialistCellTypesAsList(): List<SpecialistCellType> = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) } ?: emptyList()
+
+  fun toDto(): CertificationApprovalRequestLocationDto = CertificationApprovalRequestLocationDto(
+    id = id!!,
+    locationCode = locationCode,
+    cellMark = cellMark,
+    localName = localName,
+    pathHierarchy = pathHierarchy,
+    level = level,
+    certifiedNormalAccommodation = certifiedNormalAccommodation,
+    workingCapacity = workingCapacity,
+    maxCapacity = maxCapacity,
+    inCellSanitation = inCellSanitation,
+    locationType = locationType,
+    specialistCellTypes = getSpecialistCellTypesAsList().takeIf { it.isNotEmpty() },
+    convertedCellType = convertedCellType,
+    subLocations = subLocations.map { it.toDto() }.takeIf { it.isNotEmpty() },
+  )
 }

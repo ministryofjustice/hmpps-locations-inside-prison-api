@@ -2,7 +2,6 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CertificationApprovalRequestLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
@@ -52,23 +51,4 @@ data class CertificationApprovalRequestLocationDto(
 
   @Schema(description = "Sub-locations", required = false)
   val subLocations: List<CertificationApprovalRequestLocationDto>? = null,
-) {
-  companion object {
-    fun from(location: CertificationApprovalRequestLocation): CertificationApprovalRequestLocationDto = CertificationApprovalRequestLocationDto(
-      id = location.id!!,
-      locationCode = location.locationCode,
-      cellMark = location.cellMark,
-      localName = location.localName,
-      pathHierarchy = location.pathHierarchy,
-      level = location.level,
-      certifiedNormalAccommodation = location.certifiedNormalAccommodation,
-      workingCapacity = location.workingCapacity,
-      maxCapacity = location.maxCapacity,
-      inCellSanitation = location.inCellSanitation,
-      locationType = location.locationType,
-      specialistCellTypes = location.getSpecialistCellTypesAsList().takeIf { it.isNotEmpty() },
-      convertedCellType = location.convertedCellType,
-      subLocations = location.subLocations.map { from(it) }.takeIf { it.isNotEmpty() },
-    )
-  }
-}
+)
