@@ -2,8 +2,6 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificate
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificateLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
@@ -40,29 +38,12 @@ data class CellCertificateDto(
   @Schema(description = "Whether this is the current certificate", example = "true", required = true)
   val current: Boolean,
 
+  @Schema(description = "The approval request that created the certificate", required = true)
+  val approvedRequest: CertificationApprovalRequestDto,
+
   @Schema(description = "Locations in the certificate", required = true)
   val locations: List<CellCertificateLocationDto>? = null,
-) {
-  companion object {
-    fun from(cellCertificate: CellCertificate, showLocations: Boolean = false): CellCertificateDto = CellCertificateDto(
-      id = cellCertificate.id!!,
-      prisonId = cellCertificate.prisonId,
-      approvedBy = cellCertificate.approvedBy,
-      approvedDate = cellCertificate.approvedDate,
-      certificationApprovalRequestId = cellCertificate.certificationApprovalRequest.id!!,
-      totalWorkingCapacity = cellCertificate.totalWorkingCapacity,
-      totalMaxCapacity = cellCertificate.totalMaxCapacity,
-      totalCertifiedNormalAccommodation = cellCertificate.totalCertifiedNormalAccommodation,
-      current = cellCertificate.current,
-      locations = if (showLocations) {
-        cellCertificate.locations.filter { it.level == 1 } // Only include top-level locations
-          .map { CellCertificateLocationDto.from(it) }
-      } else {
-        null
-      },
-    )
-  }
-}
+)
 
 @Schema(description = "Cell Certificate Location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -95,6 +76,9 @@ data class CellCertificateLocationDto(
   @Schema(description = "Local name for the location, not used in cells", example = "Houseblock A")
   val localName: String? = null,
 
+  @Schema(description = "Cell mark", example = "T-01")
+  val cellMark: String? = null,
+
   @Schema(description = "Level within the hierarchy", example = "3", required = true)
   val level: Int,
 
@@ -103,21 +87,4 @@ data class CellCertificateLocationDto(
 
   @Schema(description = "Sub locations within this cell certificate location")
   val subLocations: List<CellCertificateLocationDto>? = null,
-) {
-  companion object {
-    fun from(cellCertificateLocation: CellCertificateLocation): CellCertificateLocationDto = CellCertificateLocationDto(
-      locationCode = cellCertificateLocation.locationCode,
-      pathHierarchy = cellCertificateLocation.pathHierarchy,
-      certifiedNormalAccommodation = cellCertificateLocation.certifiedNormalAccommodation,
-      workingCapacity = cellCertificateLocation.workingCapacity,
-      maxCapacity = cellCertificateLocation.maxCapacity,
-      inCellSanitation = cellCertificateLocation.inCellSanitation,
-      locationType = cellCertificateLocation.locationType,
-      specialistCellTypes = cellCertificateLocation.getSpecialistCellTypesAsList(),
-      localName = cellCertificateLocation.localName,
-      level = cellCertificateLocation.level,
-      convertedCellType = cellCertificateLocation.convertedCellType,
-      subLocations = cellCertificateLocation.subLocations.map { from(it) },
-    )
-  }
-}
+)

@@ -1,0 +1,3 @@
+ALTER TABLE certification_approval_request_location ALTER COLUMN certification_approval_request_id DROP NOT NULL;
+ALTER TABLE cell_certificate_location ALTER COLUMN cell_certificate_id DROP NOT NULL;
+ALTER TABLE cell_certificate ALTER COLUMN certification_approval_request_id DROP NOT NULL;

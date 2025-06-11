@@ -8,11 +8,12 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import org.hibernate.Hibernate
 import org.hibernate.annotations.SortNatural
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
 import java.util.SortedSet
@@ -23,38 +24,62 @@ open class CellCertificate(
   @Id
   @GeneratedUuidV7
   @Column(name = "id", updatable = false, nullable = false)
-  val id: UUID? = null,
+  open val id: UUID? = null,
 
   @Column(nullable = false)
-  val prisonId: String,
+  private val prisonId: String,
 
   @Column(nullable = false)
-  val approvedBy: String,
+  private val approvedBy: String,
 
   @Column(nullable = false)
-  val approvedDate: LocalDateTime,
+  private val approvedDate: LocalDateTime,
 
-  @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST, CascadeType.MERGE])
-  @JoinColumn(name = "certification_approval_request_id")
-  val certificationApprovalRequest: CertificationApprovalRequest,
-
-  @Column(nullable = false)
-  var totalWorkingCapacity: Int = 0,
+  @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST, CascadeType.MERGE], optional = false)
+  @JoinColumn(name = "certification_approval_request_id", nullable = false)
+  private val certificationApprovalRequest: CertificationApprovalRequest,
 
   @Column(nullable = false)
-  var totalMaxCapacity: Int = 0,
+  open var totalWorkingCapacity: Int = 0,
 
   @Column(nullable = false)
-  var totalCertifiedNormalAccommodation: Int = 0,
+  open var totalMaxCapacity: Int = 0,
 
   @Column(nullable = false)
-  var current: Boolean = true,
+  open var totalCertifiedNormalAccommodation: Int = 0,
+
+  @Column(nullable = false)
+  private var current: Boolean = true,
 
   @SortNatural
-  @OneToMany(mappedBy = "cellCertificate", fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
-  var locations: SortedSet<CellCertificateLocation> = sortedSetOf(),
+  @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @JoinColumn(name = "cell_certificate_id", nullable = false)
+  open var locations: SortedSet<CellCertificateLocation> = sortedSetOf(),
 ) {
   override fun toString(): String = "CellCertificate(prisonId='$prisonId', certificationApprovalRequest=$certificationApprovalRequest, current=$current)"
+
+  fun markAsNotCurrent() {
+    current = false
+  }
+
+  fun toDto(showLocations: Boolean = false): CellCertificateDto = CellCertificateDto(
+    id = id!!,
+    prisonId = prisonId,
+    approvedBy = approvedBy,
+    approvedDate = approvedDate,
+    certificationApprovalRequestId = certificationApprovalRequest.id!!,
+    totalWorkingCapacity = totalWorkingCapacity,
+    totalMaxCapacity = totalMaxCapacity,
+    totalCertifiedNormalAccommodation = totalCertifiedNormalAccommodation,
+    current = current,
+    approvedRequest = certificationApprovalRequest.toDto(),
+    locations = if (showLocations) {
+      locations.filter { it.level == 1 } // Only include top-level locations
+        .map { it.toDto() }
+    } else {
+      null
+    },
+  )
 }
 
 @Entity
@@ -62,53 +87,49 @@ open class CellCertificateLocation(
   @Id
   @GeneratedUuidV7
   @Column(name = "id", updatable = false, nullable = false)
-  val id: UUID? = null,
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "cell_certificate_id", nullable = false)
-  val cellCertificate: CellCertificate,
+  open val id: UUID? = null,
 
   @Column(nullable = false)
-  val locationCode: String,
+  private val locationCode: String,
 
   @Column(nullable = true)
-  val cellMark: String? = null,
+  private val cellMark: String? = null,
 
   @Column(nullable = true)
-  val localName: String? = null,
+  private val localName: String? = null,
 
   @Column(nullable = false)
-  val pathHierarchy: String,
+  private val pathHierarchy: String,
 
   @Column(nullable = false)
-  val level: Int,
+  open val level: Int,
 
   @Column(nullable = true)
-  val certifiedNormalAccommodation: Int? = null,
+  open val certifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
-  val workingCapacity: Int? = null,
+  open val workingCapacity: Int? = null,
 
   @Column(nullable = true)
-  val maxCapacity: Int? = null,
+  open val maxCapacity: Int? = null,
 
   @Column(nullable = true)
-  val inCellSanitation: Boolean? = null,
+  private val inCellSanitation: Boolean? = null,
 
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
-  val locationType: LocationType,
+  private val locationType: LocationType,
 
   @Column(name = "specialist_cell_types", nullable = true)
-  val specialistCellTypes: String? = null,
+  private val specialistCellTypes: String? = null,
 
   @Column(nullable = true)
   @Enumerated(EnumType.STRING)
-  val convertedCellType: ConvertedCellType? = null,
+  private val convertedCellType: ConvertedCellType? = null,
 
   @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "parent_location_id")
-  val subLocations: SortedSet<CellCertificateLocation> = sortedSetOf(),
+  private val subLocations: SortedSet<CellCertificateLocation> = sortedSetOf(),
 
 ) : Comparable<CellCertificateLocation> {
 
@@ -127,10 +148,24 @@ open class CellCertificateLocation(
 
     other as CellCertificateLocation
 
-    if (pathHierarchy != other.pathHierarchy) return false
-
-    return true
+    return pathHierarchy == other.pathHierarchy
   }
 
-  fun getSpecialistCellTypesAsList(): List<SpecialistCellType> = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) } ?: emptyList()
+  private fun getSpecialistCellTypesAsList(): List<SpecialistCellType> = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) } ?: emptyList()
+
+  fun toDto(): CellCertificateLocationDto = CellCertificateLocationDto(
+    locationCode = locationCode,
+    pathHierarchy = pathHierarchy,
+    certifiedNormalAccommodation = certifiedNormalAccommodation,
+    workingCapacity = workingCapacity,
+    maxCapacity = maxCapacity,
+    inCellSanitation = inCellSanitation,
+    locationType = locationType,
+    specialistCellTypes = getSpecialistCellTypesAsList(),
+    localName = localName,
+    cellMark = cellMark,
+    level = level,
+    convertedCellType = convertedCellType,
+    subLocations = subLocations.map { it.toDto() },
+  )
 }

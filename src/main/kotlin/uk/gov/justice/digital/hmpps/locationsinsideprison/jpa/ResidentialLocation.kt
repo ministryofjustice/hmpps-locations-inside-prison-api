@@ -169,7 +169,7 @@ open class ResidentialLocation(
     this.residentialStructure = wingStructure.joinToString(separator = ",") { it.name }
   }
 
-  private fun getStructure(): List<ResidentialStructuralType>? = this.residentialStructure?.split(",")?.map { ResidentialStructuralType.valueOf(it.trim()) } ?: null
+  private fun getStructure(): List<ResidentialStructuralType>? = this.residentialStructure?.split(",")?.map { ResidentialStructuralType.valueOf(it.trim()) }
 
   fun requestApproval(requestedDate: LocalDateTime, requestedBy: String, linkedTransaction: LinkedTransaction): CertificationApprovalRequest {
     fun traverseAndLock(location: ResidentialLocation) {
@@ -179,7 +179,7 @@ open class ResidentialLocation(
     traverseAndLock(this)
     val approvalRequest = CertificationApprovalRequest(
       location = this,
-      prisonId = prisonId,
+      prisonId = this.prisonId,
       locationKey = this.getKey(),
       requestedBy = requestedBy,
       requestedDate = requestedDate,
@@ -428,7 +428,6 @@ open class ResidentialLocation(
 
     val approvedLocationIsPartOfHierarchy = isInHierarchy(approvedLocation)
     return CellCertificateLocation(
-      cellCertificate = cellCertificate,
       locationType = locationType,
       locationCode = getCode(),
       pathHierarchy = getPathHierarchy(),
@@ -468,7 +467,6 @@ open class ResidentialLocation(
       .map { it.toCertificationApprovalRequestLocation(certificationApprovalRequest) }
 
     return CertificationApprovalRequestLocation(
-      certificationApprovalRequest = certificationApprovalRequest,
       locationType = locationType,
       locationCode = getCode(),
       pathHierarchy = getPathHierarchy(),
