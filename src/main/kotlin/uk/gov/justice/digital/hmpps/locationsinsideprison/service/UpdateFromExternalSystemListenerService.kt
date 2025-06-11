@@ -46,7 +46,7 @@ class UpdateFromExternalSystemListenerService(
         if (location.locationType != LocationType.CELL) {
           throw LocationIsNotACellException(location.getKey())
         }
-        val deactivateLocationsRequest = DeactivateLocationsRequest(mapOf(event.id to temporaryDeactivationLocationRequest))
+        val deactivateLocationsRequest = DeactivateLocationsRequest(updatedBy = event.updatedBy, locations = mapOf(event.id to temporaryDeactivationLocationRequest))
         deactivate(locationService.deactivateLocations(deactivateLocationsRequest))
       }
       else -> throw Exception("Cannot process event of type ${sqsMessage.eventType}")

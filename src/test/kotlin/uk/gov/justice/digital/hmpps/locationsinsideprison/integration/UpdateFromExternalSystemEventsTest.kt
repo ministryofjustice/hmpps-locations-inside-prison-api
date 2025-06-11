@@ -88,6 +88,7 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
           "deactivationReasonDescription" to "Window broken",
           "proposedReactivationDate" to "2025-01-05",
           "planetFmReference" to "23423TH/5",
+          "updatedBy" to "EXTERNAL_USER_1",
         ),
       )
       val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
@@ -130,6 +131,7 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
           "deactivationReasonDescription" to "Window broken",
           "proposedReactivationDate" to "2025-01-05",
           "planetFmReference" to "23423TH/5",
+          "updatedBy" to "EXTERNAL_USER_2",
         ),
       )
       val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)

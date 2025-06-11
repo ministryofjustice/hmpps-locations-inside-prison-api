@@ -323,12 +323,12 @@ class LocationService(
     }
   }
 
-  private fun createLinkedTransaction(prisonId: String, type: TransactionType, detail: String): LinkedTransaction {
+  private fun createLinkedTransaction(prisonId: String, type: TransactionType, detail: String, transactionInvokedBy: String? = null): LinkedTransaction {
     val linkedTransaction = LinkedTransaction(
       prisonId = prisonId,
       transactionType = type,
       transactionDetail = detail,
-      transactionInvokedBy = getUsername(),
+      transactionInvokedBy = transactionInvokedBy ?: getUsername(),
       txStartTime = LocalDateTime.now(clock),
     )
     return linkedTransactionRepository.save(linkedTransaction).also {
@@ -828,10 +828,12 @@ class LocationService(
         .orElseThrow { LocationNotFoundException(id.toString()) }.prisonId
     } ?: throw LocationNotFoundException("No location found in request")
 
+    val transactionInvokedBy = locationsToDeactivate.updatedBy ?: getUsername()
     val linkedTransaction = createLinkedTransaction(
       prisonId = prisonId,
       TransactionType.DEACTIVATION,
       "Deactivating locations",
+      transactionInvokedBy = transactionInvokedBy,
     )
 
     locationsToDeactivate.locations.forEach { (id, deactivationDetail) ->
@@ -855,7 +857,7 @@ class LocationService(
             deactivationReasonDescription = deactivationReasonDescription,
             planetFmReference = planetFmReference,
             proposedReactivationDate = proposedReactivationDate,
-            userOrSystemInContext = getUsername(),
+            userOrSystemInContext = transactionInvokedBy,
             deactivatedLocations = deactivatedLocations,
             linkedTransaction = linkedTransaction,
           )
