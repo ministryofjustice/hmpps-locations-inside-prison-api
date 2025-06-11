@@ -62,7 +62,7 @@ data class CellInitialisationRequest(
   )
   val accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 
-  val cells: Set<NewCellRequest>,
+  val cells: Set<NewCellRequest>? = null,
 ) {
 
   companion object {
@@ -74,7 +74,7 @@ data class CellInitialisationRequest(
     clock: Clock,
     linkedTransaction: LinkedTransaction,
     location: ResidentialLocation,
-  ) = cells.map { cell ->
+  ) = cells?.map { cell ->
     Cell(
       prisonId = prisonId,
       code = cell.code,

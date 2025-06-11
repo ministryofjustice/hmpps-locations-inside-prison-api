@@ -430,11 +430,13 @@ class LocationService(
         TransactionType.LOCATION_CREATE,
         "Creating locations ${it.locationType} ${it.levelCode} in prison ${createCellsRequest.prisonId}",
       )
-    } ?: createLinkedTransaction(
-      prisonId = createCellsRequest.prisonId,
-      TransactionType.LOCATION_CREATE,
-      "Creating cells ${createCellsRequest.cells.joinToString { it.code }} in prison ${createCellsRequest.prisonId}",
-    )
+    } ?: createCellsRequest.cells?.let {
+      createLinkedTransaction(
+        prisonId = createCellsRequest.prisonId,
+        TransactionType.LOCATION_CREATE,
+        "Creating cells ${createCellsRequest.cells.joinToString { it.code }} in prison ${createCellsRequest.prisonId}",
+      )
+    } ?: throw ValidationException("Either a new level above cells must be provided or the cells")
 
     val newLocation = createCellsRequest.newLevelAboveCells?.let {
       residentialLocationRepository.save(
@@ -450,7 +452,7 @@ class LocationService(
 
     val parentAboveCells = newLocation ?: parentLocation!!
 
-    createCellsRequest.cells.let { cells ->
+    createCellsRequest.cells?.let { cells ->
       cells.forEach { cell ->
         // check that code doesn't clash with the existing location
         checkParentValid(
@@ -475,7 +477,7 @@ class LocationService(
         linkedTransaction = linkedTransaction,
         location = parentAboveCells,
       )
-      log.info("Created ${createdCells.size} cells under location ${parentAboveCells.getKey()}")
+      log.info("Created ${createdCells?.size} cells under location ${parentAboveCells.getKey()}")
     }
 
     return residentialLocationRepository.save(parentAboveCells).toDto(
