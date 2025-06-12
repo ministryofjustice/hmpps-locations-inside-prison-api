@@ -116,7 +116,9 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         numberOfCellsPerSection = 3,
         numberOfLandings = 2,
         numberOfSpurs = 0,
-        defaultCellCapacity = 1,
+        defaultWorkingCapacity = 1,
+        defaultMaxCapacity = 2,
+        defaultCNA = 1,
         wingDescription = "Wing A",
       ).toEntity(
         createInDraft = false,
@@ -155,7 +157,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     cell1N = repository.save(
       buildCell(
         pathHierarchy = "A-1-001",
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 1),
         certification = Certification(certified = true, certifiedNormalAccommodation = 2),
         prisonId = "NMI",
         residentialHousingType = ResidentialHousingType.OTHER_USE,

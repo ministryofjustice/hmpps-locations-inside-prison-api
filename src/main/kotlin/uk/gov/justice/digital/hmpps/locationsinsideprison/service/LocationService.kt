@@ -681,7 +681,7 @@ class LocationService(
       )
     }
 
-    val pendingChange = activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId) && locCapChange.calcMaxCapacity(true) != maxCapacity
+    val pendingChange = activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId) && locCapChange.calcMaxCapacity(true) != maxCapacity && locCapChange.calcWorkingCapacity() == workingCapacity
 
     val trackingTx = linkedTransaction ?: createLinkedTransaction(
       prisonId = locCapChange.prisonId,

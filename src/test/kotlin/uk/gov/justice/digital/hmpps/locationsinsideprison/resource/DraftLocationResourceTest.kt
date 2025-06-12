@@ -41,7 +41,6 @@ class DraftLocationResourceTest : CommonDataTestBase() {
         numberOfCellsPerSection = 3,
         numberOfLandings = 2,
         numberOfSpurs = 0,
-        defaultCellCapacity = 1,
         wingDescription = "Wing A",
       ).toEntity(
         createInDraft = true,
@@ -174,9 +173,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "maxCapacity": 0,
                 "workingCapacity": 0
               },
-              "pendingCapacity": {
-                "maxCapacity": 1,
-                "workingCapacity": 1
+              "pendingChanges": {
+                "maxCapacity": 1
               },
               "certification": {
                 "certified": false,
@@ -191,9 +189,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                     "maxCapacity": 0,
                     "workingCapacity": 0
                   },
-                  "pendingCapacity": {
-                    "maxCapacity": 1,
-                    "workingCapacity": 1
+                  "pendingChanges": {
+                    "maxCapacity": 1
                   },
                   "certification": {
                     "certified": false,
@@ -255,9 +252,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "maxCapacity": 0,
                 "workingCapacity": 0
               },
-              "pendingCapacity": {
-                "maxCapacity": 1,
-                "workingCapacity": 1
+              "pendingChanges": {
+                "maxCapacity": 1
               },
               "certification": {
                 "certified": false,
@@ -272,9 +268,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                     "maxCapacity": 0,
                     "workingCapacity": 0
                   },
-                  "pendingCapacity": {
-                    "maxCapacity": 1,
-                    "workingCapacity": 1
+                  "pendingChanges": {
+                    "maxCapacity": 1
                   },
                   "certification": {
                     "certified": false,
@@ -337,9 +332,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "maxCapacity": 4,
                 "workingCapacity": 4
               },
-              "pendingCapacity": {
-                "maxCapacity": 5,
-                "workingCapacity": 5
+              "pendingChanges": {
+                "maxCapacity": 5
               },
               "certification": {
                 "certified": true,
@@ -366,9 +360,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                     "maxCapacity": 0,
                     "workingCapacity": 0
                   },
-                  "pendingCapacity": {
-                    "maxCapacity": 1,
-                    "workingCapacity": 1
+                  "pendingChanges": {
+                    "maxCapacity": 1
                   }
                 }  
               ]

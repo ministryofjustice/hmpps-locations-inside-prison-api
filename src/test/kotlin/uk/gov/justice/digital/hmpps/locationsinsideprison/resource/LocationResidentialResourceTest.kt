@@ -652,9 +652,8 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                 "maxCapacity": 0,
                 "workingCapacity": 0
               },
-              "pendingCapacity": {
-                "maxCapacity": 2,
-                "workingCapacity": 2
+              "pendingChanges": {
+                "maxCapacity": 2
               },
               "certification": {
                 "certified": false,

@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
@@ -45,7 +46,8 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         numberOfCellsPerSection = 3,
         numberOfLandings = 2,
         numberOfSpurs = 0,
-        defaultCellCapacity = 1,
+        defaultWorkingCapacity = 1,
+        defaultMaxCapacity = 2,
         wingDescription = "Wing M",
       ).toEntity(
         createInDraft = true,
@@ -101,16 +103,22 @@ class CellCertificateResourceTest : CommonDataTestBase() {
 
   private fun getSingleCellApprovalRequestId(): UUID {
     val aCell = repository.findOneByKey("LEI-M-1-002") as Cell
-    aCell.setCapacity(
-      maxCapacity = 3,
-      workingCapacity = 2,
-      userOrSystemInContext = EXPECTED_USERNAME,
-      amendedDate = LocalDateTime.now(
-        clock,
-      ),
-      linkedTransaction = linkedTransaction,
-    )
-    repository.saveAndFlush(aCell)
+    prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
+
+    webTestClient.put().uri("/locations/${aCell.id}/capacity")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          Capacity(
+            workingCapacity = 1,
+            maxCapacity = 3,
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+    getDomainEvents(3)
 
     return webTestClient.put().uri("/certification/location/request-approval")
       .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -302,7 +310,7 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         .jsonPath("$.approvedBy").isEqualTo(EXPECTED_USERNAME)
         .jsonPath("$.current").isEqualTo(true)
         .jsonPath("$.locations").isArray()
-        .jsonPath("$.totalMaxCapacity").isEqualTo(12)
+        .jsonPath("$.totalMaxCapacity").isEqualTo(24)
         .jsonPath("$.totalWorkingCapacity").isEqualTo(12)
         .jsonPath("$.totalCertifiedNormalAccommodation").isEqualTo(12)
         // Verify that there are locations in the response
@@ -311,11 +319,13 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         .jsonPath("$.locations[0].subLocations.length()").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[0].subLocations.length()").isEqualTo(3)
         .jsonPath("$.locations[0].subLocations[0].subLocations[0].workingCapacity").isEqualTo(1)
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].maxCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[1].subLocations.length()").isEqualTo(3)
         .jsonPath("$.locations[1].workingCapacity").isEqualTo(6)
         .jsonPath("$.locations[1].subLocations.length()").isEqualTo(2)
         .jsonPath("$.locations[1].subLocations[0].subLocations.length()").isEqualTo(3)
         .jsonPath("$.locations[1].subLocations[0].subLocations[0].workingCapacity").isEqualTo(1)
+        .jsonPath("$.locations[1].subLocations[0].subLocations[0].maxCapacity").isEqualTo(2)
         .jsonPath("$.locations[1].subLocations[1].subLocations.length()").isEqualTo(3)
     }
 
@@ -333,7 +343,7 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         .jsonPath("$.approvedBy").isEqualTo(EXPECTED_USERNAME)
         .jsonPath("$.current").isEqualTo(true)
         .jsonPath("$.locations").isArray()
-        .jsonPath("$.totalMaxCapacity").isEqualTo(14)
+        .jsonPath("$.totalMaxCapacity").isEqualTo(25)
         .jsonPath("$.totalWorkingCapacity").isEqualTo(6)
         .jsonPath("$.totalCertifiedNormalAccommodation").isEqualTo(12)
         // Verify that there are locations in the response

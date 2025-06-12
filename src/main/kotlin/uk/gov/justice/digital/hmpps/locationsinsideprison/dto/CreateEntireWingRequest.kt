@@ -46,9 +46,17 @@ data class CreateEntireWingRequest(
   @field:Max(value = 100, message = "Max of 100")
   val numberOfCellsPerSection: Int,
 
-  @Schema(description = "Default Cell Capacity", example = "1", required = true, defaultValue = "1")
+  @Schema(description = "Default working capacity", example = "1", required = false, defaultValue = "1")
   @field:Max(value = 4, message = "Max of 4")
-  val defaultCellCapacity: Int = 1,
+  val defaultWorkingCapacity: Int = 1,
+
+  @Schema(description = "Default max capacity", example = "1", required = false, defaultValue = "1")
+  @field:Max(value = 4, message = "Max of 4")
+  val defaultMaxCapacity: Int = 1,
+
+  @Schema(description = "Default CNA", example = "1", required = false, defaultValue = "1")
+  @field:Max(value = 4, message = "Max of 4")
+  val defaultCNA: Int = 1,
 ) {
 
   companion object {
@@ -156,12 +164,12 @@ data class CreateEntireWingRequest(
           whenCreated = LocalDateTime.now(clock),
           childLocations = mutableListOf(),
           capacity = Capacity(
-            maxCapacity = defaultCellCapacity,
-            workingCapacity = defaultCellCapacity,
+            maxCapacity = defaultMaxCapacity,
+            workingCapacity = defaultWorkingCapacity,
           ),
           certification = Certification(
             certified = status != LocationStatus.DRAFT,
-            certifiedNormalAccommodation = defaultCellCapacity,
+            certifiedNormalAccommodation = defaultCNA,
           ),
         ).apply {
           addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction = linkedTransaction)

@@ -80,8 +80,8 @@ data class Location(
   @Schema(description = "Capacity details of the location", required = false)
   val capacity: Capacity? = null,
 
-  @Schema(description = "Pending capacity details of draft or pending approval locations", required = false)
-  val pendingCapacity: Capacity? = null,
+  @Schema(description = "Pending changes of draft or pending approval location", required = false)
+  val pendingChanges: PendingChangeDto? = null,
 
   @Schema(description = "When a cell is inactive, show the active working capacity value", required = false)
   val oldWorkingCapacity: Int? = null,
@@ -231,6 +231,16 @@ data class Location(
     return result
   }
 }
+
+@Schema(description = "Pending changes")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class PendingChangeDto(
+  @Schema(description = "Pending max capacity", example = "2", required = false)
+  val maxCapacity: Int? = null,
+
+  @Schema(description = "Pending CNA", example = "2", required = false)
+  val certifiedNormalAccommodation: Int? = null,
+)
 
 @Schema(description = "Non Residential Usage")
 @JsonInclude(JsonInclude.Include.NON_NULL)
