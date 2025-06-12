@@ -16,7 +16,7 @@ data class UpdateFromExternalSystemEvent(
 ) {
   fun toUpdateFromExternalSystemDeactivateEvent(): UpdateFromExternalSystemDeactivateEvent {
     val mapper = ObjectMapper().registerModule(KotlinModule.Builder().build()).registerModule(JavaTimeModule())
-    return mapper.convertValue(this.messageAttributes, UpdateFromExternalSystemDeactivateEvent::class.java)
+    return mapper.convertValue(this.messageAttributes, UpdateFromExternalSystemDeactivateEvent::class.java).copy(updatedBy = who)
   }
 }
 
