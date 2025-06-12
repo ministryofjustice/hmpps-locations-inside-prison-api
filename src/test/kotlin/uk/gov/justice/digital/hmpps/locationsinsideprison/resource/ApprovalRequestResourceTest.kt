@@ -1,18 +1,19 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.test.json.JsonCompareMode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
-import java.time.LocalDateTime
 import java.util.UUID
 
 @DisplayName("Approval Request Resource")
@@ -128,7 +129,7 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
                 "id": "$approvalRequestId",
                 "status": "PENDING",
                 "locationKey": "LEI-A-1-001",
-                "maxCapacityChange": 2,
+                "maxCapacityChange": 1,
                 "workingCapacityChange": 0,
                 "certifiedNormalAccommodationChange": 0,
                  "locations": [
@@ -152,17 +153,26 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
 
   private fun getApprovalRequestId(): UUID {
     val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
-    aCell.setCapacity(
-      maxCapacity = 3,
-      workingCapacity = 2,
-      userOrSystemInContext = EXPECTED_USERNAME,
-      amendedDate = LocalDateTime.now(
-        clock,
-      ),
-      linkedTransaction = linkedTransaction,
-    )
-    repository.saveAndFlush(aCell)
+    prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
 
+    webTestClient.put().uri("/locations/${aCell.id}/capacity")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          Capacity(
+            workingCapacity = 1,
+            maxCapacity = 3,
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+    getDomainEvents(1).let {
+      assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+        "location.inside.prison.amended" to aCell.getKey(),
+      )
+    }
     return webTestClient.put().uri("/certification/location/request-approval")
       .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
       .header("Content-Type", "application/json")

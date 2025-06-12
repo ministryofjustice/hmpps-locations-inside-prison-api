@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PendingChangeDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
@@ -522,10 +523,10 @@ open class ResidentialLocation(
       workingCapacity = calcWorkingCapacity(),
     ),
 
-    pendingCapacity = if (hasPendingChanges() || hasPendingChangesBelowThisLevel()) {
-      CapacityDto(
+    pendingChanges = if (hasPendingChanges() || hasPendingChangesBelowThisLevel()) {
+      PendingChangeDto(
         maxCapacity = calcMaxCapacity(true),
-        workingCapacity = calcWorkingCapacity(true),
+        certifiedNormalAccommodation = calcCertifiedNormalAccommodation(true),
       )
     } else {
       null

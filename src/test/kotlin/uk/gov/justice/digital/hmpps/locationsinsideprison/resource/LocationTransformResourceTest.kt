@@ -17,7 +17,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
-import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationTransformResourceTest : CommonDataTestBase() {
@@ -841,16 +840,26 @@ class LocationTransformResourceTest : CommonDataTestBase() {
       @Test
       fun `cannot change a locations capacity once it is locked`() {
         val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
-        val requestedDate = LocalDateTime.now(clock)
-        aCell.setCapacity(
-          maxCapacity = 3,
-          workingCapacity = 2,
-          userOrSystemInContext = EXPECTED_USERNAME,
-          amendedDate = requestedDate,
-          linkedTransaction = linkedTransaction,
-        )
-        repository.saveAndFlush(aCell)
+        prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
 
+        webTestClient.put().uri("/locations/${aCell.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
+                workingCapacity = 1,
+                maxCapacity = 3,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to aCell.getKey(),
+          )
+        }
         webTestClient.put().uri("/certification/location/request-approval")
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
           .header("Content-Type", "application/json")
@@ -992,13 +1001,14 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
 
         var incMaxCap = aCell.getMaxCapacity()?.inc() ?: 1
+        val workingCapacity = aCell.getWorkingCapacity()?.inc() ?: 1
         webTestClient.put().uri("/locations/${aCell.id}/capacity")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue(
             jsonString(
               CapacityDto(
-                workingCapacity = aCell.getWorkingCapacity() ?: 0,
+                workingCapacity = workingCapacity,
                 maxCapacity = incMaxCap,
               ),
             ),
@@ -1016,11 +1026,10 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 "pathHierarchy": "${aCell.getPathHierarchy()}",
                 "capacity": {
                   "maxCapacity": ${aCell.getMaxCapacity()},
-                  "workingCapacity": ${aCell.getWorkingCapacity()}
+                  "workingCapacity": $workingCapacity
                 },
-                "pendingCapacity": {
-                  "maxCapacity": $incMaxCap,
-                  "workingCapacity": ${aCell.getWorkingCapacity()}
+                "pendingChanges": {
+                   "maxCapacity": $incMaxCap
                 },
                 "certification": {
                   "certified": true
@@ -1032,6 +1041,13 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
+        getDomainEvents(3).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to aCell.getKey(),
+            "location.inside.prison.amended" to aCell.getParent()?.getKey(),
+            "location.inside.prison.amended" to aCell.getParent()?.getParent()?.getKey(),
+          )
+        }
         incMaxCap += 1
         webTestClient.put().uri("/locations/${aCell.id}/capacity")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1039,7 +1055,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           .bodyValue(
             jsonString(
               CapacityDto(
-                workingCapacity = aCell.getWorkingCapacity() ?: 0,
+                workingCapacity = workingCapacity,
                 maxCapacity = incMaxCap,
               ),
             ),
@@ -1057,11 +1073,10 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 "pathHierarchy": "${aCell.getPathHierarchy()}",
                 "capacity": {
                   "maxCapacity": ${aCell.getMaxCapacity()},
-                  "workingCapacity": ${aCell.getWorkingCapacity()}
+                  "workingCapacity": $workingCapacity
                 },
-                "pendingCapacity": {
-                  "maxCapacity": $incMaxCap,
-                  "workingCapacity": ${aCell.getWorkingCapacity()}
+                "pendingChanges": {
+                   "maxCapacity": $incMaxCap
                 },
                 "certification": {
                   "certified": true
@@ -1073,7 +1088,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
-        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(2)
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(1)
       }
     }
   }

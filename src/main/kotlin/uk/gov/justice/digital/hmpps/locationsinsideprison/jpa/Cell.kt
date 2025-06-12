@@ -103,7 +103,7 @@ class Cell(
   fun getWorkingCapacity() = capacity?.workingCapacity
 
   fun getMaxCapacity(includePendingChange: Boolean = false) = if (includePendingChange) {
-    pendingChange?.let { it.capacity?.maxCapacity } ?: capacity?.maxCapacity
+    pendingChange?.maxCapacity ?: capacity?.maxCapacity
   } else {
     capacity?.maxCapacity
   }
@@ -308,19 +308,36 @@ class Cell(
     }
     if (isCertificationApprovalProcessRequired()) {
       if (pendingChange?.approvalRequest?.status == ApprovalRequestStatus.APPROVED) {
-        super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, amendedDate, linkedTransaction)
+        super.setCapacity(
+          maxCapacity = maxCapacity,
+          workingCapacity = workingCapacity,
+          userOrSystemInContext = userOrSystemInContext,
+          amendedDate = amendedDate,
+          linkedTransaction = linkedTransaction,
+        )
       } else {
+        super.setCapacity(
+          maxCapacity = getMaxCapacity() ?: 0,
+          workingCapacity = workingCapacity,
+          userOrSystemInContext = userOrSystemInContext,
+          amendedDate = amendedDate,
+          linkedTransaction = linkedTransaction,
+        )
         if (getMaxCapacity(includePendingChange = true) != maxCapacity) {
           if (pendingChange == null) {
             pendingChange = PendingLocationChange()
           }
-          pendingChange?.let {
-            it.capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = getWorkingCapacity() ?: 0)
-          }
+          pendingChange!!.maxCapacity = maxCapacity
         }
       }
     } else {
-      super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, amendedDate, linkedTransaction)
+      super.setCapacity(
+        maxCapacity = maxCapacity,
+        workingCapacity = workingCapacity,
+        userOrSystemInContext = userOrSystemInContext,
+        amendedDate = amendedDate,
+        linkedTransaction = linkedTransaction,
+      )
     }
   }
 
@@ -577,24 +594,24 @@ class Cell(
     linkedTransaction: LinkedTransaction,
   ) {
     pendingChange?.let { pc ->
-      with(pc) {
-        capacity?.let { cap ->
-          setCapacity(
-            maxCapacity = cap.maxCapacity,
-            workingCapacity = cap.workingCapacity,
-            userOrSystemInContext = approvedBy,
-            amendedDate = approvedDate,
-            linkedTransaction = linkedTransaction,
-          )
-        }
-        certifiedNormalAccommodation?.let { cna ->
-          setCna(
-            certifiedNormalAccommodation = cna,
-            linkedTransaction = linkedTransaction,
-            userOrSystemInContext = approvedBy,
-            updatedAt = approvedDate,
-          )
-        }
+
+      pc.maxCapacity?.let { maxCap ->
+        setCapacity(
+          maxCapacity = maxCap,
+          workingCapacity = getWorkingCapacity() ?: 0,
+          userOrSystemInContext = approvedBy,
+          amendedDate = approvedDate,
+          linkedTransaction = linkedTransaction,
+        )
+      }
+
+      pc.certifiedNormalAccommodation?.let { cna ->
+        setCna(
+          certifiedNormalAccommodation = cna,
+          linkedTransaction = linkedTransaction,
+          userOrSystemInContext = approvedBy,
+          updatedAt = approvedDate,
+        )
       }
     }
     if (isDraft()) {
