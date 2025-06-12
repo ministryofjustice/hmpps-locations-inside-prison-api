@@ -186,8 +186,8 @@ open class ResidentialLocation(
       maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
       workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
       certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
+      locations = sortedSetOf(toCertificationApprovalRequestLocation()),
     ).apply {
-      locations = sortedSetOf(toCertificationApprovalRequestLocation(this))
       linkPendingChangesToApprovalRequest(approvalRequest = this)
     }
 
@@ -420,11 +420,11 @@ open class ResidentialLocation(
     return this
   }
 
-  fun toCellCertificateLocation(cellCertificate: CellCertificate, approvedLocation: ResidentialLocation): CellCertificateLocation {
+  fun toCellCertificateLocation(approvedLocation: ResidentialLocation): CellCertificateLocation {
     val subLocations: List<CellCertificateLocation> = childLocations
       .filterIsInstance<ResidentialLocation>()
       .filter { !it.isDraft() && (it.isStructural() || it.isCell() || it.isConvertedCell()) }
-      .map { it.toCellCertificateLocation(cellCertificate, approvedLocation) }
+      .map { it.toCellCertificateLocation(approvedLocation) }
 
     val approvedLocationIsPartOfHierarchy = isInHierarchy(approvedLocation)
     return CellCertificateLocation(
@@ -460,11 +460,11 @@ open class ResidentialLocation(
     )
   }
 
-  private fun toCertificationApprovalRequestLocation(certificationApprovalRequest: CertificationApprovalRequest): CertificationApprovalRequestLocation {
+  private fun toCertificationApprovalRequestLocation(): CertificationApprovalRequestLocation {
     val subLocations: List<CertificationApprovalRequestLocation> = childLocations
       .filterIsInstance<ResidentialLocation>()
       .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
-      .map { it.toCertificationApprovalRequestLocation(certificationApprovalRequest) }
+      .map { it.toCertificationApprovalRequestLocation() }
 
     return CertificationApprovalRequestLocation(
       locationType = locationType,
