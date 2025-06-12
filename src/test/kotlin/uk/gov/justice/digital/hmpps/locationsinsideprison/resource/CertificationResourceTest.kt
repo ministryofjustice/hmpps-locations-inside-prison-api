@@ -51,7 +51,9 @@ class CertificationResourceTest : CommonDataTestBase() {
         numberOfCellsPerSection = 3,
         numberOfLandings = 2,
         numberOfSpurs = 0,
-        defaultCellCapacity = 1,
+        defaultWorkingCapacity = 1,
+        defaultMaxCapacity = 2,
+        defaultCNA = 1,
         wingDescription = "Wing M",
       ).toEntity(
         createInDraft = true,
@@ -146,17 +148,26 @@ class CertificationResourceTest : CommonDataTestBase() {
       @Test
       fun `can request approval for a location that has pending changes`() {
         val aCell = repository.findOneByKey("LEI-A-1-002") as Cell
-        aCell.setCapacity(
-          maxCapacity = 3,
-          workingCapacity = 2,
-          userOrSystemInContext = EXPECTED_USERNAME,
-          amendedDate = LocalDateTime.now(
-            clock,
-          ),
-          linkedTransaction = linkedTransaction,
-        )
-        repository.saveAndFlush(aCell)
+        prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
+        webTestClient.put().uri("/locations/${aCell.id}/capacity")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              Capacity(
+                workingCapacity = 1,
+                maxCapacity = 3,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
 
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to aCell.getKey(),
+          )
+        }
         webTestClient.put().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
           .header("Content-Type", "application/json")
@@ -176,7 +187,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               "locationId": "${aCell.id}",
               "locationKey": "${aCell.getKey()}",
               "status": "PENDING",
-              "maxCapacityChange": 2,
+              "maxCapacityChange": 1,
               "workingCapacityChange": 0,
               "certifiedNormalAccommodationChange": 0,
               "locations": [
@@ -222,7 +233,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               "locationId": "${mWing.id}",
               "locationKey": "${mWing.getKey()}",
               "status": "PENDING",
-              "maxCapacityChange": 6,
+              "maxCapacityChange": 12,
               "workingCapacityChange": 6,
               "certifiedNormalAccommodationChange": 6,
               "locations": [
@@ -231,7 +242,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                 "level": 1,
                 "certifiedNormalAccommodation": 6,
                 "workingCapacity": 6,
-                "maxCapacity": 6,
+                "maxCapacity": 12,
                 "locationType": "WING",
                 "subLocations": [
                   {
@@ -239,7 +250,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                     "level": 2,
                     "certifiedNormalAccommodation": 3,
                     "workingCapacity": 3,
-                    "maxCapacity": 3,
+                    "maxCapacity": 6,
                     "locationType": "LANDING",
                     "subLocations": [
                       {
@@ -248,7 +259,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "level": 3,
                         "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "inCellSanitation": true,
                         "locationType": "CELL"
                       },
@@ -258,7 +269,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "level": 3,
                         "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "inCellSanitation": true,
                         "locationType": "CELL"
                       },
@@ -268,7 +279,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "level": 3,
                         "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "inCellSanitation": true,
                         "locationType": "CELL"
                       }
@@ -279,7 +290,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                     "level": 2,
                     "certifiedNormalAccommodation": 3,
                     "workingCapacity": 3,
-                    "maxCapacity": 3,
+                    "maxCapacity": 6,
                     "locationType": "LANDING",
                     "subLocations": [
                       {
@@ -288,7 +299,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "level": 3,
                         "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "inCellSanitation": true,
                         "locationType": "CELL"
                       },
@@ -298,7 +309,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "level": 3,
                         "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "inCellSanitation": true,
                         "locationType": "CELL"
                       },
@@ -308,7 +319,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "level": 3,
                         "certifiedNormalAccommodation": 1,
                         "workingCapacity": 1,
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "inCellSanitation": true,
                         "locationType": "CELL"
                       }
@@ -368,9 +379,8 @@ class CertificationResourceTest : CommonDataTestBase() {
                 "maxCapacity": 0,
                 "workingCapacity": 0
               },
-              "pendingCapacity": {
-                 "maxCapacity": 6,
-                 "workingCapacity": 6
+              "pendingChanges": {
+                "maxCapacity": 12
               },
               "certification": {
                 "certifiedNormalAccommodation": 0,
@@ -431,7 +441,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               {
               "key": "${mWing.getKey()}",
               "capacity": {
-                "maxCapacity": 6,
+                "maxCapacity": 12,
                 "workingCapacity": 0
               },
               "certification": {
@@ -446,7 +456,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                     {
                       "key": "LEI-M-1-001",
                       "capacity": {
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "workingCapacity": 0
                       },
                       "oldWorkingCapacity": 1
@@ -454,7 +464,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                      {
                       "key": "LEI-M-1-002",
                       "capacity": {
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "workingCapacity": 0
                       },
                       "oldWorkingCapacity": 1
@@ -462,7 +472,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                      {
                       "key": "LEI-M-1-003",
                       "capacity": {
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "workingCapacity": 0
                       },
                       "oldWorkingCapacity": 1
@@ -475,7 +485,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                     {
                       "key": "LEI-M-2-001",
                       "capacity": {
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "workingCapacity": 0
                       },
                       "oldWorkingCapacity": 1
@@ -483,7 +493,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                      {
                       "key": "LEI-M-2-002",
                       "capacity": {
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "workingCapacity": 0
                       },
                       "oldWorkingCapacity": 1
@@ -491,7 +501,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                      {
                       "key": "LEI-M-2-003",
                       "capacity": {
-                        "maxCapacity": 1,
+                        "maxCapacity": 2,
                         "workingCapacity": 0
                       },
                       "oldWorkingCapacity": 1
@@ -520,9 +530,9 @@ class CertificationResourceTest : CommonDataTestBase() {
                 "maxCapacity": 2,
                 "workingCapacity": 2
               },
-              "pendingCapacity": {
+              "pendingChanges": {
                 "maxCapacity": 3,
-                "workingCapacity": 2
+                "certifiedNormalAccommodation": 3
               },
               "certification": {
                 "certifiedNormalAccommodation": 2,
@@ -686,7 +696,11 @@ class CertificationResourceTest : CommonDataTestBase() {
           )
           .exchange()
           .expectStatus().isOk
-
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to aCell.getKey(),
+          )
+        }
         assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(3)
 
         webTestClient.get().uri("/locations/key/LEI-A-1-001")
@@ -702,9 +716,8 @@ class CertificationResourceTest : CommonDataTestBase() {
                 "maxCapacity": 3,
                 "workingCapacity": 1
               },
-              "pendingCapacity": {
-                "maxCapacity": 10,
-                "workingCapacity": 1
+              "pendingChanges": {
+                "maxCapacity": 10
               },
               "status": "ACTIVE"
               }
@@ -774,7 +787,7 @@ class CertificationResourceTest : CommonDataTestBase() {
           )
         }
 
-        assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(1)
+        assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(2)
       }
     }
   }
@@ -839,22 +852,33 @@ class CertificationResourceTest : CommonDataTestBase() {
           )
         }
 
-        assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(1)
+        assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(2)
       }
     }
   }
 
   private fun getApprovalRequestId(): UUID {
     val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
-    val updatedAt = LocalDateTime.now(clock)
-    aCell.setCapacity(
-      maxCapacity = 3,
-      workingCapacity = 2,
-      userOrSystemInContext = EXPECTED_USERNAME,
-      amendedDate = updatedAt,
-      linkedTransaction = linkedTransaction,
-    )
-    repository.saveAndFlush(aCell)
+    prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
+    webTestClient.put().uri("/locations/${aCell.id}/capacity")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          Capacity(
+            workingCapacity = 1,
+            maxCapacity = 3,
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+
+    getDomainEvents(1).let {
+      assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+        "location.inside.prison.amended" to aCell.getKey(),
+      )
+    }
 
     return webTestClient.put().uri("/certification/location/request-approval")
       .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
