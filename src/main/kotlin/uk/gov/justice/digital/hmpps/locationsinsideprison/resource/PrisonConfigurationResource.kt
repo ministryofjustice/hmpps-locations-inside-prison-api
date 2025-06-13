@@ -33,10 +33,10 @@ class PrisonConfigurationResource(
 
   @PutMapping("/{prisonId}/resi-service/{status}")
   @ResponseStatus(HttpStatus.OK)
-  @PreAuthorize("hasRole('LOCATION_CONFIG_ADMIN')")
+  @PreAuthorize("hasRole('ROLE_LOCATION_CONFIG_ADMIN')")
   @Operation(
     summary = "Update the status of the service service for a prison",
-    description = "Requires role LOCATION_ADMIN",
+    description = "Requires role LOCATION_CONFIG_ADMIN",
     responses = [
       ApiResponse(
         responseCode = "200",
@@ -68,10 +68,10 @@ class PrisonConfigurationResource(
 
   @PutMapping("/{prisonId}/certification-approval-required/{approvalProcessStatus}")
   @ResponseStatus(HttpStatus.OK)
-  @PreAuthorize("hasRole('LOCATION_CONFIG_ADMIN')")
+  @PreAuthorize("hasRole('ROLE_LOCATION_CONFIG_ADMIN')")
   @Operation(
     summary = "Update the certification approval process for a prison",
-    description = "Requires role LOCATION_ADMIN",
+    description = "Requires role LOCATION_CONFIG_ADMIN",
     responses = [
       ApiResponse(
         responseCode = "200",
@@ -103,10 +103,10 @@ class PrisonConfigurationResource(
 
   @GetMapping("/{prisonId}")
   @ResponseStatus(HttpStatus.OK)
-  @PreAuthorize("hasRole('LOCATION_CONFIG_ADMIN')")
+  @PreAuthorize("hasRole('ROLE_LOCATION_CONFIG_ADMIN')")
   @Operation(
     summary = "Get prison configuration",
-    description = "Requires role LOCATION_ADMIN",
+    description = "Requires role LOCATION_CONFIG_ADMIN",
     responses = [
       ApiResponse(
         responseCode = "200",
