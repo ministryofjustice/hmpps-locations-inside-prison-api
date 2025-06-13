@@ -36,13 +36,12 @@ class CellCertificateService(
         approvedBy = approvedBy,
         approvedDate = approvedDate,
         certificationApprovalRequest = approvalRequest,
-      ).apply {
         locations = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(location.prisonId)
           .filter { !it.isPermanentlyDeactivated() && !it.isDraft() && it.isStructural() }
           .map {
-            it.toCellCertificateLocation(this, location)
-          }.toSortedSet()
-
+            it.toCellCertificateLocation(location)
+          }.toSortedSet(),
+      ).apply {
         totalWorkingCapacity = locations.sumOf { it.workingCapacity ?: 0 }
         totalMaxCapacity = locations.sumOf { it.maxCapacity ?: 0 }
         totalCertifiedNormalAccommodation = locations.sumOf { it.certifiedNormalAccommodation ?: 0 }
