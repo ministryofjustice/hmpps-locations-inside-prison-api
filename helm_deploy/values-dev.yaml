@@ -33,7 +33,7 @@ generic-service:
 
   scheduledDowntime:
     enabled: true
-    startup: '49 6 * * 1-5' # Start at 6.49am UTC Monday-Friday
+    startup: '00 6 * * 1-5' # Start at 6.00am UTC (equivalent to 7am BST) Monday-Friday
     shutdown: '58 21 * * 1-5' # Stop at 9.58pm UTC Monday-Friday
 
 # CloudPlatform AlertManager receiver to route prometheus alerts to slack
