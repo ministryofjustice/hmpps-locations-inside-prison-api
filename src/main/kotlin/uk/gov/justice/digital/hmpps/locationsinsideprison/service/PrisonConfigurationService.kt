@@ -106,11 +106,11 @@ class PrisonConfigurationService(
 data class PrisonConfigurationDto(
   @Schema(description = "Prison ID", example = "MDI", required = true)
   val prisonId: String,
-  @Schema(description = "Indicates that the residential service is active", example = "true", required = true)
+  @Schema(description = "Indicates that the residential service is active", example = "ACTIVE", required = true)
   val resiLocationServiceActive: ResidentialStatus,
-  @Schema(description = "Indicates that roll count should include segregation in its calculations for net vacancies", example = "false", required = true)
+  @Schema(description = "Indicates that roll count should include segregation in its calculations for net vacancies", example = "INACTIVE", required = true)
   val includeSegregationInRollCount: ResidentialStatus,
-  @Schema(description = "Indicates that this prison must go through the certification process to create or change cells", example = "false", required = true)
+  @Schema(description = "Indicates that this prison must go through the certification process to create or change cells", example = "INACTIVE", required = true)
   var certificationApprovalRequired: ResidentialStatus,
 )
 
