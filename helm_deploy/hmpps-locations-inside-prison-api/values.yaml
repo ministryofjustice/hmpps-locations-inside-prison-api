@@ -3,7 +3,7 @@ environment:
 
 generic-service:
   nameOverride: hmpps-locations-inside-prison-api
-  productId: "DPS039"
+  productId: "DPS038"
 
   serviceAccountName: hmpps-locations-inside-prison-api
 
