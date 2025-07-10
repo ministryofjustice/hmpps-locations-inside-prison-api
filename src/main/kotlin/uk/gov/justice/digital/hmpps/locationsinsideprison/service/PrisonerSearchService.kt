@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 
+private const val SEARCH_RESPONSE_FIELDS =
+  "prisonerNumber,firstName,lastName,prisonId,prisonName,cellLocation,gender,status,inOutStatus,csra,category,alerts,lastMovementTypeCode"
+
 @Service
 class PrisonerSearchService(
   private val prisonerSearchWebClient: WebClient,
@@ -20,7 +23,7 @@ class PrisonerSearchService(
   fun getPrisonersInPrison(prisonId: String, pageSize: Int? = 3000): List<Prisoner> {
     val prisonersInPrison = prisonerSearchWebClient
       .get()
-      .uri("/prisoner-search/prison/$prisonId?size=$pageSize")
+      .uri("/prisoner-search/prison/$prisonId?size=$pageSize&responseFields=$SEARCH_RESPONSE_FIELDS")
       .header("Content-Type", "application/json")
       .retrieve()
       .bodyToMono<SearchResult>()
@@ -56,7 +59,7 @@ class PrisonerSearchService(
 
     val prisonersInLocations = prisonerSearchWebClient
       .post()
-      .uri("/attribute-search?size=$pageSize")
+      .uri("/attribute-search?size=$pageSize&responseFields=$SEARCH_RESPONSE_FIELDS")
       .header("Content-Type", "application/json")
       .bodyValue(requestBody)
       .retrieve()
