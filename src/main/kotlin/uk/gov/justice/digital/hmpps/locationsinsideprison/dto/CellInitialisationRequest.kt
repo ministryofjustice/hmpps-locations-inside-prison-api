@@ -189,9 +189,14 @@ data class NewCellRequest(
   val inCellSanitation: Boolean = true,
 )
 
-enum class ResidentialStructuralType {
-  WING,
-  SPUR,
-  LANDING,
-  CELL,
+enum class ResidentialStructuralType(
+  val locationType: LocationType,
+) {
+  WING(LocationType.WING),
+  SPUR(LocationType.SPUR),
+  LANDING(LocationType.LANDING),
+  CELL(LocationType.CELL),
+  ;
+
+  fun getPlural() = "${locationType.description}s"
 }
