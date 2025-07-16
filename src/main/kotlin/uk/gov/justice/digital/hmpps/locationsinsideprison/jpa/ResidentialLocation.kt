@@ -170,7 +170,7 @@ open class ResidentialLocation(
     this.residentialStructure = wingStructure.joinToString(separator = ",") { it.name }
   }
 
-  private fun getStructure(): List<ResidentialStructuralType>? = this.residentialStructure?.split(",")?.map { ResidentialStructuralType.valueOf(it.trim()) }
+  fun getStructure(): List<ResidentialStructuralType>? = this.residentialStructure?.split(",")?.map { ResidentialStructuralType.valueOf(it.trim()) }
 
   fun requestApproval(requestedDate: LocalDateTime, requestedBy: String, linkedTransaction: LinkedTransaction): CertificationApprovalRequest {
     fun traverseAndLock(location: ResidentialLocation) {

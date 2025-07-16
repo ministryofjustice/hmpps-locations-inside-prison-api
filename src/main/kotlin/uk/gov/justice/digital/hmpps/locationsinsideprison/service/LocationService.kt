@@ -1339,12 +1339,17 @@ class LocationService(
       .map { it.toDto(countInactiveCells = true, countCells = true) }
       .sortedWith(NaturalOrderComparator())
 
-    val subLocationTypes = calculateSubLocationDescription(locations)
+    val subType = currentLocation?.getStructure()?.let { structure ->
+      val pos = structure.indexOfFirst { it.locationType == currentLocation.locationType } + 1
+      if (pos < structure.size) structure[pos].getPlural() else null
+    } ?: "Wings"
+
+    val subLocationTypes = calculateSubLocationDescription(locations) ?: subType
     return ResidentialSummary(
       topLevelLocationType = if (currentLocation == null) {
-        subLocationTypes ?: "Wings"
+        subLocationTypes
       } else {
-        currentLocation.getHierarchy()[0].type.description + "s"
+        currentLocation.getHierarchy()[0].type.getPlural()
       },
       prisonSummary = if (id == null) {
         val prisonDetails = prisonService.lookupPrisonDetails(prisonId) ?: throw PrisonNotFoundException(prisonId)
@@ -1370,7 +1375,7 @@ class LocationService(
   private fun calculateSubLocationDescription(locations: List<LocationDTO>): String? {
     if (locations.isEmpty()) return null
     val mostCommonType = mostCommon(locations.map { it.locationType })
-    return (mostCommonType?.description) + "s"
+    return mostCommonType?.getPlural()
   }
 
   fun <T> mostCommon(list: List<T>): T? = list.groupingBy { it }.eachCount().maxByOrNull { it.value }?.key

@@ -21,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialSummary
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 import java.util.*
@@ -500,14 +501,31 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           )
 
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+
+        assertThat(
+          webTestClient.get().uri("/locations/residential-summary/${createWingAndStructure.prisonId}?parentPathHierarchy=${createWingAndStructure.wingCode}")
+            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(ResidentialSummary::class.java)
+            .returnResult().responseBody!!.subLocationName,
+        ).isEqualTo("Landings")
       }
 
       @Test
       fun `can create a wing with a 4 tier structure`() {
+        val fourTierStructure = createWingAndStructure.copy(
+          wingStructure = listOf(
+            ResidentialStructuralType.WING,
+            ResidentialStructuralType.SPUR,
+            ResidentialStructuralType.LANDING,
+            ResidentialStructuralType.CELL,
+          ),
+        )
         webTestClient.post().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(createWingAndStructure.copy(wingStructure = listOf(ResidentialStructuralType.WING, ResidentialStructuralType.LANDING, ResidentialStructuralType.SPUR, ResidentialStructuralType.CELL)))
+          .bodyValue(fourTierStructure)
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(
@@ -523,8 +541,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               "localName": "Y Wing",
               "wingStructure": [
                 "WING",
-                "LANDING",
                 "SPUR",
+                "LANDING",
                 "CELL"
               ],
               "capacity": {
@@ -537,6 +555,15 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           )
 
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+
+        assertThat(
+          webTestClient.get().uri("/locations/residential-summary/${fourTierStructure.prisonId}?parentPathHierarchy=${fourTierStructure.wingCode}")
+            .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(ResidentialSummary::class.java)
+            .returnResult().responseBody!!.subLocationName,
+        ).isEqualTo("Spurs")
       }
     }
   }

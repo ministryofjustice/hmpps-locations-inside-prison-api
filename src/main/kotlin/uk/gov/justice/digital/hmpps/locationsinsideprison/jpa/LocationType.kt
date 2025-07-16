@@ -116,4 +116,7 @@ enum class LocationType(
   SHELF("Shelf"),
   STORE("Store"),
   TABLE("Table"),
+  ;
+
+  fun getPlural() = "${description}s"
 }
