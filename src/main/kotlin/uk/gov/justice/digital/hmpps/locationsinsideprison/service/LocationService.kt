@@ -403,6 +403,12 @@ class LocationService(
           code = levelCode,
           prisonId = createCellsRequest.prisonId,
         )
+        // check that the locationType is valid against the wing structure
+        parentLocation?.getNextLevelTypeWithinStructure()?.let { nextLevelType ->
+          if (nextLevelType != newLevel.locationType) {
+            throw ValidationException("The new level type [${newLevel.locationType}] must be the same as the agreed structure [$nextLevelType]")
+          }
+        }
         // check that local-name is unique in this hierarchy
         levelLocalName?.let { localName ->
           if (findAllByPrisonIdTopParentAndLocalName(
@@ -1339,12 +1345,7 @@ class LocationService(
       .map { it.toDto(countInactiveCells = true, countCells = true) }
       .sortedWith(NaturalOrderComparator())
 
-    val subType = currentLocation?.getStructure()?.let { structure ->
-      val pos = structure.indexOfFirst { it.locationType == currentLocation.locationType } + 1
-      if (pos < structure.size) structure[pos].getPlural() else null
-    } ?: "Wings"
-
-    val subLocationTypes = calculateSubLocationDescription(locations) ?: subType
+    val subLocationTypes = calculateSubLocationDescription(locations) ?: currentLocation?.getNextLevelTypeWithinStructure()?.getPlural() ?: "Wings"
     return ResidentialSummary(
       topLevelLocationType = if (currentLocation == null) {
         subLocationTypes
