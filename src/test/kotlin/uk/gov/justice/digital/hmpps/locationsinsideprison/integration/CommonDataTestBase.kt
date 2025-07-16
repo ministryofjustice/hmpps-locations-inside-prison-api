@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -120,6 +121,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         defaultMaxCapacity = 2,
         defaultCNA = 1,
         wingDescription = "Wing A",
+        wingStructure = listOf(ResidentialStructuralType.WING, ResidentialStructuralType.LANDING, ResidentialStructuralType.CELL),
       ).toEntity(
         createInDraft = false,
         createdBy = "TEST_USER",

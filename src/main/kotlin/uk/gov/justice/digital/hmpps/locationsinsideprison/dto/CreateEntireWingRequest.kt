@@ -57,6 +57,9 @@ data class CreateEntireWingRequest(
   @Schema(description = "Default CNA", example = "1", required = false, defaultValue = "1")
   @field:Max(value = 4, message = "Max of 4")
   val defaultCNA: Int = 1,
+
+  @Schema(description = "The structure of the wing", required = false)
+  val wingStructure: List<ResidentialStructuralType>? = null,
 ) {
 
   companion object {
@@ -77,6 +80,7 @@ data class CreateEntireWingRequest(
       whenCreated = LocalDateTime.now(clock),
       childLocations = mutableListOf(),
     ).apply {
+      wingStructure?.let { setStructure(it) }
       addHistory(
         attributeName = LocationAttribute.LOCATION_CREATED,
         oldValue = null,

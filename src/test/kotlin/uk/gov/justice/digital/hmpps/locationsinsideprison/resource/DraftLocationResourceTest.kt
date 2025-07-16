@@ -109,6 +109,24 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `location created that does not fit wing structure`() {
+        webTestClient.post().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              createCellInitialisationRequest(
+                aboveLevelCode = "TEST",
+                parentLocation = leedsWing.id,
+                locationType = ResidentialStructuralType.SPUR,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
       fun `request without a parent location or a new location is rejected`() {
         webTestClient.post().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
