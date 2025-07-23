@@ -10,7 +10,7 @@ generic-service:
   replicaCount: 4
 
   image:
-    repository: quay.io/hmpps/hmpps-locations-inside-prison-api
+    repository: ghcr.io/ministryofjustice/hmpps-locations-inside-prison-api
     tag: app_version # override at deployment time
     port: 8080
 

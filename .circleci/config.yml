@@ -2,13 +2,9 @@ version: 2.1
 orbs:
   hmpps: ministryofjustice/hmpps@10
 parameters:
-  alerts-slack-channel:
-    type: string
-    default: move-a-prisoner-alerts
   releases-slack-channel:
     type: string
     default: dps-releases
-
   java-version:
     type: string
     default: "21.0"
@@ -18,7 +14,6 @@ parameters:
   localstack-version:
     type: string
     default: "3"
-
 jobs:
   validate:
     executor:
@@ -53,84 +48,5 @@ jobs:
       - store_artifacts:
           path: build/reports/kover/html
           destination: test-coverage-report
-
 workflows:
   version: 2
-  build-test-and-deploy:
-    jobs:
-      - validate:
-          filters:
-            tags:
-              ignore: /.*/
-      - hmpps/helm_lint:
-          name: helm_lint
-      - hmpps/build_multiplatform_docker:
-          name: build_docker
-          filters:
-            branches:
-              only:
-                - main
-      - hmpps/deploy_env:
-          name: deploy_dev
-          env: "dev"
-          jira_update: true
-          pipeline_id: <<pipeline.id>>
-          pipeline_number: <<pipeline.number>>
-          context: hmpps-common-vars
-          filters:
-            branches:
-              only:
-                - main
-          requires:
-            - validate
-            - build_docker
-            - helm_lint
-          helm_timeout: 5m
-      - request-preprod-approval:
-          type: approval
-          requires:
-            - deploy_dev
-      - hmpps/deploy_env:
-          name: deploy_preprod
-          env: "preprod"
-          jira_update: true
-          jira_env_type: staging
-          pipeline_id: <<pipeline.id>>
-          pipeline_number: <<pipeline.number>>
-          context:
-            - hmpps-common-vars
-            - hmpps-locations-inside-prison-preprod
-          requires:
-            - request-preprod-approval
-          helm_timeout: 5m
-      - hmpps/deploy_env:
-          name: deploy_train
-          env: "train"
-          jira_update: false
-          pipeline_id: <<pipeline.id>>
-          pipeline_number: <<pipeline.number>>
-          context:
-            - hmpps-common-vars
-            - hmpps-locations-inside-prison-train
-          requires:
-            - request-preprod-approval
-          helm_timeout: 5m
-      - request-prod-approval:
-          type: approval
-          requires:
-            - deploy_preprod
-      - hmpps/deploy_env:
-          name: deploy_prod
-          env: "prod"
-          jira_update: true
-          jira_env_type: production
-          pipeline_id: <<pipeline.id>>
-          pipeline_number: <<pipeline.number>>
-          slack_notification: true
-          slack_channel_name: << pipeline.parameters.releases-slack-channel >>
-          context:
-            - hmpps-common-vars
-            - hmpps-locations-inside-prison-prod
-          requires:
-            - request-prod-approval
-          helm_timeout: 5m
