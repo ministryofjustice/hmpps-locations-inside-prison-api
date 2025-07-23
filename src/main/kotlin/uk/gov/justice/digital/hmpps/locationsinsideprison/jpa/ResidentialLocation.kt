@@ -95,7 +95,7 @@ open class ResidentialLocation(
     }
   }
 
-  private fun findTopLevelResidentialLocation(): ResidentialLocation = (getParent() as? ResidentialLocation)?.findTopLevelResidentialLocation() ?: this
+  fun findTopLevelResidentialLocation(): ResidentialLocation = (getParent() as? ResidentialLocation)?.findTopLevelResidentialLocation() ?: this
 
   override fun isResidentialRoomOrConvertedCell() = isNonResType() || isConvertedCell()
 
@@ -172,11 +172,11 @@ open class ResidentialLocation(
     this.residentialStructure = wingStructure.joinToString(separator = ",") { it.name }
   }
 
-  private fun getStructure(): List<ResidentialStructuralType>? = this.residentialStructure?.split(",")?.map { ResidentialStructuralType.valueOf(it.trim()) }
+  fun getStructure(): List<ResidentialStructuralType>? = this.residentialStructure?.split(",")?.map { ResidentialStructuralType.valueOf(it.trim()) }
 
   fun getNextLevelTypeWithinStructure() = findTopLevelResidentialLocation().getStructure()?.let { structure ->
     val pos = structure.indexOfFirst { it.locationType == locationType } + 1
-    if (pos < structure.size) structure[pos] else null
+    if (pos < structure.size) structure[pos] else ResidentialStructuralType.valueOf(locationType.name).defaultNextLevel
   }
 
   fun requestApproval(requestedDate: LocalDateTime, requestedBy: String, linkedTransaction: LinkedTransaction): CertificationApprovalRequest {
