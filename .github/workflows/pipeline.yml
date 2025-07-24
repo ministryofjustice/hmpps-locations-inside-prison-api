@@ -33,14 +33,14 @@ jobs:
       environment: ${{ matrix.environments }}
   kotlin_validate:
     name: Validate the kotlin
-    uses: ministryofjustice/hmpps-github-actions/.github/workflows/gradle_verify.yml@v2 # WORKFLOW_VERSION
+    uses: ministryofjustice/hmpps-github-actions/.github/workflows/gradle_localstack_postgres_verify.yml@v2 # WORKFLOW_VERSION
     secrets: inherit
-#    with:
-#      services: sns,sqs
-#      localstack-tag: "3"
-#      postgres-tag: "16"
-#      postgres-username: locations_inside_prison
-#      postgres-password: locations_inside_prison
+    with:
+      postgres-db: locations_inside_prison
+      localstack-tag: "3"
+      postgres-tag: "16"
+      postgres-username: locations_inside_prison
+      postgres-password: locations_inside_prison
   build:
     name: Build docker image from hmpps-github-actions
     if: github.ref == 'refs/heads/main'
@@ -82,6 +82,7 @@ jobs:
     needs:
       - build
       - helm_lint
+      - deploy_dev
     uses: ministryofjustice/hmpps-github-actions/.github/workflows/deploy_env.yml@v2 # WORKFLOW_VERSION
     secrets: inherit
     with:

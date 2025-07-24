@@ -10,6 +10,7 @@ on:
         options:
           - dev
           - preprod
+          - train
           - prod
         default: 'dev'
       version:
