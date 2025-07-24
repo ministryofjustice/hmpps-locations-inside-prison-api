@@ -191,11 +191,12 @@ data class NewCellRequest(
 
 enum class ResidentialStructuralType(
   val locationType: LocationType,
+  val defaultNextLevel: ResidentialStructuralType? = null,
 ) {
-  WING(LocationType.WING),
-  SPUR(LocationType.SPUR),
-  LANDING(LocationType.LANDING),
   CELL(LocationType.CELL),
+  LANDING(LocationType.LANDING, CELL),
+  SPUR(LocationType.SPUR, LANDING),
+  WING(LocationType.WING, LANDING),
   ;
 
   fun getPlural() = "${locationType.description}s"
