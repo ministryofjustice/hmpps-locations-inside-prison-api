@@ -35,12 +35,12 @@ jobs:
     name: Validate the kotlin
     uses: ministryofjustice/hmpps-github-actions/.github/workflows/gradle_localstack_postgres_verify.yml@v2 # WORKFLOW_VERSION
     secrets: inherit
-    with:
-      services: sns,sqs
-      localstack-tag: "3"
-      postgres-tag: "16"
-      postgres-username: locations_inside_prison
-      postgres-password: locations_inside_prison
+#    with:
+#      services: sns,sqs
+#      localstack-tag: "3"
+#      postgres-tag: "16"
+#      postgres-username: locations_inside_prison
+#      postgres-password: locations_inside_prison
   build:
     name: Build docker image from hmpps-github-actions
     if: github.ref == 'refs/heads/main'
