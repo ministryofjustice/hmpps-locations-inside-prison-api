@@ -29,6 +29,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationReque
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -1347,11 +1348,7 @@ class LocationService(
 
     val subLocationTypes = calculateSubLocationDescription(locations) ?: currentLocation?.getNextLevelTypeWithinStructure()?.getPlural() ?: "Wings"
     return ResidentialSummary(
-      topLevelLocationType = if (currentLocation == null) {
-        subLocationTypes
-      } else {
-        currentLocation.getHierarchy()[0].type.getPlural()
-      },
+      topLevelLocationType = currentLocation?.let { it.getHierarchy()[0].type.getPlural() } ?: "Wings",
       prisonSummary = if (id == null) {
         val prisonDetails = prisonService.lookupPrisonDetails(prisonId) ?: throw PrisonNotFoundException(prisonId)
 
@@ -1370,6 +1367,7 @@ class LocationService(
       parentLocation = currentLocation?.toDto(countInactiveCells = true, useHistoryForUpdate = true, countCells = true),
       subLocations = locations,
       subLocationName = subLocationTypes,
+      wingStructure = currentLocation?.findTopLevelResidentialLocation()?.getStructure(),
     )
   }
 
@@ -1538,6 +1536,8 @@ data class ResidentialSummary(
     examples = ["Wings", "Landings", "Spurs", "Cells"],
   )
   val subLocationName: String? = null,
+  @Schema(description = "The structure of the wing", required = false)
+  val wingStructure: List<ResidentialStructuralType>? = null,
   @Schema(description = "Parent locations, top to bottom", required = true)
   val locationHierarchy: List<LocationSummary>? = null,
   @Schema(description = "The current parent location (e.g Wing or Landing) details")
