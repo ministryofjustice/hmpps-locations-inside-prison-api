@@ -14,19 +14,19 @@ import java.time.LocalDateTime
 @Schema(description = "Request to create a wing")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateWingAndStructureRequest(
-  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  @param:Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
   @field:Size(min = 3, message = "Prison ID cannot be blank")
   @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
   val prisonId: String,
-  @Schema(description = "Code assigned to a wing", example = "B", required = true)
+  @param:Schema(description = "Code assigned to a wing", example = "B", required = true)
   @field:Size(max = 12, message = "Max of 12 characters")
   val wingCode: String,
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 80, message = "Max of 80 characters")
   val wingDescription: String?,
 
-  @Schema(description = "The structure of the wing", required = false)
+  @param:Schema(description = "The structure of the wing", required = false)
   val wingStructure: List<ResidentialStructuralType> = listOf(
     ResidentialStructuralType.WING,
     ResidentialStructuralType.LANDING,

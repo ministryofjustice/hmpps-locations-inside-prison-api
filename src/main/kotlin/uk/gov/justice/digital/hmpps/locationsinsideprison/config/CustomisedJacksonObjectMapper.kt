@@ -12,8 +12,8 @@ import java.time.format.DateTimeFormatter
 
 @Configuration
 class CustomisedJacksonObjectMapper(
-  @Value("\${spring.jackson.time-zone}") private val timeZone: String,
-  @Value("\${spring.jackson.date-format}") private val zonedDateTimeFormat: String,
+  @param:Value($$"${spring.jackson.time-zone}") private val timeZone: String,
+  @param:Value($$"${spring.jackson.date-format}") private val zonedDateTimeFormat: String,
 ) {
   @Bean
   fun serialiser() = Jackson2ObjectMapperBuilderCustomizer {

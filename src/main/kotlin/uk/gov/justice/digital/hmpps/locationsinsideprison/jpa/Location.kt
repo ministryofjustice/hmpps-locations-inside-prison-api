@@ -1046,9 +1046,9 @@ abstract class Location(
 @Schema(description = "Location Hierarchy Summary")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class LocationSummary(
-  @Schema(description = "ID of location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
+  @param:Schema(description = "ID of location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   val id: UUID? = null,
-  @Schema(
+  @param:Schema(
     description = "Prison ID where the location is situated",
     required = true,
     example = "MDI",
@@ -1057,15 +1057,15 @@ data class LocationSummary(
     pattern = "^[A-Z]{2}I|ZZGHI$",
   )
   val prisonId: String,
-  @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
+  @param:Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   val code: String,
-  @Schema(description = "Location type", example = "WING", required = true)
+  @param:Schema(description = "Location type", example = "WING", required = true)
   val type: LocationType,
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   val localName: String? = null,
-  @Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
+  @param:Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
   val pathHierarchy: String? = null,
-  @Schema(
+  @param:Schema(
     description = "Current Level within hierarchy, starts at 1, e.g Wing = 1",
     examples = ["1", "2", "3"],
     required = true,

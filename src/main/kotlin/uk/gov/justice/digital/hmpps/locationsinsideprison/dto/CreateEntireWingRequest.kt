@@ -22,43 +22,43 @@ import java.time.LocalDateTime
 @Schema(description = "Request to create a wing")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateEntireWingRequest(
-  @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+  @param:Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
   @field:Size(min = 3, message = "Prison ID cannot be blank")
   @field:Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
   val prisonId: String,
-  @Schema(description = "Code assigned to a wing", example = "B", required = true)
+  @param:Schema(description = "Code assigned to a wing", example = "B", required = true)
   @field:Size(max = 12, message = "Max of 12 characters")
   val wingCode: String,
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 80, message = "Max of 80 characters")
   val wingDescription: String?,
 
-  @Schema(description = "Number of spurs required", example = "2", required = false)
+  @param:Schema(description = "Number of spurs required", example = "2", required = false)
   @field:Max(value = 4, message = "Max of 4")
   val numberOfSpurs: Int? = null,
 
-  @Schema(description = "Number of landings required", example = "3", required = false)
+  @param:Schema(description = "Number of landings required", example = "3", required = false)
   @field:Max(value = 5, message = "Max of 5")
   val numberOfLandings: Int? = null,
 
-  @Schema(description = "Number of cells required in each section (wing,landing or spur)", example = "40", required = true)
+  @param:Schema(description = "Number of cells required in each section (wing,landing or spur)", example = "40", required = true)
   @field:Max(value = 100, message = "Max of 100")
   val numberOfCellsPerSection: Int,
 
-  @Schema(description = "Default working capacity", example = "1", required = false, defaultValue = "1")
+  @param:Schema(description = "Default working capacity", example = "1", required = false, defaultValue = "1")
   @field:Max(value = 4, message = "Max of 4")
   val defaultWorkingCapacity: Int = 1,
 
-  @Schema(description = "Default max capacity", example = "1", required = false, defaultValue = "1")
+  @param:Schema(description = "Default max capacity", example = "1", required = false, defaultValue = "1")
   @field:Max(value = 4, message = "Max of 4")
   val defaultMaxCapacity: Int = 1,
 
-  @Schema(description = "Default CNA", example = "1", required = false, defaultValue = "1")
+  @param:Schema(description = "Default CNA", example = "1", required = false, defaultValue = "1")
   @field:Max(value = 4, message = "Max of 4")
   val defaultCNA: Int = 1,
 
-  @Schema(description = "The structure of the wing", required = false)
+  @param:Schema(description = "The structure of the wing", required = false)
   val wingStructure: List<ResidentialStructuralType>? = null,
 ) {
 

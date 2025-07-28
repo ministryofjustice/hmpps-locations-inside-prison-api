@@ -207,91 +207,91 @@ data class ResidentialPrisonerLocation(
 @Schema(description = "Establishment Roll Count")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PrisonRollCount(
-  @Schema(description = "Prison Id", required = true)
+  @param:Schema(description = "Prison Id", required = true)
   val prisonId: String,
-  @Schema(description = "Unlock roll today", required = true)
+  @param:Schema(description = "Unlock roll today", required = true)
   val numUnlockRollToday: Int,
-  @Schema(description = "Current population", required = true)
+  @param:Schema(description = "Current population", required = true)
   val numCurrentPopulation: Int,
-  @Schema(description = "Arrived today", required = true)
+  @param:Schema(description = "Arrived today", required = true)
   val numArrivedToday: Int,
-  @Schema(description = "In reception", required = true)
+  @param:Schema(description = "In reception", required = true)
   val numInReception: Int,
-  @Schema(description = "Still to arrive", required = true)
+  @param:Schema(description = "Still to arrive", required = true)
   val numStillToArrive: Int,
-  @Schema(description = "Out today", required = true)
+  @param:Schema(description = "Out today", required = true)
   val numOutToday: Int,
-  @Schema(description = "No cell allocated", required = true)
+  @param:Schema(description = "No cell allocated", required = true)
   val numNoCellAllocated: Int,
 
-  @Schema(description = "Totals", required = true)
+  @param:Schema(description = "Totals", required = true)
   val totals: LocationRollCount,
 
-  @Schema(description = "Residential location roll count summary", required = true)
+  @param:Schema(description = "Residential location roll count summary", required = true)
   val locations: List<ResidentialLocationRollCount>,
 )
 
 @Schema(description = "Establishment Roll Count for Cells")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PrisonCellRollCount(
-  @Schema(description = "Parent locations, top to bottom", required = true)
+  @param:Schema(description = "Parent locations, top to bottom", required = true)
   val locationHierarchy: List<LocationSummary>? = null,
 
-  @Schema(description = "Totals", required = true)
+  @param:Schema(description = "Totals", required = true)
   val totals: LocationRollCount,
 
-  @Schema(description = "Residential location roll count summary", required = true)
+  @param:Schema(description = "Residential location roll count summary", required = true)
   val locations: List<ResidentialLocationRollCount>,
 )
 
 @Schema(description = "Summary of cell usage for this level")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class LocationRollCount(
-  @Schema(description = "Beds in use", required = true)
+  @param:Schema(description = "Beds in use", required = true)
   val bedsInUse: Int = 0,
-  @Schema(description = "Currently in cell", required = true)
+  @param:Schema(description = "Currently in cell", required = true)
   val currentlyInCell: Int = 0,
-  @Schema(description = "Currently out", required = true)
+  @param:Schema(description = "Currently out", required = true)
   val currentlyOut: Int = 0,
-  @Schema(description = "Working capacity", required = true)
+  @param:Schema(description = "Working capacity", required = true)
   val workingCapacity: Int = 0,
-  @Schema(description = "Net vacancies", required = true)
+  @param:Schema(description = "Net vacancies", required = true)
   val netVacancies: Int = 0,
-  @Schema(description = "Out of order", required = true)
+  @param:Schema(description = "Out of order", required = true)
   val outOfOrder: Int = 0,
 )
 
 @Schema(description = "Residential Prisoner Location Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ResidentialLocationRollCount(
-  @Schema(description = "Unique key to this location", example = "LEI-A-1-001", required = true)
+  @param:Schema(description = "Unique key to this location", example = "LEI-A-1-001", required = true)
   val key: String,
 
-  @Schema(description = "Location Id", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+  @param:Schema(description = "Location Id", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
   val locationId: UUID,
 
-  @Schema(description = "Location Type", example = "CELL", required = true)
+  @param:Schema(description = "Location Type", example = "CELL", required = true)
   val locationType: LocationType,
 
-  @Schema(description = "Location Code", example = "001", required = true)
+  @param:Schema(description = "Location Code", example = "001", required = true)
   val locationCode: String,
 
-  @Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
+  @param:Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
   val fullLocationPath: String,
 
-  @Schema(description = "Alternative description to display for location, (Not Cells)", example = "Wing A", required = false)
+  @param:Schema(description = "Alternative description to display for location, (Not Cells)", example = "Wing A", required = false)
   val localName: String? = null,
 
-  @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
+  @param:Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
   val certified: Boolean = false,
 
-  @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
+  @param:Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
 
-  @Schema(description = "Roll count details", required = true)
+  @param:Schema(description = "Roll count details", required = true)
   val rollCount: LocationRollCount,
 
-  @Schema(description = "Sub Locations", required = false)
+  @param:Schema(description = "Sub Locations", required = false)
   val subLocations: List<ResidentialLocationRollCount>? = null,
 
 )

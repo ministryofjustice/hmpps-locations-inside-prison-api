@@ -12,7 +12,7 @@ import kotlin.jvm.optionals.getOrNull
 @Service
 class ActivePrisonService(
   private val prisonConfigurationRepository: PrisonConfigurationRepository,
-  @Value("\${service.residential.activated.per.prison:false}")
+  @param:Value($$"${service.residential.activated.per.prison:false}")
   val resiServiceActivatedPerPrison: Boolean = false,
 ) {
   fun isAllPrisonsActive() = !resiServiceActivatedPerPrison

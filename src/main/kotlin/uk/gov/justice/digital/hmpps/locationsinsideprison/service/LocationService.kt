@@ -1526,38 +1526,38 @@ fun buildEventsToPublishOnUpdate(results: UpdateLocationResult): () -> Map<Inter
 @Schema(description = "Residential Summary")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ResidentialSummary(
-  @Schema(description = "Prison summary for top level view", required = false)
+  @param:Schema(description = "Prison summary for top level view", required = false)
   val prisonSummary: PrisonSummary? = null,
-  @Schema(description = "The top level type of locations", required = true, example = "Wings")
+  @param:Schema(description = "The top level type of locations", required = true, example = "Wings")
   val topLevelLocationType: String,
-  @Schema(
+  @param:Schema(
     description = "The description of the type of sub locations most common",
     required = false,
     examples = ["Wings", "Landings", "Spurs", "Cells"],
   )
   val subLocationName: String? = null,
-  @Schema(description = "The structure of the wing", required = false)
+  @param:Schema(description = "The structure of the wing", required = false)
   val wingStructure: List<ResidentialStructuralType>? = null,
-  @Schema(description = "Parent locations, top to bottom", required = true)
+  @param:Schema(description = "Parent locations, top to bottom", required = true)
   val locationHierarchy: List<LocationSummary>? = null,
-  @Schema(description = "The current parent location (e.g Wing or Landing) details")
+  @param:Schema(description = "The current parent location (e.g Wing or Landing) details")
   val parentLocation: LocationDTO? = null,
-  @Schema(description = "All residential locations under this parent")
+  @param:Schema(description = "All residential locations under this parent")
   val subLocations: List<LocationDTO>,
 )
 
 @Schema(description = "Prison Summary Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PrisonSummary(
-  @Schema(description = "Prison name")
+  @param:Schema(description = "Prison name")
   val prisonName: String,
-  @Schema(description = "Prison working capacity")
+  @param:Schema(description = "Prison working capacity")
   val workingCapacity: Int,
-  @Schema(description = "Prison signed operational capacity")
+  @param:Schema(description = "Prison signed operational capacity")
   val signedOperationalCapacity: Int,
-  @Schema(description = "Prison max capacity")
+  @param:Schema(description = "Prison max capacity")
   val maxCapacity: Int,
-  @Schema(description = "Total number of non-structural locations  e.g. cells and rooms")
+  @param:Schema(description = "Total number of non-structural locations  e.g. cells and rooms")
   val numberOfCellLocations: Int,
 )
 
@@ -1580,14 +1580,14 @@ data class CapacityUpdateResult(
 @Schema(description = "Capacity change audit")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CapacityChanges(
-  @Schema(description = "Location reference", example = "MDI-1-1-001")
+  @param:Schema(description = "Location reference", example = "MDI-1-1-001")
   val key: String,
-  @Schema(description = "textual description of the changes", example = "Working capacity from 2 ==> 1")
+  @param:Schema(description = "textual description of the changes", example = "Working capacity from 2 ==> 1")
   val message: String,
-  @Schema(description = "Attribute changed in the update", example = "workingCapacity")
+  @param:Schema(description = "Attribute changed in the update", example = "workingCapacity")
   val type: String? = null,
-  @Schema(description = "Old value of this attribute", example = "2")
+  @param:Schema(description = "Old value of this attribute", example = "2")
   val previousValue: Int? = null,
-  @Schema(description = "New value of this attribute", example = "1")
+  @param:Schema(description = "New value of this attribute", example = "1")
   val newValue: Int? = null,
 )

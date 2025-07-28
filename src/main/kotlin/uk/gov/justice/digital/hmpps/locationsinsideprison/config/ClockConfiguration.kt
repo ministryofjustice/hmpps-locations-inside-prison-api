@@ -8,7 +8,7 @@ import java.time.ZoneId
 
 @Configuration
 class ClockConfiguration(
-  @Value("\${spring.jackson.time-zone}") private val timeZone: String,
+  @param:Value($$"${spring.jackson.time-zone}") private val timeZone: String,
 ) {
   @Bean
   fun clock(): Clock? = Clock.system(ZoneId.of(timeZone))

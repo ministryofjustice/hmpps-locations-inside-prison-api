@@ -5,8 +5,9 @@ info.app:
 spring:
   application:
     name: hmpps-locations-inside-prison-api
-  codec:
-    max-in-memory-size: 20MB
+  http:
+    codecs:
+      max-in-memory-size: 20MB
 
   security:
     oauth2:

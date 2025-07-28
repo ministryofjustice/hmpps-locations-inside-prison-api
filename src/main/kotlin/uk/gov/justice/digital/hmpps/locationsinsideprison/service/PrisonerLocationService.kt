@@ -69,8 +69,8 @@ class PrisonerLocationService(
 @Schema(description = "Prisoner Location Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PrisonerLocation(
-  @Schema(description = "Cell location of the prisoner", example = "1-1-001", required = true)
+  @param:Schema(description = "Cell location of the prisoner", example = "1-1-001", required = true)
   val cellLocation: String,
-  @Schema(description = "list of prisoners in the cell", required = true)
+  @param:Schema(description = "list of prisoners in the cell", required = true)
   val prisoners: List<Prisoner>,
 )
