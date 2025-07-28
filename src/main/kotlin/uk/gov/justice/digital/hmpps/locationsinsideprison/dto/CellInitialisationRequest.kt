@@ -26,7 +26,7 @@ import java.util.*
 @Schema(description = "Request to a create location and cell locations below it")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CellInitialisationRequest(
-  @Schema(
+  @param:Schema(
     description = "Prison ID where the location is situated",
     required = true,
     example = "MDI",
@@ -39,22 +39,22 @@ data class CellInitialisationRequest(
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
   val prisonId: String,
 
-  @Schema(
+  @param:Schema(
     description = "Parent location under which the structure and/or cells should be created, if not specified then will add to the top level of the prison, is specified but no `newLevelAboveCells` is specified then cells will be created under this location",
     required = false,
   )
   val parentLocation: UUID? = null,
 
-  @Schema(
+  @param:Schema(
     description = "The location to create above the cells, this is normally a landing or spur, if the location where cells should be created under already exists then leave null",
     required = false,
   )
   val newLevelAboveCells: LevelAboveCells? = null,
 
-  @Schema(description = "Used For Types for all cells", required = false)
+  @param:Schema(description = "Used For Types for all cells", required = false)
   val cellsUsedFor: Set<UsedForType>? = null,
 
-  @Schema(
+  @param:Schema(
     description = "Accommodation Type for all cells",
     required = false,
     defaultValue = "NORMAL_ACCOMMODATION",
@@ -122,14 +122,14 @@ data class CellInitialisationRequest(
   }
 }
 data class LevelAboveCells(
-  @Schema(description = "Code assigned to the new structural location", example = "1", required = true)
+  @param:Schema(description = "Code assigned to the new structural location", example = "1", required = true)
   @field:Size(max = 12, message = "Max of 12 characters")
   val levelCode: String,
-  @Schema(description = "Alternative description to display for location", example = "Landing A", required = false)
+  @param:Schema(description = "Alternative description to display for location", example = "Landing A", required = false)
   @field:Size(max = 80, message = "Max of 80 characters")
   val levelLocalName: String?,
 
-  @Schema(description = "Parent location type", example = "LANDING", required = false, defaultValue = "LANDING")
+  @param:Schema(description = "Parent location type", example = "LANDING", required = false, defaultValue = "LANDING")
   val locationType: ResidentialStructuralType = ResidentialStructuralType.LANDING,
 ) {
   fun createLocation(prisonId: String, createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: ResidentialLocation? = null) = ResidentialLocation(
@@ -157,35 +157,35 @@ data class LevelAboveCells(
 }
 
 data class NewCellRequest(
-  @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
+  @param:Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be up to 12 characters")
   val code: String,
 
-  @Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1)
+  @param:Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1)
   @field:Size(min = 1, message = "Mark cannot be blank")
   @field:Size(max = 12, message = "Mark must be up to 12 characters")
   val cellMark: String? = null,
 
-  @Schema(description = "CNA value", required = false, defaultValue = "0")
+  @param:Schema(description = "CNA value", required = false, defaultValue = "0")
   @field:Max(value = 99, message = "CNA cannot be greater than 99")
   @field:PositiveOrZero(message = "CNA cannot be less than 0")
   val certifiedNormalAccommodation: Int = 0,
 
-  @Schema(description = "Max capacity of the location", example = "2", defaultValue = "0", required = false)
+  @param:Schema(description = "Max capacity of the location", example = "2", defaultValue = "0", required = false)
   @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
   @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
   val maxCapacity: Int = 0,
 
-  @Schema(description = "Working capacity of the location", example = "2", defaultValue = "0", required = false)
+  @param:Schema(description = "Working capacity of the location", example = "2", defaultValue = "0", required = false)
   @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
   @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
   val workingCapacity: Int = 0,
 
-  @Schema(description = "Specialist Cell Types", required = false)
+  @param:Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: Set<SpecialistCellType>? = null,
 
-  @Schema(description = "In-cell sanitation for cell", required = false, defaultValue = "true")
+  @param:Schema(description = "In-cell sanitation for cell", required = false, defaultValue = "true")
   val inCellSanitation: Boolean = true,
 )
 

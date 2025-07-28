@@ -12,12 +12,12 @@ import java.time.Duration
 
 @Configuration
 class WebClientConfiguration(
-  @Value("\${api.base.url.oauth}") private val authBaseUri: String,
-  @Value("\${api.base.url.prisoner-search}") private val prisonerSearchUri: String,
-  @Value("\${api.base.url.prison-register}") private val prisonRegisterUri: String,
-  @Value("\${api.base.url.prison-api}") private val prisonApiUri: String,
-  @Value("\${api.base.url.manage-users}") private val manageUsersApiUri: String,
-  @Value("\${api.timeout:20s}") val healthTimeout: Duration,
+  @param:Value($$"${api.base.url.oauth}") private val authBaseUri: String,
+  @param:Value($$"${api.base.url.prisoner-search}") private val prisonerSearchUri: String,
+  @param:Value($$"${api.base.url.prison-register}") private val prisonRegisterUri: String,
+  @param:Value($$"${api.base.url.prison-api}") private val prisonApiUri: String,
+  @param:Value($$"${api.base.url.manage-users}") private val manageUsersApiUri: String,
+  @param:Value($$"${api.timeout:20s}") val healthTimeout: Duration,
 ) {
 
   @Bean

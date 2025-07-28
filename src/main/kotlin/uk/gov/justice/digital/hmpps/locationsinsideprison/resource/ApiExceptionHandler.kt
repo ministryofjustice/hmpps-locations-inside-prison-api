@@ -109,10 +109,10 @@ class ApiExceptionHandler {
   fun handleAccessDeniedException(e: AccessDeniedException): ResponseEntity<ErrorResponse> {
     log.debug("Forbidden (403) returned with message {}", e.message)
     return ResponseEntity
-      .status(HttpStatus.FORBIDDEN)
+      .status(FORBIDDEN)
       .body(
         ErrorResponse(
-          status = HttpStatus.FORBIDDEN,
+          status = FORBIDDEN,
           userMessage = "Forbidden: ${e.message}",
           developerMessage = e.message,
         ),

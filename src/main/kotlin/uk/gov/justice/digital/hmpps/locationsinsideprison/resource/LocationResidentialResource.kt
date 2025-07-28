@@ -444,37 +444,37 @@ class LocationResidentialResource(
 
   @Schema(description = "Request to convert a cell to a non-res location")
   data class ConvertCellToNonResidentialLocationRequest(
-    @Schema(description = "Cell type to convert to", example = "SHOWER", required = true)
+    @param:Schema(description = "Cell type to convert to", example = "SHOWER", required = true)
     val convertedCellType: ConvertedCellType,
-    @Schema(description = "Other type of converted cell", example = "Swimming pool", required = false, maxLength = 255)
+    @param:Schema(description = "Other type of converted cell", example = "Swimming pool", required = false, maxLength = 255)
     @field:Size(max = 255, message = "Description of other cell type must be no more than 255 characters")
     val otherConvertedCellType: String? = null,
   )
 
   @Schema(description = "Request to update the type of a non-res cell location")
   data class UpdateNonResCellTypeRequest(
-    @Schema(description = "Cell type to change to", example = "SHOWER", required = true)
+    @param:Schema(description = "Cell type to change to", example = "SHOWER", required = true)
     val convertedCellType: ConvertedCellType,
-    @Schema(description = "When other, the cell type name", example = "Hot Tub", required = false, maxLength = 255)
+    @param:Schema(description = "When other, the cell type name", example = "Hot Tub", required = false, maxLength = 255)
     @field:Size(max = 255, message = "Description of other cell type must be no more than 255 characters")
     val otherConvertedCellType: String? = null,
   )
 
   @Schema(description = "Request to convert a non-res location to a cell")
   data class ConvertToCellRequest(
-    @Schema(description = "Accommodation type of the location", example = "NORMAL_ACCOMMODATION", required = true)
+    @param:Schema(description = "Accommodation type of the location", example = "NORMAL_ACCOMMODATION", required = true)
     val accommodationType: AllowedAccommodationTypeForConversion,
-    @Schema(description = "Specialist cell types", example = "[ \"BIOHAZARD_DIRTY_PROTEST\", \"ACCESSIBLE_CELL\" ]", required = false)
+    @param:Schema(description = "Specialist cell types", example = "[ \"BIOHAZARD_DIRTY_PROTEST\", \"ACCESSIBLE_CELL\" ]", required = false)
     val specialistCellTypes: Set<SpecialistCellType>? = null,
-    @Schema(description = "Maximum capacity", example = "2", required = true)
+    @param:Schema(description = "Maximum capacity", example = "2", required = true)
     @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
     @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
     val maxCapacity: Int = 0,
-    @Schema(description = "Working capacity", example = "1", required = true)
+    @param:Schema(description = "Working capacity", example = "1", required = true)
     @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
     @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
     val workingCapacity: Int = 0,
-    @Schema(description = "Used For list", example = "[ \"STANDARD_ACCOMMODATION\", \"PERSONALITY_DISORDER\" ]", required = false)
+    @param:Schema(description = "Used For list", example = "[ \"STANDARD_ACCOMMODATION\", \"PERSONALITY_DISORDER\" ]", required = false)
     val usedForTypes: List<UsedForType>? = null,
   )
 

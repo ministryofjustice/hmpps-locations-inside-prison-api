@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.ObjectMapper
 import io.swagger.v3.oas.annotations.media.Schema
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -8,13 +9,16 @@ import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 
-private const val SEARCH_RESPONSE_FIELDS =
-  "prisonerNumber,firstName,lastName,prisonId,prisonName,cellLocation,gender,status,inOutStatus,csra,category,alerts,lastMovementTypeCode"
-
 @Service
 class PrisonerSearchService(
   private val prisonerSearchWebClient: WebClient,
+  objectMapper: ObjectMapper,
 ) {
+  private val responseFields by lazy {
+    objectMapper.serializerProviderInstance.findValueSerializer(Prisoner::class.java).properties()
+      .asSequence()
+      .joinToString(",") { it.name }
+  }
 
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -23,7 +27,10 @@ class PrisonerSearchService(
   fun getPrisonersInPrison(prisonId: String, pageSize: Int? = 3000): List<Prisoner> {
     val prisonersInPrison = prisonerSearchWebClient
       .get()
-      .uri("/prisoner-search/prison/$prisonId?size=$pageSize&responseFields=$SEARCH_RESPONSE_FIELDS")
+      .uri(
+        "/prisoner-search/prison/$prisonId?size=$pageSize&responseFields={responseFields}",
+        mapOf("responseFields" to responseFields),
+      )
       .header("Content-Type", "application/json")
       .retrieve()
       .bodyToMono<SearchResult>()
@@ -59,7 +66,10 @@ class PrisonerSearchService(
 
     val prisonersInLocations = prisonerSearchWebClient
       .post()
-      .uri("/attribute-search?size=$pageSize&responseFields=$SEARCH_RESPONSE_FIELDS")
+      .uri(
+        "/attribute-search?size=$pageSize&responseFields={responseFields}",
+        mapOf("responseFields" to responseFields),
+      )
       .header("Content-Type", "application/json")
       .bodyValue(requestBody)
       .retrieve()
@@ -78,42 +88,42 @@ data class SearchResult(
 @Schema(description = "Prisoner Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Prisoner(
-  @Schema(description = "Prisoner Information", example = "A1234AA", required = true)
+  @param:Schema(description = "Prisoner Information", example = "A1234AA", required = true)
   val prisonerNumber: String,
-  @Schema(description = "Prison ID", example = "LEI", required = false)
+  @param:Schema(description = "Prison ID", example = "LEI", required = false)
   val prisonId: String?,
-  @Schema(description = "Prison Name", example = "HMP Leeds", required = false)
+  @param:Schema(description = "Prison Name", example = "HMP Leeds", required = false)
   val prisonName: String?,
-  @Schema(description = "Cell location of the prisoner", example = "1-1-001", required = false)
+  @param:Schema(description = "Cell location of the prisoner", example = "1-1-001", required = false)
   val cellLocation: String? = null,
-  @Schema(description = "Prisoner first name", example = "Dave", required = true)
+  @param:Schema(description = "Prisoner first name", example = "Dave", required = true)
   val firstName: String,
-  @Schema(description = "Prisoner last name", example = "Jones", required = true)
+  @param:Schema(description = "Prisoner last name", example = "Jones", required = true)
   val lastName: String,
-  @Schema(description = "Prisoner gender", example = "Male", required = true)
+  @param:Schema(description = "Prisoner gender", example = "Male", required = true)
   val gender: String,
-  @Schema(description = "Status of the prisoner", example = "ACTIVE IN", required = true)
+  @param:Schema(description = "Status of the prisoner", example = "ACTIVE IN", required = true)
   val status: String,
-  @Schema(description = "In/Out status", example = "IN", required = true)
+  @param:Schema(description = "In/Out status", example = "IN", required = true)
   val inOutStatus: String,
-  @Schema(description = "Prisoner CSRA", example = "High", required = false)
+  @param:Schema(description = "Prisoner CSRA", example = "High", required = false)
   val csra: String? = null,
-  @Schema(description = "Prisoner category", example = "C", required = false)
+  @param:Schema(description = "Prisoner category", example = "C", required = false)
   val category: String? = null,
-  @Schema(description = "Prisoner alerts", required = false)
+  @param:Schema(description = "Prisoner alerts", required = false)
   val alerts: List<Alert>? = null,
-  @Schema(description = "Last Movement Type Code of prisoner", example = "CRT", required = false)
+  @param:Schema(description = "Last Movement Type Code of prisoner", example = "CRT", required = false)
   val lastMovementTypeCode: String? = null,
 )
 
 data class Alert(
-  @Schema(description = "Alert type", example = "X", required = true)
+  @param:Schema(description = "Alert type", example = "X", required = true)
   val alertType: String,
-  @Schema(description = "Alert code", example = "XA", required = true)
+  @param:Schema(description = "Alert code", example = "XA", required = true)
   val alertCode: String,
-  @Schema(description = "Active alert", example = "true", required = true)
+  @param:Schema(description = "Active alert", example = "true", required = true)
   val active: Boolean,
-  @Schema(description = "Expired", example = "false", required = true)
+  @param:Schema(description = "Expired", example = "false", required = true)
   val expired: Boolean,
 )
 

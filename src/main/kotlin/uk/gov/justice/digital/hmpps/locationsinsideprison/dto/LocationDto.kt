@@ -36,156 +36,156 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 @Schema(description = "Location Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Location(
-  @Schema(description = "Location Id", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+  @param:Schema(description = "Location Id", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
   val id: UUID,
 
-  @Schema(description = "Prison ID", example = "MDI", required = true)
+  @param:Schema(description = "Prison ID", example = "MDI", required = true)
   val prisonId: String,
 
-  @Schema(description = "Location Code", example = "001", required = true)
+  @param:Schema(description = "Location Code", example = "001", required = true)
   val code: String,
 
-  @Schema(description = "Cell mark", example = "A1", required = false)
+  @param:Schema(description = "Cell mark", example = "A1", required = false)
   val cellMark: String? = null,
 
-  @Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
+  @param:Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
   val pathHierarchy: String,
 
-  @Schema(description = "Location Type", example = "CELL", required = true)
+  @param:Schema(description = "Location Type", example = "CELL", required = true)
   val locationType: LocationType,
 
-  @Schema(
+  @param:Schema(
     description = "Alternative description to display for location, (Not Cells)",
     example = "Wing A",
     required = false,
   )
   val localName: String? = null,
 
-  @Schema(description = "The structure of the wing", required = false)
+  @param:Schema(description = "The structure of the wing", required = false)
   val wingStructure: List<ResidentialStructuralType>? = null,
 
-  @Schema(
+  @param:Schema(
     description = "Additional comments that can be made about this location",
     example = "Not to be used",
     required = false,
   )
   val comments: String? = null,
 
-  @Schema(description = "Indicates if the location is permanently inactive", example = "false", required = true)
+  @param:Schema(description = "Indicates if the location is permanently inactive", example = "false", required = true)
   val permanentlyInactive: Boolean = false,
 
-  @Schema(description = "Reason for permanently deactivating", example = "Demolished", required = false)
+  @param:Schema(description = "Reason for permanently deactivating", example = "Demolished", required = false)
   val permanentlyInactiveReason: String? = null,
 
-  @Schema(description = "Capacity details of the location", required = false)
+  @param:Schema(description = "Capacity details of the location", required = false)
   val capacity: Capacity? = null,
 
-  @Schema(description = "Pending changes of draft or pending approval location", required = false)
+  @param:Schema(description = "Pending changes of draft or pending approval location", required = false)
   val pendingChanges: PendingChangeDto? = null,
 
-  @Schema(description = "When a cell is inactive, show the active working capacity value", required = false)
+  @param:Schema(description = "When a cell is inactive, show the active working capacity value", required = false)
   val oldWorkingCapacity: Int? = null,
 
-  @Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
+  @param:Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
   val certification: Certification? = null,
 
-  @Schema(description = "Location Usage", required = false)
+  @param:Schema(description = "Location Usage", required = false)
   val usage: List<NonResidentialUsageDto>? = null,
 
-  @Schema(description = "Accommodation Types", required = false)
+  @param:Schema(description = "Accommodation Types", required = false)
   val accommodationTypes: List<AccommodationType>? = null,
 
-  @Schema(description = "Specialist Cell Types", required = false)
+  @param:Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: List<SpecialistCellType>? = null,
 
-  @Schema(description = "Usage For", required = false)
+  @param:Schema(description = "Usage For", required = false)
   val usedFor: List<UsedForType>? = null,
 
-  @Schema(description = "Status of the location", example = "ACTIVE", required = true)
+  @param:Schema(description = "Status of the location", example = "ACTIVE", required = true)
   val status: DerivedLocationStatus,
 
-  @Schema(description = "Location is locked", example = "false", required = true)
+  @param:Schema(description = "Location is locked", example = "false", required = true)
   val locked: Boolean = false,
 
-  @Schema(description = "Convert Cell Type", required = false)
+  @param:Schema(description = "Convert Cell Type", required = false)
   val convertedCellType: ConvertedCellType? = null,
 
-  @Schema(description = "Convert Cell Type (Other)", required = false)
+  @param:Schema(description = "Convert Cell Type (Other)", required = false)
   val otherConvertedCellType: String? = null,
 
-  @Schema(description = "Indicates the location is enabled", example = "true", required = true, deprecated = true)
+  @param:Schema(description = "Indicates the location is enabled", example = "true", required = true, deprecated = true)
   val active: Boolean = true,
 
-  @Schema(description = "In-cell sanitation", required = false, example = "true")
+  @param:Schema(description = "In-cell sanitation", required = false, example = "true")
   val inCellSanitation: Boolean? = null,
 
-  @Schema(
+  @param:Schema(
     description = "Indicates the location in inactive as a parent is deactivated",
     example = "false",
     required = true,
   )
   val deactivatedByParent: Boolean = false,
 
-  @Schema(description = "Date the location was deactivated", example = "2023-01-23T12:23:00", required = false)
+  @param:Schema(description = "Date the location was deactivated", example = "2023-01-23T12:23:00", required = false)
   val deactivatedDate: LocalDateTime? = null,
 
-  @Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
+  @param:Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
 
-  @Schema(
+  @param:Schema(
     description = "For OTHER deactivation reason, a free text comment is provided",
     example = "Window damage",
     required = false,
   )
   val deactivationReasonDescription: String? = null,
 
-  @Schema(description = "Staff username who deactivated the location", required = false)
+  @param:Schema(description = "Staff username who deactivated the location", required = false)
   val deactivatedBy: String? = null,
 
-  @Schema(description = "Estimated reactivation date for location reactivation", example = "2026-01-24", required = false)
+  @param:Schema(description = "Estimated reactivation date for location reactivation", example = "2026-01-24", required = false)
   val proposedReactivationDate: LocalDate? = null,
 
-  @Schema(description = "Planet FM reference number", example = "2323/45M", required = false)
+  @param:Schema(description = "Planet FM reference number", example = "2323/45M", required = false)
   val planetFmReference: String? = null,
 
-  @Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
+  @param:Schema(description = "Top Level Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = true)
   val topLevelId: UUID,
 
-  @Schema(
+  @param:Schema(
     description = "Current Level within hierarchy, starts at 1, e.g Wing = 1",
     examples = ["1", "2", "3"],
     required = true,
   )
   val level: Int,
 
-  @Schema(description = "Indicates this is the lowest level, often a cell", example = "false", required = true)
+  @param:Schema(description = "Indicates this is the lowest level, often a cell", example = "false", required = true)
   val leafLevel: Boolean,
 
-  @Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
+  @param:Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
   val parentId: UUID?,
 
-  @Schema(description = "Parent Location", required = false)
+  @param:Schema(description = "Parent Location", required = false)
   val parentLocation: Location? = null,
 
-  @Schema(description = "Number of inactive cells below this location", required = false)
+  @param:Schema(description = "Number of inactive cells below this location", required = false)
   val inactiveCells: Int? = null,
 
-  @Schema(description = "Total number of non-structural locations are below this level, e.g. cells and rooms")
+  @param:Schema(description = "Total number of non-structural locations are below this level, e.g. cells and rooms")
   val numberOfCellLocations: Int? = null,
 
-  @Schema(description = "Child Locations", required = false)
+  @param:Schema(description = "Child Locations", required = false)
   val childLocations: List<Location>? = null,
 
-  @Schema(description = "History of changes", required = false)
+  @param:Schema(description = "History of changes", required = false)
   val changeHistory: List<ChangeHistory>? = null,
 
-  @Schema(description = "A list of transactions applied to this location", required = false)
+  @param:Schema(description = "A list of transactions applied to this location", required = false)
   val transactionHistory: List<TransactionHistory>? = null,
 
-  @Schema(description = "Staff username who last changed the location", required = true)
+  @param:Schema(description = "Staff username who last changed the location", required = true)
   val lastModifiedBy: String,
 
-  @Schema(description = "Date and time of the last change", required = true)
+  @param:Schema(description = "Date and time of the last change", required = true)
   val lastModifiedDate: LocalDateTime,
 
 ) : SortAttribute {
@@ -235,10 +235,10 @@ data class Location(
 @Schema(description = "Pending changes")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PendingChangeDto(
-  @Schema(description = "Pending max capacity", example = "2", required = false)
+  @param:Schema(description = "Pending max capacity", example = "2", required = false)
   val maxCapacity: Int? = null,
 
-  @Schema(description = "Pending CNA", example = "2", required = false)
+  @param:Schema(description = "Pending CNA", example = "2", required = false)
   val certifiedNormalAccommodation: Int? = null,
 )
 
@@ -273,11 +273,11 @@ data class NonResidentialUsageDto(
 @Schema(description = "Capacity")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Capacity(
-  @Schema(description = "Max capacity of the location", example = "2", required = true)
+  @param:Schema(description = "Max capacity of the location", example = "2", required = true)
   @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
   @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
   val maxCapacity: Int = 0,
-  @Schema(description = "Working capacity of the location", example = "2", required = true)
+  @param:Schema(description = "Working capacity of the location", example = "2", required = true)
   @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
   @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
   val workingCapacity: Int = 0,
@@ -305,53 +305,53 @@ data class Capacity(
 @Schema(description = "Change History")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ChangeHistory(
-  @Schema(description = "Transaction ID", example = "019464e9-05da-77b3-810b-887e199d8190", required = false)
+  @param:Schema(description = "Transaction ID", example = "019464e9-05da-77b3-810b-887e199d8190", required = false)
   val transactionId: UUID? = null,
 
-  @Schema(description = "Transaction type", example = "CAPACITY_CHANGE", required = false)
+  @param:Schema(description = "Transaction type", example = "CAPACITY_CHANGE", required = false)
   val transactionType: TransactionType? = null,
 
-  @Schema(description = "Location Attribute", example = "Location Type", required = true)
+  @param:Schema(description = "Location Attribute", example = "Location Type", required = true)
   val attribute: String,
 
-  @Schema(description = "Previous values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
+  @param:Schema(description = "Previous values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
   val oldValues: List<String>? = null,
 
-  @Schema(description = "New values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
+  @param:Schema(description = "New values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
   val newValues: List<String>? = null,
 
-  @Schema(description = "User who made the change", example = "user", required = true)
+  @param:Schema(description = "User who made the change", example = "user", required = true)
   val amendedBy: String,
 
-  @Schema(description = "Date the change was made", example = "2023-01-23T10:15:30", required = true)
+  @param:Schema(description = "Date the change was made", example = "2023-01-23T10:15:30", required = true)
   val amendedDate: LocalDateTime,
 )
 
 @Schema(description = "Transaction Detail")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class TransactionDetail(
-  @Schema(description = "Location Id", example = "019483f5-fee7-7ed0-924c-3ee4b2b51904", required = true)
+  @param:Schema(description = "Location Id", example = "019483f5-fee7-7ed0-924c-3ee4b2b51904", required = true)
   val locationId: UUID,
 
-  @Schema(description = "Location key", example = "BXI-1-1-001", required = true)
+  @param:Schema(description = "Location key", example = "BXI-1-1-001", required = true)
   val locationKey: String,
 
-  @Schema(description = "Attribute Code", required = true)
+  @param:Schema(description = "Attribute Code", required = true)
   val attributeCode: LocationAttribute,
 
-  @Schema(description = "Location Attribute", example = "Location Type", required = true)
+  @param:Schema(description = "Location Attribute", example = "Location Type", required = true)
   val attribute: String,
 
-  @Schema(description = "User who made the change", example = "user", required = true)
+  @param:Schema(description = "User who made the change", example = "user", required = true)
   val amendedBy: String,
 
-  @Schema(description = "Date the change was made", example = "2023-01-23T10:15:30", required = true)
+  @param:Schema(description = "Date the change was made", example = "2023-01-23T10:15:30", required = true)
   val amendedDate: LocalDateTime,
 
-  @Schema(description = "Previous values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
+  @param:Schema(description = "Previous values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
   val oldValues: List<String>? = null,
 
-  @Schema(description = "New values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
+  @param:Schema(description = "New values of this attribute", example = "[\"Dry cell\",\"Safe cell\"]", required = false)
   val newValues: List<String>? = null,
 ) {
   fun toChangeHistory(transactionHistory: TransactionHistory): ChangeHistory? {

@@ -25,35 +25,35 @@ interface PatchLocationRequest {
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PatchResidentialLocationRequest(
 
-  @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
+  @param:Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be no more than 12 characters")
   override val code: String? = null,
 
-  @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
+  @param:Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   override val parentId: UUID? = null,
 
-  @Schema(description = "Key of parent location", example = "MDI-B-1", required = false)
+  @param:Schema(description = "Key of parent location", example = "MDI-B-1", required = false)
   @field:Size(max = 80, message = "Key must be less than 81 characters")
   override val parentLocationKey: String? = null,
 
-  @Schema(description = "Indicates this location should move to the top of the hierarchy", example = "false", required = false)
+  @param:Schema(description = "Indicates this location should move to the top of the hierarchy", example = "false", required = false)
   override val removeParent: Boolean? = false,
 
-  @Schema(description = "Accommodation type", example = "NORMAL_ACCOMMODATION", required = false)
+  @param:Schema(description = "Accommodation type", example = "NORMAL_ACCOMMODATION", required = false)
   val accommodationType: AccommodationType? = null,
 
-  @Schema(description = "used For types", required = false)
+  @param:Schema(description = "used For types", required = false)
   val usedFor: Set<UsedForType>? = null,
 
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 30, message = "Description must be less than 31 characters")
   override val localName: String? = null,
 
-  @Schema(description = "Location Type", example = "CELL", required = false)
+  @param:Schema(description = "Location Type", example = "CELL", required = false)
   val locationType: ResidentialLocationType? = null,
 
-  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
+  @param:Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   override val comments: String? = null,
 
 ) : PatchLocationRequest
@@ -62,31 +62,31 @@ data class PatchResidentialLocationRequest(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PatchNonResidentialLocationRequest(
 
-  @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
+  @param:Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be no more than 12 characters")
   override val code: String? = null,
 
-  @Schema(description = "Location Type", example = "APPOINTMENTS", required = true)
+  @param:Schema(description = "Location Type", example = "APPOINTMENTS", required = true)
   val locationType: NonResidentialLocationType? = null,
 
-  @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
+  @param:Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   override val parentId: UUID? = null,
 
-  @Schema(description = "Key of parent location", example = "MDI-B-1", required = false)
+  @param:Schema(description = "Key of parent location", example = "MDI-B-1", required = false)
   override val parentLocationKey: String? = null,
 
-  @Schema(description = "Indicates this location should move to the top of the hierarchy", example = "false", required = false)
+  @param:Schema(description = "Indicates this location should move to the top of the hierarchy", example = "false", required = false)
   override val removeParent: Boolean? = false,
 
-  @Schema(description = "Non-residential usage", required = false)
+  @param:Schema(description = "Non-residential usage", required = false)
   val usage: Set<NonResidentialUsageDto>? = null,
 
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 30, message = "Description must be less than 31 characters")
   override val localName: String? = null,
 
-  @Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
+  @param:Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   override val comments: String? = null,
 ) : PatchLocationRequest
 
@@ -94,10 +94,10 @@ data class PatchNonResidentialLocationRequest(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class UpdateLocationLocalNameRequest(
 
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 30, message = "Description must be less than 31 characters")
   val localName: String? = null,
 
-  @Schema(description = "Username of the staff updating the location", required = false)
+  @param:Schema(description = "Username of the staff updating the location", required = false)
   val updatedBy: String? = null,
 )

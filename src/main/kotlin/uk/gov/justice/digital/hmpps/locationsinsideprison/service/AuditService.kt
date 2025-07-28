@@ -16,7 +16,7 @@ import java.time.Instant
 
 @Service
 class AuditService(
-  @Value("\${spring.application.name}")
+  @param:Value($$"${spring.application.name}")
   private val serviceName: String,
   private val hmppsQueueService: HmppsQueueService,
   private val telemetryClient: TelemetryClient,
