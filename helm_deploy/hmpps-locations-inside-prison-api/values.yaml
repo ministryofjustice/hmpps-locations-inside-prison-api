@@ -10,7 +10,7 @@ generic-service:
   replicaCount: 4
 
   image:
-    repository: quay.io/hmpps/hmpps-locations-inside-prison-api
+    repository: ghcr.io/ministryofjustice/hmpps-locations-inside-prison-api
     tag: app_version # override at deployment time
     port: 8080
 
@@ -24,16 +24,16 @@ generic-service:
     JAVA_OPTS: "-Xmx512m"
     SERVER_PORT: "8080"
     SPRING_PROFILES_ACTIVE: "logstash"
-    APPLICATIONINSIGHTS_CONNECTION_STRING: "InstrumentationKey=$(APPINSIGHTS_INSTRUMENTATIONKEY)"
     APPLICATIONINSIGHTS_CONFIGURATION_FILE: applicationinsights.json
     HMPPS_SQS_USE_WEB_TOKEN: "true"
     SERVICE_RESIDENTIAL_ACTIVATED_PER_PRISON: true
 
-  envFrom:
-    - secretRef:
-        name: hmpps-locations-inside-prison-api
-
   namespace_secrets:
+    hmpps-locations-inside-prison-api-application-insights:
+      APPLICATIONINSIGHTS_CONNECTION_STRING: "APPLICATIONINSIGHTS_CONNECTION_STRING"
+    hmpps-locations-inside-prison-api-client-creds:
+      LOCATIONS_INSIDE_PRISON_API_CLIENT_ID: "API_CLIENT_ID"
+      LOCATIONS_INSIDE_PRISON_API_CLIENT_SECRET: "API_CLIENT_SECRET"
     dps-rds-instance-output:
       DATABASE_ENDPOINT: "rds_instance_endpoint"
       DATABASE_NAME: "database_name"
