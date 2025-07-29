@@ -168,14 +168,20 @@ class LocationService(
     }
   }
 
-  fun getPrisonResidentialHierarchy(prisonId: String, includeVirtualLocations: Boolean = false, maxLevel: Int? = null, includeInactive: Boolean = false): List<PrisonHierarchyDto> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+  fun getPrisonResidentialHierarchy(prisonId: String, includeVirtualLocations: Boolean = false, maxLevel: Int? = null, includeInactive: Boolean = false, parentPathHierarchy: String? = null): List<PrisonHierarchyDto> = (
+    parentPathHierarchy?.let {
+      residentialLocationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, parentPathHierarchy)?.getResidentialLocationsBelowThisLevel()
+        ?: throw LocationNotFoundException("$prisonId-$parentPathHierarchy")
+    }
+      ?: residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+    )
     .filter {
       if (includeInactive) {
         !it.isPermanentlyDeactivated()
       } else {
         it.isActiveAndAllParentsActive()
       } &&
-        (it.isStructural() || (includeVirtualLocations && it.isVirtualResidentialLocation()))
+        (it.isStructural() || it.isCell() || (includeVirtualLocations && it.isVirtualResidentialLocation()))
     }
     .map {
       it.toPrisonHierarchyDto(maxLevel, includeInactive)

@@ -162,6 +162,58 @@ class LocationPrisonIdResource(
     includeInactive: Boolean = false,
   ): List<PrisonHierarchyDto> = locationService.getPrisonResidentialHierarchy(prisonId = prisonId, includeVirtualLocations = includeVirtualLocations, maxLevel = maxLevel, includeInactive = includeInactive)
 
+  @GetMapping("/prison/{prisonId}/residential-hierarchy/{parentPathHierarchy}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return the hierarchy below the parent path specified for this prison",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns hierarchy for this prison below the path specified for this prison",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getPrisonHierarchyBelowLocation(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
+    @NotBlank(message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
+    @PathVariable
+    prisonId: String,
+    @Schema(description = "Parent path", example = "A-1", required = true)
+    @Size(min = 1, message = "Path must be a minimum of 1 characters")
+    @NotBlank(message = "Path cannot be blank")
+    @PathVariable
+    parentPathHierarchy: String,
+    @Schema(description = "The maximum level to return, default is all if not defined.  Most APIs will just need the first level so maxLevel=1", example = "1", required = false)
+    @RequestParam(name = "maxLevel", required = false)
+    maxLevel: Int? = null,
+    @Schema(description = "Include virtual locations such as CSWAP and RECP", example = "false", required = false)
+    @RequestParam(name = "includeVirtualLocations", required = false, defaultValue = "false")
+    includeVirtualLocations: Boolean = false,
+    @Schema(description = "Include temporarily inactive locations", example = "false", required = false)
+    @RequestParam(name = "includeInactive", required = false, defaultValue = "false")
+    includeInactive: Boolean = false,
+  ): List<PrisonHierarchyDto> = locationService.getPrisonResidentialHierarchy(prisonId = prisonId, includeVirtualLocations = includeVirtualLocations, maxLevel = maxLevel, includeInactive = includeInactive, parentPathHierarchy = parentPathHierarchy)
+
   @GetMapping("/prison/{prisonId}/residential-first-level")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
