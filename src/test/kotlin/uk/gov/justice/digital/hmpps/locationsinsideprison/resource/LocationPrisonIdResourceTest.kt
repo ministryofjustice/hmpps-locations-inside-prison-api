@@ -553,6 +553,163 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
     }
   }
 
+  @DisplayName("GET /locations/prison/{prisonId}/residential-hierarchy/{parentPathHierarchy}")
+  @Nested
+  inner class ViewPrisonHierarchyWithParentTest {
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy/Z")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy/Z")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy/Z")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `should return not found for an unknown location`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy/XXX")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can retrieve full hierarchy for a wing of a prison`() {
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/residential-hierarchy/${wingZ.getPathHierarchy()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+          [
+
+                {
+                  "locationType": "LANDING",
+                  "locationCode": "1",
+                  "fullLocationPath": "Z-1",
+                  "localName": "Landing 1",
+                  "level": 2,
+                  "subLocations": [
+                    {
+                      "locationType": "CELL",
+                      "locationCode": "001",
+                      "fullLocationPath": "Z-1-001",
+                      "level": 3
+                    },
+                    {
+                      "locationType": "CELL",
+                      "locationCode": "002",
+                      "fullLocationPath": "Z-1-002",
+                      "level": 3
+                    }
+                  ]
+                },
+                {
+                  "locationType": "LANDING",
+                  "locationCode": "2",
+                  "fullLocationPath": "Z-2",
+                  "localName": "Landing 2",
+                  "level": 2
+                }
+              ]
+            """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can retrieve hierarchy for a landing of a prison`() {
+        webTestClient.get().uri("/locations/prison/${wingZ.prisonId}/residential-hierarchy/${landingZ1.getPathHierarchy()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+          [
+
+                    {
+                      "locationType": "CELL",
+                      "locationCode": "001",
+                      "fullLocationPath": "Z-1-001",
+                      "level": 3
+                    },
+                    {
+                      "locationType": "CELL",
+                      "locationCode": "002",
+                      "fullLocationPath": "Z-1-002",
+                      "level": 3
+                    }
+
+              ]
+            """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can retrieve level 2 hierarchy for a wing`() {
+        webTestClient.get().uri("/locations/prison/MDI/residential-hierarchy/${wingZ.getPathHierarchy()}?maxLevel=2")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            [
+              {
+                "locationType": "LANDING",
+                "locationCode": "1",
+                "fullLocationPath": "Z-1",
+                "localName": "Landing 1",
+                "level": 2,
+                "status": "ACTIVE"
+              },
+              {
+                "locationType": "LANDING",
+                "locationCode": "2",
+                "fullLocationPath": "Z-2",
+                "localName": "Landing 2",
+                "level": 2,
+                "status": "ACTIVE"
+              }
+            ]
+            """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /locations/prison/{prisonId}/group/{group}/location-prefix")
   @Nested
   inner class ViewLocationPrefixInPropertiesByPrisonAndGroupTest {

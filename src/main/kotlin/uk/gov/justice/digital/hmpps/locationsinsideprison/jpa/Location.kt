@@ -266,6 +266,8 @@ abstract class Location(
 
   private fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
 
+  fun getResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>()
+
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>().filter { !it.isPermanentlyDeactivated() }
 
   private fun leafResidentialLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>()
