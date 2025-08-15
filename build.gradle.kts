@@ -25,7 +25,7 @@ dependencies {
   implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.18.1")
 
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
-  implementation("com.zaxxer:HikariCP:6.3.2")
+  implementation("com.zaxxer:HikariCP:7.0.1")
   runtimeOnly("org.postgresql:postgresql")
   implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
