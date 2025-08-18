@@ -4,9 +4,9 @@ import uk.gov.justice.digital.hmpps.gradle.PortForwardRedisTask
 import uk.gov.justice.digital.hmpps.gradle.RevealSecretsTask
 
 plugins {
-  id("uk.gov.justice.hmpps.gradle-spring-boot") version "8.3.4"
-  kotlin("plugin.spring") version "2.2.0"
-  kotlin("plugin.jpa") version "2.2.0"
+  id("uk.gov.justice.hmpps.gradle-spring-boot") version "8.3.6"
+  kotlin("plugin.spring") version "2.2.10"
+  kotlin("plugin.jpa") version "2.2.10"
   id("org.jetbrains.kotlinx.kover") version "0.9.1"
   idea
 }
@@ -16,16 +16,16 @@ configurations {
 }
 
 dependencies {
-  implementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter:1.4.11")
+  implementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter:1.5.0")
   implementation("org.springframework.boot:spring-boot-starter-webflux")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springframework.boot:spring-boot-starter-validation")
   implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.3.3")
   implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:5.4.10")
-  implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.18.1")
+  implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.19.0")
 
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
-  implementation("com.zaxxer:HikariCP:6.3.2")
+  implementation("com.zaxxer:HikariCP:7.0.1")
   runtimeOnly("org.postgresql:postgresql")
   implementation("com.fasterxml.uuid:java-uuid-generator:5.1.0")
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9")
@@ -33,13 +33,13 @@ dependencies {
 
   developmentOnly("org.springframework.boot:spring-boot-devtools")
 
-  testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:1.4.11")
+  testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:1.5.0")
   testImplementation("org.wiremock:wiremock-standalone:3.13.1")
 
   testImplementation("com.pauldijou:jwt-core_2.11:5.0.0")
   testImplementation("org.awaitility:awaitility-kotlin:4.3.0")
   testImplementation("org.mockito:mockito-inline:5.2.0")
-  testImplementation("io.swagger.parser.v3:swagger-parser:2.1.31")
+  testImplementation("io.swagger.parser.v3:swagger-parser:2.1.32")
   testImplementation("org.springframework.security:spring-security-test")
   testImplementation("io.opentelemetry:opentelemetry-sdk-testing")
   testImplementation("org.testcontainers:localstack:1.21.3")
