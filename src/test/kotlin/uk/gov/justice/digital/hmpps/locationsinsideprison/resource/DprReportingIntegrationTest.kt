@@ -13,7 +13,7 @@ private const val REQUESTING_USER = "request-user"
 @DisplayName("DPR reporting resource tests")
 class DprReportingIntegrationTest : CommonDataTestBase() {
 
-  @Value("\${dpr.lib.system.role}")
+  @Value($$"${dpr.lib.system.role}")
   lateinit var systemRole: String
 
   @BeforeEach

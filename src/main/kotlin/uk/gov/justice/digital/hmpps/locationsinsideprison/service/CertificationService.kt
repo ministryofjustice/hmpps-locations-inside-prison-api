@@ -246,6 +246,6 @@ class CertificationService(
 @Schema(description = "Request to approve a location or set of locations and cells below it")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class LocationApprovalRequest(
-  @Schema(description = "Location Id of location requiring approval for being certified", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+  @param:Schema(description = "Location Id of location requiring approval for being certified", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
   val locationId: UUID,
 )
