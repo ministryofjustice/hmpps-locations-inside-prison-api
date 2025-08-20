@@ -29,5 +29,5 @@ enum class SpecialistCellType(
   MEDICAL("Medical cell", sequence = 11),
   MOTHER_AND_BABY("Mother and baby cell", sequence = 12),
   SAFE_CELL("Safe cell", sequence = 13),
-  UNFURNISHED("Unfurnished cell", sequence = 14),
+  UNFURNISHED("Unfurnished cell", sequence = 14, affectsCapacity = true),
 }

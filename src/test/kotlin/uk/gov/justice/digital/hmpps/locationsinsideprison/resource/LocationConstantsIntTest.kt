@@ -1094,7 +1094,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "key": "UNFURNISHED",
                   "description": "Unfurnished cell",
                   "attributes": {
-                    "affectsCapacity": false
+                    "affectsCapacity": true
                   }
                 }
               ]
