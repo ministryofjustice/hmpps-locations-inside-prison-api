@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.microsoft.applicationinsights.TelemetryClient
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DynamicTest
@@ -9,7 +8,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
 import org.springframework.http.HttpHeaders
-import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.HmppsAuthMockServer
@@ -27,9 +25,6 @@ abstract class IntegrationTestBase : TestBase() {
 
   @Autowired
   protected lateinit var jwtAuthHelper: JwtAuthorisationHelper
-
-  @MockitoSpyBean
-  protected lateinit var telemetryClient: TelemetryClient
 
   @Autowired
   protected lateinit var objectMapper: ObjectMapper

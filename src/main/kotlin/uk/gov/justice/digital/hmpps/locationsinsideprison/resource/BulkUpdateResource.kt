@@ -190,7 +190,7 @@ class BulkUpdateResource(
 @Schema(description = "Update Capacities Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class UpdateCapacityRequest(
-  @Schema(
+  @param:Schema(
     description = "List of capacities to update",
     example = "{\"TCI-A-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"certifiedNormalAccommodation\": 2 }, \"TCI-A-1-002\": { \"maxCapacity\": 3, \"workingCapacity\": 1, \"certifiedNormalAccommodation\": 1 } }",
   )
@@ -200,11 +200,11 @@ data class UpdateCapacityRequest(
 @Schema(description = "Bulk permanent deactivation request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class BulkPermanentDeactivationRequest(
-  @Schema(description = "Reason for permanent deactivation", example = "Wing demolished", required = true)
+  @param:Schema(description = "Reason for permanent deactivation", example = "Wing demolished", required = true)
   @field:Size(max = 100, message = "Reason for permanent deactivation cannot be more than 100 characters")
   @field:NotBlank(message = "Reason for permanent deactivation cannot be blank")
   val reason: String,
-  @Schema(
+  @param:Schema(
     description = "List of locations to permanently deactivate",
     required = true,
     example = "[ \"TCI-A-1-001\", \"TCI-B-1-001\", \"TCI-A-2-001\" ]",
@@ -216,9 +216,9 @@ data class BulkPermanentDeactivationRequest(
 @Schema(description = "Deactivate Locations Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class DeactivateLocationsRequest(
-  @Schema(description = "List of locations to deactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"deactivationReason\": \"DAMAGED\" } }")
+  @param:Schema(description = "List of locations to deactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"deactivationReason\": \"DAMAGED\" } }")
   val locations: Map<UUID, TemporaryDeactivationLocationRequest>,
-  @Schema(description = "Username of the user requesting to deactivate the locations, if not provided the token username or client id will be used", example = "TESTUSER", required = false)
+  @param:Schema(description = "Username of the user requesting to deactivate the locations, if not provided the token username or client id will be used", example = "TESTUSER", required = false)
   @field:Size(max = 80, message = "The updatedBy field cannot be more than 80 characters")
   val updatedBy: String? = null,
 )
@@ -226,41 +226,41 @@ data class DeactivateLocationsRequest(
 @Schema(description = "Reactivate Locations Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivateLocationsRequest(
-  @Schema(description = "List of locations to reactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
+  @param:Schema(description = "List of locations to reactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
   val locations: Map<UUID, ReactivationDetail>,
 )
 
 @Schema(description = "Reactivation Details")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivationDetail(
-  @Schema(description = "List of locations to reactivate", defaultValue = "false", required = true, example = "true")
+  @param:Schema(description = "List of locations to reactivate", defaultValue = "false", required = true, example = "true")
   val cascadeReactivation: Boolean = false,
-  @Schema(description = "New capacity of the location, if null the old values are used", required = false, example = " { \"workingCapacity\": 1, \"maxCapacity\": 2 }")
+  @param:Schema(description = "New capacity of the location, if null the old values are used", required = false, example = " { \"workingCapacity\": 1, \"maxCapacity\": 2 }")
   val capacity: Capacity? = null,
 )
 
 @Schema(description = "Bulk Update Cell Capacity Details")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CellCapacityUpdateDetail(
-  @Schema(description = "Max capacity of the location", example = "2", required = true)
+  @param:Schema(description = "Max capacity of the location", example = "2", required = true)
   @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
   @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
   val maxCapacity: Int,
 
-  @Schema(description = "Working capacity of the location", example = "2", required = true)
+  @param:Schema(description = "Working capacity of the location", example = "2", required = true)
   @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
   @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
   val workingCapacity: Int,
 
-  @Schema(description = "Indicates the capacity of the certified location (cell)", example = "1", required = false)
+  @param:Schema(description = "Indicates the capacity of the certified location (cell)", example = "1", required = false)
   @field:Max(value = 99, message = "CNA cannot be greater than 99")
   @field:PositiveOrZero(message = "CNA cannot be less than 0")
   val certifiedNormalAccommodation: Int? = null,
 
-  @Schema(description = "Working capacity of the location", example = "A1-03", required = false)
+  @param:Schema(description = "Working capacity of the location", example = "A1-03", required = false)
   @field:Size(max = 12, message = "Cell mark cannot be more than 12 characters")
   val cellMark: String? = null,
 
-  @Schema(description = "Indicate that the cell as in-cell sanitation", example = "true", required = true)
+  @param:Schema(description = "Indicate that the cell as in-cell sanitation", example = "true", required = true)
   val inCellSanitation: Boolean = true,
 )

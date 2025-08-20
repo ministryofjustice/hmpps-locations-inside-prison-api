@@ -90,25 +90,25 @@ class LocationOccupancyResource(
 @Schema(description = "Cell with specialist cell attributes details")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CellWithSpecialistCellTypes(
-  @Schema(required = true, title = "Location identifier.", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0")
+  @param:Schema(required = true, title = "Location identifier.", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0")
   val id: UUID,
-  @Schema(description = "Prison ID", example = "MDI", required = true)
+  @param:Schema(description = "Prison ID", example = "MDI", required = true)
   val prisonId: String,
-  @Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
+  @param:Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
   val pathHierarchy: String,
-  @Schema(required = true, title = "Current occupancy of location.", example = "1")
+  @param:Schema(required = true, title = "Current occupancy of location.", example = "1")
   val noOfOccupants: Int,
-  @Schema(required = true, title = "Max capacity of the location.", example = "2")
+  @param:Schema(required = true, title = "Max capacity of the location.", example = "2")
   val maxCapacity: Int,
-  @Schema(required = true, title = "Working capacity of the location.", example = "1")
+  @param:Schema(required = true, title = "Working capacity of the location.", example = "1")
   val workingCapacity: Int,
-  @Schema(title = "Local Name of the location.", example = "RES-HB1-ALE")
+  @param:Schema(title = "Local Name of the location.", example = "RES-HB1-ALE")
   val localName: String? = null,
-  @Schema(title = "List of specialist types for the cell.", example = """[{ "typeCode": "LISTENER_CRISIS", "typeDescription": "Listener / crisis cell" }]""")
+  @param:Schema(title = "List of specialist types for the cell.", example = """[{ "typeCode": "LISTENER_CRISIS", "typeDescription": "Listener / crisis cell" }]""")
   val specialistCellTypes: List<CellType> = listOf(),
-  @Schema(title = "List of the old location attributes.", example = """[{ "typeCode": "DOUBLE_OCCUPANCY", "typeDescription": "Double Occupancy" }]""")
+  @param:Schema(title = "List of the old location attributes.", example = """[{ "typeCode": "DOUBLE_OCCUPANCY", "typeDescription": "Double Occupancy" }]""")
   val legacyAttributes: List<ResidentialLocationAttribute> = listOf(),
-  @Schema(title = "List prisoners in this cell", required = true)
+  @param:Schema(title = "List prisoners in this cell", required = true)
   val prisonersInCell: List<Prisoner>? = null,
 ) {
   @Schema(description = "Business Key for a location", example = "MDI-A-1-001", required = true)
@@ -122,18 +122,18 @@ data class CellWithSpecialistCellTypes(
   @Schema(description = "Cell with specialist cell attribute")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   data class CellType(
-    @Schema(title = "Specialist Cell Type Code", required = true)
+    @param:Schema(title = "Specialist Cell Type Code", required = true)
     val typeCode: SpecialistCellType,
-    @Schema(title = "Specialist Cell Type Description", required = true)
+    @param:Schema(title = "Specialist Cell Type Description", required = true)
     val typeDescription: String,
   )
 
   @Schema(description = "Cell with old location attribute")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   data class ResidentialLocationAttribute(
-    @Schema(title = "Attribute Type Code", required = true)
+    @param:Schema(title = "Attribute Type Code", required = true)
     val typeCode: ResidentialAttributeValue,
-    @Schema(title = "Attribute Type Description", required = true)
+    @param:Schema(title = "Attribute Type Description", required = true)
     val typeDescription: String,
   )
 }

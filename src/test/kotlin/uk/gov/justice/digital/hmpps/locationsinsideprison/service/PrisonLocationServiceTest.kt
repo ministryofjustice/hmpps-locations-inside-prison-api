@@ -89,7 +89,15 @@ class PrisonLocationServiceTest {
   @Test
   fun `Get prisoners in location id with alert`() {
     val cell: Cell = mock()
-    val alerts = listOf(Alert("X", "XA", true, false), Alert("X", "XA", true, false))
+    val alerts = listOf(
+      Alert(alertType = "X", alertCode = "XA", active = true, expired = false),
+      Alert(
+        alertType = "X",
+        alertCode = "XA",
+        active = true,
+        expired = false,
+      ),
+    )
 
     whenever(cell.getPathHierarchy()).thenReturn("path")
     whenever(cell.cellLocations()).thenReturn(listOf(cell))

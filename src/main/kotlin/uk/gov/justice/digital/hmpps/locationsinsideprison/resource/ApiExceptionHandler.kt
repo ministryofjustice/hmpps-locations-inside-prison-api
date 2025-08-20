@@ -58,7 +58,7 @@ class ApiExceptionHandler {
 
   @ExceptionHandler(HttpMediaTypeNotSupportedException::class)
   fun handleInvalidRequestFormatException(e: HttpMediaTypeNotSupportedException): ResponseEntity<ErrorResponse> {
-    log.info("Validation exception: Request format not supported: {}", e.message)
+    log.info("Request format exception: Request format not supported: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
       .body(
@@ -72,7 +72,7 @@ class ApiExceptionHandler {
 
   @ExceptionHandler(HttpMessageNotReadableException::class)
   fun handleNoBodyValidationException(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> {
-    log.info("Validation exception: Couldn't read request body: {}", e.message)
+    log.info("No body validation exception: Couldn't read request body: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
       .body(
@@ -93,7 +93,7 @@ class ApiExceptionHandler {
       "Parameter ${e.name} must be of type ${type.typeName}"
     }
 
-    log.info("Validation exception: {}", message)
+    log.info("Method argument type mismatch: {}", message)
     return ResponseEntity
       .status(BAD_REQUEST)
       .body(

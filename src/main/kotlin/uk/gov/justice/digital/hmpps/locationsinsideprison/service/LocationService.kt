@@ -100,7 +100,7 @@ class LocationService(
   private val authenticationHolder: HmppsAuthenticationHolder,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
   private val activePrisonService: ActivePrisonService,
-  @Qualifier("residentialGroups") private val groupsProperties: Properties,
+  @param:Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
