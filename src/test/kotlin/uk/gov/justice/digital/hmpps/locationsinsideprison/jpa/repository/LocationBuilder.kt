@@ -20,7 +20,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
 import java.time.LocalDateTime
-import java.util.*
 
 fun buildResidentialLocation(
   prisonId: String = "MDI",

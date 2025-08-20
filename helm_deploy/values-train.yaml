@@ -9,7 +9,7 @@ generic-service:
   ingress:
     host: locations-inside-prison-api-train.hmpps.service.justice.gov.uk
     annotations:
-      # Secure the reset-training endpoint from outside of the Kubernetes ingress
+      # Secure the reset-training endpoint from the outside of the Kubernetes ingress
       nginx.ingress.kubernetes.io/server-snippet: |
         server_tokens off;
         location /reset-training {

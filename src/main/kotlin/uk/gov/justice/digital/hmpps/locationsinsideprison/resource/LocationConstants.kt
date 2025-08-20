@@ -94,7 +94,7 @@ class LocationConstants(
     ],
   )
   @ResponseBody
-  fun deactivedReasonsConstants(): Map<String, List<Constant>> = mapOf(
+  fun deactivatedReasonsConstants(): Map<String, List<Constant>> = mapOf(
     "deactivatedReasons" to DeactivatedReason.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
   )
 
@@ -244,7 +244,14 @@ class LocationConstants(
   )
   @ResponseBody
   fun getSpecialistCellTypeConstants(): Map<String, List<Constant>> = mapOf(
-    "specialistCellTypes" to SpecialistCellType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description, it.additionalInformation) },
+    "specialistCellTypes" to SpecialistCellType.entries.sortedBy { it.sequence }.map {
+      Constant(
+        key = it.name,
+        description = it.description,
+        attributes = mapOf("affectsCapacity" to it.affectsCapacity),
+        additionalInformation = it.additionalInformation,
+      )
+    },
   )
 
   @GetMapping("used-for-type")
@@ -343,22 +350,23 @@ class LocationConstants(
   @Schema(description = "Reference data information")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   data class Constant(
-    @Schema(description = "Code of reference information", example = "ACCESSIBLE_CELL", required = true)
+    @param:Schema(description = "Code of reference information", example = "ACCESSIBLE_CELL", required = true)
     val key: String,
-    @Schema(description = "Description of reference code", example = "Accessible cell", required = true)
+    @param:Schema(description = "Description of reference code", example = "Accessible cell", required = true)
     val description: String,
-    @Schema(description = "Additional information about this reference code", example = "Some useful extra info", required = false)
+    val attributes: Map<String, Any>? = null,
+    @param:Schema(description = "Additional information about this reference code", example = "Some useful extra info", required = false)
     val additionalInformation: String? = null,
   )
 
   @Schema(description = "Reference data information")
   @JsonInclude(JsonInclude.Include.NON_NULL)
   data class CompoundConstant(
-    @Schema(description = "Code of reference information", example = "ACCESSIBLE_CELL", required = true)
+    @param:Schema(description = "Code of reference information", example = "ACCESSIBLE_CELL", required = true)
     val key: String,
-    @Schema(description = "Description of reference code", example = "Accessible cell", required = true)
+    @param:Schema(description = "Description of reference code", example = "Accessible cell", required = true)
     val description: String,
-    @Schema(description = "Sub list of reference data values", required = true)
+    @param:Schema(description = "Sub list of reference data values", required = true)
     val values: List<Constant>,
   )
 }
