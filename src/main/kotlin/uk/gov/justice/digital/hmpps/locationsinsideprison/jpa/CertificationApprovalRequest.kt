@@ -2,30 +2,30 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
+import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
-import jakarta.persistence.EnumType
-import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
-import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
 import java.util.SortedSet
 import java.util.UUID
 
 @Entity
+@DiscriminatorValue("LOCATION_APPROVAL_REQUEST")
 open class CertificationApprovalRequest(
-  @Id
-  @GeneratedUuidV7
-  @Column(name = "id", updatable = false, nullable = false)
-  open val id: UUID? = null,
-
-  @Column(nullable = false)
-  private val prisonId: String,
+  id: UUID? = null,
+  approvalType: ApprovalType,
+  prisonId: String,
+  status: ApprovalRequestStatus,
+  requestedBy: String,
+  requestedDate: LocalDateTime,
+  approvedOrRejectedBy: String? = null,
+  approvedOrRejectedDate: LocalDateTime? = null,
+  comments: String? = null,
 
   @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
   @JoinColumn(name = "location_id", nullable = false)
@@ -33,25 +33,6 @@ open class CertificationApprovalRequest(
 
   @Column(nullable = false)
   private val locationKey: String,
-
-  @Column(nullable = false)
-  private val requestedBy: String,
-
-  @Column(nullable = false)
-  private val requestedDate: LocalDateTime,
-
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  open var status: ApprovalRequestStatus = ApprovalRequestStatus.PENDING,
-
-  @Column(nullable = true)
-  private var approvedOrRejectedBy: String? = null,
-
-  @Column(nullable = true)
-  private var approvedOrRejectedDate: LocalDateTime? = null,
-
-  @Column(nullable = true)
-  private var comments: String? = null,
 
   @Column(nullable = false)
   private var certifiedNormalAccommodationChange: Int = 0,
@@ -67,9 +48,20 @@ open class CertificationApprovalRequest(
   @JoinColumn(name = "certification_approval_request_id", nullable = false)
   open var locations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
 
+) : PrisonCertificationApprovalRequest(
+  id = id,
+  approvalType = approvalType,
+  prisonId = prisonId,
+  status = status,
+  requestedBy = requestedBy,
+  requestedDate = requestedDate,
+  approvedOrRejectedBy = approvedOrRejectedBy,
+  approvedOrRejectedDate = approvedOrRejectedDate,
+  comments = comments,
 ) {
-  fun toDto(showLocations: Boolean = false): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
+  override fun toDto(showLocations: Boolean): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
     id = id!!,
+    approvalType = approvalType,
     locationId = location.id!!,
     locationKey = locationKey,
     prisonId = prisonId,
@@ -89,7 +81,7 @@ open class CertificationApprovalRequest(
     },
   )
 
-  fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+  override fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
     this.status = ApprovalRequestStatus.APPROVED
     this.approvedOrRejectedBy = approvedBy
     this.approvedOrRejectedDate = approvedDate
@@ -101,11 +93,8 @@ open class CertificationApprovalRequest(
     )
   }
 
-  fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
-    this.status = ApprovalRequestStatus.REJECTED
-    this.approvedOrRejectedBy = rejectedBy
-    this.approvedOrRejectedDate = rejectedDate
-    this.comments = comments
+  override fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+    super.reject(rejectedBy, rejectedDate, linkedTransaction, comments)
     location.reject(
       rejectedDate = rejectedDate,
       rejectedBy = rejectedBy,
@@ -113,7 +102,7 @@ open class CertificationApprovalRequest(
     )
   }
 
-  fun withdraw(withdrawnBy: String, withdrawnDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+  override fun withdraw(withdrawnBy: String, withdrawnDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
     this.status = ApprovalRequestStatus.WITHDRAWN
     this.approvedOrRejectedBy = withdrawnBy
     this.approvedOrRejectedDate = withdrawnDate
@@ -124,11 +113,4 @@ open class CertificationApprovalRequest(
       linkedTransaction = linkedTransaction,
     )
   }
-}
-
-enum class ApprovalRequestStatus {
-  PENDING,
-  APPROVED,
-  REJECTED,
-  WITHDRAWN,
 }
