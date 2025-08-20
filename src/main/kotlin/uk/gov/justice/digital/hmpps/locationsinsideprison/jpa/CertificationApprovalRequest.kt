@@ -20,7 +20,7 @@ open class CertificationApprovalRequest(
   id: UUID? = null,
   approvalType: ApprovalType,
   prisonId: String,
-  status: ApprovalRequestStatus,
+  status: ApprovalRequestStatus = ApprovalRequestStatus.PENDING,
   requestedBy: String,
   requestedDate: LocalDateTime,
   approvedOrRejectedBy: String? = null,
