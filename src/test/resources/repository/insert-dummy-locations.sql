@@ -3,6 +3,7 @@ DELETE FROM certification_approval_request_location;
 UPDATE pending_location_change set approval_request_id = null;
 DELETE FROM certification_approval_request;
 DELETE FROM location;
+DELETE FROM signed_operation_capacity;
 
 INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name, residential_housing_type, when_created, when_updated, updated_by, status)
 values ('MDI', 'A', 'A', 'WING', 'RESIDENTIAL', null, 'Wing A', 'NORMAL_ACCOMMODATION', now(), now(), 'LOCATION_RO', 'ACTIVE');

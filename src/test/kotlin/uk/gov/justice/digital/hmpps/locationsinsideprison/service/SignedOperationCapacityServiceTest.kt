@@ -52,14 +52,12 @@ class SignedOperationCapacityServiceTest {
 
   @Test
   fun `Get signed operation capacity for the prison when record found`() {
-    whenever(signedOperationCapacityRepository.findById(any())).thenReturn(
-      Optional.of(
-        SignedOperationCapacity(
-          prisonId = "MDI",
-          signedOperationCapacity = 130,
-          whenUpdated = LocalDateTime.now(clock),
-          updatedBy = "Updated by",
-        ),
+    whenever(signedOperationCapacityRepository.findByPrisonId(any())).thenReturn(
+      SignedOperationCapacity(
+        prisonId = "MDI",
+        signedOperationCapacity = 130,
+        whenUpdated = LocalDateTime.now(clock),
+        updatedBy = "Updated by",
       ),
     )
     val result = service.getSignedOperationalCapacity("MDI")
@@ -126,7 +124,7 @@ class SignedOperationCapacityServiceTest {
     whenever(request.signedOperationCapacity).thenReturn(signedOperationCapacity)
     whenever(request.prisonId).thenReturn(prisonId)
     whenever(request.updatedBy).thenReturn(updatedBy)
-    whenever(signedOperationCapacityRepository.findById(any())).thenReturn(Optional.of(existingRecord))
+    whenever(signedOperationCapacityRepository.findByPrisonId(any())).thenReturn(existingRecord)
     whenever(signedOperationCapacityRepository.save(any())).thenReturn(signedOperationCapacityResponse)
     whenever(locationService.getResidentialLocations(prisonId = prisonId)).thenReturn(residentialSummary)
 
