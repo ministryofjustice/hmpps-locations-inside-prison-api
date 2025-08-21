@@ -17,7 +17,7 @@ class PendingLocationChange(
 
   @ManyToOne(fetch = FetchType.LAZY, optional = true)
   @JoinColumn(name = "approval_request_id", nullable = false)
-  var approvalRequest: CertificationApprovalRequest? = null,
+  var approvalRequest: LocationCertificationApprovalRequest? = null,
 
   @Column(nullable = true)
   var maxCapacity: Int? = null,

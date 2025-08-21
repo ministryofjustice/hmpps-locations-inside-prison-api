@@ -118,19 +118,21 @@ class CertificationResource(
     @Validated
     approveCertificationRequest: ApproveCertificationRequestDto,
   ): CertificationApprovalRequestDto {
-    val response = certificationService.approveCertificationRequest(
+    val approvalResponse = certificationService.approveCertificationRequest(
       approveCertificationRequest = approveCertificationRequest,
     )
-    eventPublishAndAudit(
-      if (response.newLocation) {
-        InternalLocationDomainEventType.LOCATION_CREATED
-      } else {
-        InternalLocationDomainEventType.LOCATION_AMENDED
-      },
-    ) {
-      response.location
+    approvalResponse.location?.let { publishedLocation ->
+      eventPublishAndAudit(
+        if (approvalResponse.newLocation) {
+          InternalLocationDomainEventType.LOCATION_CREATED
+        } else {
+          InternalLocationDomainEventType.LOCATION_AMENDED
+        },
+      ) {
+        publishedLocation
+      }
     }
-    return response.approvalRequest
+    return approvalResponse.approvalRequest
   }
 
   @PutMapping("/location/reject")
@@ -172,7 +174,7 @@ class CertificationResource(
     val response = certificationService.rejectCertificationRequest(
       rejectCertificationRequest = rejectCertificationRequest,
     )
-    if (!response.newLocation) {
+    if (!response.newLocation && response.location != null) {
       eventPublishAndAudit(
         InternalLocationDomainEventType.LOCATION_AMENDED,
       ) {
@@ -221,7 +223,7 @@ class CertificationResource(
     val response = certificationService.withdrawCertificationRequest(
       withdrawCertificationRequest = withdrawCertificationRequest,
     )
-    if (!response.newLocation) {
+    if (!response.newLocation && response.location != null) {
       eventPublishAndAudit(
         InternalLocationDomainEventType.LOCATION_AMENDED,
       ) {

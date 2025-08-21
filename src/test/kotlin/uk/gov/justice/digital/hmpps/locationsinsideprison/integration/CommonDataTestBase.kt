@@ -18,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguratio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
@@ -25,6 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Certifi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
@@ -43,6 +45,9 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var configurationRepository: PrisonConfigurationRepository
+
+  @Autowired
+  lateinit var signedOperationCapacityRepository: SignedOperationCapacityRepository
 
   @Autowired
   lateinit var linkedTransactionRepository: LinkedTransactionRepository
@@ -72,11 +77,19 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     prisonRegisterMockServer.resetAll()
     repository.deleteAll()
     configurationRepository.deleteAll()
+    signedOperationCapacityRepository.deleteAll()
+
+    signedOperationCapacityRepository.saveAllAndFlush(
+      listOf(
+        SignedOperationCapacity(prisonId = "MDI", signedOperationCapacity = 200, whenUpdated = LocalDateTime.now(clock), updatedBy = SYSTEM_USERNAME),
+        SignedOperationCapacity(prisonId = "NMI", signedOperationCapacity = 10, whenUpdated = LocalDateTime.now(clock), updatedBy = SYSTEM_USERNAME),
+        SignedOperationCapacity(prisonId = "LEI", signedOperationCapacity = 200, whenUpdated = LocalDateTime.now(clock), updatedBy = SYSTEM_USERNAME),
+      ),
+    )
 
     val nmiConfig = configurationRepository.saveAndFlush(
       PrisonConfiguration(
-        prisonId = "NMI",
-        signedOperationCapacity = 10,
+        id = "NMI",
         resiLocationServiceActive = true,
         certificationApprovalRequired = true,
         whenUpdated = LocalDateTime.now(clock),
@@ -86,23 +99,20 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     configurationRepository.saveAllAndFlush(
       listOf(
         PrisonConfiguration(
-          prisonId = "MDI",
-          signedOperationCapacity = 200,
+          id = "MDI",
           resiLocationServiceActive = true,
           whenUpdated = LocalDateTime.now(clock),
           updatedBy = SYSTEM_USERNAME,
         ),
         PrisonConfiguration(
-          prisonId = "LEI",
-          signedOperationCapacity = 200,
+          id = "LEI",
           resiLocationServiceActive = true,
           certificationApprovalRequired = true,
           whenUpdated = LocalDateTime.now(clock),
           updatedBy = SYSTEM_USERNAME,
         ),
         PrisonConfiguration(
-          prisonId = "ZZGHI",
-          signedOperationCapacity = 0,
+          id = "ZZGHI",
           whenUpdated = LocalDateTime.now(clock),
           updatedBy = SYSTEM_USERNAME,
         ),

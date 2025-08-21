@@ -22,8 +22,7 @@ class PrisonConfigurationResourceTest : SqsIntegrationTestBase() {
   fun setUp() {
     prisonConfigurationRepository.save(
       PrisonConfiguration(
-        prisonId = prisonId,
-        signedOperationCapacity = 0,
+        id = prisonId,
         whenUpdated = LocalDateTime.now(clock),
         updatedBy = "TEST",
       ),

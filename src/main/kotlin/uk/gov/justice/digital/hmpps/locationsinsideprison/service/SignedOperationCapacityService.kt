@@ -8,22 +8,21 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import java.time.Clock
 import java.time.LocalDateTime
-import kotlin.jvm.optionals.getOrNull
 
 @Service
 @Transactional(readOnly = true)
 class SignedOperationCapacityService(
   private val locationService: LocationService,
-  private val prisonConfigurationRepository: PrisonConfigurationRepository,
+  private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val telemetryClient: TelemetryClient,
   private val clock: Clock,
@@ -32,7 +31,7 @@ class SignedOperationCapacityService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun getSignedOperationalCapacity(prisonId: String): SignedOperationCapacityDto? = prisonConfigurationRepository.findById(prisonId).getOrNull()?.toSignedOperationCapacityDto()
+  fun getSignedOperationalCapacity(prisonId: String): SignedOperationCapacityDto? = signedOperationCapacityRepository.findByPrisonId(prisonId)?.toSignedOperationCapacityDto()
 
   @Transactional
   fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignOpCapResult {
@@ -45,13 +44,13 @@ class SignedOperationCapacityService(
       throw CapacityException(request.prisonId, "Signed operational capacity cannot be more than the establishment's maximum capacity of $maxCap", ErrorCode.SignedOpCapCannotBeMoreThanMaxCap)
     }
     val record =
-      prisonConfigurationRepository.findById(request.prisonId).getOrNull()?.also {
+      signedOperationCapacityRepository.findByPrisonId(request.prisonId)?.also {
         it.signedOperationCapacity = request.signedOperationCapacity
         it.updatedBy = request.updatedBy
         it.whenUpdated = LocalDateTime.now(clock)
         newRecord = false
-      } ?: prisonConfigurationRepository.save(
-        PrisonConfiguration(
+      } ?: signedOperationCapacityRepository.save(
+        SignedOperationCapacity(
           signedOperationCapacity = request.signedOperationCapacity,
           prisonId = request.prisonId,
           whenUpdated = LocalDateTime.now(clock),

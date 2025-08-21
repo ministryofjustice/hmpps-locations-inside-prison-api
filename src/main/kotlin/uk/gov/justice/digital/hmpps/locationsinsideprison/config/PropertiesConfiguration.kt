@@ -9,7 +9,7 @@ import org.springframework.core.io.Resource
 
 @Configuration
 class PropertiesConfiguration(
-  @Value("classpath:locations/patterns/*.properties") private val resources: Array<Resource>,
+  @param:Value("classpath:locations/patterns/*.properties") private val resources: Array<Resource>,
 ) {
 
   @Bean

@@ -43,16 +43,14 @@ class PrisonConfigurationRepositoryTest : TestBase() {
   @Test
   fun `Return result when capacity defined for prison id`() {
     val prisonConfiguration = PrisonConfiguration(
-      prisonId = testPrisonId,
-      signedOperationCapacity = 130,
+      id = testPrisonId,
       whenUpdated = LocalDateTime.now(clock),
       updatedBy = testUser,
     )
     repository.save(prisonConfiguration)
 
     val oc = repository.findById(testPrisonId).getOrNull()
-    assertThat(oc?.signedOperationCapacity).isEqualTo(prisonConfiguration.signedOperationCapacity)
-    assertThat(oc?.prisonId).isEqualTo(testPrisonId)
+    assertThat(oc?.id).isEqualTo(testPrisonId)
     assertThat(oc?.whenUpdated).isEqualTo(LocalDateTime.now(clock))
     assertThat(oc?.updatedBy).isEqualTo(testUser)
     assertThat(oc.toString()).contains("PrisonConfiguration")
