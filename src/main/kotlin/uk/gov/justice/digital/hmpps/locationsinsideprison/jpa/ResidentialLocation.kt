@@ -533,6 +533,7 @@ open class ResidentialLocation(
     pendingChanges = if (hasPendingChanges() || hasPendingChangesBelowThisLevel()) {
       PendingChangeDto(
         maxCapacity = calcMaxCapacity(true),
+        workingCapacity = calcWorkingCapacity(true),
         certifiedNormalAccommodation = calcCertifiedNormalAccommodation(true),
       )
     } else {
