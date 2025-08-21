@@ -62,14 +62,6 @@ class PrisonConfigurationGetIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `bad GET request when prisonID is not valid signed op cap`() {
-        webTestClient.get().uri("/signed-op-cap/MDI")
-          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-
-      @Test
       fun `bad GET error response ERROR when prisonID doesn't exist`() {
         webTestClient.get().uri("/signed-op-cap/XXXXX")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))

@@ -26,7 +26,7 @@ class SignedOperationCapacity(
 
   @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST, CascadeType.MERGE], optional = true)
   @JoinColumn(name = "certification_approval_request_id", nullable = true)
-  var approvalRequest: CertificationApprovalRequest? = null,
+  var approvalRequest: SignedOpCapCertificationApprovalRequest? = null,
 
   var whenUpdated: LocalDateTime,
   var updatedBy: String,

@@ -1,69 +1,59 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
-import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
-import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
-import jakarta.persistence.FetchType
-import jakarta.persistence.JoinColumn
-import jakarta.persistence.ManyToOne
-import jakarta.persistence.OneToMany
-import org.hibernate.annotations.SortNatural
+import jakarta.persistence.EnumType
+import jakarta.persistence.Enumerated
+import jakarta.persistence.Id
+import jakarta.persistence.Inheritance
+import jakarta.persistence.InheritanceType
+import jakarta.persistence.Table
+import org.hibernate.annotations.DiscriminatorFormula
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
+import java.io.Serializable
 import java.time.LocalDateTime
-import java.util.SortedSet
 import java.util.UUID
 
 @Entity
-@DiscriminatorValue("LOCATION_APPROVAL_REQUEST")
-open class CertificationApprovalRequest(
-  id: UUID? = null,
-  approvalType: ApprovalType,
-  prisonId: String,
-  status: ApprovalRequestStatus = ApprovalRequestStatus.PENDING,
-  requestedBy: String,
-  requestedDate: LocalDateTime,
-  approvedOrRejectedBy: String? = null,
-  approvedOrRejectedDate: LocalDateTime? = null,
-  comments: String? = null,
+@DiscriminatorFormula("CASE WHEN approval_type = 'SIGNED_OP_CAP' THEN 'SIGNED_OP_CAP_APPROVAL_REQUEST' ELSE 'LOCATION_APPROVAL_REQUEST' END")
+@Table(name = "certification_approval_request")
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
+abstract class CertificationApprovalRequest(
+  @Id
+  @GeneratedUuidV7
+  @Column(name = "id", updatable = false, nullable = false)
+  open val id: UUID? = null,
 
-  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
-  @JoinColumn(name = "location_id", nullable = false)
-  open val location: ResidentialLocation,
+  @Enumerated(EnumType.STRING)
+  val approvalType: ApprovalType,
 
   @Column(nullable = false)
-  private val locationKey: String,
+  val prisonId: String,
 
   @Column(nullable = false)
-  private var certifiedNormalAccommodationChange: Int = 0,
+  protected val requestedBy: String,
 
   @Column(nullable = false)
-  private var workingCapacityChange: Int = 0,
+  protected val requestedDate: LocalDateTime,
 
+  @Enumerated(EnumType.STRING)
   @Column(nullable = false)
-  private var maxCapacityChange: Int = 0,
+  open var status: ApprovalRequestStatus = ApprovalRequestStatus.PENDING,
 
-  @SortNatural
-  @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  @JoinColumn(name = "certification_approval_request_id", nullable = false)
-  open var locations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
+  @Column(nullable = true)
+  protected var approvedOrRejectedBy: String? = null,
 
-) : PrisonCertificationApprovalRequest(
-  id = id,
-  approvalType = approvalType,
-  prisonId = prisonId,
-  status = status,
-  requestedBy = requestedBy,
-  requestedDate = requestedDate,
-  approvedOrRejectedBy = approvedOrRejectedBy,
-  approvedOrRejectedDate = approvedOrRejectedDate,
-  comments = comments,
-) {
-  override fun toDto(showLocations: Boolean): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
+  @Column(nullable = true)
+  protected var approvedOrRejectedDate: LocalDateTime? = null,
+
+  @Column(nullable = true)
+  protected var comments: String? = null,
+
+) : Serializable {
+  open fun toDto(showLocations: Boolean = false): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
     id = id!!,
     approvalType = approvalType,
-    locationId = location.id!!,
-    locationKey = locationKey,
     prisonId = prisonId,
     status = status,
     requestedBy = requestedBy,
@@ -71,46 +61,41 @@ open class CertificationApprovalRequest(
     approvedOrRejectedBy = approvedOrRejectedBy,
     approvedOrRejectedDate = approvedOrRejectedDate,
     comments = comments,
-    certifiedNormalAccommodationChange = certifiedNormalAccommodationChange,
-    workingCapacityChange = workingCapacityChange,
-    maxCapacityChange = maxCapacityChange,
-    locations = if (showLocations) {
-      locations.filter { it.pathHierarchy == location.getPathHierarchy() }.map { it.toDto() }
-    } else {
-      null
-    },
   )
 
-  override fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+  open fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
     this.status = ApprovalRequestStatus.APPROVED
     this.approvedOrRejectedBy = approvedBy
     this.approvedOrRejectedDate = approvedDate
     this.comments = comments
-    location.approve(
-      approvedDate = approvedDate,
-      approvedBy = approvedBy,
-      linkedTransaction = linkedTransaction,
-    )
   }
 
-  override fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
-    super.reject(rejectedBy, rejectedDate, linkedTransaction, comments)
-    location.reject(
-      rejectedDate = rejectedDate,
-      rejectedBy = rejectedBy,
-      linkedTransaction = linkedTransaction,
-    )
+  open fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+    this.status = ApprovalRequestStatus.REJECTED
+    this.approvedOrRejectedBy = rejectedBy
+    this.approvedOrRejectedDate = rejectedDate
+    this.comments = comments
   }
 
-  override fun withdraw(withdrawnBy: String, withdrawnDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+  open fun withdraw(withdrawnBy: String, withdrawnDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
     this.status = ApprovalRequestStatus.WITHDRAWN
     this.approvedOrRejectedBy = withdrawnBy
     this.approvedOrRejectedDate = withdrawnDate
     this.comments = comments
-    location.reject(
-      rejectedDate = withdrawnDate,
-      rejectedBy = withdrawnBy,
-      linkedTransaction = linkedTransaction,
-    )
   }
+}
+
+enum class ApprovalRequestStatus {
+  PENDING,
+  APPROVED,
+  REJECTED,
+  WITHDRAWN,
+}
+
+enum class ApprovalType {
+  SIGNED_OP_CAP,
+  DRAFT,
+  DEACTIVATION,
+  REACTIVATION,
+  CAPACITY_CHANGE,
 }

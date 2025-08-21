@@ -21,8 +21,7 @@ class InfoTest : SqsIntegrationTestBase() {
     whenever(prisonConfigurationRepository.findAll()).thenReturn(
       listOf(
         PrisonConfiguration(
-          prisonId = "MDI",
-          signedOperationCapacity = 130,
+          id = "MDI",
           resiLocationServiceActive = true,
           whenUpdated = LocalDateTime.now(clock),
           updatedBy = "TEST",

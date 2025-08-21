@@ -44,13 +44,16 @@ data class CertificationApprovalRequestDto(
   val comments: String? = null,
 
   @param:Schema(description = "Change in certified normal accommodation", example = "1", required = true)
-  val certifiedNormalAccommodationChange: Int = 0,
+  val certifiedNormalAccommodationChange: Int? = null,
 
   @param:Schema(description = "Change in working capacity", example = "1", required = true)
-  val workingCapacityChange: Int = 0,
+  val workingCapacityChange: Int? = null,
 
   @param:Schema(description = "Change in maximum capacity", example = "1", required = true)
-  val maxCapacityChange: Int = 0,
+  val maxCapacityChange: Int? = null,
+
+  @param:Schema(description = "Change signed operational capacity", example = "1", required = true)
+  val signedOperationCapacityChange: Int? = null,
 
   @param:Schema(description = "Locations affected by the approval", required = false)
   val locations: List<CertificationApprovalRequestLocationDto>? = null,
@@ -89,7 +92,8 @@ data class WithdrawCertificationRequestDto(
 @Schema(description = "Response from approving/rejecting a certification request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ApprovalResponse(
-  val newLocation: Boolean = false,
-  val location: Location,
   val approvalRequest: CertificationApprovalRequestDto,
+  val newLocation: Boolean = false,
+  val prisonId: String,
+  val location: Location? = null,
 )

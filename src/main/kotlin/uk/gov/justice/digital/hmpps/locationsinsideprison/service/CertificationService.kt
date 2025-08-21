@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
@@ -92,16 +93,16 @@ class CertificationService(
 
     val username = getUsername()
     val now = LocalDateTime.now(clock)
-    val location = approvalRequest.location
+    val transactionInvokedBy = getUsername()
+    val approvedLocation = (approvalRequest as? LocationCertificationApprovalRequest)?.location
 
     val linkedTransaction = createLinkedTransaction(
-      TransactionType.APPROVE_CERTIFICATION_REQUEST,
-      location.prisonId,
-      "Approval for approval request ${approveCertificationRequest.approvalRequestReference} for ${location.getKey()}",
-      now,
-      username,
+      transactionType = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+      prisonId = approvalRequest.prisonId,
+      detail = "Approval for approval request ${approveCertificationRequest.approvalRequestReference} for ${approvalRequest.prisonId} " + if (approvedLocation != null) "at ${approvedLocation.getKey()}" else "",
+      now = now,
+      transactionInvokedBy = transactionInvokedBy,
     )
-    val newLocation = location.isDraft()
     approvalRequest.approve(
       approvedBy = username,
       approvedDate = now,
@@ -110,24 +111,39 @@ class CertificationService(
     )
 
     // Create the cell certificate
-    cellCertificateService.createCellCertificate(location, username, now, approvalRequest)
+    cellCertificateService.createCellCertificate(
+      approvalRequest = approvalRequest,
+      approvedBy = transactionInvokedBy,
+      approvedDate = now,
+      approvedLocation = approvedLocation,
+    )
 
     telemetryClient.trackEvent(
       "certification-approval-approved",
       mapOf(
-        "locationId" to location.id.toString(),
-        "locationKey" to location.getKey(),
-        "approvedBy" to username,
+        "approvalType" to approvalRequest.approvalType.toString(),
         "approvalRequestId" to approvalRequest.id.toString(),
+        "prisonId" to approvalRequest.prisonId,
+        "approvedBy" to transactionInvokedBy,
+        "locationId" to approvedLocation?.id.toString(),
+        "locationKey" to approvedLocation?.getKey(),
       ),
       null,
     )
 
-    log.info("Certification approval approved for location ${location.getKey()} by $username")
+    val locationKeySuffix = approvedLocation?.let { "at ${it.getKey()}" } ?: ""
+    log.info(
+      "Certification approval approved for {} {} by {}",
+      approvalRequest.prisonId,
+      locationKeySuffix,
+      transactionInvokedBy,
+    )
+
     return ApprovalResponse(
-      newLocation = newLocation,
-      location = location.toDto(includeChildren = true, includeParent = true),
       approvalRequest = approvalRequest.toDto(),
+      prisonId = approvalRequest.prisonId,
+      newLocation = approvedLocation?.isDraft() ?: false,
+      location = approvedLocation?.toDto(includeChildren = true, includeParent = true),
     )
   }
 
@@ -140,17 +156,17 @@ class CertificationService(
     }
 
     val now = LocalDateTime.now(clock)
-    val location = approvalRequest.location
     val transactionInvokedBy = getUsername()
+    val location = (approvalRequest as? LocationCertificationApprovalRequest)?.location
 
     val linkedTransaction = createLinkedTransaction(
-      TransactionType.REJECT_CERTIFICATION_REQUEST,
-      location.prisonId,
-      "Rejection of approval request ${rejectCertificationRequest.approvalRequestReference} for ${location.getKey()}",
-      now,
-      transactionInvokedBy,
+      transactionType = TransactionType.REJECT_CERTIFICATION_REQUEST,
+      prisonId = approvalRequest.prisonId,
+      detail = "Rejection of approval request ${rejectCertificationRequest.approvalRequestReference} for ${approvalRequest.prisonId} " + if (location != null) "at ${location.getKey()}" else "",
+      now = now,
+      transactionInvokedBy = transactionInvokedBy,
     )
-    val newLocation = location.isDraft()
+    val newLocation = location?.isDraft() ?: false
     approvalRequest.reject(
       rejectedBy = transactionInvokedBy,
       rejectedDate = now,
@@ -161,19 +177,28 @@ class CertificationService(
     telemetryClient.trackEvent(
       "certification-approval-rejected",
       mapOf(
-        "locationId" to location.id.toString(),
-        "locationKey" to location.getKey(),
-        "rejectedBy" to transactionInvokedBy,
+        "approvalType" to approvalRequest.approvalType.toString(),
         "approvalRequestId" to approvalRequest.id.toString(),
+        "prisonId" to approvalRequest.prisonId,
+        "locationId" to location?.id.toString(),
+        "locationKey" to location?.getKey(),
+        "rejectedBy" to transactionInvokedBy,
       ),
       null,
     )
 
-    log.info("Certification rejected for location ${location.getKey()} by $transactionInvokedBy")
+    val locationKeySuffix = location?.let { "at ${it.getKey()}" } ?: ""
+    log.info(
+      "Certification rejected for {} {} by {}",
+      approvalRequest.prisonId,
+      locationKeySuffix,
+      transactionInvokedBy,
+    )
     return ApprovalResponse(
-      newLocation = newLocation,
-      location = location.toDto(includeChildren = !newLocation, includeParent = !newLocation),
       approvalRequest = approvalRequest.toDto(),
+      prisonId = approvalRequest.prisonId,
+      newLocation = newLocation,
+      location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
     )
   }
 
@@ -186,16 +211,16 @@ class CertificationService(
     }
 
     val now = LocalDateTime.now(clock)
-    val location = approvalRequest.location
+    val location = (approvalRequest as? LocationCertificationApprovalRequest)?.location
     val transactionInvokedBy = getUsername()
-    val newLocation = location.isDraft()
+    val newLocation = location?.isDraft() ?: false
 
     val linkedTransaction = createLinkedTransaction(
-      TransactionType.WITHDRAW_CERTIFICATION_REQUEST,
-      location.prisonId,
-      "Withdrawal of approval request ${withdrawCertificationRequest.approvalRequestReference} for ${location.getKey()}",
-      now,
-      transactionInvokedBy,
+      transactionType = TransactionType.WITHDRAW_CERTIFICATION_REQUEST,
+      prisonId = approvalRequest.prisonId,
+      detail = "Withdrawal of approval request ${withdrawCertificationRequest.approvalRequestReference} for ${approvalRequest.prisonId} " + if (location != null) "at ${location.getKey()}" else "",
+      now = now,
+      transactionInvokedBy = transactionInvokedBy,
     )
 
     approvalRequest.withdraw(
@@ -208,19 +233,29 @@ class CertificationService(
     telemetryClient.trackEvent(
       "certification-approval-withdrawn",
       mapOf(
-        "locationId" to location.id.toString(),
-        "locationKey" to location.getKey(),
-        "withdrawnBy" to transactionInvokedBy,
+        "approvalType" to approvalRequest.approvalType.toString(),
         "approvalRequestId" to approvalRequest.id.toString(),
+        "prisonId" to approvalRequest.prisonId,
+        "locationId" to location?.id.toString(),
+        "locationKey" to location?.getKey(),
+        "withdrawnBy" to transactionInvokedBy,
       ),
       null,
     )
 
-    log.info("Certification withdrawn for location ${location.getKey()} by $transactionInvokedBy")
+    val locationKeySuffix = location?.let { "at ${it.getKey()}" } ?: ""
+    log.info(
+      "Certification withdrawn for {} {} by {}",
+      approvalRequest.prisonId,
+      locationKeySuffix,
+      transactionInvokedBy,
+    )
+
     return ApprovalResponse(
-      newLocation = newLocation,
-      location = location.toDto(includeChildren = !newLocation, includeParent = !newLocation),
       approvalRequest = approvalRequest.toDto(),
+      prisonId = approvalRequest.prisonId,
+      newLocation = newLocation,
+      location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
     )
   }
 

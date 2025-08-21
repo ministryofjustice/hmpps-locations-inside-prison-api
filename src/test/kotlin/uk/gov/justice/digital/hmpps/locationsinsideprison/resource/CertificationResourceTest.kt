@@ -17,6 +17,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
@@ -544,7 +545,7 @@ class CertificationResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
-        val approvalRequestId = certificationApprovalRequestRepository.findByLocationKeyOrderByRequestedDateDesc(cell1N.getKey()).first()
+        val approvalRequestId = certificationApprovalRequestRepository.findByPrisonIdAndStatusOrderByRequestedDateDesc(cell1N.prisonId, ApprovalRequestStatus.PENDING).first()
         webTestClient.put().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
           .header("Content-Type", "application/json")

@@ -61,7 +61,7 @@ open class ResidentialLocation(
   private var residentialStructure: String? = null,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  private val approvalRequests: MutableList<CertificationApprovalRequest> = mutableListOf(),
+  private val approvalRequests: MutableList<LocationCertificationApprovalRequest> = mutableListOf(),
 
 ) : Location(
   id = id,
@@ -179,14 +179,14 @@ open class ResidentialLocation(
     if (pos < structure.size) structure[pos] else ResidentialStructuralType.valueOf(locationType.name).defaultNextLevel
   }
 
-  fun requestApproval(requestedDate: LocalDateTime, requestedBy: String, linkedTransaction: LinkedTransaction): CertificationApprovalRequest {
+  fun requestApproval(requestedDate: LocalDateTime, requestedBy: String, linkedTransaction: LinkedTransaction): LocationCertificationApprovalRequest {
     fun traverseAndLock(location: ResidentialLocation) {
       location.lock(requestedDate, requestedBy, linkedTransaction)
       location.childLocations.filterIsInstance<ResidentialLocation>().forEach { traverseAndLock(it) }
     }
     traverseAndLock(this)
-    val approvalRequest = CertificationApprovalRequest(
-      approvalType = ApprovalType.DRAFT_LOCATIONS,
+    val approvalRequest = LocationCertificationApprovalRequest(
+      approvalType = ApprovalType.DRAFT,
       location = this,
       prisonId = this.prisonId,
       locationKey = this.getKey(),
@@ -217,7 +217,7 @@ open class ResidentialLocation(
     }
   }
 
-  open fun linkPendingChangesToApprovalRequest(approvalRequest: CertificationApprovalRequest) {
+  open fun linkPendingChangesToApprovalRequest(approvalRequest: LocationCertificationApprovalRequest) {
     childLocations.filterIsInstance<ResidentialLocation>().forEach { it.linkPendingChangesToApprovalRequest(approvalRequest = approvalRequest) }
   }
 
@@ -429,13 +429,13 @@ open class ResidentialLocation(
     return this
   }
 
-  fun toCellCertificateLocation(approvedLocation: ResidentialLocation): CellCertificateLocation {
+  fun toCellCertificateLocation(approvedLocation: ResidentialLocation? = null): CellCertificateLocation {
     val subLocations: List<CellCertificateLocation> = childLocations
       .filterIsInstance<ResidentialLocation>()
       .filter { !it.isDraft() && (it.isStructural() || it.isCell() || it.isConvertedCell()) }
       .map { it.toCellCertificateLocation(approvedLocation) }
 
-    val approvedLocationIsPartOfHierarchy = isInHierarchy(approvedLocation)
+    val approvedLocationIsPartOfHierarchy = approvedLocation?.let { isInHierarchy(it) } ?: false
     return CellCertificateLocation(
       locationType = locationType,
       locationCode = getCode(),

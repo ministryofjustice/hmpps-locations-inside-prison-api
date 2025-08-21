@@ -14,20 +14,20 @@ import org.mockito.kotlin.whenever
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.Companion.clock
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import java.time.LocalDateTime
 import java.util.*
 
 class SignedOperationCapacityServiceTest {
   private val locationService: LocationService = mock()
-  private val prisonConfigurationRepository: PrisonConfigurationRepository = mock()
+  private val signedOperationCapacityRepository: SignedOperationCapacityRepository = mock()
   private val linkedTransactionRepository: LinkedTransactionRepository = mock()
   private val telemetryClient: TelemetryClient = mock()
   private val service: SignedOperationCapacityService = SignedOperationCapacityService(
     locationService,
-    prisonConfigurationRepository,
+    signedOperationCapacityRepository,
     linkedTransactionRepository,
     telemetryClient,
     clock,
@@ -52,9 +52,9 @@ class SignedOperationCapacityServiceTest {
 
   @Test
   fun `Get signed operation capacity for the prison when record found`() {
-    whenever(prisonConfigurationRepository.findById(any())).thenReturn(
+    whenever(signedOperationCapacityRepository.findById(any())).thenReturn(
       Optional.of(
-        PrisonConfiguration(
+        SignedOperationCapacity(
           prisonId = "MDI",
           signedOperationCapacity = 130,
           whenUpdated = LocalDateTime.now(clock),
@@ -68,7 +68,7 @@ class SignedOperationCapacityServiceTest {
 
   @Test
   fun `Get null for the prison when record not found`() {
-    whenever(prisonConfigurationRepository.findById(any())).thenReturn(Optional.empty())
+    whenever(signedOperationCapacityRepository.findById(any())).thenReturn(Optional.empty())
     val result = service.getSignedOperationalCapacity("MDI")
     assertThat(result).isNull()
   }
@@ -79,7 +79,7 @@ class SignedOperationCapacityServiceTest {
     val prisonId = "MDI"
     val updatedBy = "USER"
     val request: SignedOperationCapacityValidRequest = mock()
-    val prisonConfiguration: PrisonConfiguration = mock()
+    val signedOpCapResponse: SignedOperationCapacity = mock()
 
     val prisonSignedOperationCap = SignedOperationCapacityDto(
       signedOperationCapacity = signedOperationCapacity,
@@ -90,15 +90,15 @@ class SignedOperationCapacityServiceTest {
     whenever(request.signedOperationCapacity).thenReturn(signedOperationCapacity)
     whenever(request.prisonId).thenReturn(prisonId)
     whenever(request.updatedBy).thenReturn(updatedBy)
-    whenever(prisonConfiguration.toSignedOperationCapacityDto()).thenReturn(prisonSignedOperationCap)
-    whenever(prisonConfigurationRepository.findById(any())).thenReturn(Optional.empty())
-    whenever(prisonConfigurationRepository.save(any())).thenReturn(prisonConfiguration)
+    whenever(signedOpCapResponse.toSignedOperationCapacityDto()).thenReturn(prisonSignedOperationCap)
+    whenever(signedOperationCapacityRepository.findById(any())).thenReturn(Optional.empty())
+    whenever(signedOperationCapacityRepository.save(any())).thenReturn(signedOpCapResponse)
     whenever(locationService.getResidentialLocations(prisonId = prisonId)).thenReturn(residentialSummary)
     val result = service.saveSignedOperationalCapacity(request)
     assertThat(result.newRecord).isTrue()
 
-    verify(prisonConfigurationRepository).save(
-      PrisonConfiguration(
+    verify(signedOperationCapacityRepository).save(
+      SignedOperationCapacity(
         signedOperationCapacity = signedOperationCapacity,
         prisonId = prisonId,
         updatedBy = updatedBy,
@@ -114,9 +114,9 @@ class SignedOperationCapacityServiceTest {
     val prisonId = "MDI"
     val updatedBy = "USER"
     val request: SignedOperationCapacityValidRequest = mock()
-    val prisonConfiguration: PrisonConfiguration = mock()
+    val signedOperationCapacityResponse: SignedOperationCapacity = mock()
 
-    val existingRecord = PrisonConfiguration(
+    val existingRecord = SignedOperationCapacity(
       signedOperationCapacity = signedOperationCapacity,
       prisonId = prisonId,
       updatedBy = updatedBy,
@@ -126,8 +126,8 @@ class SignedOperationCapacityServiceTest {
     whenever(request.signedOperationCapacity).thenReturn(signedOperationCapacity)
     whenever(request.prisonId).thenReturn(prisonId)
     whenever(request.updatedBy).thenReturn(updatedBy)
-    whenever(prisonConfigurationRepository.findById(any())).thenReturn(Optional.of(existingRecord))
-    whenever(prisonConfigurationRepository.save(any())).thenReturn(prisonConfiguration)
+    whenever(signedOperationCapacityRepository.findById(any())).thenReturn(Optional.of(existingRecord))
+    whenever(signedOperationCapacityRepository.save(any())).thenReturn(signedOperationCapacityResponse)
     whenever(locationService.getResidentialLocations(prisonId = prisonId)).thenReturn(residentialSummary)
 
     service.saveSignedOperationalCapacity(request)
