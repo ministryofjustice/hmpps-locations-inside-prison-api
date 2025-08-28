@@ -380,8 +380,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
         whenever(prisonConfigurationRepository.findById("MDI")).thenReturn(
           Optional.of(
             PrisonConfiguration(
-              prisonId = "MDI",
-              signedOperationCapacity = 1,
+              id = "MDI",
               resiLocationServiceActive = true,
               includeSegregationInRollCount = true,
               whenUpdated = LocalDateTime.now(clock),

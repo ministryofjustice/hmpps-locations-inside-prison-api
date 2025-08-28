@@ -10,5 +10,4 @@ import java.util.UUID
 interface CertificationApprovalRequestRepository : JpaRepository<CertificationApprovalRequest, UUID> {
   fun findByPrisonIdAndStatusOrderByRequestedDateDesc(prisonId: String, status: ApprovalRequestStatus): List<CertificationApprovalRequest>
   fun findByPrisonIdOrderByRequestedDateDesc(prisonId: String): List<CertificationApprovalRequest>
-  fun findByLocationKeyOrderByRequestedDateDesc(locationKey: String): List<CertificationApprovalRequest>
 }

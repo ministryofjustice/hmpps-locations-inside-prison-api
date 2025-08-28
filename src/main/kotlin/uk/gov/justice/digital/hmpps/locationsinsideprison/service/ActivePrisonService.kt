@@ -24,7 +24,7 @@ class ActivePrisonService(
   fun getPrisonConfiguration(prisonId: String): PrisonConfiguration? = prisonConfigurationRepository.findById(prisonId).getOrNull()
 
   @Cacheable(CacheConfiguration.ACTIVE_PRISONS_CACHE_NAME)
-  fun getActivePrisons(): List<String> = prisonConfigurationRepository.findAll().filter { it.resiLocationServiceActive }.map { it.prisonId }
+  fun getActivePrisons(): List<String> = prisonConfigurationRepository.findAll().filter { it.resiLocationServiceActive }.map { it.id }
 
   @CacheEvict(CacheConfiguration.ACTIVE_PRISONS_CACHE_NAME)
   fun setResiLocationServiceActive(prisonId: String, resiLocationServiceActive: Boolean) {

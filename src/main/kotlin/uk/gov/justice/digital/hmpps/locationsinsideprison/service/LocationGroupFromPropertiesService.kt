@@ -11,7 +11,7 @@ import java.util.regex.Pattern
 
 @Service
 class LocationGroupFromPropertiesService(
-  @Qualifier("residentialGroups") private val properties: Properties,
+  @param:Qualifier("residentialGroups") private val properties: Properties,
 ) {
 
   fun getLocationGroups(prisonId: String): List<LocationGroupDto> {
