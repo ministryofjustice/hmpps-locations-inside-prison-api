@@ -193,7 +193,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "workingCapacity": 0
               },
               "pendingChanges": {
-                "maxCapacity": 1
+                "maxCapacity": 1,
+                "workingCapacity": 1
               },
               "certification": {
                 "certified": false,
@@ -209,7 +210,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                     "workingCapacity": 0
                   },
                   "pendingChanges": {
-                    "maxCapacity": 1
+                    "maxCapacity": 1,
+                    "workingCapacity": 1
                   },
                   "certification": {
                     "certified": false,
@@ -272,7 +274,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "workingCapacity": 0
               },
               "pendingChanges": {
-                "maxCapacity": 1
+                "maxCapacity": 1,
+                "workingCapacity": 1
               },
               "certification": {
                 "certified": false,
@@ -288,7 +291,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                     "workingCapacity": 0
                   },
                   "pendingChanges": {
-                    "maxCapacity": 1
+                    "maxCapacity": 1,
+                    "workingCapacity": 1
                   },
                   "certification": {
                     "certified": false,
@@ -352,7 +356,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "workingCapacity": 4
               },
               "pendingChanges": {
-                "maxCapacity": 5
+                "maxCapacity": 5,
+                "workingCapacity": 5
               },
               "certification": {
                 "certified": true,
@@ -380,7 +385,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                     "workingCapacity": 0
                   },
                   "pendingChanges": {
-                    "maxCapacity": 1
+                    "maxCapacity": 1,
+                    "workingCapacity": 1
                   }
                 }  
               ]

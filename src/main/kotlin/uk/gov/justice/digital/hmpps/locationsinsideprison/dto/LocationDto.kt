@@ -238,8 +238,12 @@ data class PendingChangeDto(
   @param:Schema(description = "Pending max capacity", example = "2", required = false)
   val maxCapacity: Int? = null,
 
+  @param:Schema(description = "Pending working capacity", example = "1", required = false)
+  val workingCapacity: Int? = null,
+
   @param:Schema(description = "Pending CNA", example = "2", required = false)
   val certifiedNormalAccommodation: Int? = null,
+
 )
 
 @Schema(description = "Non Residential Usage")
