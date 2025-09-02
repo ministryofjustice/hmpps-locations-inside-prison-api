@@ -83,7 +83,7 @@ class ApprovalRequestResource(
     requestToApprove = locationApprovalRequest,
   )
 
-  @PutMapping("/location/signed-op-cap-request-approval")
+  @PutMapping("/prison/signed-op-cap-change")
   @Operation(
     summary = "Requests approval for a signed operation capacity change",
     description = "Requires role LOCATION_CERTIFICATION",

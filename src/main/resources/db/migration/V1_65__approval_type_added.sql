@@ -1,4 +1,6 @@
 alter table certification_approval_request
 add column approval_type varchar(30) NOT NULL DEFAULT 'DRAFT',
 add column signed_operation_capacity_change INT NOT NULL DEFAULT 0,
-add column signed_operation_capacity_id bigint null;
+add column signed_operation_capacity_id bigint null,
+alter column location_id DROP NOT NULL,
+alter column location_key DROP NOT NULL;

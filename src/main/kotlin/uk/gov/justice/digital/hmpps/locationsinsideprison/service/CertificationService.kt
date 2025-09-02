@@ -37,6 +37,7 @@ import java.util.*
 class CertificationService(
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
+  private val signedOperationCapacityService: SignedOperationCapacityService,
   private val certificationApprovalRequestRepository: CertificationApprovalRequestRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val cellCertificateService: CellCertificateService,
@@ -95,6 +96,8 @@ class CertificationService(
     if (signedOpCap.findPendingApprovalRequest() != null) {
       throw PendingApprovalAlreadyExistsException(requestToApprove.prisonId)
     }
+
+    signedOperationCapacityService.validateSignedOpCap(requestToApprove.prisonId, requestToApprove.signedOperationalCapacity)
 
     val username = getUsername()
     val now = LocalDateTime.now(clock)

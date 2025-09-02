@@ -46,10 +46,7 @@ class SignedOperationCapacityService(
 
     val tx = createLinkedTransaction(prisonId = request.prisonId, TransactionType.SIGNED_OP_CAP, "Signed op cap for prison ${request.prisonId} set to ${request.signedOperationCapacity}", request.updatedBy)
 
-    val maxCap = locationService.getResidentialLocations(request.prisonId).prisonSummary?.maxCapacity ?: throw PrisonNotFoundException(request.prisonId)
-    if (maxCap < request.signedOperationCapacity) {
-      throw CapacityException(request.prisonId, "Signed operational capacity cannot be more than the establishment's maximum capacity of $maxCap", ErrorCode.SignedOpCapCannotBeMoreThanMaxCap)
-    }
+    validateSignedOpCap(request.prisonId, request.signedOperationCapacity)
     val record =
       signedOperationCapacityRepository.findByPrisonId(request.prisonId)?.also {
         it.signedOperationCapacity = request.signedOperationCapacity
@@ -81,6 +78,18 @@ class SignedOperationCapacityService(
     )
     return SignOpCapResult(signedOperationCapacityDto = record.toSignedOperationCapacityDto(), newRecord = newRecord).also {
       tx.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  fun validateSignedOpCap(prisonId: String, signedOperationCapacity: Int) {
+    val maxCap = locationService.getResidentialLocations(prisonId).prisonSummary?.maxCapacity
+      ?: throw PrisonNotFoundException(prisonId)
+    if (maxCap < signedOperationCapacity) {
+      throw CapacityException(
+        prisonId,
+        "Signed operational capacity cannot be more than the establishment's maximum capacity of $maxCap",
+        ErrorCode.SignedOpCapCannotBeMoreThanMaxCap,
+      )
     }
   }
 
