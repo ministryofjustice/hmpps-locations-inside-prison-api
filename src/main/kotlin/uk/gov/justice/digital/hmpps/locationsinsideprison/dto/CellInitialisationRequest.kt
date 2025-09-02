@@ -187,7 +187,12 @@ data class NewCellRequest(
 
   @param:Schema(description = "In-cell sanitation for cell", required = false, defaultValue = "true")
   val inCellSanitation: Boolean = true,
-)
+) {
+  fun isCapacityValid(): Boolean {
+    val cellIsSpecialistCellAllowingZeroCapacity = specialistCellTypes?.any { it.affectsCapacity } == true
+    return cellIsSpecialistCellAllowingZeroCapacity || (certifiedNormalAccommodation != 0 && workingCapacity != 0)
+  }
+}
 
 enum class ResidentialStructuralType(
   val locationType: LocationType,
