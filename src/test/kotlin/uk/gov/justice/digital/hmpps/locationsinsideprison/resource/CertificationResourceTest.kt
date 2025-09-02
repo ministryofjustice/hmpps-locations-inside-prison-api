@@ -489,6 +489,62 @@ class CertificationResourceTest : CommonDataTestBase() {
     inner class HappyPath {
 
       @Test
+      fun `can approve a sign op cap change`() {
+        val approvalId = webTestClient.put().uri("/certification/prison/signed-op-cap-change")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              SignedOpCapApprovalRequest(
+                prisonId = "LEI",
+                signedOperationalCapacity = 10,
+              ),
+            ),
+          )
+          .exchange()
+          .expectBody(CertificationApprovalRequestDto::class.java)
+          .returnResult().responseBody!!.id
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ApproveCertificationRequestDto(
+                approvalRequestReference = approvalId,
+                comments = "Op Cap Approved",
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+              "prisonId": "LEI",
+              "status": "APPROVED"
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        webTestClient.get().uri("/signed-op-cap/LEI")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "signedOperationCapacity": 10,
+                "prisonId": "LEI"
+              }
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
       fun `can approve a set of draft locations`() {
         webTestClient.get().uri("/locations/${mWing.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
