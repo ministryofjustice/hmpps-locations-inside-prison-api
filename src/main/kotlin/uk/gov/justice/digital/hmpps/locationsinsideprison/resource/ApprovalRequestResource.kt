@@ -28,6 +28,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalReques
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CertificationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
 import java.util.*
 
 @RestController
@@ -38,7 +39,7 @@ import java.util.*
   name = "Certification",
   description = "Functionality to manage certification of residential locations",
 )
-class CertificationResource(
+class ApprovalRequestResource(
   private val certificationService: CertificationService,
   private val approvalRequestService: ApprovalRequestService,
 ) : EventBase() {
@@ -79,7 +80,46 @@ class CertificationResource(
     @Validated
     locationApprovalRequest: LocationApprovalRequest,
   ): CertificationApprovalRequestDto = certificationService.requestApproval(
-    locationApprovalRequest = locationApprovalRequest,
+    requestToApprove = locationApprovalRequest,
+  )
+
+  @PutMapping("/location/signed-op-cap-request-approval")
+  @Operation(
+    summary = "Requests approval for a signed operation capacity change",
+    description = "Requires role LOCATION_CERTIFICATION",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the approval request status",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CERTIFICATION role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun requestSignedOpCapApproval(
+    @RequestBody
+    @Validated
+    signedOpCapApprovalRequest: SignedOpCapApprovalRequest,
+  ): CertificationApprovalRequestDto = certificationService.requestApproval(
+    signedOpCapApprovalRequest,
   )
 
   @PutMapping("/location/approve")

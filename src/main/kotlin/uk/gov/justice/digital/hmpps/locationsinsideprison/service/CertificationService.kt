@@ -14,12 +14,14 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationAppro
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotInPendingStatusException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
@@ -34,6 +36,7 @@ import java.util.*
 @Transactional
 class CertificationService(
   private val residentialLocationRepository: ResidentialLocationRepository,
+  private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val certificationApprovalRequestRepository: CertificationApprovalRequestRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val cellCertificateService: CellCertificateService,
@@ -45,9 +48,9 @@ class CertificationService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun requestApproval(locationApprovalRequest: LocationApprovalRequest): CertificationApprovalRequestDto {
-    val location = residentialLocationRepository.findById(locationApprovalRequest.locationId)
-      .orElseThrow { LocationNotFoundException(locationApprovalRequest.locationId.toString()) }
+  fun requestApproval(requestToApprove: LocationApprovalRequest): CertificationApprovalRequestDto {
+    val location = residentialLocationRepository.findById(requestToApprove.locationId)
+      .orElseThrow { LocationNotFoundException(requestToApprove.locationId.toString()) }
 
     if (!location.hasPendingChanges()) {
       throw LocationDoesNotRequireApprovalException(location.getKey())
@@ -80,7 +83,46 @@ class CertificationService(
     )
 
     log.info("Certification approval requested (${approvalRequest.id}) for location ${location.getKey()} by $username")
-    return approvalRequest.toDto(showLocations = true)
+    return approvalRequest.toDto(showLocations = true).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  fun requestApproval(requestToApprove: SignedOpCapApprovalRequest): CertificationApprovalRequestDto {
+    val signedOpCap = signedOperationCapacityRepository.findByPrisonId(requestToApprove.prisonId)
+      ?: throw LocationNotFoundException(requestToApprove.prisonId)
+
+    if (signedOpCap.findPendingApprovalRequest() != null) {
+      throw PendingApprovalAlreadyExistsException(requestToApprove.prisonId)
+    }
+
+    val username = getUsername()
+    val now = LocalDateTime.now(clock)
+
+    val linkedTransaction = createLinkedTransaction(
+      TransactionType.REQUEST_CERTIFICATION_APPROVAL,
+      requestToApprove.prisonId,
+      "Requesting approval for signed op cap change for ${requestToApprove.prisonId}",
+      now,
+      username,
+    )
+    val approvalRequest = certificationApprovalRequestRepository.save(signedOpCap.requestApproval(pendingSignedOperationCapacity = requestToApprove.signedOperationalCapacity, requestedBy = username, requestedDate = now))
+
+    telemetryClient.trackEvent(
+      "certification-op-cap-approval-requested",
+      mapOf(
+        "id" to approvalRequest.id.toString(),
+        "prisonId" to requestToApprove.prisonId,
+        "requestedBy" to username,
+        "approvalRequestId" to approvalRequest.id.toString(),
+      ),
+      null,
+    )
+
+    log.info("Certification approval requested for Op-Cap change (${approvalRequest.id}) for prison ${requestToApprove.prisonId} by $username")
+    return approvalRequest.toDto(showLocations = true).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
   }
 
   fun approveCertificationRequest(approveCertificationRequest: ApproveCertificationRequestDto): ApprovalResponse {
@@ -144,7 +186,7 @@ class CertificationService(
       prisonId = approvalRequest.prisonId,
       newLocation = approvedLocation?.isDraft() ?: false,
       location = approvedLocation?.toDto(includeChildren = true, includeParent = true),
-    )
+    ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
 
   fun rejectCertificationRequest(rejectCertificationRequest: RejectCertificationRequestDto): ApprovalResponse {
@@ -199,7 +241,7 @@ class CertificationService(
       prisonId = approvalRequest.prisonId,
       newLocation = newLocation,
       location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
-    )
+    ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
 
   fun withdrawCertificationRequest(withdrawCertificationRequest: WithdrawCertificationRequestDto): ApprovalResponse {
@@ -256,7 +298,7 @@ class CertificationService(
       prisonId = approvalRequest.prisonId,
       newLocation = newLocation,
       location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
-    )
+    ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
 
   private fun createLinkedTransaction(
@@ -283,4 +325,17 @@ class CertificationService(
 data class LocationApprovalRequest(
   @param:Schema(description = "Location Id of location requiring approval for being certified", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
   val locationId: UUID,
+
+  @param:Schema(description = "Type of approval request", example = "DRAFT", required = true)
+  val approvalType: ApprovalType = ApprovalType.DRAFT,
+)
+
+@Schema(description = "Request to approve a location or set of locations and cells below it")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class SignedOpCapApprovalRequest(
+  @param:Schema(description = "The prison where the signed op cap is to be approved", example = "MDI", required = true)
+  val prisonId: String,
+
+  @param:Schema(description = "The new value of the signed operational capacity", example = "456", required = true)
+  val signedOperationalCapacity: Int,
 )

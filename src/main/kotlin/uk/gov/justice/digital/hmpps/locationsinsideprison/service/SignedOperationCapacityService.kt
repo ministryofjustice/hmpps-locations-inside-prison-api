@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.SignedOpCapCannotChangedWithoutApprovalException
 import java.time.Clock
 import java.time.LocalDateTime
 
@@ -24,6 +25,7 @@ class SignedOperationCapacityService(
   private val locationService: LocationService,
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
+  private val prisonConfigurationService: PrisonConfigurationService,
   private val telemetryClient: TelemetryClient,
   private val clock: Clock,
 ) {
@@ -35,6 +37,11 @@ class SignedOperationCapacityService(
 
   @Transactional
   fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignOpCapResult {
+    val prisonConfiguration = prisonConfigurationService.getPrisonConfiguration(request.prisonId)
+    if (prisonConfiguration.certificationApprovalRequired == ResidentialStatus.ACTIVE) {
+      throw SignedOpCapCannotChangedWithoutApprovalException(prisonConfiguration.prisonId)
+    }
+
     var newRecord = true
 
     val tx = createLinkedTransaction(prisonId = request.prisonId, TransactionType.SIGNED_OP_CAP, "Signed op cap for prison ${request.prisonId} set to ${request.signedOperationCapacity}", request.updatedBy)

@@ -8,10 +8,10 @@ import jakarta.persistence.Id
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
 import jakarta.persistence.Table
+import org.hibernate.Hibernate
 import org.hibernate.annotations.DiscriminatorFormula
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
-import java.io.Serializable
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -50,7 +50,42 @@ abstract class CertificationApprovalRequest(
   @Column(nullable = true)
   protected var comments: String? = null,
 
-) : Serializable {
+) : Comparable<CertificationApprovalRequest> {
+
+  companion object {
+    private val COMPARATOR = compareBy<CertificationApprovalRequest>
+      { it.prisonId }
+      .thenBy { it.approvalType }
+      .thenBy { it.requestedDate }
+      .thenBy { it.status }
+  }
+
+  override fun compareTo(other: CertificationApprovalRequest) = COMPARATOR.compare(this, other)
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false
+
+    other as CertificationApprovalRequest
+
+    if (prisonId != other.prisonId) return false
+    if (approvalType != other.approvalType) return false
+    if (requestedDate != other.requestedDate) return false
+    if (status != other.status) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = prisonId.hashCode()
+    result = 31 * result + approvalType.hashCode()
+    result = 31 * result + requestedDate.hashCode()
+    result = 31 * result + status.hashCode()
+    return result
+  }
+
+  fun isPending() = status == ApprovalRequestStatus.PENDING
+
   open fun toDto(showLocations: Boolean = false): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
     id = id!!,
     approvalType = approvalType,

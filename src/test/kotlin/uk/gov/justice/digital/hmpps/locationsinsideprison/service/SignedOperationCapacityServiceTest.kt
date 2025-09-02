@@ -24,11 +24,13 @@ class SignedOperationCapacityServiceTest {
   private val locationService: LocationService = mock()
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository = mock()
   private val linkedTransactionRepository: LinkedTransactionRepository = mock()
+  private val prisonConfigurationService: PrisonConfigurationService = mock()
   private val telemetryClient: TelemetryClient = mock()
   private val service: SignedOperationCapacityService = SignedOperationCapacityService(
     locationService,
     signedOperationCapacityRepository,
     linkedTransactionRepository,
+    prisonConfigurationService,
     telemetryClient,
     clock,
   )
@@ -36,6 +38,14 @@ class SignedOperationCapacityServiceTest {
   @BeforeEach
   fun setUp() {
     whenever(linkedTransactionRepository.save(any())).thenReturn(Mockito.mock())
+    whenever(prisonConfigurationService.getPrisonConfiguration(any())).thenReturn(
+      PrisonConfigurationDto(
+        prisonId = "MDI",
+        resiLocationServiceActive = ResidentialStatus.ACTIVE,
+        includeSegregationInRollCount = ResidentialStatus.INACTIVE,
+        certificationApprovalRequired = ResidentialStatus.INACTIVE,
+      ),
+    )
   }
 
   private val residentialSummary = ResidentialSummary(
