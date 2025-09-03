@@ -178,7 +178,7 @@ class CertificationService(
 
     val locationKeySuffix = approvedLocation?.let { "at ${it.getKey()}" } ?: ""
     log.info(
-      "Certification approval approved for {} {} by {}",
+      "Certification of {} {} APPROVED by {}",
       approvalRequest.prisonId,
       locationKeySuffix,
       transactionInvokedBy,
@@ -234,7 +234,7 @@ class CertificationService(
 
     val locationKeySuffix = location?.let { "at ${it.getKey()}" } ?: ""
     log.info(
-      "Certification rejected for {} {} by {}",
+      "Certification of {} {} REJECTED by {}",
       approvalRequest.prisonId,
       locationKeySuffix,
       transactionInvokedBy,
@@ -290,7 +290,7 @@ class CertificationService(
 
     val locationKeySuffix = location?.let { "at ${it.getKey()}" } ?: ""
     log.info(
-      "Certification withdrawn for {} {} by {}",
+      "Certification of {} {} WITHDRAWN by {}",
       approvalRequest.prisonId,
       locationKeySuffix,
       transactionInvokedBy,

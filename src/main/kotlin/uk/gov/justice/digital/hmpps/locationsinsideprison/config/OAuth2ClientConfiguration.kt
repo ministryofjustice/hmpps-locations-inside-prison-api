@@ -6,6 +6,7 @@ import org.springframework.security.oauth2.client.AuthorizedClientServiceOAuth2A
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProviderBuilder
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository
+import uk.gov.justice.hmpps.kotlin.auth.service.GlobalPrincipalOAuth2AuthorizedClientService
 
 @Configuration
 class OAuth2ClientConfiguration {
@@ -18,7 +19,7 @@ class OAuth2ClientConfiguration {
     val authorizedClientManager =
       AuthorizedClientServiceOAuth2AuthorizedClientManager(
         clientRegistrationRepository,
-        ClientCachingOAuth2AuthorizedClientService(clientRegistrationRepository),
+        GlobalPrincipalOAuth2AuthorizedClientService(clientRegistrationRepository),
       )
     authorizedClientManager.setAuthorizedClientProvider(authorizedClientProvider)
     return authorizedClientManager
