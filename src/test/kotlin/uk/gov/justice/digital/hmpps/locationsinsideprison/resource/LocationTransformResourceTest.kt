@@ -510,7 +510,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .expectStatus().isEqualTo(400)
             .expectBody(ErrorResponse::class.java)
             .returnResult().responseBody!!.errorCode,
-        ).isEqualTo(106)
+        ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
       }
     }
 
@@ -834,7 +834,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .expectStatus().isEqualTo(400)
             .expectBody(ErrorResponse::class.java)
             .returnResult().responseBody!!.errorCode,
-        ).isEqualTo(106)
+        ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
       }
 
       @Test

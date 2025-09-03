@@ -474,11 +474,10 @@ class LocationService(
           prisonId = createCellsRequest.prisonId,
         )
 
-        val specialistCellTypesAffectingCapacity = cell.specialistCellTypes?.filter { it.affectsCapacity }
-        if (!specialistCellTypesAffectingCapacity.isNullOrEmpty() && !(cell.certifiedNormalAccommodation == 0 && cell.workingCapacity == 0)) {
+        if (!cell.isCapacityValid()) {
           throw CapacityException(
             cell.code,
-            "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
+            "Normal accommodation must not have a CNA or working capacity of 0",
             ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
           )
         }
