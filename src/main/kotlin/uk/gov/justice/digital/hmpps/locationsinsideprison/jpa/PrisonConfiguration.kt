@@ -1,9 +1,9 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
 import org.hibernate.Hibernate
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonConfigurationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialStatus
 import java.time.LocalDateTime
@@ -11,23 +11,17 @@ import java.time.LocalDateTime
 @Entity
 class PrisonConfiguration(
   @Id
-  val prisonId: String,
-  var signedOperationCapacity: Int,
+  @Column(name = "prison_id", updatable = false, nullable = false)
+  val id: String,
   var resiLocationServiceActive: Boolean = false,
   var includeSegregationInRollCount: Boolean = false,
   var certificationApprovalRequired: Boolean = false,
   var whenUpdated: LocalDateTime,
   var updatedBy: String,
 ) {
-  fun toSignedOperationCapacityDto() = SignedOperationCapacityDto(
-    signedOperationCapacity = signedOperationCapacity,
-    prisonId = prisonId,
-    whenUpdated = whenUpdated,
-    updatedBy = updatedBy,
-  )
 
   fun toPrisonConfiguration() = PrisonConfigurationDto(
-    prisonId = prisonId,
+    prisonId = id,
     resiLocationServiceActive = convertToStatus(resiLocationServiceActive),
     includeSegregationInRollCount = convertToStatus(includeSegregationInRollCount),
     certificationApprovalRequired = convertToStatus(certificationApprovalRequired),
@@ -44,10 +38,10 @@ class PrisonConfiguration(
 
     other as PrisonConfiguration
 
-    return prisonId == other.prisonId
+    return id == other.id
   }
 
-  override fun hashCode(): Int = prisonId.hashCode()
+  override fun hashCode(): Int = id.hashCode()
 
-  override fun toString(): String = "PrisonConfiguration(prisonId='$prisonId', signedOperationCapacity=$signedOperationCapacity, resiLocationServiceActive=$resiLocationServiceActive, includeSegregationInRollCount=$includeSegregationInRollCount, certificationApprovalRequired=$certificationApprovalRequired)"
+  override fun toString(): String = "PrisonConfiguration(prisonId='$id', resiLocationServiceActive=$resiLocationServiceActive, includeSegregationInRollCount=$includeSegregationInRollCount, certificationApprovalRequired=$certificationApprovalRequired)"
 }

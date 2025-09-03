@@ -584,7 +584,7 @@ class Cell(
 
   override fun hasPendingChanges() = super.hasPendingChanges() || pendingChange != null
 
-  override fun linkPendingChangesToApprovalRequest(approvalRequest: CertificationApprovalRequest) {
+  override fun linkPendingChangesToApprovalRequest(approvalRequest: LocationCertificationApprovalRequest) {
     pendingChange?.let { it.approvalRequest = approvalRequest }
   }
 

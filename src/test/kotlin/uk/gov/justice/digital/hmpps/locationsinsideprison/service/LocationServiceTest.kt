@@ -29,8 +29,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLoc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
@@ -44,7 +44,7 @@ class LocationServiceTest {
   private val locationRepository: LocationRepository = mock()
   private val nonResidentialLocationRepository: NonResidentialLocationRepository = mock()
   private val residentialLocationRepository: ResidentialLocationRepository = mock()
-  private val signedOperationCapacityRepository: PrisonConfigurationRepository = mock()
+  private val signedOperationCapacityRepository: SignedOperationCapacityRepository = mock()
   private val cellLocationRepository: CellLocationRepository = mock()
   private val linkedTransactionRepository: LinkedTransactionRepository = mock()
   private val prisonerLocationService: PrisonerLocationService = mock()

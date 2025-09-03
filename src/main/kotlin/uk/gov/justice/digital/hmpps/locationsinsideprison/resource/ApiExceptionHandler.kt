@@ -237,6 +237,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(SignedOpCapCannotChangedWithoutApprovalException::class)
+  fun handleSignedOpCapCannotBeUpdatedException(e: SignedOpCapCannotChangedWithoutApprovalException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Cannot update Signed Op Cap without approval: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.BAD_REQUEST,
+          errorCode = ErrorCode.SignedOpCapCannotChangedWithoutApproval,
+          userMessage = "Approval required or signed op cap change: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(ApprovalRequestNotFoundException::class)
   fun handleApprovalRequestNotFound(e: ApprovalRequestNotFoundException): ResponseEntity<ErrorResponse?>? {
     log.debug("Approval request not found exception caught: {}", e.message)
@@ -566,3 +581,4 @@ class LocationDoesNotRequireApprovalException(key: String) : Exception("Location
 class LocationCannotBeUnlockedWhenNotLockedException(key: String) : Exception("Location $key cannot be unlocked as it is not locked")
 class CellCertificateNotFoundException(id: UUID) : Exception("Cell certificate with id $id not found")
 class CurrentCellCertificateNotFoundException(prisonId: String) : Exception("No current cell certificate found for prison $prisonId")
+class SignedOpCapCannotChangedWithoutApprovalException(prisonId: String) : Exception("Signed op cap cannot be updated in $prisonId without approval")

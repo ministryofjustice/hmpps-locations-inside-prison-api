@@ -17,12 +17,14 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 import java.util.UUID
@@ -42,6 +44,8 @@ class CertificationResourceTest : CommonDataTestBase() {
     cellCertificateRepository.deleteAll()
     super.setUp()
     approvalRequestId = getApprovalRequestId()
+
+    prisonRegisterMockServer.stubLookupPrison("LEI")
 
     // Create a new wing in Leeds prison
     mWing = repository.saveAndFlush(
@@ -70,6 +74,126 @@ class CertificationResourceTest : CommonDataTestBase() {
         ),
       ),
     )
+  }
+
+  @DisplayName("PUT /certification/prison/signed-op-cap-change")
+  @Nested
+  inner class RequestSignedOpCapApprovalTest {
+
+    private val url = "/certification/prison/signed-op-cap-change"
+
+    @DisplayName("is secured")
+    @Nested
+    inner class Security {
+      @DisplayName("by role and scope")
+      @TestFactory
+      fun endpointRequiresAuthorisation() = endpointRequiresAuthorisation(
+        webTestClient.put().uri(url).bodyValue(
+          jsonString(
+            SignedOpCapApprovalRequest(
+              prisonId = "LEI",
+              signedOperationalCapacity = 300,
+            ),
+          ),
+        ),
+        "ROLE_LOCATION_CERTIFICATION",
+      )
+    }
+
+    @Nested
+    inner class Validation {
+
+      @Test
+      fun `cannot request approval for a prison which has already been sent for approval`() {
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              SignedOpCapApprovalRequest(
+                prisonId = "LEI",
+                signedOperationalCapacity = 11,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        assertThat(
+          webTestClient.put().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              jsonString(
+                SignedOpCapApprovalRequest(
+                  prisonId = "LEI",
+                  signedOperationalCapacity = 10,
+                ),
+              ),
+            )
+            .exchange()
+            .expectStatus().isEqualTo(409)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.ApprovalRequestAlreadyExists.errorCode)
+      }
+
+      @Test
+      fun `cannot request approval for a prison where max capacity is more than signed op cap`() {
+        assertThat(
+          webTestClient.put().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              jsonString(
+                SignedOpCapApprovalRequest(
+                  prisonId = "LEI",
+                  signedOperationalCapacity = 50,
+                ),
+              ),
+            )
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.SignedOpCapCannotBeMoreThanMaxCap.errorCode)
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can request approval for a signed op cap change`() {
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              SignedOpCapApprovalRequest(
+                prisonId = "LEI",
+                signedOperationalCapacity = 10,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+              "approvalType":"SIGNED_OP_CAP",
+              "prisonId":"LEI",
+              "status": "PENDING",
+              "signedOperationCapacityChange": -190
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+    }
   }
 
   @DisplayName("PUT /certification/location/request-approval")
@@ -365,6 +489,62 @@ class CertificationResourceTest : CommonDataTestBase() {
     inner class HappyPath {
 
       @Test
+      fun `can approve a sign op cap change`() {
+        val approvalId = webTestClient.put().uri("/certification/prison/signed-op-cap-change")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              SignedOpCapApprovalRequest(
+                prisonId = "LEI",
+                signedOperationalCapacity = 10,
+              ),
+            ),
+          )
+          .exchange()
+          .expectBody(CertificationApprovalRequestDto::class.java)
+          .returnResult().responseBody!!.id
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ApproveCertificationRequestDto(
+                approvalRequestReference = approvalId,
+                comments = "Op Cap Approved",
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+              "prisonId": "LEI",
+              "status": "APPROVED"
+              }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        webTestClient.get().uri("/signed-op-cap/LEI")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "signedOperationCapacity": 10,
+                "prisonId": "LEI"
+              }
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
       fun `can approve a set of draft locations`() {
         webTestClient.get().uri("/locations/${mWing.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
@@ -544,7 +724,7 @@ class CertificationResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
-        val approvalRequestId = certificationApprovalRequestRepository.findByLocationKeyOrderByRequestedDateDesc(cell1N.getKey()).first()
+        val approvalRequestId = certificationApprovalRequestRepository.findByPrisonIdAndStatusOrderByRequestedDateDesc(cell1N.prisonId, ApprovalRequestStatus.PENDING).first()
         webTestClient.put().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
           .header("Content-Type", "application/json")
