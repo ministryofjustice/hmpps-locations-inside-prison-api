@@ -52,6 +52,9 @@ data class LegacyLocation(
   @param:Schema(description = "Location Usage", required = false)
   val usage: List<NonResidentialUsageDto>? = null,
 
+  @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
+  val internalMovementAllowed: Boolean? = null,
+
   @param:Schema(description = "Sequence of locations within the current parent location", example = "1", required = false)
   val orderWithinParentLocation: Int? = null,
 

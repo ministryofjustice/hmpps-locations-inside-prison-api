@@ -1,0 +1,1 @@
+ALTER TABLE location add column internal_movement_allowed boolean;
