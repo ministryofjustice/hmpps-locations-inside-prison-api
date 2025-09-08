@@ -25,6 +25,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       code = "ADJ",
       locationType = NonResidentialLocationType.ADJUDICATION_ROOM,
       localName = "Adjudication Room",
+      internalMovementAllowed = true,
       usage = setOf(
         NonResidentialUsageDto(usageType = NonResidentialUsageType.ADJUDICATION_HEARING, capacity = 15, sequence = 1),
       ),
@@ -113,6 +114,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "locationType": "${createNonResidentialLocationRequest.locationType}",
               "active": true,
               "key": "MDI-Z-ADJ",
+              "internalMovementAllowed": false,
               "localName": "${createNonResidentialLocationRequest.localName}",
               "usage": [
                 {
@@ -154,6 +156,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
 
     val removeUsage = PatchNonResidentialLocationRequest(
       usage = emptySet(),
+      internalMovementAllowed = true,
     )
 
     @Nested
@@ -335,7 +338,8 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "locationType": "VISITS",
               "active": true,
               "key": "MDI-Z-VISIT",
-              "usage": []
+              "usage": [],
+              "internalMovementAllowed": true
             }
           """,
             JsonCompareMode.LENIENT,
@@ -357,10 +361,16 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "active": true,
               "key": "MDI-Z-VISIT",
               "usage": [],
+              "internalMovementAllowed":true,
               "changeHistory": [
                 {
                   "attribute": "Usage",
                   "oldValues": ["Visit"]
+                },
+                 {
+                  "attribute": "Internal movement allowed",
+                  "oldValues": ["false"],
+                  "newValues": ["true"]
                 }
               ]
             }

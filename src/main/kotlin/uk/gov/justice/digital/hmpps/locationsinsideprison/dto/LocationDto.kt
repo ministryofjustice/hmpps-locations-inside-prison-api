@@ -92,6 +92,9 @@ data class Location(
   @param:Schema(description = "Location Usage", required = false)
   val usage: List<NonResidentialUsageDto>? = null,
 
+  @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
+  val internalMovementAllowed: Boolean? = null,
+
   @param:Schema(description = "Accommodation Types", required = false)
   val accommodationTypes: List<AccommodationType>? = null,
 
@@ -636,6 +639,9 @@ data class CreateNonResidentialLocationRequest(
 
   @param:Schema(description = "Location Usage", required = false)
   val usage: Set<NonResidentialUsageDto>? = null,
+
+  @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
+  val internalMovementAllowed: Boolean? = null,
 ) {
 
   fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location? = null) = NonResidentialLocationJPA(
