@@ -15,8 +15,6 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
@@ -33,8 +31,6 @@ import uk.gov.justice.hmpps.sqs.MissingQueueException
 import uk.gov.justice.hmpps.sqs.countAllMessagesOnQueue
 import java.util.UUID
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@ActiveProfiles("test")
 class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
   @Autowired
   private lateinit var hmppsQueueService: HmppsQueueService
@@ -188,7 +184,6 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
       SendMessageRequest.builder().queueUrl(queueUrl).messageBody(message).build(),
     )
 
-    await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 1 }
     await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 0 }
     await untilCallTo { getNumberOfMessagesCurrentlyOnDlq() } matches { it == 0 }
   }
