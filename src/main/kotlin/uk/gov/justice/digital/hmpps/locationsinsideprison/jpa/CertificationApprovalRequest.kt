@@ -70,7 +70,7 @@ abstract class CertificationApprovalRequest(
 
     if (prisonId != other.prisonId) return false
     if (approvalType != other.approvalType) return false
-    if (requestedDate != other.requestedDate) return false
+    if (!requestedDate.isEqual(other.requestedDate)) return false
     if (status != other.status) return false
 
     return true

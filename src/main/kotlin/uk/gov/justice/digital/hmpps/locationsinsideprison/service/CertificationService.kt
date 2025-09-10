@@ -109,7 +109,7 @@ class CertificationService(
       now,
       username,
     )
-    val approvalRequest = certificationApprovalRequestRepository.save(signedOpCap.requestApproval(pendingSignedOperationCapacity = requestToApprove.signedOperationalCapacity, requestedBy = username, requestedDate = now))
+    val approvalRequest = certificationApprovalRequestRepository.save(signedOpCap.requestApproval(pendingSignedOperationCapacity = requestToApprove.signedOperationalCapacity, reasonForChange = requestToApprove.reasonForChange, requestedBy = username, requestedDate = now))
 
     telemetryClient.trackEvent(
       "certification-op-cap-approval-requested",
@@ -341,4 +341,7 @@ data class SignedOpCapApprovalRequest(
 
   @param:Schema(description = "The new value of the signed operational capacity", example = "456", required = true)
   val signedOperationalCapacity: Int,
+
+  @param:Schema(description = "Explanation of why the signed op cap is changing", example = "The size of the prison has changed", required = true)
+  val reasonForChange: String,
 )
