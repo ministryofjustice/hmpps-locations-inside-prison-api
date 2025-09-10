@@ -191,7 +191,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               "prisonId":"LEI",
               "status": "PENDING",
               "signedOperationCapacityChange": -190,
-              "reasonForChange": "Damp cells"
+              "reasonForSignedOpChange": "Damp cells"
               }
           """,
             JsonCompareMode.LENIENT,
