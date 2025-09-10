@@ -93,6 +93,7 @@ class CertificationResourceTest : CommonDataTestBase() {
             SignedOpCapApprovalRequest(
               prisonId = "LEI",
               signedOperationalCapacity = 300,
+              reasonForChange = "Prison cells offline",
             ),
           ),
         ),
@@ -113,6 +114,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               SignedOpCapApprovalRequest(
                 prisonId = "LEI",
                 signedOperationalCapacity = 11,
+                reasonForChange = "Fire",
               ),
             ),
           )
@@ -128,6 +130,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                 SignedOpCapApprovalRequest(
                   prisonId = "LEI",
                   signedOperationalCapacity = 10,
+                  reasonForChange = "Flood",
                 ),
               ),
             )
@@ -149,6 +152,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                 SignedOpCapApprovalRequest(
                   prisonId = "LEI",
                   signedOperationalCapacity = 50,
+                  reasonForChange = "We built more cells",
                 ),
               ),
             )
@@ -173,6 +177,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               SignedOpCapApprovalRequest(
                 prisonId = "LEI",
                 signedOperationalCapacity = 10,
+                reasonForChange = "Damp cells",
               ),
             ),
           )
@@ -185,7 +190,8 @@ class CertificationResourceTest : CommonDataTestBase() {
               "approvalType":"SIGNED_OP_CAP",
               "prisonId":"LEI",
               "status": "PENDING",
-              "signedOperationCapacityChange": -190
+              "signedOperationCapacityChange": -190,
+              "reasonForChange": "Damp cells"
               }
           """,
             JsonCompareMode.LENIENT,
@@ -498,6 +504,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               SignedOpCapApprovalRequest(
                 prisonId = "LEI",
                 signedOperationalCapacity = 10,
+                reasonForChange = "Broken door",
               ),
             ),
           )

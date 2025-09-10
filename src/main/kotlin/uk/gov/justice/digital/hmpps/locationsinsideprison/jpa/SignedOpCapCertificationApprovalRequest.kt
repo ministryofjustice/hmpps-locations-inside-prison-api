@@ -22,6 +22,9 @@ open class SignedOpCapCertificationApprovalRequest(
   approvedOrRejectedDate: LocalDateTime? = null,
   comments: String? = null,
 
+  @Column
+  private val reasonForChange: String,
+
   @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
   private val signedOperationCapacity: SignedOperationCapacity,
 
@@ -40,6 +43,7 @@ open class SignedOpCapCertificationApprovalRequest(
   comments = comments,
 ) {
   override fun toDto(showLocations: Boolean) = super.toDto(showLocations).copy(
+    reasonForSignedOpChange = reasonForChange,
     signedOperationCapacityChange = signedOperationCapacityChange,
   )
 
