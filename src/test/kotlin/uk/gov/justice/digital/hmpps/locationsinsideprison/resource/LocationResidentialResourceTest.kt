@@ -263,6 +263,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             """
            {
               "topLevelLocationType": "Wings",
+              "subLocationName": "Cells",
               "parentLocation": {
                 "prisonId": "MDI",
                 "code": "1",
@@ -373,6 +374,66 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                     "localName": "Store Room"
                 }
             ]
+          }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can retrieve details of a locations on a landing without any cells`() {
+        webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${landingZ2.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+           {
+              "topLevelLocationType": "Wings",
+              "subLocationName": "Cells",
+              "parentLocation": {
+                "prisonId": "MDI",
+                "code": "2",
+                "pathHierarchy": "Z-2",
+                "locationType": "LANDING",
+                "level": 2,
+                "permanentlyInactive": false,
+                "capacity": {
+                  "maxCapacity": 0,
+                  "workingCapacity": 0
+                },
+                "certification": {
+                  "certified": false
+                },
+                "accommodationTypes": [
+                ],
+                "specialistCellTypes": [
+                ],
+                "usedFor": [
+                ],
+                "numberOfCellLocations": 0,
+                "status": "ACTIVE",
+                "active": true,
+                "inactiveCells": 0,
+                "key": "MDI-Z-2"
+              },
+               "locationHierarchy": [
+                  {
+                    "prisonId": "MDI",
+                    "code": "Z",
+                    "type": "WING",
+                    "pathHierarchy": "Z",
+                    "level": 1
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "2",
+                    "type": "LANDING",
+                    "pathHierarchy": "Z-2",
+                    "level": 2
+                 }
+                ]
           }
           """,
             JsonCompareMode.LENIENT,
