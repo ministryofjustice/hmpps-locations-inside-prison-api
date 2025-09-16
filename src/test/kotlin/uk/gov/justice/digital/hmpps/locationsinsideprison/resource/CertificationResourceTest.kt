@@ -617,7 +617,20 @@ class CertificationResourceTest : CommonDataTestBase() {
           )
 
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(9)
-
+        getDomainEvents(9).let {
+          assertThat(it).hasSize(9)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.created" to "LEI-M-1-001",
+            "location.inside.prison.created" to "LEI-M-1-002",
+            "location.inside.prison.created" to "LEI-M-1-003",
+            "location.inside.prison.created" to "LEI-M-2-001",
+            "location.inside.prison.created" to "LEI-M-2-002",
+            "location.inside.prison.created" to "LEI-M-2-003",
+            "location.inside.prison.created" to "LEI-M-1",
+            "location.inside.prison.created" to "LEI-M-2",
+            "location.inside.prison.created" to "LEI-M",
+          )
+        }
         webTestClient.get().uri("/locations/${mWing.id}?includeChildren=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
