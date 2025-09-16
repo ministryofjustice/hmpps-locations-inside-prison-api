@@ -179,6 +179,10 @@ open class ResidentialLocation(
     if (pos < structure.size) structure[pos] else ResidentialStructuralType.valueOf(locationType.name).defaultNextLevel
   }
 
+  fun getDefaultNextLevel() = getResidentialStructuralType()?.defaultNextLevel
+
+  fun getResidentialStructuralType() = ResidentialStructuralType.entries.firstOrNull { it.locationType == locationType }
+
   fun requestApproval(requestedDate: LocalDateTime, requestedBy: String, linkedTransaction: LinkedTransaction): LocationCertificationApprovalRequest {
     fun traverseAndLock(location: ResidentialLocation) {
       location.lock(requestedDate, requestedBy, linkedTransaction)
