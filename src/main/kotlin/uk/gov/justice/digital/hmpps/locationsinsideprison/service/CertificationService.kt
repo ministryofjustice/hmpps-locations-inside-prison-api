@@ -140,6 +140,7 @@ class CertificationService(
     val now = LocalDateTime.now(clock)
     val transactionInvokedBy = getUsername()
     val approvedLocation = (approvalRequest as? LocationCertificationApprovalRequest)?.location
+    val wasDraft = approvedLocation?.isDraft() ?: false
 
     val linkedTransaction = createLinkedTransaction(
       transactionType = TransactionType.APPROVE_CERTIFICATION_REQUEST,
@@ -187,7 +188,7 @@ class CertificationService(
     return ApprovalResponse(
       approvalRequest = approvalRequest.toDto(),
       prisonId = approvalRequest.prisonId,
-      newLocation = approvedLocation?.isDraft() ?: false,
+      newLocation = wasDraft,
       location = approvedLocation?.toDto(includeChildren = true, includeParent = true),
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
