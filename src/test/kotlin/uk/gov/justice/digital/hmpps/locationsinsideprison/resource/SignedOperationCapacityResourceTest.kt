@@ -9,12 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 
 class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
 
   @Autowired
-  lateinit var repository: PrisonConfigurationRepository
+  lateinit var repository: SignedOperationCapacityRepository
 
   @AfterEach
   fun cleanUp() {
@@ -186,6 +186,31 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
           )
           .exchange()
           .expectStatus().isBadRequest
+      }
+
+      @Test
+      @Sql("classpath:repository/insert-dummy-locations.sql")
+      fun `cannot update Signed Operation Capacity when certification process active`() {
+        prisonRegisterMockServer.stubLookupPrison("MDI")
+
+        assertThat(
+          webTestClient.post().uri("/signed-op-cap/")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              """
+              { 
+                "prisonId": "LEI",
+                "signedOperationCapacity": 200,
+                "updatedBy": "TEST"
+              }
+              """.trimIndent(),
+            )
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.SignedOpCapCannotChangedWithoutApproval.errorCode)
       }
     }
 

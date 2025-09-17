@@ -58,7 +58,7 @@ class ApiExceptionHandler {
 
   @ExceptionHandler(HttpMediaTypeNotSupportedException::class)
   fun handleInvalidRequestFormatException(e: HttpMediaTypeNotSupportedException): ResponseEntity<ErrorResponse> {
-    log.info("Validation exception: Request format not supported: {}", e.message)
+    log.info("Request format exception: Request format not supported: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
       .body(
@@ -72,7 +72,7 @@ class ApiExceptionHandler {
 
   @ExceptionHandler(HttpMessageNotReadableException::class)
   fun handleNoBodyValidationException(e: HttpMessageNotReadableException): ResponseEntity<ErrorResponse> {
-    log.info("Validation exception: Couldn't read request body: {}", e.message)
+    log.info("No body validation exception: Couldn't read request body: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
       .body(
@@ -93,7 +93,7 @@ class ApiExceptionHandler {
       "Parameter ${e.name} must be of type ${type.typeName}"
     }
 
-    log.info("Validation exception: {}", message)
+    log.info("Method argument type mismatch: {}", message)
     return ResponseEntity
       .status(BAD_REQUEST)
       .body(
@@ -232,6 +232,21 @@ class ApiExceptionHandler {
           status = HttpStatus.NOT_FOUND,
           errorCode = ErrorCode.LocationNotFound,
           userMessage = "Cell certificate not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(SignedOpCapCannotChangedWithoutApprovalException::class)
+  fun handleSignedOpCapCannotBeUpdatedException(e: SignedOpCapCannotChangedWithoutApprovalException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Cannot update Signed Op Cap without approval: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.BAD_REQUEST,
+          errorCode = ErrorCode.SignedOpCapCannotChangedWithoutApproval,
+          userMessage = "Approval required or signed op cap change: ${e.message}",
           developerMessage = e.message,
         ),
       )
@@ -566,3 +581,4 @@ class LocationDoesNotRequireApprovalException(key: String) : Exception("Location
 class LocationCannotBeUnlockedWhenNotLockedException(key: String) : Exception("Location $key cannot be unlocked as it is not locked")
 class CellCertificateNotFoundException(id: UUID) : Exception("Cell certificate with id $id not found")
 class CurrentCellCertificateNotFoundException(prisonId: String) : Exception("No current cell certificate found for prison $prisonId")
+class SignedOpCapCannotChangedWithoutApprovalException(prisonId: String) : Exception("Signed op cap cannot be updated in $prisonId without approval")

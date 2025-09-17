@@ -176,6 +176,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       locationType = LocationType.VISITS,
       localName = "Visit Hall",
       comments = "This is a visit room",
+      internalMovementAllowed = true,
       orderWithinParentLocation = 1,
       lastUpdatedBy = "user",
       usage = setOf(NonResidentialUsageDto(NonResidentialUsageType.VISIT, 10, 1)),
@@ -668,6 +669,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "active": true,
               "key": "ZZGHI-VISIT",
               "comments": "This is a visit room",
+              "internalMovementAllowed": true,
               "localName": "Visit Hall",
               "orderWithinParentLocation": 1,
               "usage": [
@@ -678,6 +680,50 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 }
               ]
             }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can sync an existing non res location and update it`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncNonResRequest.copy(
+                id = nonRes.id,
+                internalMovementAllowed = true,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+           {
+            "key": "ZZGHI-B-1-VISIT",
+            "prisonId": "ZZGHI",
+            "code": "VISIT",
+            "pathHierarchy": "B-1-VISIT",
+            "locationType": "VISITS",
+            "localName": "Visit Hall",
+            "comments": "This is a visit room",
+            "ignoreWorkingCapacity": false,
+            "usage": [
+              {
+                "usageType": "VISIT",
+                "capacity": 10,
+                "sequence": 1
+              }
+            ],
+            "internalMovementAllowed": true,
+            "orderWithinParentLocation": 1,
+            "active": true,
+            "permanentlyDeactivated": false
+          }
           """,
             JsonCompareMode.LENIENT,
           )

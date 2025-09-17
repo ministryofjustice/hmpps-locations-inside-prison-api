@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -23,10 +22,6 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
   @DisplayName("GET /prison/roll-count/{prisonId}")
   @Nested
   inner class PrisonRollCountTest {
-
-    @BeforeEach
-    fun beforeEach() {
-    }
 
     @Nested
     inner class Security {
@@ -385,8 +380,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
         whenever(prisonConfigurationRepository.findById("MDI")).thenReturn(
           Optional.of(
             PrisonConfiguration(
-              prisonId = "MDI",
-              signedOperationCapacity = 1,
+              id = "MDI",
               resiLocationServiceActive = true,
               includeSegregationInRollCount = true,
               whenUpdated = LocalDateTime.now(clock),

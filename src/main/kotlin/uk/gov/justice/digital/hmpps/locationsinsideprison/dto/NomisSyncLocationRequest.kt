@@ -89,6 +89,9 @@ data class NomisSyncLocationRequest(
   @param:Schema(description = "Location Usage", required = false)
   val usage: Set<NonResidentialUsageDto>? = null,
 
+  @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
+  val internalMovementAllowed: Boolean? = null,
+
   @param:Schema(description = "Date location was created, if not provided then the current time will be used for a new location", required = false)
   val createDate: LocalDateTime? = null,
 
@@ -193,6 +196,7 @@ data class NomisSyncLocationRequest(
         localName = localName,
         comments = comments,
         orderWithinParentLocation = orderWithinParentLocation,
+        internalMovementAllowed = internalMovementAllowed,
         createdBy = lastUpdatedBy,
         whenCreated = createDate ?: LocalDateTime.now(clock),
         childLocations = mutableListOf(),

@@ -40,6 +40,7 @@ class NonResidentialLocation(
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   private val nonResidentialUsages: MutableSet<NonResidentialUsage> = mutableSetOf(),
 
+  private var internalMovementAllowed: Boolean? = false,
 ) : Location(
   id = id,
   code = code,
@@ -103,10 +104,12 @@ class NonResidentialLocation(
     formatLocalName = formatLocalName,
   ).copy(
     usage = nonResidentialUsages.map { it.toDto() }.sortedBy { it.usageType.sequence },
+    internalMovementAllowed = internalMovementAllowed,
   )
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
     usage = nonResidentialUsages.map { it.toDto() },
+    internalMovementAllowed = internalMovementAllowed,
   )
 
   override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): NonResidentialLocation {
@@ -114,6 +117,18 @@ class NonResidentialLocation(
 
     if (upsert is PatchNonResidentialLocationRequest) {
       updateUsage(upsert.usage, userOrSystemInContext, clock, linkedTransaction)
+
+      upsert.internalMovementAllowed?.let { internalMovementAllowedUpdate ->
+        addHistory(
+          attributeName = LocationAttribute.INTERNAL_MOVEMENT_ALLOWED,
+          oldValue = this.internalMovementAllowed.toString(),
+          newValue = internalMovementAllowedUpdate.toString(),
+          amendedBy = userOrSystemInContext,
+          amendedDate = LocalDateTime.now(clock),
+          linkedTransaction = linkedTransaction,
+        )
+        this.internalMovementAllowed = internalMovementAllowedUpdate
+      }
 
       if (upsert.locationType != null) {
         addHistory(
@@ -134,6 +149,18 @@ class NonResidentialLocation(
   override fun sync(upsert: NomisSyncLocationRequest, clock: Clock, linkedTransaction: LinkedTransaction): NonResidentialLocation {
     super.sync(upsert, clock, linkedTransaction)
     updateUsage(upsert.usage, upsert.lastUpdatedBy, clock, linkedTransaction)
+    upsert.internalMovementAllowed?.let { internalMovementAllowedUpdate ->
+      addHistory(
+        attributeName = LocationAttribute.INTERNAL_MOVEMENT_ALLOWED,
+        oldValue = this.internalMovementAllowed.toString(),
+        newValue = internalMovementAllowedUpdate.toString(),
+        amendedBy = upsert.lastUpdatedBy,
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+
+      this.internalMovementAllowed = internalMovementAllowedUpdate
+    }
     return this
   }
 

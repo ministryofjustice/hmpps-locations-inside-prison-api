@@ -995,68 +995,110 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
           .expectStatus().isOk
           .expectBody().json(
             """
-            {
-                "specialistCellTypes": [
-                  {
-                    "key": "ACCESSIBLE_CELL",
-                    "description": "Accessible cell",
-                    "additionalInformation": "Also known as wheelchair accessible or Disability and Discrimination Act (DDA) compliant"
+             {
+              "specialistCellTypes": [
+                {
+                  "key": "ACCESSIBLE_CELL",
+                  "description": "Accessible cell",
+                  "attributes": {
+                    "affectsCapacity": false
                   },
-                  {
-                    "key": "BIOHAZARD_DIRTY_PROTEST",
-                    "description": "Biohazard / dirty protest cell",
-                    "additionalInformation": "Previously known as a dirty protest cell"
+                  "additionalInformation": "Also known as wheelchair accessible or Disability and Discrimination Act (DDA) compliant"
+                },
+                {
+                  "key": "BIOHAZARD_DIRTY_PROTEST",
+                  "description": "Biohazard / dirty protest cell",
+                  "attributes": {
+                    "affectsCapacity": true
                   },
-                  {
-                    "key": "CSU",
-                    "description": "Care and separation cell"
-                  },
-                  {
-                    "key": "CAT_A",
-                    "description": "Cat A cell"
-                  },
-                  {
-                    "key": "CONSTANT_SUPERVISION",
-                    "description": "Constant supervision cell"
-                  },
-                  {
-                    "key": "DRY",
-                    "description": "Dry cell"
-                  },
-                  {
-                    "key": "ESCAPE_LIST",
-                    "description": "Escape list cell"
-                  },
-                  {
-                    "key": "ISOLATION_DISEASES",
-                    "description": "Isolation cell for communicable diseases"
-                  }, 
-                  {
-                    "key": "LISTENER_CRISIS",
-                    "description": "Listener / crisis cell"
-                  },
-                  {
-                    "key": "LOCATE_FLAT_CELL",
-                    "description": "Locate flat"
-                  },
-                  {
-                    "key": "MEDICAL",
-                    "description": "Medical cell"
-                  },
-                  {
-                    "key": "MOTHER_AND_BABY",
-                    "description": "Mother and baby cell"
-                  },
-                  {
-                    "key": "SAFE_CELL",
-                    "description": "Safe cell"
-                  },
-                  {
-                    "key": "UNFURNISHED",
-                    "description": "Unfurnished cell"
+                  "additionalInformation": "Previously known as a dirty protest cell"
+                },
+                {
+                  "key": "CSU",
+                  "description": "Care and separation cell",
+                  "attributes": {
+                    "affectsCapacity": true
                   }
-                ]
-              }
+                },
+                {
+                  "key": "CAT_A",
+                  "description": "Cat A cell",
+                  "attributes": {
+                    "affectsCapacity": false
+                  }
+                },
+                {
+                  "key": "CONSTANT_SUPERVISION",
+                  "description": "Constant supervision cell",
+                  "attributes": {
+                    "affectsCapacity": false
+                  }
+                },
+                {
+                  "key": "DRY",
+                  "description": "Dry cell",
+                  "attributes": {
+                    "affectsCapacity": true
+                  }
+                },
+                {
+                  "key": "ESCAPE_LIST",
+                  "description": "Escape list cell",
+                  "attributes": {
+                    "affectsCapacity": false
+                  }
+                },
+                {
+                  "key": "ISOLATION_DISEASES",
+                  "description": "Isolation cell for communicable diseases",
+                  "attributes": {
+                    "affectsCapacity": false
+                  }
+                },
+                {
+                  "key": "LISTENER_CRISIS",
+                  "description": "Listener / crisis cell",
+                  "attributes": {
+                    "affectsCapacity": false
+                  }
+                },
+                {
+                  "key": "LOCATE_FLAT_CELL",
+                  "description": "Locate flat",
+                  "attributes": {
+                    "affectsCapacity": false
+                  }
+                },
+                {
+                  "key": "MEDICAL",
+                  "description": "Medical cell",
+                  "attributes": {
+                    "affectsCapacity": false
+                  }
+                },
+                {
+                  "key": "MOTHER_AND_BABY",
+                  "description": "Mother and baby cell",
+                  "attributes": {
+                    "affectsCapacity": false
+                  }
+                },
+                {
+                  "key": "SAFE_CELL",
+                  "description": "Safe cell",
+                  "attributes": {
+                    "affectsCapacity": false
+                  }
+                },
+                {
+                  "key": "UNFURNISHED",
+                  "description": "Unfurnished cell",
+                  "attributes": {
+                    "affectsCapacity": true
+                  }
+                }
+              ]
+            }
             """.trimIndent(),
             JsonCompareMode.STRICT,
           )

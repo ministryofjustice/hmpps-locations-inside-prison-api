@@ -20,7 +20,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
 import java.time.LocalDateTime
-import java.util.*
 
 fun buildResidentialLocation(
   prisonId: String = "MDI",
@@ -129,6 +128,7 @@ fun buildNonResidentialLocation(
     status = status,
     createdBy = "DIFFERENT_USER",
     whenCreated = LocalDateTime.now(clock).minusDays(1),
+    internalMovementAllowed = false,
     childLocations = mutableListOf(),
     orderWithinParentLocation = 99,
   )

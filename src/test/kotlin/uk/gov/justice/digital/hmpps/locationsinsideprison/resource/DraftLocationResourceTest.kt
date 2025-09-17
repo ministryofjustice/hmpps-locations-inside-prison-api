@@ -147,13 +147,41 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       }
 
       @Test
-      fun `request with specialist cells with non zero CNA or Working Capacity are rejected`() {
+      fun `request with normal cells do not allow zero CNA or Working Capacity`() {
+        assertThat(
+          webTestClient.post().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(createCellInitialisationRequest(specialistCellTypes = emptySet(), workingCap = 0, cna = 0))
+            .exchange()
+            .expectStatus().is4xxClientError
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
+      }
+
+      @Test
+      fun `request with specialist cells which are not capacity affecting do not allow zero CNA or Working Capacity`() {
+        assertThat(
+          webTestClient.post().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(createCellInitialisationRequest(specialistCellTypes = setOf(SpecialistCellType.CONSTANT_SUPERVISION), workingCap = 0, cna = 0))
+            .exchange()
+            .expectStatus().is4xxClientError
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
+      }
+
+      @Test
+      fun `request with specialist cells with zero CNA or Working Capacity are allowed`() {
         webTestClient.post().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(createCellInitialisationRequest(specialistCellTypes = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
+          .bodyValue(createCellInitialisationRequest(specialistCellTypes = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST), workingCap = 0, cna = 0))
           .exchange()
-          .expectStatus().is4xxClientError
+          .expectStatus().isCreated
       }
     }
 
@@ -193,7 +221,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "workingCapacity": 0
               },
               "pendingChanges": {
-                "maxCapacity": 1
+                "maxCapacity": 1,
+                "workingCapacity": 1
               },
               "certification": {
                 "certified": false,
@@ -209,7 +238,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                     "workingCapacity": 0
                   },
                   "pendingChanges": {
-                    "maxCapacity": 1
+                    "maxCapacity": 1,
+                    "workingCapacity": 1
                   },
                   "certification": {
                     "certified": false,
@@ -272,7 +302,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "workingCapacity": 0
               },
               "pendingChanges": {
-                "maxCapacity": 1
+                "maxCapacity": 1,
+                "workingCapacity": 1
               },
               "certification": {
                 "certified": false,
@@ -288,7 +319,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                     "workingCapacity": 0
                   },
                   "pendingChanges": {
-                    "maxCapacity": 1
+                    "maxCapacity": 1,
+                    "workingCapacity": 1
                   },
                   "certification": {
                     "certified": false,
@@ -352,7 +384,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 "workingCapacity": 4
               },
               "pendingChanges": {
-                "maxCapacity": 5
+                "maxCapacity": 5,
+                "workingCapacity": 5
               },
               "certification": {
                 "certified": true,
@@ -380,7 +413,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                     "workingCapacity": 0
                   },
                   "pendingChanges": {
-                    "maxCapacity": 1
+                    "maxCapacity": 1,
+                    "workingCapacity": 1
                   }
                 }  
               ]

@@ -51,8 +51,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLoc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanentDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
@@ -89,7 +89,7 @@ class LocationService(
   private val locationRepository: LocationRepository,
   private val nonResidentialLocationRepository: NonResidentialLocationRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
-  private val signedOperationCapacityRepository: PrisonConfigurationRepository,
+  private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val cellLocationRepository: CellLocationRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val entityManager: EntityManager,
@@ -100,7 +100,7 @@ class LocationService(
   private val authenticationHolder: HmppsAuthenticationHolder,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
   private val activePrisonService: ActivePrisonService,
-  @Qualifier("residentialGroups") private val groupsProperties: Properties,
+  @param:Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -474,11 +474,10 @@ class LocationService(
           prisonId = createCellsRequest.prisonId,
         )
 
-        val specialistCellTypesAffectingCapacity = cell.specialistCellTypes?.filter { it.affectsCapacity }
-        if (!specialistCellTypesAffectingCapacity.isNullOrEmpty() && !(cell.certifiedNormalAccommodation == 0 && cell.workingCapacity == 0)) {
+        if (!cell.isCapacityValid()) {
           throw CapacityException(
             cell.code,
-            "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
+            "Normal accommodation must not have a CNA or working capacity of 0",
             ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
           )
         }
@@ -1352,7 +1351,7 @@ class LocationService(
       .map { it.toDto(countInactiveCells = true, countCells = true) }
       .sortedWith(NaturalOrderComparator())
 
-    val subLocationTypes = calculateSubLocationDescription(locations) ?: currentLocation?.getNextLevelTypeWithinStructure()?.getPlural() ?: "Wings"
+    val subLocationTypes = calculateSubLocationDescription(locations) ?: currentLocation?.getNextLevelTypeWithinStructure()?.getPlural() ?: currentLocation?.getDefaultNextLevel()?.getPlural() ?: "Wings"
     return ResidentialSummary(
       topLevelLocationType = currentLocation?.let { it.getHierarchy()[0].type.getPlural() } ?: "Wings",
       prisonSummary = if (id == null) {
@@ -1363,7 +1362,7 @@ class LocationService(
           workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
           maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
           numberOfCellLocations = locations.sumOf { it.numberOfCellLocations ?: 0 },
-          signedOperationalCapacity = signedOperationCapacityRepository.findById(prisonId).getOrNull()?.signedOperationCapacity
+          signedOperationalCapacity = signedOperationCapacityRepository.findByPrisonId(prisonId)?.signedOperationCapacity
             ?: 0,
         )
       } else {

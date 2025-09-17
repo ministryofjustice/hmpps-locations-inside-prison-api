@@ -82,6 +82,9 @@ data class PatchNonResidentialLocationRequest(
   @param:Schema(description = "Non-residential usage", required = false)
   val usage: Set<NonResidentialUsageDto>? = null,
 
+  @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
+  val internalMovementAllowed: Boolean? = null,
+
   @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 30, message = "Description must be less than 31 characters")
   override val localName: String? = null,

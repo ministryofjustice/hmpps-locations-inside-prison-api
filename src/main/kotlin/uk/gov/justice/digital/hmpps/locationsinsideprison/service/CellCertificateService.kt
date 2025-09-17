@@ -25,21 +25,26 @@ class CellCertificateService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun createCellCertificate(location: ResidentialLocation, approvedBy: String, approvedDate: LocalDateTime, approvalRequest: CertificationApprovalRequest): CellCertificateDto {
+  fun createCellCertificate(
+    approvedBy: String,
+    approvedDate: LocalDateTime,
+    approvalRequest: CertificationApprovalRequest,
+    approvedLocation: ResidentialLocation? = null,
+  ): CellCertificateDto {
     // Mark any existing current certificates as not current
-    cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(location.prisonId)?.markAsNotCurrent()
+    cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(approvalRequest.prisonId)?.markAsNotCurrent()
 
     // Create the cell certificate
     val cellCertificate = cellCertificateRepository.save(
       CellCertificate(
-        prisonId = location.prisonId,
+        prisonId = approvalRequest.prisonId,
         approvedBy = approvedBy,
         approvedDate = approvedDate,
         certificationApprovalRequest = approvalRequest,
-        locations = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(location.prisonId)
+        locations = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(approvalRequest.prisonId)
           .filter { !it.isPermanentlyDeactivated() && !it.isDraft() && it.isStructural() }
           .map {
-            it.toCellCertificateLocation(location)
+            it.toCellCertificateLocation(approvedLocation)
           }.toSortedSet(),
       ).apply {
         totalWorkingCapacity = locations.sumOf { it.workingCapacity ?: 0 }
@@ -48,7 +53,7 @@ class CellCertificateService(
       },
     )
 
-    log.info("Created cell certificate for prison ${location.prisonId} with ID ${cellCertificate.id}")
+    log.info("Created cell certificate for prison ${approvalRequest.prisonId} with ID ${cellCertificate.id}")
     return cellCertificate.toDto()
   }
 

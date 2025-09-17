@@ -92,6 +92,9 @@ data class Location(
   @param:Schema(description = "Location Usage", required = false)
   val usage: List<NonResidentialUsageDto>? = null,
 
+  @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
+  val internalMovementAllowed: Boolean? = null,
+
   @param:Schema(description = "Accommodation Types", required = false)
   val accommodationTypes: List<AccommodationType>? = null,
 
@@ -238,8 +241,12 @@ data class PendingChangeDto(
   @param:Schema(description = "Pending max capacity", example = "2", required = false)
   val maxCapacity: Int? = null,
 
+  @param:Schema(description = "Pending working capacity", example = "1", required = false)
+  val workingCapacity: Int? = null,
+
   @param:Schema(description = "Pending CNA", example = "2", required = false)
   val certifiedNormalAccommodation: Int? = null,
+
 )
 
 @Schema(description = "Non Residential Usage")
@@ -376,28 +383,28 @@ data class TransactionDetail(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class TransactionHistory(
 
-  @Schema(description = "Unique transaction ID", example = "019464e9-05da-77b3-810b-887e199d8190", required = true)
+  @param:Schema(description = "Unique transaction ID", example = "019464e9-05da-77b3-810b-887e199d8190", required = true)
   val transactionId: UUID,
 
-  @Schema(description = "Type of transaction", example = "CAPACITY_CHANGE", required = true)
+  @param:Schema(description = "Type of transaction", example = "CAPACITY_CHANGE", required = true)
   val transactionType: TransactionType,
 
-  @Schema(description = "Prison ID of the transaction", example = "MDI", required = true)
+  @param:Schema(description = "Prison ID of the transaction", example = "MDI", required = true)
   val prisonId: String,
 
-  @Schema(description = "Description of the transaction", example = "Working capacity changed from 0 to 1", required = true)
+  @param:Schema(description = "Description of the transaction", example = "Working capacity changed from 0 to 1", required = true)
   val transactionDetail: String,
 
-  @Schema(description = "User who invoked the change", example = "STAFF_USER1", required = true)
+  @param:Schema(description = "User who invoked the change", example = "STAFF_USER1", required = true)
   val transactionInvokedBy: String,
 
-  @Schema(description = "Date and time the transaction started", required = true)
+  @param:Schema(description = "Date and time the transaction started", required = true)
   val txStartTime: LocalDateTime,
 
-  @Schema(description = "Date and time the transaction ended", required = true)
+  @param:Schema(description = "Date and time the transaction ended", required = true)
   var txEndTime: LocalDateTime? = null,
 
-  @Schema(description = "The list of changes that were made in the transaction", required = true)
+  @param:Schema(description = "The list of changes that were made in the transaction", required = true)
   val transactionDetails: List<TransactionDetail>,
 ) {
   fun toChangeHistory(): List<ChangeHistory> = transactionDetails.mapNotNull { it.toChangeHistory(this) }
@@ -406,17 +413,17 @@ data class TransactionHistory(
 @Schema(description = "Certification")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Certification(
-  @Schema(
+  @param:Schema(
     description = "Indicates that this location is certified for use as a residential location",
     example = "true",
     required = false,
   )
   val certified: Boolean = false,
-  @Schema(description = "Old name for CNA (Certified normal accommodation)", example = "1", required = false, deprecated = true)
+  @param:Schema(description = "Old name for CNA (Certified normal accommodation)", example = "1", required = false, deprecated = true)
   @Deprecated("Use certifiedNormalAccommodation instead")
   val capacityOfCertifiedCell: Int = 0,
 
-  @Schema(description = "CNA (Certified normal accommodation)", example = "1", required = false)
+  @param:Schema(description = "CNA (Certified normal accommodation)", example = "1", required = false)
   val certifiedNormalAccommodation: Int? = null,
 ) {
 
@@ -448,7 +455,7 @@ data class Certification(
 @Schema(description = "Request to create a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateResidentialLocationRequest(
-  @Schema(
+  @param:Schema(
     description = "Prison ID where the location is situated",
     required = true,
     example = "MDI",
@@ -461,50 +468,50 @@ data class CreateResidentialLocationRequest(
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
   val prisonId: String,
 
-  @Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
+  @param:Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be up to 12 characters")
   val code: String,
 
-  @Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1)
+  @param:Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1)
   @field:Size(min = 1, message = "Mark cannot be blank")
   @field:Size(max = 12, message = "Mark must be up to 12 characters")
   val cellMark: String? = null,
 
-  @Schema(description = "Accommodation Type", required = false, example = "NORMAL_ACCOMMODATION")
+  @param:Schema(description = "Accommodation Type", required = false, example = "NORMAL_ACCOMMODATION")
   val accommodationType: AccommodationType,
 
-  @Schema(description = "Location Type", example = "CELL", required = true)
+  @param:Schema(description = "Location Type", example = "CELL", required = true)
   val locationType: ResidentialLocationType,
 
-  @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+  @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 80, message = "Local name must be less than 81 characters")
   val localName: String? = null,
 
-  @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
+  @param:Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   val parentId: UUID? = null,
 
-  @Schema(description = "Key of parent location (can be used instead of parentId)", example = "MDI-B-1", required = false)
+  @param:Schema(description = "Key of parent location (can be used instead of parentId)", example = "MDI-B-1", required = false)
   val parentLocationKey: String? = null,
 
-  @Schema(description = "Capacity of the residential location", required = false)
+  @param:Schema(description = "Capacity of the residential location", required = false)
   val capacity: Capacity? = null,
 
-  @Schema(description = "Certified status of the residential location", required = false, defaultValue = "false")
+  @param:Schema(description = "Certified status of the residential location", required = false, defaultValue = "false")
   val certified: Boolean = false,
 
-  @Schema(description = "Used For Types", required = false)
+  @param:Schema(description = "Used For Types", required = false)
   val usedFor: Set<UsedForType>? = null,
 
-  @Schema(description = "Specialist Cell Types", required = false)
+  @param:Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: Set<SpecialistCellType>? = null,
 
-  @Schema(description = "CNA value", required = false, defaultValue = "0")
+  @param:Schema(description = "CNA value", required = false, defaultValue = "0")
   @field:Max(value = 99, message = "CNA cannot be greater than 99")
   @field:PositiveOrZero(message = "CNA cannot be less than 0")
   val certifiedNormalAccommodation: Int = 0,
 
-  @Schema(description = "In-cell sanitation", required = false, defaultValue = "false")
+  @param:Schema(description = "In-cell sanitation", required = false, defaultValue = "false")
   val inCellSanitation: Boolean = false,
 ) {
 
@@ -602,7 +609,7 @@ data class CreateResidentialLocationRequest(
 @Schema(description = "Request to create a non-residential location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateNonResidentialLocationRequest(
-  @Schema(
+  @param:Schema(
     description = "Prison ID where the location is situated",
     required = true,
     example = "MDI",
@@ -615,23 +622,26 @@ data class CreateNonResidentialLocationRequest(
   @field:Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
   val prisonId: String,
 
-  @Schema(description = "Code of the location", required = true, example = "ADJ", minLength = 1)
+  @param:Schema(description = "Code of the location", required = true, example = "ADJ", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be no more than 12 characters")
   val code: String,
 
-  @Schema(description = "Location Type", example = "ADJUDICATION_ROOM", required = true)
+  @param:Schema(description = "Location Type", example = "ADJUDICATION_ROOM", required = true)
   val locationType: NonResidentialLocationType,
 
-  @Schema(description = "Alternative description to display for location", example = "Adj Room", required = false)
+  @param:Schema(description = "Alternative description to display for location", example = "Adj Room", required = false)
   @field:Size(max = 80, message = "Local name must be less than 81 characters")
   val localName: String? = null,
 
-  @Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
+  @param:Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   val parentId: UUID? = null,
 
-  @Schema(description = "Location Usage", required = false)
+  @param:Schema(description = "Location Usage", required = false)
   val usage: Set<NonResidentialUsageDto>? = null,
+
+  @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
+  val internalMovementAllowed: Boolean? = null,
 ) {
 
   fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location? = null) = NonResidentialLocationJPA(
@@ -667,18 +677,18 @@ data class CreateNonResidentialLocationRequest(
 @Schema(description = "Request to temporarily deactivate a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class TemporaryDeactivationLocationRequest(
-  @Schema(description = "Reason for temporary deactivation", example = "MOTHBALLED", required = true)
+  @param:Schema(description = "Reason for temporary deactivation", example = "MOTHBALLED", required = true)
   val deactivationReason: DeactivatedReason,
-  @Schema(
+  @param:Schema(
     description = "Additional information on deactivation, for OTHER DeactivatedReason must be provided",
     example = "Window broken",
     required = false,
   )
   @field:Size(max = 255, message = "Other deactivation reason cannot be more than 255 characters")
   val deactivationReasonDescription: String? = null,
-  @Schema(description = "Estimated reactivation date", example = "2025-01-05", required = false)
+  @param:Schema(description = "Estimated reactivation date", example = "2025-01-05", required = false)
   val proposedReactivationDate: LocalDate? = null,
-  @Schema(description = "Planet FM reference number", example = "23423TH/5", required = false)
+  @param:Schema(description = "Planet FM reference number", example = "23423TH/5", required = false)
   @field:Size(max = 60, message = "Planet FM reference number cannot be more than 60 characters")
   val planetFmReference: String? = null,
 )
@@ -689,7 +699,7 @@ data class TemporaryDeactivationLocationRequest(
 @Schema(description = "Request to permanently deactivate a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PermanentDeactivationLocationRequest(
-  @Schema(description = "Reason for permanent deactivation", example = "Wing demolished", required = true)
+  @param:Schema(description = "Reason for permanent deactivation", example = "Wing demolished", required = true)
   @field:Size(max = 200, message = "Reason for permanent deactivation cannot be more than 200 characters")
   val reason: String,
 )
