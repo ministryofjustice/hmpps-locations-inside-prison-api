@@ -71,8 +71,8 @@ open class LocationCertificationApprovalRequest(
     },
   )
 
-  override fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
-    super.approve(approvedBy, approvedDate, linkedTransaction, comments)
+  override fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
+    super.approve(approvedBy, approvedDate, linkedTransaction)
     location.approve(
       approvedDate = approvedDate,
       approvedBy = approvedBy,

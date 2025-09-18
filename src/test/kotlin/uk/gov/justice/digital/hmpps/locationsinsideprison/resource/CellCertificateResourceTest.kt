@@ -89,7 +89,6 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         jsonString(
           ApproveCertificationRequestDto(
             approvalRequestReference = approvalRequestId,
-            comments = "All locations OK",
           ),
         ),
       )
@@ -146,7 +145,6 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         jsonString(
           ApproveCertificationRequestDto(
             approvalRequestReference = approvalRequestId,
-            comments = "Cell ok",
           ),
         ),
       )
@@ -316,9 +314,14 @@ class CellCertificateResourceTest : CommonDataTestBase() {
         // Verify that there are locations in the response
         .jsonPath("$.locations.length()").isEqualTo(2)
         .jsonPath("$.locations[0].workingCapacity").isEqualTo(6)
+        .jsonPath("$.locations[0].accommodationTypes[0]").isEqualTo("NORMAL_ACCOMMODATION")
+        .jsonPath("$.locations[0].usedFor[0]").isEqualTo("STANDARD_ACCOMMODATION")
+        .jsonPath("$.locations[0].specialistCellTypes[0]").isEqualTo("ESCAPE_LIST")
         .jsonPath("$.locations[0].subLocations.length()").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[0].subLocations.length()").isEqualTo(3)
         .jsonPath("$.locations[0].subLocations[0].subLocations[0].workingCapacity").isEqualTo(1)
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].accommodationTypes[0]").isEqualTo("NORMAL_ACCOMMODATION")
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].usedFor[0]").isEqualTo("STANDARD_ACCOMMODATION")
         .jsonPath("$.locations[0].subLocations[0].subLocations[0].maxCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[1].subLocations.length()").isEqualTo(3)
         .jsonPath("$.locations[1].workingCapacity").isEqualTo(6)

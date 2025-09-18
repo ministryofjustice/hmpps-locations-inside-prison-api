@@ -55,9 +55,8 @@ open class SignedOpCapCertificationApprovalRequest(
     approvedBy: String,
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
-    comments: String,
   ) {
-    super.approve(approvedBy, approvedDate, linkedTransaction, comments)
+    super.approve(approvedBy, approvedDate, linkedTransaction)
     signedOperationCapacity.signedOperationCapacity += signedOperationCapacityChange
   }
 }

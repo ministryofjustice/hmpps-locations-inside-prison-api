@@ -98,11 +98,10 @@ abstract class CertificationApprovalRequest(
     comments = comments,
   )
 
-  open fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+  open fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
     this.status = ApprovalRequestStatus.APPROVED
     this.approvedOrRejectedBy = approvedBy
     this.approvedOrRejectedDate = approvedDate
-    this.comments = comments
   }
 
   open fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
