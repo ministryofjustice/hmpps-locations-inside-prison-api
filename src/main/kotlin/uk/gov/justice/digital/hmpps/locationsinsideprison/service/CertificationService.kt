@@ -153,7 +153,6 @@ class CertificationService(
       approvedBy = username,
       approvedDate = now,
       linkedTransaction = linkedTransaction,
-      comments = approveCertificationRequest.comments,
     )
 
     // Create the cell certificate
@@ -162,6 +161,8 @@ class CertificationService(
       approvedBy = transactionInvokedBy,
       approvedDate = now,
       approvedLocation = approvedLocation,
+      signedOperationCapacity = signedOperationCapacityRepository.findByPrisonId(approvalRequest.prisonId)?.signedOperationCapacity
+        ?: 0,
     )
 
     telemetryClient.trackEvent(

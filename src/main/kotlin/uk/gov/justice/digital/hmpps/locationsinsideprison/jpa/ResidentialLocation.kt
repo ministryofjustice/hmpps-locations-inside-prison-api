@@ -463,7 +463,9 @@ open class ResidentialLocation(
         calcWorkingCapacity()
       },
       certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
-      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name },
+      usedForTypes = getUsedForValuesAsCSV(),
+      accommodationTypes = getAccommodationTypesAsCSV(),
+      specialistCellTypes = getSpecialistCellTypesAsCSV(),
       convertedCellType = if (this is Cell && isConvertedCell()) {
         convertedCellType
       } else {
@@ -498,7 +500,9 @@ open class ResidentialLocation(
       maxCapacity = calcMaxCapacity(true),
       workingCapacity = calcWorkingCapacity(true),
       certifiedNormalAccommodation = calcCertifiedNormalAccommodation(true),
-      specialistCellTypes = getSpecialistCellTypes().map { it.specialistCellType }.takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name },
+      usedForTypes = getUsedForValuesAsCSV(),
+      accommodationTypes = getAccommodationTypesAsCSV(),
+      specialistCellTypes = getSpecialistCellTypesAsCSV(),
       convertedCellType = if (this is Cell && isConvertedCell()) {
         convertedCellType
       } else {
@@ -507,6 +511,14 @@ open class ResidentialLocation(
       subLocations = subLocations.toSortedSet(),
     )
   }
+
+  private fun getSpecialistCellTypesAsCSV(): String? = getSpecialistCellTypes().map { it.specialistCellType }.distinct().takeIf { it.isNotEmpty() }
+    ?.joinToString(separator = ",") { it.name }
+
+  private fun getAccommodationTypesAsCSV(): String? = getAccommodationTypes().takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name }
+
+  private fun getUsedForValuesAsCSV(): String? = getUsedForValues().map { it.usedFor }.distinct().takeIf { it.isNotEmpty() }
+    ?.joinToString(separator = ",") { it.name }
 
   override fun toDto(
     includeChildren: Boolean,

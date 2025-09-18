@@ -29,6 +29,7 @@ class CellCertificateService(
     approvedBy: String,
     approvedDate: LocalDateTime,
     approvalRequest: CertificationApprovalRequest,
+    signedOperationCapacity: Int,
     approvedLocation: ResidentialLocation? = null,
   ): CellCertificateDto {
     // Mark any existing current certificates as not current
@@ -41,6 +42,7 @@ class CellCertificateService(
         approvedBy = approvedBy,
         approvedDate = approvedDate,
         certificationApprovalRequest = approvalRequest,
+        signedOperationCapacity = signedOperationCapacity,
         locations = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(approvalRequest.prisonId)
           .filter { !it.isPermanentlyDeactivated() && !it.isDraft() && it.isStructural() }
           .map {
