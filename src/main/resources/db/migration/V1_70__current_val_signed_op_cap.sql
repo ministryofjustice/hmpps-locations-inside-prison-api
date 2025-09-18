@@ -1,0 +1,1 @@
+ALTER TABLE certification_approval_request ADD COLUMN current_signed_operation_capacity integer NOT NULL DEFAULT 0;

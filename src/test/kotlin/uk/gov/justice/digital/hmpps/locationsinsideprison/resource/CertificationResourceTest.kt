@@ -190,6 +190,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               "approvalType":"SIGNED_OP_CAP",
               "prisonId":"LEI",
               "status": "PENDING",
+              "currentSignedOperationCapacity": 200,
               "signedOperationCapacityChange": -190,
               "reasonForSignedOpChange": "Damp cells"
               }

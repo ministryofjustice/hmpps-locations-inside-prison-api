@@ -29,6 +29,9 @@ open class SignedOpCapCertificationApprovalRequest(
   private val signedOperationCapacity: SignedOperationCapacity,
 
   @Column(nullable = false)
+  private var currentSignedOperationCapacity: Int = 0,
+
+  @Column(nullable = false)
   private var signedOperationCapacityChange: Int = 0,
 
 ) : CertificationApprovalRequest(
@@ -44,6 +47,7 @@ open class SignedOpCapCertificationApprovalRequest(
 ) {
   override fun toDto(showLocations: Boolean) = super.toDto(showLocations).copy(
     reasonForSignedOpChange = reasonForChange,
+    currentSignedOperationCapacity = currentSignedOperationCapacity,
     signedOperationCapacityChange = signedOperationCapacityChange,
   )
 

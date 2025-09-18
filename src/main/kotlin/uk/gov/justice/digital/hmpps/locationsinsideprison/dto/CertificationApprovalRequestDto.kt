@@ -52,6 +52,9 @@ data class CertificationApprovalRequestDto(
   @param:Schema(description = "Change in maximum capacity", example = "1", required = true)
   val maxCapacityChange: Int? = null,
 
+  @param:Schema(description = "Current value of signed operational capacity", example = "1", required = true)
+  val currentSignedOperationCapacity: Int? = null,
+
   @param:Schema(description = "Change signed operational capacity", example = "1", required = true)
   val signedOperationCapacityChange: Int? = null,
 
