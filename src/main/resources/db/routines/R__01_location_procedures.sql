@@ -10,14 +10,7 @@ BEGIN
     FROM certification c
     where NOT EXISTS (select 1 from location l where l.certification_id = c.id);
 
-    DELETE FROM cell_certificate_location ccl where ccl.cell_certificate_id in (select id from cell_certificate where prison_id = p_prison_id);
-    DELETE FROM cell_certificate c where c.prison_id = p_prison_id;
-    DELETE FROM certification_approval_request_location ca where ca.certification_approval_request_id in (select id from certification_approval_request where prison_id = p_prison_id);
-    UPDATE pending_location_change set approval_request_id = null where approval_request_id in (select id from certification_approval_request where prison_id = p_prison_id);
-    DELETE FROM certification_approval_request car where car.prison_id = p_prison_id;
-
     DELETE FROM location l where l.prison_id = p_prison_id;
-
     DELETE FROM prison_configuration where prison_id = p_prison_id;
 END;
 
