@@ -218,6 +218,70 @@ class PrisonConfigurationResourceTest : SqsIntegrationTestBase() {
             JsonCompareMode.STRICT,
           )
       }
+    }
+  }
+
+  @DisplayName("PUT /prison-configuration/{prisonId}/certification-approval-required/{status}")
+  @Nested
+  inner class UpdateCertificationApprovalProcessTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/certification-approval-required/ACTIVE")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/certification-approval-required/ACTIVE")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/certification-approval-required/ACTIVE")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+
+      @Test
+      fun `error occurs when non existent prison used`() {
+        webTestClient.put().uri("/prison-configuration/JJI/certification-approval-required/ACTIVE")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `error occurs when invalid prison used`() {
+        webTestClient.put().uri("/prison-configuration/XXXXXX/certification-approval-required/ACTIVE")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `error occurs when invalid status used`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/certification-approval-required/XXXXX")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
 
       @Test
       fun `can update certification approval process`() {
@@ -238,6 +302,105 @@ class PrisonConfigurationResourceTest : SqsIntegrationTestBase() {
           )
 
         webTestClient.put().uri("/prison-configuration/$prisonId/certification-approval-required/INACTIVE")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "prisonId": "$prisonId",
+                "resiLocationServiceActive": "INACTIVE",
+                "includeSegregationInRollCount": "INACTIVE",
+                "certificationApprovalRequired": "INACTIVE"
+              }
+            """.trimIndent(),
+            JsonCompareMode.STRICT,
+          )
+      }
+    }
+  }
+
+  @DisplayName("PUT /prison-configuration/{prisonId}/include-seg-in-roll-count/{status}")
+  @Nested
+  inner class UpdateIncludeSegInRollCountTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/include-seg-in-roll-count/ACTIVE")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/include-seg-in-roll-count/ACTIVE")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/include-seg-in-roll-count/ACTIVE")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+
+      @Test
+      fun `error occurs when non existent prison used`() {
+        webTestClient.put().uri("/prison-configuration/JJI/include-seg-in-roll-count/ACTIVE")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `error occurs when invalid prison used`() {
+        webTestClient.put().uri("/prison-configuration/XXXXXX/include-seg-in-roll-count/ACTIVE")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `error occurs when invalid status used`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/include-seg-in-roll-count/XXXXX")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `can update include seg in roll count status`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/include-seg-in-roll-count/ACTIVE")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "prisonId": "$prisonId",
+                "resiLocationServiceActive": "INACTIVE",
+                "includeSegregationInRollCount": "ACTIVE",
+                "certificationApprovalRequired": "INACTIVE"
+              }
+            """.trimIndent(),
+            JsonCompareMode.STRICT,
+          )
+
+        webTestClient.put().uri("/prison-configuration/$prisonId/include-seg-in-roll-count/INACTIVE")
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
           .exchange()
           .expectStatus().isOk
