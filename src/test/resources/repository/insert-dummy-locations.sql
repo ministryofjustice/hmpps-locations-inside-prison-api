@@ -1,7 +1,3 @@
-DELETE FROM cell_certificate cascade;
-DELETE FROM certification_approval_request_location;
-UPDATE pending_location_change set approval_request_id = null;
-DELETE FROM certification_approval_request;
 DELETE FROM location;
 DELETE FROM prison_configuration;
 
