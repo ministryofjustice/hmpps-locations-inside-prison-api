@@ -41,6 +41,7 @@ class SignedOperationCapacity(
       prisonId = this.prisonId,
       requestedBy = requestedBy,
       requestedDate = requestedDate,
+      currentSignedOperationCapacity = signedOperationCapacity,
       signedOperationCapacityChange = pendingSignedOperationCapacity - signedOperationCapacity,
       signedOperationCapacity = this,
       reasonForChange = reasonForChange,
