@@ -98,6 +98,40 @@ class PrisonConfigurationService(
     return prisonConfig.toPrisonConfiguration()
   }
 
+  @Transactional
+  fun updateIncludeSegInRollCount(prisonId: String, includeSegInRollCountStatus: ResidentialStatus): PrisonConfigurationDto {
+    val prisonConfig = activePrisonService.getPrisonConfiguration(prisonId) ?: throw PrisonNotFoundException(prisonId)
+
+    val includeSegActive = includeSegInRollCountStatus == ResidentialStatus.ACTIVE
+    if (prisonConfig.includeSegregationInRollCount != includeSegActive) {
+      val tx = LinkedTransaction(
+        transactionType = TransactionType.INCLUDE_SEG_IN_ROLL_COUNT_ACTIVATION,
+        prisonId = prisonId,
+        transactionDetail = "Include seg in roll count changed to $includeSegInRollCountStatus",
+        transactionInvokedBy = authenticationHolder.username ?: SYSTEM_USERNAME,
+        txStartTime = LocalDateTime.now(clock),
+      )
+      linkedTransactionRepository.save(tx)
+      prisonConfig.includeSegregationInRollCount = includeSegActive
+
+      telemetryClient.trackEvent(
+        "Include seg in roll count update",
+        mapOf(
+          "prisonId" to prisonId,
+          "includeSegInRollCount" to includeSegInRollCountStatus.name,
+          "tx" to tx.transactionId.toString(),
+        ),
+        null,
+      )
+      log.info("Include seg in roll count update [$tx]")
+      tx.txEndTime = LocalDateTime.now(clock)
+    } else {
+      log.warn("No change applied, include seg in roll count already is $includeSegInRollCountStatus")
+    }
+
+    return prisonConfig.toPrisonConfiguration()
+  }
+
   fun getPrisonConfiguration(prisonId: String) = activePrisonService.getPrisonConfiguration(prisonId)?.toPrisonConfiguration() ?: throw PrisonNotFoundException(prisonId)
 }
 
