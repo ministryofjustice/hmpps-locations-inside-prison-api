@@ -8,8 +8,6 @@ generic-service:
 
   ingress:
     host: locations-inside-prison-api-dev.hmpps.service.justice.gov.uk
-    annotations:
-      nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
 
   env:
     APPLICATIONINSIGHTS_CONFIGURATION_FILE: applicationinsights.dev.json
