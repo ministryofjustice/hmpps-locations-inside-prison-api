@@ -11,6 +11,7 @@ BEGIN
     where NOT EXISTS (select 1 from location l where l.certification_id = c.id);
 
     DELETE FROM location l where l.prison_id = p_prison_id;
+    DELETE FROM signed_operation_capacity soc where soc.prison_id = p_prison_id;
     DELETE FROM prison_configuration where prison_id = p_prison_id;
 END;
 
@@ -348,18 +349,13 @@ AS $$
 $$ LANGUAGE plpgsql;
 
 
-CREATE OR REPLACE PROCEDURE setup_prison_demo_locations(IN p_prison_id varchar(6), IN p_username varchar(80))
+CREATE OR REPLACE PROCEDURE setup_prison_demo_locations(IN p_prison_id varchar(6), IN p_username varchar(80), IN p_certification_approval_required boolean = false)
  AS $$
 BEGIN
     call delete_location_for_prison (p_prison_id := p_prison_id);
 
     -- Wings A to D, S and H
     PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'A', p_number_landings := 3, p_number_cells_per_landing := 15, p_working_cap := 2, p_max_cap := 2, p_username := p_username);
-    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'B', p_number_landings := 3, p_number_cells_per_landing := 15, p_working_cap := 2, p_max_cap := 2, p_used_for := array['STANDARD_ACCOMMODATION', 'FIRST_NIGHT_CENTRE'],  p_username := p_username);
-    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'C', p_number_landings := 3, p_number_cells_per_landing := 15, p_working_cap := 2, p_max_cap := 2, p_username := p_username);
-    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'D', p_number_landings := 2, p_number_cells_per_landing := 15, p_used_for := array ['VULNERABLE_PRISONERS'], p_username := p_username);
-    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'S', p_number_landings := 1, p_number_cells_per_landing := 20, p_working_cap := 0, p_max_cap := 1, p_used_for := array[]::varchar[], p_username := p_username, p_local_name := 'Separation Unit', p_accommodation_type := 'CARE_AND_SEPARATION', p_housing_type := 'SEGREGATION');
-    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'H', p_number_landings := 1, p_number_cells_per_landing := 10, p_working_cap := 0, p_max_cap := 2, p_used_for := array[]::varchar[], p_username := p_username, p_local_name := 'Healthcare', p_accommodation_type := 'HEALTHCARE_INPATIENTS', p_housing_type := 'HEALTHCARE');
 
     -- update in A-1
     PERFORM update_cell(p_cell_path := 'A-1-001', p_prison_id := p_prison_id, p_username := p_username, p_cell_type := array ['ACCESSIBLE_CELL'], p_max_cap := 2, p_working_cap := 2);
@@ -387,6 +383,8 @@ BEGIN
     PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_cell_type := array['LISTENER_CRISIS']);
     PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
     PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'A-3', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
+
+    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'B', p_number_landings := 3, p_number_cells_per_landing := 15, p_working_cap := 2, p_max_cap := 2, p_used_for := array['STANDARD_ACCOMMODATION', 'FIRST_NIGHT_CENTRE'],  p_username := p_username);
 
     -- cells in B-1
     PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'B-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_cell_type := array['ESCAPE_LIST']);
@@ -421,6 +419,7 @@ BEGIN
     PERFORM create_archive_location(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'B-3', p_username := p_username, p_archive_reason := 'Duplicate');
 
 
+    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'C', p_number_landings := 3, p_number_cells_per_landing := 15, p_working_cap := 2, p_max_cap := 2, p_username := p_username);
     -- cells in C-1
     PERFORM create_inactive_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_deactivation_reason := 'DAMP', p_cell_type := array['ACCESSIBLE_CELL']);
     PERFORM create_inactive_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_deactivation_reason := 'DAMP');
@@ -447,6 +446,7 @@ BEGIN
     PERFORM create_archive_location(p_code := '014', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_archive_reason := 'Merged to C-3-15');
     PERFORM create_cell(p_code := '015', p_prison_id := p_prison_id, p_parent_path := 'C-3', p_username := p_username, p_max_cap := 4, p_working_cap := 4);
 
+    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'D', p_number_landings := 2, p_number_cells_per_landing := 15, p_used_for := array ['VULNERABLE_PRISONERS'], p_username := p_username);
     -- cells in D-1
     PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1, p_used_for := array['VULNERABLE_PRISONERS'], p_cell_type := array['ACCESSIBLE_CELL']);
     PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'D-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1, p_used_for := array['VULNERABLE_PRISONERS']);
@@ -472,6 +472,7 @@ BEGIN
     PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'D-3', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
     PERFORM create_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'D-3', p_username := p_username, p_max_cap := 1, p_working_cap := 0);
 
+    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'S', p_number_landings := 1, p_number_cells_per_landing := 20, p_working_cap := 0, p_max_cap := 1, p_used_for := array[]::varchar[], p_username := p_username, p_local_name := 'Separation Unit', p_accommodation_type := 'CARE_AND_SEPARATION', p_housing_type := 'SEGREGATION');
     -- cells in S-1
     PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0, p_used_for := array[]::varchar[], p_accommodation_type := 'CARE_AND_SEPARATION', p_cell_type := array['ACCESSIBLE_CELL']);
     PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0, p_used_for := array[]::varchar[], p_accommodation_type := 'CARE_AND_SEPARATION', p_cell_type := array['ACCESSIBLE_CELL']);
@@ -480,7 +481,7 @@ BEGIN
     PERFORM create_cell(p_code := '017', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0, p_used_for := array[]::varchar[], p_accommodation_type := 'CARE_AND_SEPARATION', p_cell_type := array['DRY']);
     PERFORM create_cell(p_code := '018', p_prison_id := p_prison_id, p_parent_path := 'S-1', p_username := p_username, p_max_cap := 1, p_working_cap := 0, p_used_for := array[]::varchar[], p_accommodation_type := 'CARE_AND_SEPARATION', p_cell_type := array['DRY']);
 
-
+    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'H', p_number_landings := 1, p_number_cells_per_landing := 10, p_working_cap := 0, p_max_cap := 2, p_used_for := array[]::varchar[], p_username := p_username, p_local_name := 'Healthcare', p_accommodation_type := 'HEALTHCARE_INPATIENTS', p_housing_type := 'HEALTHCARE');
     -- cells in H-1
     PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_used_for := array[]::varchar[], p_accommodation_type := 'HEALTHCARE_INPATIENTS', p_cell_type := array['ACCESSIBLE_CELL']);
     PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'H-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_used_for := array[]::varchar[], p_accommodation_type := 'HEALTHCARE_INPATIENTS', p_cell_type := array['ACCESSIBLE_CELL']);
@@ -490,7 +491,7 @@ BEGIN
 
     -- set up the prison configuration
     insert into prison_configuration (prison_id, resi_location_service_active, certification_approval_required, when_updated, updated_by)
-    values (p_prison_id, true, false,now(), p_username);
+    values (p_prison_id, true, p_certification_approval_required,now(), p_username);
 
     insert into signed_operation_capacity (signed_operation_capacity, prison_id, when_updated, updated_by)
     select SUM(COALESCE(c.max_capacity, 0)), l.prison_id,now(), p_username from location l left join capacity c on c.id = l.capacity_id and l.status = 'ACTIVE' where l.prison_id = p_prison_id group by l.prison_id;
