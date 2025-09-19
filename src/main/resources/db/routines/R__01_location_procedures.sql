@@ -36,7 +36,8 @@ CREATE OR REPLACE FUNCTION create_cell(IN p_code varchar,
                                         IN p_cell_type varchar(80)[] = ARRAY[]::varchar[],
                                         IN p_used_for varchar(80)[] = ARRAY['STANDARD_ACCOMMODATION'],
                                         IN p_certified boolean = true,
-                                        IN p_status varchar(20) = 'ACTIVE'
+                                        IN p_status varchar(20) = 'ACTIVE',
+                                        IN p_locked boolean = false
 ) RETURNS UUID
 AS $$
 DECLARE v_location_id UUID;
@@ -57,10 +58,10 @@ BEGIN
         INSERT INTO certification (certified, certified_normal_accommodation) VALUES (p_certified, p_max_cap)  returning id INTO v_certification_id;
 
         INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status,
-                              capacity_id, certification_id,
+                              capacity_id, certification_id, locked, in_cell_sanitation, cell_mark,
                               accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
         values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, p_status, v_capacity_id, v_certification_id,
-                p_accommodation_type, map_accommodation_type(p_accommodation_type),
+                p_locked, true, concat(p_parent_path,p_code), p_accommodation_type, map_accommodation_type(p_accommodation_type),
                 now(), now(), p_username) RETURNING id INTO v_location_id;
 
         FOREACH v_used_for IN ARRAY p_used_for
@@ -318,6 +319,7 @@ CREATE OR REPLACE FUNCTION create_wing(IN p_prison_id varchar(6),
                                        IN p_number_landings integer = 1,
                                        IN p_number_cells_per_landing integer = 10,
                                        IN p_local_name varchar(100) = null,
+                                       IN p_status varchar(60) = 'ACTIVE',
                                        IN p_max_cap integer = 1,
                                        IN p_working_cap integer = 1,
                                        IN p_accommodation_type varchar(60) = 'NORMAL_ACCOMMODATION',
@@ -331,16 +333,16 @@ AS $$
     BEGIN
         INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
                               accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
-        values (p_prison_id, p_wing_code, p_wing_code, 'WING', 'RESIDENTIAL', null, p_local_name, p_accommodation_type, p_housing_type, now(), now(), p_username, 'ACTIVE');
+        values (p_prison_id, p_wing_code, p_wing_code, 'WING', 'RESIDENTIAL', null, p_local_name, p_accommodation_type, p_housing_type, now(), now(), p_username, p_status);
 
         SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_wing_code;
         FOR landing_number IN 1..p_number_landings LOOP
             INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, local_name,
                                   accommodation_type, residential_housing_type, when_created, when_updated, updated_by, status)
-            values (p_prison_id, concat(p_wing_code,'-',landing_number), landing_number, 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, p_accommodation_type, p_housing_type, now(), now(), p_username, 'ACTIVE');
+            values (p_prison_id, concat(p_wing_code,'-',landing_number), landing_number, 'LANDING', 'RESIDENTIAL',v_current_parent_id, null, p_accommodation_type, p_housing_type, now(), now(), p_username, p_status);
 
             FOR cell_number IN 1..p_number_cells_per_landing LOOP
-                PERFORM create_cell(p_code := trim(to_char(cell_number, '000')), p_prison_id := p_prison_id, p_parent_path := concat(p_wing_code,'-',landing_number), p_username := p_username, p_max_cap := p_max_cap, p_working_cap := p_working_cap, p_used_for := p_used_for, p_cell_type := p_cell_type);
+                PERFORM create_cell(p_code := trim(to_char(cell_number, '000')), p_prison_id := p_prison_id, p_parent_path := concat(p_wing_code,'-',landing_number), p_username := p_username, p_max_cap := p_max_cap, p_working_cap := p_working_cap, p_used_for := p_used_for, p_cell_type := p_cell_type, p_status := p_status);
             END LOOP;
         END LOOP;
 
@@ -348,11 +350,94 @@ AS $$
     END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION request_approval(IN p_prison_id varchar(6), IN p_location_path varchar(100), IN p_username varchar(80))
+     RETURNS UUID
+AS $$
+    DECLARE v_location_id UUID;
+    DECLARE v_approval_id UUID;
+    DECLARE v_max_capacity_change integer;
+    DECLARE v_working_capacity_change integer;
+    DECLARE v_certified_normal_accommodation_change integer;
+    BEGIN
+        SELECT id INTO v_location_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_location_path;
+
+        IF FOUND THEN
+            select SUM(c.max_capacity), sum(c.working_capacity), sum(cert.certified_normal_accommodation)
+                From location l join capacity c on c.id = l.capacity_id left join certification cert on cert.id = l.certification_id
+                where prison_id = p_prison_id and path_hierarchy like concat(p_location_path, '%')
+            INTO v_max_capacity_change, v_working_capacity_change, v_certified_normal_accommodation_change;
+
+            INSERT INTO certification_approval_request(
+                id,
+                prison_id,
+                location_id,
+                location_key,
+                status,
+                requested_by,
+                requested_date,
+                certified_normal_accommodation_change,
+                working_capacity_change,
+                max_capacity_change,
+                approval_type)
+            VALUES (gen_random_uuid(), p_prison_id, v_location_id, concat(p_prison_id, '-', p_location_path), 'PENDING', p_username, now(), v_certified_normal_accommodation_change, v_working_capacity_change, v_max_capacity_change, 'DRAFT')
+            RETURNING id INTO v_approval_id;
+
+            INSERT INTO certification_approval_request_location (id, certification_approval_request_id, location_code,
+                                                                 cell_mark, local_name, path_hierarchy, level,
+                                                                 certified_normal_accommodation, working_capacity, max_capacity,
+                                                                 in_cell_sanitation, location_type,
+                                                                 used_for_types, accommodation_types, specialist_cell_types )
+            select gen_random_uuid(),
+                   v_approval_id,
+                   l.code,
+                   l.cell_mark,
+                   l.local_name,
+                   l.path_hierarchy,
+                   (CHAR_LENGTH(l.path_hierarchy) - CHAR_LENGTH(REPLACE(l.path_hierarchy, '-', ''))) / CHAR_LENGTH('-') +1,
+                   cert.certified_normal_accommodation,
+                   c.working_capacity,
+                   c.max_capacity,
+                   l.in_cell_sanitation,
+                   l.location_type,
+                   (select string_agg( distinct uf.used_for, ',') from cell_used_for uf join location l3 on l3.id = uf.location_id where l3.prison_id = p_prison_id and l3.path_hierarchy like concat(p_location_path, '%')),
+                   (select string_agg( distinct l3.accommodation_type, ',') from location l3 where l3.prison_id = p_prison_id and l3.path_hierarchy like concat(p_location_path, '%')),
+                   (select string_agg( distinct sc.specialist_cell_type, ',') from specialist_cell sc join location l3 on l3.id = sc.location_id where l3.prison_id = p_prison_id and l3.path_hierarchy like concat(p_location_path, '%'))
+            From location l left join capacity c on c.id = l.capacity_id left join certification cert on cert.id = l.certification_id
+                where prison_id = p_prison_id and path_hierarchy like concat(p_location_path, '%')
+            order by l.path_hierarchy;
+
+            UPDATE certification_approval_request_location c
+               set certification_approval_request_id = null,
+                   parent_location_id = (select id from certification_approval_request_location where path_hierarchy = regexp_replace (c.path_hierarchy, '[|-][^|-]*$', '') and certification_approval_request_id = v_approval_id)
+            where certification_approval_request_id = v_approval_id and parent_location_id is null and path_hierarchy != p_location_path;
+
+            UPDATE location
+            SET locked = true,
+                updated_by = p_username,
+                when_updated = now()
+            WHERE id = v_location_id;
+            UPDATE location
+            SET locked = true,
+                updated_by = p_username,
+                when_updated = now()
+            WHERE prison_id = p_prison_id and path_hierarchy like concat(p_location_path, '-%');
+        ELSE
+            RAISE EXCEPTION 'Location not found';
+        END IF;
+    RETURN v_approval_id;
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE PROCEDURE setup_prison_demo_locations(IN p_prison_id varchar(6), IN p_username varchar(80), IN p_certification_approval_required boolean = false)
  AS $$
 BEGIN
     call delete_location_for_prison (p_prison_id := p_prison_id);
+    -- Create draft wings E, F and G
+    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'E', p_number_landings := 0, p_number_cells_per_landing := 0, p_username := p_username, p_status := 'DRAFT');
+    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'F', p_number_landings := 3, p_number_cells_per_landing := 0, p_username := p_username, p_status := 'DRAFT');
+    PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'G', p_number_landings := 3, p_number_cells_per_landing := 15, p_username := p_username, p_status := 'DRAFT');
+
+    PERFORM request_approval(p_prison_id := p_prison_id, p_location_path := 'G', p_username := p_username);
 
     -- Wings A to D, S and H
     PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'A', p_number_landings := 3, p_number_cells_per_landing := 15, p_working_cap := 2, p_max_cap := 2, p_username := p_username);
@@ -363,6 +448,10 @@ BEGIN
     PERFORM create_inactive_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'A-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_deactivation_reason := 'PEST', p_deactivation_desc := 'Bed bugs');
     PERFORM create_non_res_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'A-1', p_username := p_username, p_non_res_cell_type := 'OFFICE');
     PERFORM update_cell(p_cell_path := 'A-1-010', p_prison_id := p_prison_id, p_username := p_username, p_cell_type := array ['LISTENER_CRISIS'], p_max_cap := 2, p_working_cap := 1);
+
+    -- DRAFT CELL
+    PERFORM create_cell(p_code := '016', p_prison_id := p_prison_id, p_parent_path := 'A-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1, p_status := 'DRAFT');
+    PERFORM request_approval(p_prison_id := p_prison_id, p_location_path := 'A-1-016', p_username := p_username);
 
     -- cells in A-2
     PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
