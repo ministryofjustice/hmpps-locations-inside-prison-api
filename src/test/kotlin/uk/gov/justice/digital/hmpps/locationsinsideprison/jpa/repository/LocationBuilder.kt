@@ -128,6 +128,7 @@ fun buildNonResidentialLocation(
     status = status,
     createdBy = "DIFFERENT_USER",
     whenCreated = LocalDateTime.now(clock).minusDays(1),
+    internalMovementAllowed = false,
     childLocations = mutableListOf(),
     orderWithinParentLocation = 99,
   )

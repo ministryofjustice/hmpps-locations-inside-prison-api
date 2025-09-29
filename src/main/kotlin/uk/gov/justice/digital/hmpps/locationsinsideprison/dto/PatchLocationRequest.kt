@@ -25,7 +25,7 @@ interface PatchLocationRequest {
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PatchResidentialLocationRequest(
 
-  @param:Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
+  @param:Schema(description = "Code of the location", required = false, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be no more than 12 characters")
   override val code: String? = null,
@@ -62,12 +62,12 @@ data class PatchResidentialLocationRequest(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class PatchNonResidentialLocationRequest(
 
-  @param:Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
+  @param:Schema(description = "Code of the location", required = false, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be no more than 12 characters")
   override val code: String? = null,
 
-  @param:Schema(description = "Location Type", example = "APPOINTMENTS", required = true)
+  @param:Schema(description = "Location Type", example = "APPOINTMENTS", required = false)
   val locationType: NonResidentialLocationType? = null,
 
   @param:Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
@@ -81,6 +81,9 @@ data class PatchNonResidentialLocationRequest(
 
   @param:Schema(description = "Non-residential usage", required = false)
   val usage: Set<NonResidentialUsageDto>? = null,
+
+  @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
+  val internalMovementAllowed: Boolean? = null,
 
   @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 30, message = "Description must be less than 31 characters")

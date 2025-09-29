@@ -2,9 +2,11 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -34,6 +36,9 @@ data class CellCertificateDto(
 
   @param:Schema(description = "Total capacity of certified cells for the prison", example = "110", required = true)
   val totalCertifiedNormalAccommodation: Int,
+
+  @param:Schema(description = "Signed operational capacity for the prison", example = "500", required = true)
+  val signedOperationCapacity: Int,
 
   @param:Schema(description = "Whether this is the current certificate", example = "true", required = true)
   val current: Boolean,
@@ -70,8 +75,14 @@ data class CellCertificateLocationDto(
   @param:Schema(description = "Location type", example = "CELL", required = true)
   val locationType: LocationType,
 
-  @param:Schema(description = "Specialist cell types")
-  val specialistCellTypes: List<SpecialistCellType>,
+  @param:Schema(description = "Accommodation Types", required = false)
+  val accommodationTypes: List<AccommodationType>? = null,
+
+  @param:Schema(description = "Specialist Cell Types", required = false)
+  val specialistCellTypes: List<SpecialistCellType>? = null,
+
+  @param:Schema(description = "Usage For", required = false)
+  val usedFor: List<UsedForType>? = null,
 
   @param:Schema(description = "Local name for the location, not used in cells", example = "Houseblock A")
   val localName: String? = null,

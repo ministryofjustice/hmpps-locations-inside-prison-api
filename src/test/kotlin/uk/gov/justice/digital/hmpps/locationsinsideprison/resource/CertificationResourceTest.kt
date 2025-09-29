@@ -93,6 +93,7 @@ class CertificationResourceTest : CommonDataTestBase() {
             SignedOpCapApprovalRequest(
               prisonId = "LEI",
               signedOperationalCapacity = 300,
+              reasonForChange = "Prison cells offline",
             ),
           ),
         ),
@@ -113,6 +114,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               SignedOpCapApprovalRequest(
                 prisonId = "LEI",
                 signedOperationalCapacity = 11,
+                reasonForChange = "Fire",
               ),
             ),
           )
@@ -128,6 +130,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                 SignedOpCapApprovalRequest(
                   prisonId = "LEI",
                   signedOperationalCapacity = 10,
+                  reasonForChange = "Flood",
                 ),
               ),
             )
@@ -149,6 +152,7 @@ class CertificationResourceTest : CommonDataTestBase() {
                 SignedOpCapApprovalRequest(
                   prisonId = "LEI",
                   signedOperationalCapacity = 50,
+                  reasonForChange = "We built more cells",
                 ),
               ),
             )
@@ -173,6 +177,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               SignedOpCapApprovalRequest(
                 prisonId = "LEI",
                 signedOperationalCapacity = 10,
+                reasonForChange = "Damp cells",
               ),
             ),
           )
@@ -185,7 +190,9 @@ class CertificationResourceTest : CommonDataTestBase() {
               "approvalType":"SIGNED_OP_CAP",
               "prisonId":"LEI",
               "status": "PENDING",
-              "signedOperationCapacityChange": -190
+              "currentSignedOperationCapacity": 200,
+              "signedOperationCapacityChange": -190,
+              "reasonForSignedOpChange": "Damp cells"
               }
           """,
             JsonCompareMode.LENIENT,
@@ -368,6 +375,12 @@ class CertificationResourceTest : CommonDataTestBase() {
                 "workingCapacity": 6,
                 "maxCapacity": 12,
                 "locationType": "WING",
+                "accommodationTypes": [
+                  "NORMAL_ACCOMMODATION"
+                ],
+                "usedFor": [
+                  "STANDARD_ACCOMMODATION"
+                ],
                 "subLocations": [
                   {
                     "pathHierarchy": "M-1",
@@ -376,6 +389,12 @@ class CertificationResourceTest : CommonDataTestBase() {
                     "workingCapacity": 3,
                     "maxCapacity": 6,
                     "locationType": "LANDING",
+                    "accommodationTypes": [
+                      "NORMAL_ACCOMMODATION"
+                    ],
+                    "usedFor": [
+                      "STANDARD_ACCOMMODATION"
+                    ],
                     "subLocations": [
                       {
                         "cellMark": "M-1",
@@ -385,7 +404,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       },
                       {
                         "cellMark": "M-2",
@@ -395,7 +420,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       },
                       {
                         "cellMark": "M-3",
@@ -405,7 +436,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       }
                     ]
                   },
@@ -425,7 +462,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       },
                       {
                         "cellMark": "M-2",
@@ -435,7 +478,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       },
                       {
                         "cellMark": "M-3",
@@ -445,7 +494,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       }
                     ]
                   }
@@ -477,7 +532,6 @@ class CertificationResourceTest : CommonDataTestBase() {
           jsonString(
             ApproveCertificationRequestDto(
               approvalRequestReference = UUID.randomUUID(),
-              comments = "TEST",
             ),
           ),
         ),
@@ -498,6 +552,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               SignedOpCapApprovalRequest(
                 prisonId = "LEI",
                 signedOperationalCapacity = 10,
+                reasonForChange = "Broken door",
               ),
             ),
           )
@@ -512,7 +567,6 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               ApproveCertificationRequestDto(
                 approvalRequestReference = approvalId,
-                comments = "Op Cap Approved",
               ),
             ),
           )
@@ -592,7 +646,6 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               ApproveCertificationRequestDto(
                 approvalRequestReference = approvalId,
-                comments = "All locations OK",
               ),
             ),
           )
@@ -610,7 +663,20 @@ class CertificationResourceTest : CommonDataTestBase() {
           )
 
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(9)
-
+        getDomainEvents(9).let {
+          assertThat(it).hasSize(9)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.created" to "LEI-M-1-001",
+            "location.inside.prison.created" to "LEI-M-1-002",
+            "location.inside.prison.created" to "LEI-M-1-003",
+            "location.inside.prison.created" to "LEI-M-2-001",
+            "location.inside.prison.created" to "LEI-M-2-002",
+            "location.inside.prison.created" to "LEI-M-2-003",
+            "location.inside.prison.created" to "LEI-M-1",
+            "location.inside.prison.created" to "LEI-M-2",
+            "location.inside.prison.created" to "LEI-M",
+          )
+        }
         webTestClient.get().uri("/locations/${mWing.id}?includeChildren=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
@@ -732,7 +798,6 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               ApproveCertificationRequestDto(
                 approvalRequestReference = approvalRequestId.id!!,
-                comments = "All OK",
               ),
             ),
           )
@@ -743,8 +808,7 @@ class CertificationResourceTest : CommonDataTestBase() {
             """
               {
               "locationKey": "${cell1N.getKey()}",
-              "status": "APPROVED",
-              "comments": "All OK"
+              "status": "APPROVED"
               }
           """,
             JsonCompareMode.LENIENT,
@@ -792,7 +856,6 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               ApproveCertificationRequestDto(
                 approvalRequestReference = approvalRequestId,
-                comments = "All OK",
               ),
             ),
           )
@@ -851,7 +914,6 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               ApproveCertificationRequestDto(
                 approvalRequestReference = approvalRequestId,
-                comments = "All OK",
               ),
             ),
           )

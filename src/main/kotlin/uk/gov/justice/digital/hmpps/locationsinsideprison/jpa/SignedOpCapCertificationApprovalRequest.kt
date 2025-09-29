@@ -22,8 +22,14 @@ open class SignedOpCapCertificationApprovalRequest(
   approvedOrRejectedDate: LocalDateTime? = null,
   comments: String? = null,
 
+  @Column
+  private val reasonForChange: String,
+
   @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
   private val signedOperationCapacity: SignedOperationCapacity,
+
+  @Column(nullable = false)
+  private var currentSignedOperationCapacity: Int = 0,
 
   @Column(nullable = false)
   private var signedOperationCapacityChange: Int = 0,
@@ -40,6 +46,8 @@ open class SignedOpCapCertificationApprovalRequest(
   comments = comments,
 ) {
   override fun toDto(showLocations: Boolean) = super.toDto(showLocations).copy(
+    reasonForSignedOpChange = reasonForChange,
+    currentSignedOperationCapacity = currentSignedOperationCapacity,
     signedOperationCapacityChange = signedOperationCapacityChange,
   )
 
@@ -47,9 +55,8 @@ open class SignedOpCapCertificationApprovalRequest(
     approvedBy: String,
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
-    comments: String,
   ) {
-    super.approve(approvedBy, approvedDate, linkedTransaction, comments)
+    super.approve(approvedBy, approvedDate, linkedTransaction)
     signedOperationCapacity.signedOperationCapacity += signedOperationCapacityChange
   }
 }

@@ -1351,7 +1351,7 @@ class LocationService(
       .map { it.toDto(countInactiveCells = true, countCells = true) }
       .sortedWith(NaturalOrderComparator())
 
-    val subLocationTypes = calculateSubLocationDescription(locations) ?: currentLocation?.getNextLevelTypeWithinStructure()?.getPlural() ?: "Wings"
+    val subLocationTypes = calculateSubLocationDescription(locations) ?: currentLocation?.getNextLevelTypeWithinStructure()?.getPlural() ?: currentLocation?.getDefaultNextLevel()?.getPlural() ?: "Wings"
     return ResidentialSummary(
       topLevelLocationType = currentLocation?.let { it.getHierarchy()[0].type.getPlural() } ?: "Wings",
       prisonSummary = if (id == null) {

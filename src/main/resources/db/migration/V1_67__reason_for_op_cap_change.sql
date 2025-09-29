@@ -1,0 +1,1 @@
+ALTER TABLE certification_approval_request add column reason_for_change TEXT;

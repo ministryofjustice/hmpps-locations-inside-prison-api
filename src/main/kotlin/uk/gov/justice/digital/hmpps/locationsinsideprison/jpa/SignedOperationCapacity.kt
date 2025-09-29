@@ -35,14 +35,16 @@ class SignedOperationCapacity(
 
   fun findPendingApprovalRequest(): SignedOpCapCertificationApprovalRequest? = approvalRequests.findLast { it.isPending() }
 
-  fun requestApproval(pendingSignedOperationCapacity: Int, requestedDate: LocalDateTime, requestedBy: String): SignedOpCapCertificationApprovalRequest {
+  fun requestApproval(pendingSignedOperationCapacity: Int, reasonForChange: String, requestedDate: LocalDateTime, requestedBy: String): SignedOpCapCertificationApprovalRequest {
     val approvalRequest = SignedOpCapCertificationApprovalRequest(
       approvalType = ApprovalType.SIGNED_OP_CAP,
       prisonId = this.prisonId,
       requestedBy = requestedBy,
       requestedDate = requestedDate,
+      currentSignedOperationCapacity = signedOperationCapacity,
       signedOperationCapacityChange = pendingSignedOperationCapacity - signedOperationCapacity,
       signedOperationCapacity = this,
+      reasonForChange = reasonForChange,
     )
     approvalRequests.add(approvalRequest)
     return approvalRequest

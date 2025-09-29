@@ -109,7 +109,7 @@ class CertificationService(
       now,
       username,
     )
-    val approvalRequest = certificationApprovalRequestRepository.save(signedOpCap.requestApproval(pendingSignedOperationCapacity = requestToApprove.signedOperationalCapacity, requestedBy = username, requestedDate = now))
+    val approvalRequest = certificationApprovalRequestRepository.save(signedOpCap.requestApproval(pendingSignedOperationCapacity = requestToApprove.signedOperationalCapacity, reasonForChange = requestToApprove.reasonForChange, requestedBy = username, requestedDate = now))
 
     telemetryClient.trackEvent(
       "certification-op-cap-approval-requested",
@@ -140,6 +140,7 @@ class CertificationService(
     val now = LocalDateTime.now(clock)
     val transactionInvokedBy = getUsername()
     val approvedLocation = (approvalRequest as? LocationCertificationApprovalRequest)?.location
+    val wasDraft = approvedLocation?.isDraft() ?: false
 
     val linkedTransaction = createLinkedTransaction(
       transactionType = TransactionType.APPROVE_CERTIFICATION_REQUEST,
@@ -152,7 +153,6 @@ class CertificationService(
       approvedBy = username,
       approvedDate = now,
       linkedTransaction = linkedTransaction,
-      comments = approveCertificationRequest.comments,
     )
 
     // Create the cell certificate
@@ -161,6 +161,8 @@ class CertificationService(
       approvedBy = transactionInvokedBy,
       approvedDate = now,
       approvedLocation = approvedLocation,
+      signedOperationCapacity = signedOperationCapacityRepository.findByPrisonId(approvalRequest.prisonId)?.signedOperationCapacity
+        ?: 0,
     )
 
     telemetryClient.trackEvent(
@@ -187,7 +189,7 @@ class CertificationService(
     return ApprovalResponse(
       approvalRequest = approvalRequest.toDto(),
       prisonId = approvalRequest.prisonId,
-      newLocation = approvedLocation?.isDraft() ?: false,
+      newLocation = wasDraft,
       location = approvedLocation?.toDto(includeChildren = true, includeParent = true),
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
@@ -341,4 +343,7 @@ data class SignedOpCapApprovalRequest(
 
   @param:Schema(description = "The new value of the signed operational capacity", example = "456", required = true)
   val signedOperationalCapacity: Int,
+
+  @param:Schema(description = "Explanation of why the signed op cap is changing", example = "The size of the prison has changed", required = true)
+  val reasonForChange: String,
 )

@@ -49,6 +49,9 @@ open class CellCertificate(
   open var totalCertifiedNormalAccommodation: Int = 0,
 
   @Column(nullable = false)
+  open var signedOperationCapacity: Int = 0,
+
+  @Column(nullable = false)
   private var current: Boolean = true,
 
   @SortNatural
@@ -71,6 +74,7 @@ open class CellCertificate(
     totalWorkingCapacity = totalWorkingCapacity,
     totalMaxCapacity = totalMaxCapacity,
     totalCertifiedNormalAccommodation = totalCertifiedNormalAccommodation,
+    signedOperationCapacity = signedOperationCapacity,
     current = current,
     approvedRequest = certificationApprovalRequest.toDto(),
     locations = if (showLocations) {
@@ -120,8 +124,11 @@ open class CellCertificateLocation(
   @Enumerated(EnumType.STRING)
   private val locationType: LocationType,
 
-  @Column(name = "specialist_cell_types", nullable = true)
   private val specialistCellTypes: String? = null,
+
+  private val usedForTypes: String? = null,
+
+  private val accommodationTypes: String? = null,
 
   @Column(nullable = true)
   @Enumerated(EnumType.STRING)
@@ -151,8 +158,6 @@ open class CellCertificateLocation(
     return pathHierarchy == other.pathHierarchy
   }
 
-  private fun getSpecialistCellTypesAsList(): List<SpecialistCellType> = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) } ?: emptyList()
-
   fun toDto(): CellCertificateLocationDto = CellCertificateLocationDto(
     locationCode = locationCode,
     pathHierarchy = pathHierarchy,
@@ -161,11 +166,19 @@ open class CellCertificateLocation(
     maxCapacity = maxCapacity,
     inCellSanitation = inCellSanitation,
     locationType = locationType,
-    specialistCellTypes = getSpecialistCellTypesAsList(),
+    specialistCellTypes = getSpecialistCellTypesFromList(),
+    accommodationTypes = getAccommodationTypesFromList(),
+    usedFor = getUsedForTypesFromList(),
     localName = localName,
     cellMark = cellMark,
     level = level,
     convertedCellType = convertedCellType,
     subLocations = subLocations.map { it.toDto() },
   )
+
+  private fun getSpecialistCellTypesFromList(): List<SpecialistCellType>? = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) }
+
+  private fun getUsedForTypesFromList(): List<UsedForType>? = usedForTypes?.split(",")?.map { UsedForType.valueOf(it.trim()) }
+
+  private fun getAccommodationTypesFromList(): List<AccommodationType>? = accommodationTypes?.split(",")?.map { AccommodationType.valueOf(it.trim()) }
 }

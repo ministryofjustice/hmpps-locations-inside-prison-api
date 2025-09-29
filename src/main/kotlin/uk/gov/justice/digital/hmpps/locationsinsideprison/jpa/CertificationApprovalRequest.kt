@@ -26,29 +26,29 @@ abstract class CertificationApprovalRequest(
   open val id: UUID? = null,
 
   @Enumerated(EnumType.STRING)
-  val approvalType: ApprovalType,
+  open val approvalType: ApprovalType,
 
   @Column(nullable = false)
-  val prisonId: String,
+  open val prisonId: String,
 
   @Column(nullable = false)
-  protected val requestedBy: String,
+  open val requestedBy: String,
 
   @Column(nullable = false)
-  protected val requestedDate: LocalDateTime,
+  open val requestedDate: LocalDateTime,
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false)
   open var status: ApprovalRequestStatus = ApprovalRequestStatus.PENDING,
 
   @Column(nullable = true)
-  protected var approvedOrRejectedBy: String? = null,
+  open var approvedOrRejectedBy: String? = null,
 
   @Column(nullable = true)
-  protected var approvedOrRejectedDate: LocalDateTime? = null,
+  open var approvedOrRejectedDate: LocalDateTime? = null,
 
   @Column(nullable = true)
-  protected var comments: String? = null,
+  open var comments: String? = null,
 
 ) : Comparable<CertificationApprovalRequest> {
 
@@ -70,7 +70,7 @@ abstract class CertificationApprovalRequest(
 
     if (prisonId != other.prisonId) return false
     if (approvalType != other.approvalType) return false
-    if (requestedDate != other.requestedDate) return false
+    if (!requestedDate.isEqual(other.requestedDate)) return false
     if (status != other.status) return false
 
     return true
@@ -98,11 +98,10 @@ abstract class CertificationApprovalRequest(
     comments = comments,
   )
 
-  open fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+  open fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
     this.status = ApprovalRequestStatus.APPROVED
     this.approvedOrRejectedBy = approvedBy
     this.approvedOrRejectedDate = approvedDate
-    this.comments = comments
   }
 
   open fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {

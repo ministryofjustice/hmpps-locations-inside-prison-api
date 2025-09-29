@@ -52,8 +52,14 @@ data class CertificationApprovalRequestDto(
   @param:Schema(description = "Change in maximum capacity", example = "1", required = true)
   val maxCapacityChange: Int? = null,
 
+  @param:Schema(description = "Current value of signed operational capacity", example = "1", required = true)
+  val currentSignedOperationCapacity: Int? = null,
+
   @param:Schema(description = "Change signed operational capacity", example = "1", required = true)
   val signedOperationCapacityChange: Int? = null,
+
+  @param:Schema(description = "The reason why the signed op cap was changed", example = "Change in number of cells", required = false)
+  val reasonForSignedOpChange: String? = null,
 
   @param:Schema(description = "Locations affected by the approval", required = false)
   val locations: List<CertificationApprovalRequestLocationDto>? = null,
@@ -64,9 +70,6 @@ data class CertificationApprovalRequestDto(
 data class ApproveCertificationRequestDto(
   @param:Schema(description = "Approval request reference", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
   val approvalRequestReference: UUID,
-
-  @param:Schema(description = "Comments about the approval", required = true)
-  val comments: String,
 )
 
 @Schema(description = "Request to reject a certification request")

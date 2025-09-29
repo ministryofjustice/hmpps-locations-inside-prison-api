@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.time.Clock
 import java.time.LocalDateTime
@@ -177,6 +178,7 @@ data class CreateEntireWingRequest(
           ),
         ).apply {
           addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction = linkedTransaction)
+          addSpecialistCellType(SpecialistCellType.ESCAPE_LIST, linkedTransaction = linkedTransaction, userOrSystemInContext = createdBy, clock = clock)
           leaf.addChildLocation(this)
 
           addHistory(

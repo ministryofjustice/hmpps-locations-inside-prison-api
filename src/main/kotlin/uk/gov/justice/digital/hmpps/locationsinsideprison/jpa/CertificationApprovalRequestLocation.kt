@@ -53,8 +53,11 @@ open class CertificationApprovalRequestLocation(
   @Enumerated(EnumType.STRING)
   private val locationType: LocationType,
 
-  @Column(name = "specialist_cell_types", nullable = true)
   private val specialistCellTypes: String? = null,
+
+  private val usedForTypes: String? = null,
+
+  private val accommodationTypes: String? = null,
 
   @Column(nullable = true)
   @Enumerated(EnumType.STRING)
@@ -84,8 +87,6 @@ open class CertificationApprovalRequestLocation(
     return pathHierarchy == other.pathHierarchy
   }
 
-  private fun getSpecialistCellTypesAsList(): List<SpecialistCellType> = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) } ?: emptyList()
-
   fun toDto(): CertificationApprovalRequestLocationDto = CertificationApprovalRequestLocationDto(
     id = id!!,
     locationCode = locationCode,
@@ -98,8 +99,16 @@ open class CertificationApprovalRequestLocation(
     maxCapacity = maxCapacity,
     inCellSanitation = inCellSanitation,
     locationType = locationType,
-    specialistCellTypes = getSpecialistCellTypesAsList().takeIf { it.isNotEmpty() },
+    specialistCellTypes = getSpecialistCellTypesFromList(),
+    accommodationTypes = getAccommodationTypesFromList(),
+    usedFor = getUsedForTypesFromList(),
     convertedCellType = convertedCellType,
     subLocations = subLocations.map { it.toDto() }.takeIf { it.isNotEmpty() },
   )
+
+  private fun getSpecialistCellTypesFromList(): List<SpecialistCellType>? = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) }
+
+  private fun getUsedForTypesFromList(): List<UsedForType>? = usedForTypes?.split(",")?.map { UsedForType.valueOf(it.trim()) }
+
+  private fun getAccommodationTypesFromList(): List<AccommodationType>? = accommodationTypes?.split(",")?.map { AccommodationType.valueOf(it.trim()) }
 }
