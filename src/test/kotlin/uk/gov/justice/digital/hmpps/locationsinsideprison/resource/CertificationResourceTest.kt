@@ -190,6 +190,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               "approvalType":"SIGNED_OP_CAP",
               "prisonId":"LEI",
               "status": "PENDING",
+              "currentSignedOperationCapacity": 200,
               "signedOperationCapacityChange": -190,
               "reasonForSignedOpChange": "Damp cells"
               }
@@ -374,6 +375,12 @@ class CertificationResourceTest : CommonDataTestBase() {
                 "workingCapacity": 6,
                 "maxCapacity": 12,
                 "locationType": "WING",
+                "accommodationTypes": [
+                  "NORMAL_ACCOMMODATION"
+                ],
+                "usedFor": [
+                  "STANDARD_ACCOMMODATION"
+                ],
                 "subLocations": [
                   {
                     "pathHierarchy": "M-1",
@@ -382,6 +389,12 @@ class CertificationResourceTest : CommonDataTestBase() {
                     "workingCapacity": 3,
                     "maxCapacity": 6,
                     "locationType": "LANDING",
+                    "accommodationTypes": [
+                      "NORMAL_ACCOMMODATION"
+                    ],
+                    "usedFor": [
+                      "STANDARD_ACCOMMODATION"
+                    ],
                     "subLocations": [
                       {
                         "cellMark": "M-1",
@@ -391,7 +404,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       },
                       {
                         "cellMark": "M-2",
@@ -401,7 +420,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       },
                       {
                         "cellMark": "M-3",
@@ -411,7 +436,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       }
                     ]
                   },
@@ -431,7 +462,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       },
                       {
                         "cellMark": "M-2",
@@ -441,7 +478,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       },
                       {
                         "cellMark": "M-3",
@@ -451,7 +494,13 @@ class CertificationResourceTest : CommonDataTestBase() {
                         "workingCapacity": 1,
                         "maxCapacity": 2,
                         "inCellSanitation": true,
-                        "locationType": "CELL"
+                        "locationType": "CELL",
+                        "accommodationTypes": [
+                          "NORMAL_ACCOMMODATION"
+                        ],
+                        "usedFor": [
+                          "STANDARD_ACCOMMODATION"
+                        ]
                       }
                     ]
                   }
@@ -483,7 +532,6 @@ class CertificationResourceTest : CommonDataTestBase() {
           jsonString(
             ApproveCertificationRequestDto(
               approvalRequestReference = UUID.randomUUID(),
-              comments = "TEST",
             ),
           ),
         ),
@@ -519,7 +567,6 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               ApproveCertificationRequestDto(
                 approvalRequestReference = approvalId,
-                comments = "Op Cap Approved",
               ),
             ),
           )
@@ -599,7 +646,6 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               ApproveCertificationRequestDto(
                 approvalRequestReference = approvalId,
-                comments = "All locations OK",
               ),
             ),
           )
@@ -752,7 +798,6 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               ApproveCertificationRequestDto(
                 approvalRequestReference = approvalRequestId.id!!,
-                comments = "All OK",
               ),
             ),
           )
@@ -763,8 +808,7 @@ class CertificationResourceTest : CommonDataTestBase() {
             """
               {
               "locationKey": "${cell1N.getKey()}",
-              "status": "APPROVED",
-              "comments": "All OK"
+              "status": "APPROVED"
               }
           """,
             JsonCompareMode.LENIENT,
@@ -812,7 +856,6 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               ApproveCertificationRequestDto(
                 approvalRequestReference = approvalRequestId,
-                comments = "All OK",
               ),
             ),
           )
@@ -871,7 +914,6 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               ApproveCertificationRequestDto(
                 approvalRequestReference = approvalRequestId,
-                comments = "All OK",
               ),
             ),
           )

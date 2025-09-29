@@ -2,9 +2,11 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.util.UUID
 
 @Schema(description = "Location affected by certification approval")
@@ -43,8 +45,14 @@ data class CertificationApprovalRequestLocationDto(
   @param:Schema(description = "Location type", example = "CELL", required = true)
   val locationType: LocationType,
 
-  @param:Schema(description = "Specialist cell types", example = "LISTENER,SAFE_CELL", required = false)
+  @param:Schema(description = "Accommodation Types", required = false)
+  val accommodationTypes: List<AccommodationType>? = null,
+
+  @param:Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: List<SpecialistCellType>? = null,
+
+  @param:Schema(description = "Usage For", required = false)
+  val usedFor: List<UsedForType>? = null,
 
   @param:Schema(description = "Converted cell type", example = "OFFICE", required = false)
   val convertedCellType: ConvertedCellType? = null,
