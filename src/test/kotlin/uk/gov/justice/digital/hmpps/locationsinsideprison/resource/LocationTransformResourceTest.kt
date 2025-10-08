@@ -496,7 +496,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             pathHierarchy = "Z-1-005",
             capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
             certification = Certification(certified = true, certifiedNormalAccommodation = 2),
-            specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+            specialistCellType = SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
             linkedTransaction = linkedTransaction,
           ),
         )
@@ -511,6 +511,70 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .expectBody(ErrorResponse::class.java)
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
+      }
+
+      @Test
+      fun `cannot change specialists cell types to type requiring capacity if capacity is 0 for normal accommodations`() {
+        val testCell = repository.save(
+          buildCell(
+            pathHierarchy = "Z-1-005",
+            capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
+            certification = Certification(certified = true, certifiedNormalAccommodation = 2),
+            specialistCellType = SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+            linkedTransaction = linkedTransaction,
+          ),
+        )
+
+        assertThat(
+          webTestClient.put().uri("/locations/${testCell.id}/specialist-cell-types")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(setOf(SpecialistCellType.ACCESSIBLE_CELL)))
+            .exchange()
+            .expectStatus().isEqualTo(400)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
+      }
+
+      @Test
+      fun `can change specialists cell types to type requiring capacity if capacity is 0 for normal accommodations`() {
+        val testCell = repository.save(
+          buildCell(
+            pathHierarchy = "Z-1-005",
+            capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
+            certification = Certification(certified = true, certifiedNormalAccommodation = 2),
+            specialistCellType = SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+            linkedTransaction = linkedTransaction,
+          ),
+        )
+
+        webTestClient.put().uri("/locations/${testCell.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.CSU)))
+          .exchange()
+          .expectStatus().isOk
+      }
+
+      @Test
+      fun `can change specialists cell types to type requiring capacity if capacity is 0 for other accommodation`() {
+        val testCell = repository.save(
+          buildCell(
+            pathHierarchy = "Z-1-005",
+            capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
+            certification = Certification(certified = true, certifiedNormalAccommodation = 2),
+            accommodationType = AccommodationType.CARE_AND_SEPARATION,
+            linkedTransaction = linkedTransaction,
+          ),
+        )
+
+        webTestClient.put().uri("/locations/${testCell.id}/specialist-cell-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(SpecialistCellType.ACCESSIBLE_CELL)))
+          .exchange()
+          .expectStatus().isOk
       }
     }
 

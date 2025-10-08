@@ -188,8 +188,8 @@ data class NewCellRequest(
   @param:Schema(description = "In-cell sanitation for cell", required = false, defaultValue = "true")
   val inCellSanitation: Boolean = true,
 ) {
-  fun isCapacityValid(): Boolean {
-    val cellIsSpecialistCellAllowingZeroCapacity = specialistCellTypes?.any { it.affectsCapacity } == true
+  fun isCapacityValid(accommodationType: AccommodationType): Boolean {
+    val cellIsSpecialistCellAllowingZeroCapacity = (specialistCellTypes?.isNotEmpty() ?: false && specialistCellTypes.all { it.affectsCapacity }) || accommodationType != AccommodationType.NORMAL_ACCOMMODATION
     return cellIsSpecialistCellAllowingZeroCapacity || (certifiedNormalAccommodation != 0 && workingCapacity != 0)
   }
 }

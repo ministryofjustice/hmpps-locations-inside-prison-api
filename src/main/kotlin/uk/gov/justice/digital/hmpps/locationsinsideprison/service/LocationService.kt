@@ -474,7 +474,7 @@ class LocationService(
           prisonId = createCellsRequest.prisonId,
         )
 
-        if (!cell.isCapacityValid()) {
+        if (!cell.isCapacityValid(createCellsRequest.accommodationType)) {
           throw CapacityException(
             cell.code,
             "Normal accommodation must not have a CNA or working capacity of 0",
@@ -751,7 +751,7 @@ class LocationService(
     }
 
     // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialist cell types
-    if (specialistCellTypes.isEmpty() && cell.accommodationType == AccommodationType.NORMAL_ACCOMMODATION && cell.getWorkingCapacity() == 0) {
+    if (cell.isCapacityRequired(specialistCellTypes) && cell.getWorkingCapacity() == 0) {
       throw CapacityException(
         cell.getKey(),
         "Cannot removes specialist cell types for a normal accommodation with a working capacity of 0",
