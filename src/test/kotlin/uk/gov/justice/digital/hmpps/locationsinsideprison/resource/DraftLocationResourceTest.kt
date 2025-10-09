@@ -147,12 +147,32 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       }
 
       @Test
-      fun `request with normal cells do not allow zero CNA or Working Capacity`() {
+      fun `request with normal cells without specialist cells do not allow zero CNA or Working Capacity`() {
         assertThat(
           webTestClient.post().uri(url)
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
-            .bodyValue(createCellInitialisationRequest(specialistCellTypes = emptySet(), workingCap = 0, cna = 0))
+            .bodyValue(createCellInitialisationRequest(workingCap = 0, cna = 0, specialistCellTypes = emptySet()))
+            .exchange()
+            .expectStatus().is4xxClientError
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
+      }
+
+      @Test
+      fun `request with normal cell combination of specialist cells that do and do not not allow zero CNA or Working Capacity fails`() {
+        assertThat(
+          webTestClient.post().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              createCellInitialisationRequest(
+                workingCap = 0,
+                cna = 0,
+                specialistCellTypes = setOf(SpecialistCellType.ESCAPE_LIST, SpecialistCellType.CSU),
+              ),
+            )
             .exchange()
             .expectStatus().is4xxClientError
             .expectBody(ErrorResponse::class.java)
@@ -166,7 +186,13 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           webTestClient.post().uri(url)
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
-            .bodyValue(createCellInitialisationRequest(specialistCellTypes = setOf(SpecialistCellType.CONSTANT_SUPERVISION), workingCap = 0, cna = 0))
+            .bodyValue(
+              createCellInitialisationRequest(
+                workingCap = 0,
+                cna = 0,
+                specialistCellTypes = setOf(SpecialistCellType.CONSTANT_SUPERVISION),
+              ),
+            )
             .exchange()
             .expectStatus().is4xxClientError
             .expectBody(ErrorResponse::class.java)
@@ -179,10 +205,52 @@ class DraftLocationResourceTest : CommonDataTestBase() {
         webTestClient.post().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(createCellInitialisationRequest(specialistCellTypes = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST), workingCap = 0, cna = 0))
+          .bodyValue(
+            createCellInitialisationRequest(
+              workingCap = 0,
+              cna = 0,
+              specialistCellTypes = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST),
+            ),
+          )
           .exchange()
           .expectStatus().isCreated
       }
+    }
+
+    @Test
+    fun `request with specialist multiple cells with zero CNA or Working Capacity are allowed`() {
+      webTestClient.post().uri(url)
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          createCellInitialisationRequest(
+            workingCap = 0,
+            cna = 0,
+            specialistCellTypes = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST, SpecialistCellType.CSU),
+          ),
+        )
+        .exchange()
+        .expectStatus().isCreated
+    }
+
+    @Test
+    fun `request with Care and separation accommodation type with zero CNA or Working Capacity are allowed`() {
+      webTestClient.post().uri(url)
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(createCellInitialisationRequest(accommodationType = AccommodationType.CARE_AND_SEPARATION, workingCap = 0, cna = 0))
+        .exchange()
+        .expectStatus().isCreated
+    }
+
+    @Test
+    fun `request with healthcare accommodation type with zero CNA or Working Capacity are allowed`() {
+      webTestClient.post().uri(url)
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(createCellInitialisationRequest(accommodationType = AccommodationType.HEALTHCARE_INPATIENTS, workingCap = 0, cna = 0))
+        .exchange()
+        .expectStatus().isCreated
     }
 
     @Nested
@@ -695,6 +763,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
     cna: Int = 1,
     specialistCellTypes: Set<SpecialistCellType> = setOf(SpecialistCellType.ACCESSIBLE_CELL),
     locationType: ResidentialStructuralType = ResidentialStructuralType.LANDING,
+    accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
   ) = CellInitialisationRequest(
     prisonId = prisonId,
     parentLocation = parentLocation,
@@ -703,7 +772,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       locationType = locationType,
       levelLocalName = "$locationType $aboveLevelCode",
     ),
-    accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+    accommodationType = accommodationType,
     cellsUsedFor = setOf(UsedForType.STANDARD_ACCOMMODATION),
     cells = (1..numberOfCells).map { index ->
       NewCellRequest(

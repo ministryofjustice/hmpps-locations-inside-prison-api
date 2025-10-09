@@ -214,7 +214,7 @@ class Cell(
 
     capacity = null
     deCertifyCell(userOrSystemInContext, clock, linkedTransaction)
-    recordRemovedSpecialistCellTypes(specialistCellTypes.map { it.specialistCellType }.toSet(), userOrSystemInContext, clock, linkedTransaction)
+    recordRemovedSpecialistCellTypes(getSpecialistCellTypesForCell(), userOrSystemInContext, clock, linkedTransaction)
     specialistCellTypes.clear()
 
     recordRemovedUsedForTypes(
@@ -296,7 +296,12 @@ class Cell(
   }
 
   override fun setCapacity(maxCapacity: Int, workingCapacity: Int, userOrSystemInContext: String, amendedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
-    if (!(isPermanentlyDeactivated() || isTemporarilyDeactivated()) && workingCapacity == 0 && accommodationType == AccommodationType.NORMAL_ACCOMMODATION && specialistCellTypes.isEmpty()) {
+    if (!(isPermanentlyDeactivated() || isTemporarilyDeactivated()) &&
+      workingCapacity == 0 &&
+      isCapacityRequired(
+        getSpecialistCellTypesForCell(),
+      )
+    ) {
       throw CapacityException(
         getKey(),
         "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
@@ -340,6 +345,9 @@ class Cell(
       )
     }
   }
+
+  fun isCapacityRequired(typesToCheck: Set<SpecialistCellType>): Boolean = accommodationType == AccommodationType.NORMAL_ACCOMMODATION &&
+    (typesToCheck.isEmpty() || typesToCheck.any { !it.affectsCapacity })
 
   fun certifyCell(
     cellUpdatedBy: String,
@@ -556,7 +564,7 @@ class Cell(
     clock: Clock,
     linkedTransaction: LinkedTransaction,
   ) {
-    val oldSpecialistCellTypes = this.specialistCellTypes.map { it.specialistCellType }.toSet()
+    val oldSpecialistCellTypes = getSpecialistCellTypesForCell()
     if (oldSpecialistCellTypes != specialistCellTypes) {
       oldSpecialistCellTypes.forEach { removedSpecialistCellType ->
         addHistory(
@@ -581,6 +589,8 @@ class Cell(
       }
     }
   }
+
+  private fun getSpecialistCellTypesForCell(): Set<SpecialistCellType> = specialistCellTypes.map { it.specialistCellType }.toSet()
 
   override fun hasPendingChanges() = super.hasPendingChanges() || pendingChange != null
 
