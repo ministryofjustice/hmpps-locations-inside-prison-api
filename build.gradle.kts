@@ -39,7 +39,7 @@ dependencies {
   testImplementation("com.pauldijou:jwt-core_2.11:5.0.0")
   testImplementation("org.awaitility:awaitility-kotlin:4.3.0")
   testImplementation("org.mockito:mockito-inline:5.2.0")
-  testImplementation("io.swagger.parser.v3:swagger-parser:2.1.35")
+  testImplementation("io.swagger.parser.v3:swagger-parser:2.1.34")
   testImplementation("org.springframework.security:spring-security-test")
   testImplementation("io.opentelemetry:opentelemetry-sdk-testing")
   testImplementation("org.testcontainers:localstack:1.21.3")
