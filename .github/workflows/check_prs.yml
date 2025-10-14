@@ -1,0 +1,119 @@
+name: Process API docs PRs
+
+on:
+  schedule:
+    - cron: "40 7 * * MON-FRI" # Every weekday at 07:40 UTC
+  workflow_dispatch:
+
+jobs:
+  check-prs:
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/create-github-app-token@v2
+        id: generate-token
+        with:
+          repositories: ${{ github.event.repository.name }}
+          owner: ministryofjustice
+          # Created by PGP following instructions in https://github.com/peter-evans/create-pull-request/blob/main/docs/concepts-guidelines.md#authenticating-with-github-app-generated-tokens
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Combine PRs
+        id: combine-prs
+        uses: github/combine-prs@v5.2.0
+        with:
+          branch_prefix: api-docs-
+          pr_title: Combined update of api docs
+          labels: combined-pr
+          github_token: ${{ steps.generate-token.outputs.token }}
+
+      - name: Check status of PRs
+        id: check-prs
+        run: ./check-prs.bash
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+
+      - name: Slack message to review failing PRs
+        if: ${{ steps.check-prs.outputs.failure_count != '0' }}
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SRE_SLACK_BOT_TOKEN }}
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.HMPPS_SRE_SLACK_BOT_TOKEN }}
+          payload-templated: true
+          payload: |
+            channel: ${{ vars.SECURITY_ALERTS_SLACK_CHANNEL_ID }}
+            text: "Check APIs has detected failing PRs"
+            blocks:
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: ":warning: Github Workflow ${{ github.workflow }} has detected ${{ steps.check-prs.outputs.failure_count }} failing PRs"
+              - type: section
+                fields:
+                  - type: mrkdwn
+                    text: "*PRs:*\n<${{ github.server_url }}/${{ github.repository }}/pulls>"
+                  - type: mrkdwn
+                    text: "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>"
+                  - type: mrkdwn
+                    text: "*Repository:*\n${{ github.repository }}"
+
+      - name: Slack message to review combined PR
+        if: steps.check-prs.outputs.combined_pr
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SRE_SLACK_BOT_TOKEN }}
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.HMPPS_SRE_SLACK_BOT_TOKEN }}
+          payload-templated: true
+          payload: |
+            channel: ${{ vars.SECURITY_ALERTS_SLACK_CHANNEL_ID }}
+            text: "Check APIs has detected a combined PR that needs reviewing and merging"
+            blocks:
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: ":githubpr: Github Workflow ${{ github.workflow }} has detected a combined PR"
+              - type: section
+                fields:
+                  - type: mrkdwn
+                    text: "*PR:*\n<${{ steps.check-prs.outputs.combined_pr }}>"
+                  - type: mrkdwn
+                    text: "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>"
+                  - type: mrkdwn
+                    text: "*Repository:*\n${{ github.repository }}"
+
+      - name: Slack message to review PRs
+        if: ${{ steps.check-prs.outputs.failure_count != steps.check-prs.outputs.pr_count && steps.check-prs.outputs.combined_pr == '' }}
+        uses: slackapi/slack-github-action@485a9d42d3a73031f12ec201c457e2162c45d02d # v2.0.0
+        with:
+          method: chat.postMessage
+          token: ${{ secrets.HMPPS_SRE_SLACK_BOT_TOKEN }}
+          payload-templated: true
+          payload: |
+            channel: ${{ vars.SECURITY_ALERTS_SLACK_CHANNEL_ID }}
+            text: "Check APIs has detected PRs"
+            blocks:
+              - type: section
+                text:
+                  type: mrkdwn
+                  text: ":githubpr: Github Workflow ${{ github.workflow }} has detected PRs"
+              - type: section
+                fields:
+                  - type: mrkdwn
+                    text: "*PRs:*\n<${{ github.server_url }}/${{ github.repository }}/pulls>"
+                  - type: mrkdwn
+                    text: "*Workflow:*\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }}>"
+                  - type: mrkdwn
+                    text: "*Repository:*\n${{ github.repository }}"
