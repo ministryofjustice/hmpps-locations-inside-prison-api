@@ -164,6 +164,9 @@ data class Location(
   @param:Schema(description = "Indicates this is the lowest level, often a cell", example = "false", required = true)
   val leafLevel: Boolean,
 
+  @param:Schema(description = "Location Id where approvals can be requested, below this level approval request will not be allowed", example = "57718979-573c-433a-9e51-2d83f087c11c", required = false)
+  val topLevelApprovalLocationId: UUID? = null,
+
   @param:Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
   val parentId: UUID?,
 

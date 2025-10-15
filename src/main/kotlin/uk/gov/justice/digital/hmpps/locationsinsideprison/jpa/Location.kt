@@ -382,6 +382,7 @@ abstract class Location(
       topLevelId = findTopLevelLocation().id!!,
       level = getLevel(),
       leafLevel = isLeafLevel(),
+      topLevelApprovalLocationId = findHighestLevelPending()?.id,
       lastModifiedDate = if (useHistoryForUpdate) {
         topHistoryEntry?.amendedDate ?: whenUpdated
       } else {
