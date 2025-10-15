@@ -162,6 +162,20 @@ abstract class Location(
     return findDeactivatedLocation(getParent())
   }
 
+  protected fun findHighestLevelPending(): Location? {
+    var current: Location? = this
+    var highestPending: Location? = null
+
+    while (current != null) {
+      if (current.hasPendingChanges()) {
+        highestPending = current
+      }
+      current = current.getParent()
+    }
+
+    return highestPending
+  }
+
   private fun findArchivedLocationInHierarchy(): Location? {
     if (isArchived()) {
       return this

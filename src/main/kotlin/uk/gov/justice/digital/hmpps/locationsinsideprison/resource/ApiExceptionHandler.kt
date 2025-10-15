@@ -522,6 +522,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(ApprovalRequiredAboveThisLevelException::class)
+  fun handleApprovalRequiredAboveThisLevelException(e: ApprovalRequiredAboveThisLevelException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Approval request at wrong level: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.ApprovalRequestAtWrongLevel,
+          userMessage = "Approval must be above this level: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(LocationCannotBeUnlockedWhenNotLockedException::class)
   fun handleLocationCannotBeUnlockedWhenNotLockedException(e: LocationCannotBeUnlockedWhenNotLockedException): ResponseEntity<ErrorResponse?>? {
     log.debug("Unable to unlock a location that is not locked: {}", e.message)
@@ -582,3 +597,4 @@ class LocationCannotBeUnlockedWhenNotLockedException(key: String) : Exception("L
 class CellCertificateNotFoundException(id: UUID) : Exception("Cell certificate with id $id not found")
 class CurrentCellCertificateNotFoundException(prisonId: String) : Exception("No current cell certificate found for prison $prisonId")
 class SignedOpCapCannotChangedWithoutApprovalException(prisonId: String) : Exception("Signed op cap cannot be updated in $prisonId without approval")
+class ApprovalRequiredAboveThisLevelException(key: String, parentKey: String) : Exception("Location $key cannot be approved, approval should be from location $parentKey")
