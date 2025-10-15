@@ -57,9 +57,6 @@ class CertificationService(
       throw LocationDoesNotRequireApprovalException(location.getKey())
     }
 
-    if (location.isLocationLocked()) {
-      throw PendingApprovalAlreadyExistsException(location.getKey())
-    }
     val username = getUsername()
     val now = LocalDateTime.now(clock)
 

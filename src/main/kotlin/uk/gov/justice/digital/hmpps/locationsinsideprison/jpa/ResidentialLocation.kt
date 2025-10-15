@@ -16,9 +16,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PendingChangeDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequiredAboveThisLevelException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeUnlockedWhenNotLockedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
 import java.time.Clock
@@ -184,6 +186,15 @@ open class ResidentialLocation(
   fun getResidentialStructuralType() = ResidentialStructuralType.entries.firstOrNull { it.locationType == locationType }
 
   fun requestApproval(requestedDate: LocalDateTime, requestedBy: String, linkedTransaction: LinkedTransaction): LocationCertificationApprovalRequest {
+    val topLevelPendingLocation = findHighestLevelPending()
+    if (topLevelPendingLocation != null && this != topLevelPendingLocation) {
+      throw ApprovalRequiredAboveThisLevelException(this.getKey(), topLevelPendingLocation.getKey())
+    }
+
+    if (isLocationLocked()) {
+      throw PendingApprovalAlreadyExistsException(getKey())
+    }
+
     fun traverseAndLock(location: ResidentialLocation) {
       location.lock(requestedDate, requestedBy, linkedTransaction)
       location.childLocations.filterIsInstance<ResidentialLocation>().forEach { traverseAndLock(it) }

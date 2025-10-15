@@ -251,6 +251,28 @@ class CertificationResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `cannot request approval for a location which is not the highest level with a pending change`() {
+        val aLandingInDraft = mWing.findSubLocations().find { it.getKey() == "LEI-M-1" } ?: throw RuntimeException("Landing not found")
+
+        Assertions.assertThat(
+          webTestClient.put().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+            .header("Content-Type", "application/json")
+            .bodyValue(
+              jsonString(
+                LocationApprovalRequest(
+                  locationId = aLandingInDraft.id!!,
+                ),
+              ),
+            )
+            .exchange()
+            .expectStatus().isEqualTo(400)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.ApprovalRequestAtWrongLevel.errorCode)
+      }
+
+      @Test
       fun `cannot request approval for a location which has already been sent for approval`() {
         val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
 
