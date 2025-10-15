@@ -273,6 +273,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               "pathHierarchy": "${wingZ.getCode()}-${request.newLevelAboveCells?.levelCode}",
               "locationType": "LANDING",
               "status": "DRAFT",
+              "topLevelApprovalLocationId": "${repository.findOneByKey("${request.prisonId}-${wingZ.getCode()}-${request.newLevelAboveCells?.levelCode}")?.id}",
               "key": "${request.prisonId}-${wingZ.getCode()}-${request.newLevelAboveCells?.levelCode}",
               "localName": "LANDING J",
               "accommodationTypes": [
@@ -301,6 +302,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   "key": "MDI-Z-J-001",
                   "cellMark": "J-001",
                   "locationType": "CELL",
+                  "topLevelApprovalLocationId": "${repository.findOneByKey("${request.prisonId}-${wingZ.getCode()}-${request.newLevelAboveCells?.levelCode}")?.id}",
                   "capacity": {
                     "maxCapacity": 0,
                     "workingCapacity": 0
@@ -354,6 +356,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               "pathHierarchy": "${request.newLevelAboveCells?.levelCode}",
               "locationType": "WING",
               "status": "DRAFT",
+              "topLevelApprovalLocationId": "${repository.findOneByKey("MDI-J")?.id}",
               "key": "${request.prisonId}-${request.newLevelAboveCells?.levelCode}",
               "localName": "WING J",
               "accommodationTypes": [
@@ -382,6 +385,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   "key": "MDI-J-001",
                   "cellMark": "J-001",
                   "locationType": "CELL",
+                  "topLevelApprovalLocationId": "${repository.findOneByKey("MDI-J")?.id}",
                   "capacity": {
                     "maxCapacity": 0,
                     "workingCapacity": 0
@@ -475,6 +479,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                 {
                   "key": "MDI-Z-1-010",
                   "status": "DRAFT",
+                  "topLevelApprovalLocationId": "${repository.findOneByKey("MDI-Z-1-010")?.id}",
                   "inCellSanitation": true,
                   "capacity": {
                     "maxCapacity": 0,
@@ -604,6 +609,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               "pathHierarchy": "Y",
               "locationType": "WING",
               "status":"DRAFT",
+              "topLevelApprovalLocationId": "${repository.findOneByKey("MDI-Y")?.id}",
               "key": "MDI-Y",
               "localName": "Y Wing",
               "wingStructure": [
@@ -659,6 +665,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               "status":"DRAFT",
               "key": "MDI-Y",
               "localName": "Y Wing",
+              "topLevelApprovalLocationId": "${repository.findOneByKey("MDI-Y")?.id}",
               "wingStructure": [
                 "WING",
                 "SPUR",
