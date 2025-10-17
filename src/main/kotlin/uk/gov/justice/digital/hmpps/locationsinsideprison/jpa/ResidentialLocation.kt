@@ -571,9 +571,8 @@ open class ResidentialLocation(
       maxCapacity = calcMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),
     ),
-    locationAbovePendingApproval = findHighestLevelPending()?.approvalRequests?.any { it.isPending() },
     topLevelApprovalLocationId = findHighestLevelPending()?.id,
-    pendingApprovalRequestId = approvalRequests.firstOrNull { it.isPending() }?.id,
+    pendingApprovalRequestId = findHighestLevelPending()?.approvalRequests?.firstOrNull { it.isPending() }?.id,
 
     pendingChanges = if (hasPendingChanges() || hasPendingChangesBelowThisLevel()) {
       PendingChangeDto(
