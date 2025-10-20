@@ -140,6 +140,20 @@ open class ResidentialLocation(
 
   private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingChanges() }
 
+  protected fun findHighestLevelPending(): ResidentialLocation? {
+    var current: ResidentialLocation? = this
+    var highestPending: ResidentialLocation? = null
+
+    while (current != null) {
+      if (current.hasPendingChanges()) {
+        highestPending = current
+      }
+      current = current.getParent() as? ResidentialLocation
+    }
+
+    return highestPending
+  }
+
   private fun lock(lockTime: LocalDateTime, lockingUser: String, linkedTransaction: LinkedTransaction) {
     val oldStatus = getDerivedStatus(ignoreParentStatus = true).description
     lockLocation()
@@ -557,6 +571,8 @@ open class ResidentialLocation(
       maxCapacity = calcMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),
     ),
+    topLevelApprovalLocationId = findHighestLevelPending()?.id,
+    pendingApprovalRequestId = findHighestLevelPending()?.approvalRequests?.firstOrNull { it.isPending() }?.id,
 
     pendingChanges = if (hasPendingChanges() || hasPendingChangesBelowThisLevel()) {
       PendingChangeDto(
