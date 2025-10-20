@@ -661,6 +661,36 @@ class CertificationResourceTest : CommonDataTestBase() {
           .expectBody(CertificationApprovalRequestDto::class.java)
           .returnResult().responseBody!!.id
 
+        webTestClient.get().uri("/locations/residential-summary/${mWing.prisonId}?parentPathHierarchy=${mWing.getCode()}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "parentLocation": {
+                  "pathHierarchy": "M",
+                  "topLevelApprovalLocationId": "${mWing.id}",
+                  "pendingApprovalRequestId": "$approvalId"
+                },
+                "subLocations": [
+                  {
+                  "pathHierarchy": "M-1",
+                  "topLevelApprovalLocationId": "${mWing.id}",
+                  "pendingApprovalRequestId": "$approvalId"
+                  },
+                  {
+                  "pathHierarchy": "M-2",
+                  "topLevelApprovalLocationId": "${mWing.id}",
+                  "pendingApprovalRequestId": "$approvalId"
+                  }
+                ]
+                }
+               """,
+            JsonCompareMode.LENIENT,
+          )
+
         webTestClient.put().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
           .header("Content-Type", "application/json")
