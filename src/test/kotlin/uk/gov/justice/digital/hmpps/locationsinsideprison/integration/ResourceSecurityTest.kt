@@ -24,6 +24,7 @@ class ResourceSecurityTest : SqsIntegrationTestBase() {
     "GET /reports/{reportId}/{reportVariantId}",
     "GET /reports/{reportId}/{reportVariantId}/{fieldId}",
     "GET /definitions",
+    "GET /definitions/{reportId}",
     "GET /definitions/{reportId}/{variantId}",
     "GET /definitions/{dataProductDefinitionId}/dashboards/{dashboardId}",
     "GET /statements",
