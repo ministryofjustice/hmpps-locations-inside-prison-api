@@ -261,6 +261,6 @@ data class CellCapacityUpdateDetail(
   @field:Size(max = 12, message = "Cell mark cannot be more than 12 characters")
   val cellMark: String? = null,
 
-  @param:Schema(description = "Indicate that the cell as in-cell sanitation", example = "true", required = true)
-  val inCellSanitation: Boolean = true,
+  @param:Schema(description = "Indicate that the cell as in-cell sanitation", example = "true", required = false)
+  val inCellSanitation: Boolean? = null,
 )

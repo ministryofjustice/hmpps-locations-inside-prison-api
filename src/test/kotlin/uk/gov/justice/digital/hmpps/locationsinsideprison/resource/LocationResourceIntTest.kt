@@ -2580,7 +2580,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               UpdateCapacityRequest(
                 locations = mapOf(
                   cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, certifiedNormalAccommodation = 3, inCellSanitation = true, cellMark = "X001"),
-                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0, inCellSanitation = true, cellMark = "X002"),
+                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0, inCellSanitation = null, cellMark = "X002"),
                   cell1N.getKey() to CellCapacityUpdateDetail(maxCapacity = 4, workingCapacity = 1, inCellSanitation = true, cellMark = "X001-N"),
                   "MDI-1-2-008" to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, cellMark = "X008"),
                   archivedCell.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, inCellSanitation = false, cellMark = "X001-ARCH"),
@@ -2737,7 +2737,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       {
                         "key": "MDI-Z-1-002",
                         "cellMark": "X002",
-                        "inCellSanitation": true,
                         "capacity": {
                           "maxCapacity": 2,
                           "workingCapacity": 2
