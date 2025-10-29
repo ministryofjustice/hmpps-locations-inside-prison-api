@@ -48,7 +48,7 @@ services:
       - NOMIS_ENABLED=false
 
   locations-inside-prison-db:
-    image: postgres:17
+    image: postgres:18
     networks:
       - hmpps
     container_name: locations-inside-prison-db
@@ -81,7 +81,7 @@ services:
       - HMPPS_SQS_LOCALSTACK_URL=http://localstack:4566
 
   prison-register-db:
-    image: postgres:16
+    image: postgres:18
     networks:
       - hmpps
     container_name: prison-register-db
