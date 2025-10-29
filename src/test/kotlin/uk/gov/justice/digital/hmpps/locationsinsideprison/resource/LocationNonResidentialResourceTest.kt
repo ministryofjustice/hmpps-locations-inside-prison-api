@@ -287,7 +287,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                  ],
                  "changeHistory": [
                    {
-                     "transactionType": "LOCATION_UPDATE",
+                     "transactionType": "LOCATION_UPDATE_NON_RESI",
                      "attribute": "Usage",
                      "oldValues": [
                        "Programmes/activities"
@@ -297,14 +297,14 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                      ]
                    },
                    {
-                     "transactionType": "LOCATION_UPDATE",
+                     "transactionType": "LOCATION_UPDATE_NON_RESI",
                      "attribute": "Non residential capacity",
                      "newValues": [
                        "20"
                      ]
                    },
                    {
-                     "transactionType": "LOCATION_UPDATE",
+                     "transactionType": "LOCATION_UPDATE_NON_RESI",
                      "attribute": "Usage",
                      "oldValues": [
                        "Visit"

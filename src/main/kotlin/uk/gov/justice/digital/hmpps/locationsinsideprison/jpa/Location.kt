@@ -177,7 +177,7 @@ abstract class Location(
   fun isDraft() = status == LocationStatus.DRAFT
   open fun isLocationLocked() = false
   open fun hasPendingChanges() = isDraft()
-
+  open fun isNonResidential() = false
   open fun isResidentialRoomOrConvertedCell() = false
   open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent()
 
