@@ -76,7 +76,13 @@ class SyncService(
       throw UpdateNotAllowedAsConvertedCellException(locationToUpdate.getKey())
     }
 
-    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.SYNC, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()}] in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
+    val txType = if (locationToUpdate.isNonResidential()) {
+      TransactionType.SYNC_NON_RESIDENTIAL
+    } else {
+      TransactionType.SYNC
+    }
+
+    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, txType, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()}] in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
 
     locationToUpdate = handleChangeOfType(id, locationToUpdate, upsert, linkedTransaction)
 
@@ -138,7 +144,7 @@ class SyncService(
   }
 
   private fun createLocation(upsert: NomisSyncLocationRequest): LegacyLocation {
-    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, TransactionType.SYNC, "<pending>", upsert.lastUpdatedBy)
+    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, if (upsert.residentialHousingType != null) TransactionType.SYNC_NON_RESIDENTIAL else TransactionType.SYNC, "<pending>", upsert.lastUpdatedBy)
 
     val locationToCreate = upsert.toNewEntity(clock, linkedTransaction)
     findParent(upsert)?.let { locationToCreate.setParent(it) }

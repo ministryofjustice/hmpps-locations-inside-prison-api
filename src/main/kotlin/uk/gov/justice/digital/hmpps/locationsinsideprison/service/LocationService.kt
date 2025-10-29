@@ -357,7 +357,7 @@ class LocationService(
 
     val linkedTransaction = createLinkedTransaction(
       prisonId = request.prisonId,
-      TransactionType.LOCATION_CREATE,
+      TransactionType.LOCATION_CREATE_NON_RESI,
       "Create non-residential location ${request.code} in prison ${request.prisonId} under ${parentLocation?.getKey() ?: "top level"}",
     )
 
@@ -546,7 +546,7 @@ class LocationService(
 
     val linkedTransaction = createLinkedTransaction(
       prisonId = nonResLocation.prisonId,
-      TransactionType.LOCATION_UPDATE,
+      TransactionType.LOCATION_UPDATE_NON_RESI,
       "Update non-residential location ${nonResLocation.getKey()}",
     )
 
@@ -564,7 +564,7 @@ class LocationService(
     val nonResLocation = nonResidentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
     val linkedTransaction = createLinkedTransaction(
       prisonId = nonResLocation.prisonId,
-      TransactionType.LOCATION_UPDATE,
+      TransactionType.LOCATION_UPDATE_NON_RESI,
       "Update non-residential location ${nonResLocation.getKey()}",
     )
 
@@ -798,7 +798,7 @@ class LocationService(
 
     val linkedTransaction = createLinkedTransaction(
       prisonId = location.prisonId,
-      TransactionType.LOCATION_UPDATE,
+      if (location.isNonResidential()) TransactionType.LOCATION_UPDATE_NON_RESI else TransactionType.LOCATION_UPDATE,
       "Updated local name for ${location.getKey()}",
     )
 
@@ -948,7 +948,7 @@ class LocationService(
 
     val linkedTransaction = createLinkedTransaction(
       prisonId = locationToUpdate.prisonId,
-      TransactionType.LOCATION_UPDATE,
+      if (locationToUpdate.isNonResidential()) TransactionType.LOCATION_UPDATE_NON_RESI else TransactionType.LOCATION_UPDATE,
       "Temporarily deactivated location details updated for ${locationToUpdate.getKey()}",
     )
 

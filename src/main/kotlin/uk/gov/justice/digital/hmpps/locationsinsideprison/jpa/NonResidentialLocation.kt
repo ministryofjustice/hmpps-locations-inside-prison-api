@@ -61,6 +61,8 @@ class NonResidentialLocation(
   updatedBy = createdBy,
 ) {
 
+  override fun isNonResidential() = true
+
   override fun hasDeactivatedParent() = false
 
   override fun findDeactivatedLocationInHierarchy(): Location? {
