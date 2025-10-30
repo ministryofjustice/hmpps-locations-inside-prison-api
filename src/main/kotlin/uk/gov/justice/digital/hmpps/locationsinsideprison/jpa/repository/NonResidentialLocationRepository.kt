@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import java.util.*
 
 @Repository
@@ -20,4 +21,10 @@ interface NonResidentialLocationRepository : JpaRepository<NonResidentialLocatio
 
   @Query("select l from NonResidentialLocation l where concat(l.prisonId,'-',l.pathHierarchy) = :key")
   fun findOneByKey(key: String): NonResidentialLocation?
+
+  @Query("select nrl from NonResidentialLocation nrl join fetch nrl.services u where u.serviceType = :serviceType and nrl.prisonId = :prisonId")
+  fun findAllByPrisonIdAndNonResidentialService(prisonId: String, serviceType: ServiceType): List<NonResidentialLocation>
+
+  @Query("select nrl from NonResidentialLocation nrl join fetch nrl.services u where nrl.prisonId = :prisonId")
+  fun findAllByPrisonIdWithNonResidentialServices(prisonId: String): List<NonResidentialLocation>
 }

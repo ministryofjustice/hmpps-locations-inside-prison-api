@@ -31,6 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
@@ -118,7 +119,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         prisonId = "ZZGHI",
         pathHierarchy = "B-1-VISIT",
         locationType = LocationType.VISITS,
-        nonResidentialUsageType = NonResidentialUsageType.VISIT,
+        serviceType = ServiceType.OFFICIAL_VISITS,
       ),
     )
     room = repository.save(
@@ -495,7 +496,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 code = "VISIT-ROOM",
                 locationType = LocationType.VISITS,
                 residentialHousingType = null,
-                usage = setOf(NonResidentialUsageDto(usageType = NonResidentialUsageType.VISIT)),
+                usage = setOf(NonResidentialUsageDto(usageType = NonResidentialUsageType.VISIT, capacity = 10)),
               ),
             ),
           )
@@ -515,10 +516,40 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "usage": [
                 {
                   "usageType": "VISIT",
+                  "capacity": 10,
                   "sequence": 99
                 }
               ]
             }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        webTestClient.get().uri("/locations/${cell.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "key": "ZZGHI-B-1-VISIT-ROOM",
+              "usage": [
+                {
+                  "usageType": "VISIT",
+                  "capacity": 10,
+                  "sequence": 99
+                }
+              ],
+              "servicesUsingLocation": [
+                {
+                  "serviceType": "OFFICIAL_VISITS",
+                  "serviceName": "Official visits",
+                  "usageType": "VISIT"
+                }
+              ]
+             }
           """,
             JsonCompareMode.LENIENT,
           )

@@ -103,10 +103,12 @@ data class NomisSyncLocationRequest(
 
 ) {
 
+  fun toServiceTypes() = usage?.map { it.usageType.toServiceTypes() }?.flatten()?.toSet()
+
   fun toNewEntity(clock: Clock, linkedTransaction: LinkedTransaction): Location {
     val location = if (residentialHousingType != null) {
       if (locationType == LocationType.CELL) {
-        val location = Cell(
+        Cell(
           id = null,
           prisonId = prisonId,
           code = code,
@@ -137,18 +139,18 @@ data class NomisSyncLocationRequest(
               certifiedNormalAccommodation = it.getCNA(),
             )
           },
-        )
-        attributes?.forEach { attribute ->
-          location.addAttribute(attribute)
-          attribute.mapTo?.let { location.addSpecialistCellType(it) }
+        ).also {
+          attributes?.forEach { attribute ->
+            it.addAttribute(attribute)
+            attribute.mapTo?.let { attr -> it.addSpecialistCellType(attr) }
+          }
+          if (it.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+            it.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, lastUpdatedBy, clock, linkedTransaction)
+          }
+          if (residentialHousingType == HOLDING_CELL) {
+            it.convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = lastUpdatedBy, clock = clock, linkedTransaction = linkedTransaction)
+          }
         }
-        if (location.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
-          location.addUsedFor(UsedForType.STANDARD_ACCOMMODATION, lastUpdatedBy, clock, linkedTransaction)
-        }
-        if (residentialHousingType == HOLDING_CELL) {
-          location.convertToNonResidentialCell(convertedCellType = ConvertedCellType.HOLDING_ROOM, userOrSystemInContext = lastUpdatedBy, clock = clock, linkedTransaction = linkedTransaction)
-        }
-        location
       } else if (code in getVirtualLocationCodes()) {
         VirtualResidentialLocation(
           prisonId = prisonId,
@@ -187,7 +189,7 @@ data class NomisSyncLocationRequest(
         )
       }
     } else {
-      val location = NonResidentialLocation(
+      NonResidentialLocation(
         prisonId = prisonId,
         code = code,
         locationType = locationType,
@@ -200,11 +202,12 @@ data class NomisSyncLocationRequest(
         createdBy = lastUpdatedBy,
         whenCreated = createDate ?: LocalDateTime.now(clock),
         childLocations = mutableListOf(),
-      )
-      usage?.forEach { usage ->
-        location.addUsage(usage.usageType, usage.capacity, usage.sequence)
+      ).also {
+        usage?.forEach { usage ->
+          it.addUsage(usage.usageType, usage.capacity, usage.sequence)
+          usage.usageType.toServiceTypes().forEach { service -> it.addService(service) }
+        }
       }
-      location
     }
 
     if (isDeactivated()) {

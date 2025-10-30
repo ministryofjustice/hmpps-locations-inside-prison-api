@@ -101,11 +101,17 @@ abstract class Location(
   open var whenUpdated: LocalDateTime,
   open var updatedBy: String,
   open var deactivatedBy: String? = null,
-) : Serializable {
+) : Comparable<Location>,
+  Serializable {
 
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
+
+    private val COMPARATOR = compareBy<Location>
+      { it.getKey() }
   }
+
+  override fun compareTo(other: Location) = COMPARATOR.compare(this, other)
 
   fun getKey() = "$prisonId-${getPathHierarchy()}"
 
