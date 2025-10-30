@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.util.*
 
@@ -79,11 +80,8 @@ data class PatchNonResidentialLocationRequest(
   @param:Schema(description = "Indicates this location should move to the top of the hierarchy", example = "false", required = false)
   override val removeParent: Boolean? = false,
 
-  @param:Schema(description = "Non-residential usage", required = false)
-  val usage: Set<NonResidentialUsageDto>? = null,
-
-  @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
-  val internalMovementAllowed: Boolean? = null,
+  @param:Schema(description = "Services that use this location", required = false)
+  val servicesUsingLocation: Set<ServiceType>? = null,
 
   @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
   @field:Size(max = 30, message = "Description must be less than 31 characters")
@@ -91,7 +89,9 @@ data class PatchNonResidentialLocationRequest(
 
   @param:Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   override val comments: String? = null,
-) : PatchLocationRequest
+) : PatchLocationRequest {
+  fun toUsages() = servicesUsingLocation?.map { it.nonResidentialUsageType }?.toSet() ?: emptySet()
+}
 
 @Schema(description = "Request to update the local name of a location")
 @JsonInclude(JsonInclude.Include.NON_NULL)

@@ -64,4 +64,7 @@ enum class NonResidentialUsageType(
   PROPERTY("Property", 6),
   VISIT("Visit", 7),
   OTHER("Other", 99),
+  ;
+
+  fun toServiceTypes() = ServiceType.entries.toList().filter { it.nonResidentialUsageType == this }.toSet()
 }

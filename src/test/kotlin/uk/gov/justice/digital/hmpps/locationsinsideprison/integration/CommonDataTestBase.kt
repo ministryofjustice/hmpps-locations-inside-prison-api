@@ -13,11 +13,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
@@ -284,14 +284,14 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       buildNonResidentialLocation(
         pathHierarchy = "VISIT",
         locationType = LocationType.VISITS,
-        nonResidentialUsageType = NonResidentialUsageType.VISIT,
+        serviceType = ServiceType.OFFICIAL_VISITS,
       ),
     )
     adjRoom = repository.save(
       buildNonResidentialLocation(
         pathHierarchy = "ADJUDICATION",
         locationType = LocationType.ADJUDICATION_ROOM,
-        nonResidentialUsageType = NonResidentialUsageType.ADJUDICATION_HEARING,
+        serviceType = ServiceType.HEARING_LOCATION,
       ),
     )
     wingZ.addChildLocation(visitRoom)

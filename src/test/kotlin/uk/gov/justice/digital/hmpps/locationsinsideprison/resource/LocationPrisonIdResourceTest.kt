@@ -11,7 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonData
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 @WithMockAuthUser(username = EXPECTED_USERNAME)
@@ -1158,14 +1158,14 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
         val videoLinkParent = buildNonResidentialLocation(
           pathHierarchy = "RES",
           locationType = LocationType.CLASSROOM,
-          nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
         )
 
         repository.save(
           buildNonResidentialLocation(
             pathHierarchy = "RTU",
             locationType = LocationType.RESIDENTIAL_UNIT,
-            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           ),
         )
 
@@ -1173,7 +1173,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
           buildNonResidentialLocation(
             pathHierarchy = "VIDEOR1",
             locationType = LocationType.VIDEO_LINK,
-            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           ),
         )
         repository.save(videoLinkParent)
@@ -1297,14 +1297,14 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
         val videoLinkParent = buildNonResidentialLocation(
           pathHierarchy = "RES",
           locationType = LocationType.CLASSROOM,
-          nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
         )
 
         videoLinkParent.addChildLocation(
           buildNonResidentialLocation(
             pathHierarchy = "VIDEOR1",
             locationType = LocationType.VIDEO_LINK,
-            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           ),
         )
         repository.save(videoLinkParent)
@@ -1377,14 +1377,14 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
         val videoLinkParent = buildNonResidentialLocation(
           pathHierarchy = "RES",
           locationType = LocationType.CLASSROOM,
-          nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
         )
 
         repository.save(
           buildNonResidentialLocation(
             pathHierarchy = "RTU",
             locationType = LocationType.RESIDENTIAL_UNIT,
-            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           ),
         )
 
@@ -1392,7 +1392,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
           buildNonResidentialLocation(
             pathHierarchy = "VIDEOR1",
             locationType = LocationType.VIDEO_LINK,
-            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           ),
         )
         repository.save(videoLinkParent)
