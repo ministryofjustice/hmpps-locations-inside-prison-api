@@ -124,7 +124,7 @@ class NonResidentialLocation(
       deactivatedReason = deactivatedLocation?.deactivatedReason,
       deactivationReasonDescription = deactivatedLocation?.deactivationReasonDescription,
       deactivatedBy = deactivatedBy,
-      usedByGroupedServices = services.map { it.serviceType.serviceFamily },
+      usedByGroupedServices = services.map { it.serviceType.serviceFamily }.distinct().sortedBy { it.sequence },
       usedByServices = services.map { it.serviceType }.sortedBy { it.sequence },
     )
   }
