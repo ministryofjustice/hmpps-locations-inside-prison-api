@@ -20,15 +20,17 @@ select l.id,
            when nru.usage_type = 'OCCURRENCE' then 'LOCATION_OF_INCIDENT'
            when nru.usage_type = 'MOVEMENT' then 'INTERNAL_MOVEMENTS'
            when nru.usage_type = 'VISIT' then 'OFFICIAL_VISITS'
-           end
+           end as service_type
 FROM location l join non_residential_usage nru on l.id = nru.location_id
 where location_type_discriminator = 'NON_RESIDENTIAL' and l.code != 'RTU'
+  and nru.usage_type in ('APPOINTMENT', 'PROGRAMMES_ACTIVITIES', 'ADJUDICATION_HEARING', 'OCCURRENCE', 'MOVEMENT', 'VISIT')
 union
-select l.id, 'USE_OF_FORCE'
+select l.id, 'USE_OF_FORCE' as service_type
 FROM location l join non_residential_usage nru on l.id = nru.location_id
 where location_type_discriminator = 'NON_RESIDENTIAL'
   and nru.usage_type = 'OCCURRENCE' and l.code != 'RTU'
 union
-select l.id, 'INTERNAL_MOVEMENTS'
+select l.id, 'INTERNAL_MOVEMENTS' as service_type
 FROM location l
-where location_type_discriminator = 'NON_RESIDENTIAL' and l.internal_movement_allowed = true;
+where location_type_discriminator = 'NON_RESIDENTIAL' and l.internal_movement_allowed = true
+  and l.code != 'RTU'
