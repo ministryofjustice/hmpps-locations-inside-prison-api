@@ -453,7 +453,7 @@ class LocationNonResidentialResource(
     @Schema(description = "Filter by given types", example = "[ADJUDICATION_ROOM,VIDEO_LINK]", required = false)
     @Parameter(
       description = "Filter by given types",
-      example = "[[ADJUDICATION_ROOM,VIDEO_LINK]",
+      example = "[ADJUDICATION_ROOM,VIDEO_LINK]",
       array = ArraySchema(
         schema = Schema(implementation = LocationType::class),
         arraySchema = Schema(
