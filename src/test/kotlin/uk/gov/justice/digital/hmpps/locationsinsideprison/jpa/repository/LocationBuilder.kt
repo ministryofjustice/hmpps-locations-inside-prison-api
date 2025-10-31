@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
@@ -119,6 +120,7 @@ fun buildNonResidentialLocation(
   locationType: LocationType,
   status: LocationStatus = LocationStatus.ACTIVE,
   serviceType: ServiceType,
+  usageTypes: Set<NonResidentialUsageType> = emptySet(),
 ): NonResidentialLocation {
   val nonResidentialLocationJPA = NonResidentialLocation(
     prisonId = prisonId,
@@ -134,5 +136,6 @@ fun buildNonResidentialLocation(
   )
   nonResidentialLocationJPA.addService(serviceType)
   nonResidentialLocationJPA.addUsage(serviceType.nonResidentialUsageType, 15, 1)
+  usageTypes.forEach { nonResidentialLocationJPA.addUsage(it, 10) }
   return nonResidentialLocationJPA
 }
