@@ -10,6 +10,8 @@ import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
 import org.hibernate.Hibernate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ServiceUsingLocationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationConstants.CompoundConstant
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationConstants.Constant
 
 @Entity
 class ServiceUsage(
@@ -33,14 +35,9 @@ class ServiceUsage(
 
   override fun compareTo(other: ServiceUsage) = COMPARATOR.compare(this, other)
 
-  fun isInternalMovementTracking() = serviceType == ServiceType.INTERNAL_MOVEMENTS
-
   fun toDto() = ServiceUsingLocationDto(
     serviceType = serviceType,
-    serviceName = serviceType.description,
-    usageType = serviceType.nonResidentialUsageType,
     serviceFamilyType = serviceType.serviceFamily,
-    serviceFamilyName = serviceType.serviceFamily?.description,
   )
 
   override fun equals(other: Any?): Boolean {
@@ -67,22 +64,35 @@ class ServiceUsage(
 
 enum class ServiceFamilyType(
   val description: String,
+  val sequence: Int = 99,
 ) {
-  ACTIVITIES_APPOINTMENTS("Activities and appointments"),
-  ADJUDICATIONS("Adjudications"),
+  ACTIVITIES_APPOINTMENTS("Activities and appointments", 1),
+  ADJUDICATIONS("Adjudications", 2),
+  INTERNAL_MOVEMENTS("Internal movements", 3),
+  OFFICIAL_VISITS("Official visits", 4),
+  USE_OF_FORCE("Use of force", 5),
+  ;
+
+  fun toDto() = CompoundConstant(
+    key = name,
+    description = description,
+    values = ServiceType.entries.sortedBy { it.sequence }
+      .filter { it.serviceFamily == this }
+      .map { Constant(key = it.name, description = it.description) },
+  )
 }
 
 enum class ServiceType(
   val description: String,
   val nonResidentialUsageType: NonResidentialUsageType,
-  val serviceFamily: ServiceFamilyType? = null,
+  val serviceFamily: ServiceFamilyType,
   val sequence: Int = 99,
 ) {
   APPOINTMENT("Appointments", NonResidentialUsageType.APPOINTMENT, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, 1),
   PROGRAMMES_AND_ACTIVITIES("Programmes and activities", NonResidentialUsageType.PROGRAMMES_ACTIVITIES, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, 2),
   HEARING_LOCATION("Hearing location", NonResidentialUsageType.ADJUDICATION_HEARING, ServiceFamilyType.ADJUDICATIONS, 3),
   LOCATION_OF_INCIDENT("Location of incident", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.ADJUDICATIONS, 4),
-  INTERNAL_MOVEMENTS("Internal movements", NonResidentialUsageType.MOVEMENT, sequence = 5),
-  OFFICIAL_VISITS("Official visits", NonResidentialUsageType.VISIT, sequence = 6),
-  USE_OF_FORCE("Use of force", NonResidentialUsageType.OCCURRENCE, sequence = 7),
+  INTERNAL_MOVEMENTS("Internal movements", NonResidentialUsageType.MOVEMENT, ServiceFamilyType.INTERNAL_MOVEMENTS, sequence = 5),
+  OFFICIAL_VISITS("Official visits", NonResidentialUsageType.VISIT, ServiceFamilyType.OFFICIAL_VISITS, sequence = 6),
+  USE_OF_FORCE("Use of force", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.USE_OF_FORCE, sequence = 7),
 }

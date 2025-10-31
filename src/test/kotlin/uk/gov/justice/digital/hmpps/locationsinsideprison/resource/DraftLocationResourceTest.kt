@@ -99,7 +99,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           .bodyValue(
             jsonString(
               createCellInitialisationRequest(
-                aboveLevelCode = landingZ1.getCode(),
+                aboveLevelCode = landingZ1.getLocationCode(),
                 parentLocation = wingZ.id,
               ),
             ),
@@ -270,11 +270,11 @@ class DraftLocationResourceTest : CommonDataTestBase() {
              {
               "prisonId": "${request.prisonId}",
               "code": "${request.newLevelAboveCells?.levelCode}",
-              "pathHierarchy": "${wingZ.getCode()}-${request.newLevelAboveCells?.levelCode}",
+              "pathHierarchy": "${wingZ.getLocationCode()}-${request.newLevelAboveCells?.levelCode}",
               "locationType": "LANDING",
               "status": "DRAFT",
-              "topLevelApprovalLocationId": "${repository.findOneByKey("${request.prisonId}-${wingZ.getCode()}-${request.newLevelAboveCells?.levelCode}")?.id}",
-              "key": "${request.prisonId}-${wingZ.getCode()}-${request.newLevelAboveCells?.levelCode}",
+              "topLevelApprovalLocationId": "${repository.findOneByKey("${request.prisonId}-${wingZ.getLocationCode()}-${request.newLevelAboveCells?.levelCode}")?.id}",
+              "key": "${request.prisonId}-${wingZ.getLocationCode()}-${request.newLevelAboveCells?.levelCode}",
               "localName": "LANDING J",
               "accommodationTypes": [
                 "NORMAL_ACCOMMODATION"
@@ -302,7 +302,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   "key": "MDI-Z-J-001",
                   "cellMark": "J-001",
                   "locationType": "CELL",
-                  "topLevelApprovalLocationId": "${repository.findOneByKey("${request.prisonId}-${wingZ.getCode()}-${request.newLevelAboveCells?.levelCode}")?.id}",
+                  "topLevelApprovalLocationId": "${repository.findOneByKey("${request.prisonId}-${wingZ.getLocationCode()}-${request.newLevelAboveCells?.levelCode}")?.id}",
                   "capacity": {
                     "maxCapacity": 0,
                     "workingCapacity": 0
@@ -435,7 +435,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             """ 
              {
               "prisonId": "${request.prisonId}",
-              "code": "${landingZ1.getCode()}",
+              "code": "${landingZ1.getLocationCode()}",
               "pathHierarchy": "${landingZ1.getPathHierarchy()}",
               "locationType": "${landingZ1.locationType}",
               "status": "ACTIVE",

@@ -886,6 +886,224 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("GET /constants/service-types")
+  @Nested
+  inner class ViewServiceTypesConstantsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/constants/service-types")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/constants/service-types")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/constants/service-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve residential-attribute-type constants`() {
+        webTestClient.get().uri("/constants/service-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+            {
+              "nonResidentialServiceTypes": [
+                {
+                  "key": "APPOINTMENT",
+                  "description": "Appointments",
+                  "attributes": {
+                    "serviceFamilyType": "ACTIVITIES_APPOINTMENTS",
+                    "serviceFamilyDescription": "Activities and appointments"
+                  }
+                },
+                {
+                  "key": "PROGRAMMES_AND_ACTIVITIES",
+                  "description": "Programmes and activities",
+                  "attributes": {
+                    "serviceFamilyType": "ACTIVITIES_APPOINTMENTS",
+                    "serviceFamilyDescription": "Activities and appointments"
+                  }
+                },
+                {
+                  "key": "HEARING_LOCATION",
+                  "description": "Hearing location",
+                  "attributes": {
+                    "serviceFamilyType": "ADJUDICATIONS",
+                    "serviceFamilyDescription": "Adjudications"
+                  }
+                },
+                {
+                  "key": "LOCATION_OF_INCIDENT",
+                  "description": "Location of incident",
+                  "attributes": {
+                    "serviceFamilyType": "ADJUDICATIONS",
+                    "serviceFamilyDescription": "Adjudications"
+                  }
+                },
+                {
+                  "key": "INTERNAL_MOVEMENTS",
+                  "description": "Internal movements",
+                  "attributes": {
+                    "serviceFamilyType": "INTERNAL_MOVEMENTS",
+                    "serviceFamilyDescription": "Internal movements"
+                  }
+                },
+                {
+                  "key": "OFFICIAL_VISITS",
+                  "description": "Official visits",
+                  "attributes": {
+                    "serviceFamilyType": "OFFICIAL_VISITS",
+                    "serviceFamilyDescription": "Official visits"
+                  }
+                },
+                {
+                  "key": "USE_OF_FORCE",
+                  "description": "Use of force",
+                  "attributes": {
+                    "serviceFamilyType": "USE_OF_FORCE",
+                    "serviceFamilyDescription": "Use of force"
+                  }
+                }
+              ]
+            }              
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+      }
+    }
+  }
+
+  @DisplayName("GET /constants/service-family-types")
+  @Nested
+  inner class ViewServiceFamilyTypesConstantsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/constants/service-family-types")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/constants/service-family-types")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/constants/service-family-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve residential-attribute-type constants`() {
+        webTestClient.get().uri("/constants/service-family-types")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+            {
+              "serviceFamilyTypes": [
+                {
+                  "key": "ACTIVITIES_APPOINTMENTS",
+                  "description": "Activities and appointments",
+                  "values": [
+                    {
+                      "key": "APPOINTMENT",
+                      "description": "Appointments"
+                    },
+                    {
+                      "key": "PROGRAMMES_AND_ACTIVITIES",
+                      "description": "Programmes and activities"
+                    }
+                  ]
+                },
+                {
+                  "key": "ADJUDICATIONS",
+                  "description": "Adjudications",
+                  "values": [
+                    {
+                      "key": "HEARING_LOCATION",
+                      "description": "Hearing location"
+                    },
+                    {
+                      "key": "LOCATION_OF_INCIDENT",
+                      "description": "Location of incident"
+                    }
+                  ]
+                },
+                {
+                  "key": "INTERNAL_MOVEMENTS",
+                  "description": "Internal movements",
+                  "values": [
+                    {
+                      "key": "INTERNAL_MOVEMENTS",
+                      "description": "Internal movements"
+                    }
+                  ]
+                },
+                {
+                  "key": "OFFICIAL_VISITS",
+                  "description": "Official visits",
+                  "values": [
+                    {
+                      "key": "OFFICIAL_VISITS",
+                      "description": "Official visits"
+                    }
+                  ]
+                },
+                {
+                  "key": "USE_OF_FORCE",
+                  "description": "Use of force",
+                  "values": [
+                    {
+                      "key": "USE_OF_FORCE",
+                      "description": "Use of force"
+                    }
+                  ]
+                }
+              ]
+            }              
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /constants/accommodation-type")
   @Nested
   inner class ViewAccommodationTypeConstantsTest {

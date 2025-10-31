@@ -1408,7 +1408,17 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       "usageType": "VISIT",
                       "capacity": 15,
                       "sequence": 1
-                    }
+                    },
+                    {
+                        "usageType": "PROPERTY",
+                        "capacity": 10,
+                        "sequence": 99
+                      },
+                      {
+                        "usageType": "OTHER",
+                        "capacity": 10,
+                        "sequence": 99
+                      }
                   ],
                   
                   "active": true,
@@ -1634,6 +1644,16 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       "usageType": "VISIT",
                       "capacity": 15,
                       "sequence": 1
+                    },
+                    {
+                      "usageType": "PROPERTY",
+                      "capacity": 10,
+                      "sequence": 99
+                    },
+                    {
+                      "usageType": "OTHER",
+                      "capacity": 10,
+                      "sequence": 99
                     }
                   ],
                   
@@ -1872,6 +1892,16 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       "usageType": "VISIT",
                       "capacity": 15,
                       "sequence": 1
+                    },
+                    {
+                      "usageType": "PROPERTY",
+                      "capacity": 10,
+                      "sequence": 99
+                    },
+                    {
+                      "usageType": "OTHER",
+                      "capacity": 10,
+                      "sequence": 99
                     }
                   ],
                   
@@ -2169,6 +2199,16 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
                       "usageType": "VISIT",
                       "capacity": 15,
                       "sequence": 1
+                    },
+                    {
+                      "usageType": "PROPERTY",
+                      "capacity": 10,
+                      "sequence": 99
+                    },
+                    {
+                      "usageType": "OTHER",
+                      "capacity": 10,
+                      "sequence": 99
                     }
                   ],
                   "active": true,

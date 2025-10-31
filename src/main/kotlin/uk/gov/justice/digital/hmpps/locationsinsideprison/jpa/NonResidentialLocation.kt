@@ -12,6 +12,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialLocationDTO
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -103,6 +105,30 @@ class NonResidentialLocation(
     return existingService
   }
 
+  fun toNonResidentialDto(): NonResidentialLocationDTO {
+    val deactivatedLocation = findDeactivatedLocationInHierarchy()
+
+    return NonResidentialLocationDTO(
+      id = id!!,
+      localName = localName?.let { formatLocation(it) } ?: getPathHierarchy(),
+      code = getLocationCode(),
+      status = getDerivedStatus(),
+      locationType = locationType,
+      pathHierarchy = getPathHierarchy(),
+      prisonId = prisonId,
+      parentId = getParent()?.id,
+      level = getLevel(),
+      active = isActiveAndAllParentsActive(),
+      permanentlyInactive = isPermanentlyDeactivated(),
+      deactivatedDate = deactivatedLocation?.deactivatedDate,
+      deactivatedReason = deactivatedLocation?.deactivatedReason,
+      deactivationReasonDescription = deactivatedLocation?.deactivationReasonDescription,
+      deactivatedBy = deactivatedBy,
+      usedByGroupedServices = services.map { it.serviceType.serviceFamily },
+      usedByServices = services.map { it.serviceType }.sortedBy { it.sequence },
+    )
+  }
+
   override fun toDto(
     includeChildren: Boolean,
     includeParent: Boolean,
@@ -123,7 +149,7 @@ class NonResidentialLocation(
     formatLocalName = formatLocalName,
   ).copy(
     usage = nonResidentialUsages.map { it.toDto() }.sortedBy { it.usageType.sequence },
-    servicesUsingLocation = services.map { it.toDto() },
+    servicesUsingLocation = services.map { it.toDto() }.sortedBy { it.serviceType.sequence },
     internalMovementAllowed = internalMovementAllowed,
   )
 
@@ -177,6 +203,10 @@ class NonResidentialLocation(
 
     val existingUsages = this.nonResidentialUsages.filter { it.usageType in derivedUsages }
     newSetOfUsages.addAll(existingUsages.map { NonResidentialUsageDto(it.usageType, it.capacity, it.sequence) })
+
+    // These are things like PROPERTY and OTHER - we don't want to lose them if they aren't mapped to a service
+    val unmappedUsages = this.nonResidentialUsages.filter { it.usageType !in ServiceType.entries.map { st -> st.nonResidentialUsageType } }
+    newSetOfUsages.addAll(unmappedUsages.map { NonResidentialUsageDto(it.usageType, it.capacity, it.sequence) })
 
     return newSetOfUsages.toSet()
   }

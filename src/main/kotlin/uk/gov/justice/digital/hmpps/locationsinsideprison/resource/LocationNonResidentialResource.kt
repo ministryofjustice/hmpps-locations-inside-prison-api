@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -8,6 +10,10 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import org.springdoc.core.annotations.ParameterObject
+import org.springframework.data.domain.Pageable
+import org.springframework.data.domain.Sort
+import org.springframework.data.web.PageableDefault
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
@@ -23,11 +29,14 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialService
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.buildEventsToPublishOnUpdate
 import java.util.*
 
@@ -336,9 +345,11 @@ class LocationNonResidentialResource(
 
   @GetMapping("/prison/{prisonId}/non-residential")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Deprecated("Use /locations/non-residential/summary/{prisonId} instead")
   @Operation(
     summary = "Get a list of active non-residential locations for a prison (excluding RTU)",
     description = "Requires role VIEW_LOCATIONS",
+    deprecated = true,
     responses = [
       ApiResponse(
         responseCode = "200",
@@ -387,5 +398,84 @@ class LocationNonResidentialResource(
     prisonId = prisonId,
     sortByLocalName = sortByLocalName,
     formatLocalName = formatLocalName,
+  )
+
+  @GetMapping("/non-residential/summary/{prisonId}")
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Get a paged list of non-residential locations for a prison (excluding RTU and BOXes)",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns a paged list of non-residential locations for a prison",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "When input parameters are not valid",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getPaginatedNonResidentialList(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
+    @NotBlank(message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
+    @PathVariable
+    prisonId: String,
+    @Schema(description = "Filter by given statuses", example = "[ACTIVE,INACTIVE]", required = false)
+    @Parameter(
+      description = "Filter by given statuses",
+      example = "[ACTIVE,INACTIVE]",
+      array = ArraySchema(
+        schema = Schema(implementation = LocationStatus::class),
+        arraySchema = Schema(
+          requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+          nullable = true,
+          defaultValue = "null",
+        ),
+      ),
+    )
+    @RequestParam(required = false)
+    status: List<LocationStatus>? = null,
+    @Schema(description = "Filter by given types", example = "[ADJUDICATION_ROOM,VIDEO_LINK]", required = false)
+    @Parameter(
+      description = "Filter by given types",
+      example = "[[ADJUDICATION_ROOM,VIDEO_LINK]",
+      array = ArraySchema(
+        schema = Schema(implementation = LocationType::class),
+        arraySchema = Schema(
+          requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+          nullable = true,
+          defaultValue = "null",
+        ),
+      ),
+    )
+    @RequestParam(required = false)
+    locationType: List<LocationType>? = null,
+    @Schema(description = "Service Type", example = "APPOINTMENT", required = false)
+    @Parameter(description = "Filter by service type", example = "APPOINTMENT", required = false)
+    serviceType: ServiceType? = null,
+    @ParameterObject
+    @PageableDefault(page = 0, size = 100, sort = ["localName"], direction = Sort.Direction.ASC)
+    pageable: Pageable,
+  ): NonResidentialSummary = nonResidentialService.getNonResidentialLocationSummaryForPrison(
+    prisonId = prisonId,
+    serviceType = serviceType,
+    pageable = pageable,
+    statuses = status ?: emptyList(),
+    locationTypes = locationType ?: emptyList(),
   )
 }
