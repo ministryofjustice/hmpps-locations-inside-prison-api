@@ -17,6 +17,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLoca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
@@ -91,6 +93,9 @@ data class Location(
 
   @param:Schema(description = "Location Usage", required = false)
   val usage: List<NonResidentialUsageDto>? = null,
+
+  @param:Schema(description = "Services that use this location", required = false)
+  val servicesUsingLocation: List<ServiceUsingLocationDto>? = null,
 
   @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
   val internalMovementAllowed: Boolean? = null,
@@ -254,6 +259,24 @@ data class PendingChangeDto(
   val certifiedNormalAccommodation: Int? = null,
 
 )
+
+@Schema(description = "Service that uses a location")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ServiceUsingLocationDto(
+  val serviceType: ServiceType,
+  val serviceFamilyType: ServiceFamilyType,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as ServiceUsingLocationDto
+
+    return serviceType == other.serviceType
+  }
+
+  override fun hashCode(): Int = serviceType.hashCode()
+}
 
 @Schema(description = "Non Residential Usage")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -643,12 +666,11 @@ data class CreateNonResidentialLocationRequest(
   @param:Schema(description = "ID of parent location", example = "c73e8ad1-191b-42b8-bfce-2550cc858dab", required = false)
   val parentId: UUID? = null,
 
-  @param:Schema(description = "Location Usage", required = false)
-  val usage: Set<NonResidentialUsageDto>? = null,
-
-  @param:Schema(description = "Indicates that this location can used for internal movements", required = false)
-  val internalMovementAllowed: Boolean? = null,
+  @param:Schema(description = "Services that use this location", required = false)
+  val servicesUsingLocation: Set<ServiceType>? = null,
 ) {
+
+  fun isInternalMovement() = servicesUsingLocation?.find { it == ServiceType.INTERNAL_MOVEMENTS } != null
 
   fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location? = null) = NonResidentialLocationJPA(
     id = null,
@@ -661,11 +683,14 @@ data class CreateNonResidentialLocationRequest(
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
     childLocations = mutableListOf(),
+    internalMovementAllowed = isInternalMovement(),
   ).apply {
-    usage?.forEach { usage ->
-      addUsage(usage.usageType, usage.capacity, usage.sequence)
-    }
     parentLocation?.let { setParent(it) }
+    servicesUsingLocation?.forEach { serviceType ->
+      val usageType = serviceType.nonResidentialUsageType
+      addUsage(usageType, 99)
+      addService(serviceType)
+    }
     addHistory(
       attributeName = LocationAttribute.LOCATION_CREATED,
       oldValue = null,

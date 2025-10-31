@@ -11,7 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonData
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 @WithMockAuthUser(username = EXPECTED_USERNAME)
@@ -1156,24 +1156,27 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
       @Test
       fun `can retrieve locations from usage type filter our parents`() {
         val videoLinkParent = buildNonResidentialLocation(
+          localName = "Classroom 1",
           pathHierarchy = "RES",
           locationType = LocationType.CLASSROOM,
-          nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
         )
 
         repository.save(
           buildNonResidentialLocation(
+            localName = "Return to unit",
             pathHierarchy = "RTU",
             locationType = LocationType.RESIDENTIAL_UNIT,
-            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           ),
         )
 
         videoLinkParent.addChildLocation(
           buildNonResidentialLocation(
+            localName = "Video room 1",
             pathHierarchy = "VIDEOR1",
             locationType = LocationType.VIDEO_LINK,
-            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           ),
         )
         repository.save(videoLinkParent)
@@ -1283,6 +1286,16 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                         "usageType": "VISIT",
                         "capacity": 15,
                         "sequence": 1
+                      },
+                      {
+                        "usageType": "PROPERTY",
+                        "capacity": 10,
+                        "sequence": 99
+                      },
+                      {
+                        "usageType": "OTHER",
+                        "capacity": 10,
+                        "sequence": 99
                       }
                     ]
                   }
@@ -1295,16 +1308,18 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
       @Test
       fun `can retrieve locations from usage type filter and return parents`() {
         val videoLinkParent = buildNonResidentialLocation(
+          localName = "Classroom 1",
           pathHierarchy = "RES",
           locationType = LocationType.CLASSROOM,
-          nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
         )
 
         videoLinkParent.addChildLocation(
           buildNonResidentialLocation(
+            localName = "Video room 1",
             pathHierarchy = "VIDEOR1",
             locationType = LocationType.VIDEO_LINK,
-            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           ),
         )
         repository.save(videoLinkParent)
@@ -1363,6 +1378,16 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                         "usageType": "VISIT",
                         "capacity": 15,
                         "sequence": 1
+                      },
+                      {
+                        "usageType": "PROPERTY",
+                        "capacity": 10,
+                        "sequence": 99
+                      },
+                      {
+                        "usageType": "OTHER",
+                        "capacity": 10,
+                        "sequence": 99
                       }
                     ]
                   }
@@ -1375,24 +1400,27 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
       @Test
       fun `can retrieve locations from usage type filter out parents`() {
         val videoLinkParent = buildNonResidentialLocation(
+          localName = "Residential 1",
           pathHierarchy = "RES",
           locationType = LocationType.CLASSROOM,
-          nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
         )
 
         repository.save(
           buildNonResidentialLocation(
+            localName = "Return to unit",
             pathHierarchy = "RTU",
             locationType = LocationType.RESIDENTIAL_UNIT,
-            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           ),
         )
 
         videoLinkParent.addChildLocation(
           buildNonResidentialLocation(
+            localName = "Video room 1",
             pathHierarchy = "VIDEOR1",
             locationType = LocationType.VIDEO_LINK,
-            nonResidentialUsageType = NonResidentialUsageType.PROGRAMMES_ACTIVITIES,
+            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           ),
         )
         repository.save(videoLinkParent)
@@ -1439,6 +1467,16 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                         "usageType": "VISIT",
                         "capacity": 15,
                         "sequence": 1
+                      },
+                      {
+                        "usageType": "PROPERTY",
+                        "capacity": 10,
+                        "sequence": 99
+                      },
+                      {
+                        "usageType": "OTHER",
+                        "capacity": 10,
+                        "sequence": 99
                       }
                     ]
                   }

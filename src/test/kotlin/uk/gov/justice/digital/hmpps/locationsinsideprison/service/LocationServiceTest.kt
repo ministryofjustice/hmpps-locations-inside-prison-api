@@ -9,26 +9,28 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
@@ -36,13 +38,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefi
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
 import java.time.LocalDateTime
-import java.util.Optional
-import java.util.Properties
-import java.util.UUID
+import java.util.*
 
 class LocationServiceTest {
+  private val sharedLocationService: SharedLocationService = mock()
   private val locationRepository: LocationRepository = mock()
-  private val nonResidentialLocationRepository: NonResidentialLocationRepository = mock()
   private val residentialLocationRepository: ResidentialLocationRepository = mock()
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository = mock()
   private val cellLocationRepository: CellLocationRepository = mock()
@@ -58,8 +58,8 @@ class LocationServiceTest {
   private val groupsProperties: Properties = mock()
 
   private val service = LocationService(
+    sharedLocationService,
     locationRepository,
-    nonResidentialLocationRepository,
     residentialLocationRepository,
     signedOperationCapacityRepository,
     cellLocationRepository,
@@ -69,7 +69,6 @@ class LocationServiceTest {
     prisonService,
     clock,
     telemetryClient,
-    authenticationHolder,
     locationGroupFromPropertiesService,
     activePrisonService,
     groupsProperties,
@@ -79,6 +78,16 @@ class LocationServiceTest {
   fun setUp() {
     whenever(authenticationHolder.username).thenReturn("User 1")
     whenever(linkedTransactionRepository.save(any())).thenReturn(mock())
+    whenever(sharedLocationService.createLinkedTransaction(eq("MDI"), any(), any(), anyOrNull())).thenReturn(
+      LinkedTransaction(
+        UUID.randomUUID(),
+        TransactionType.LOCATION_CREATE,
+        "MDI",
+        "A Transaction",
+        "User 1",
+        LocalDateTime.now(),
+      ),
+    )
   }
 
   @Test
@@ -194,83 +203,6 @@ class LocationServiceTest {
 
     val loc = service.getLocationById(UUID.randomUUID())
     Assertions.assertThat(loc?.localName).isEqualTo("CeLL a")
-  }
-
-  // findAllByPrisonIdAndNonResidentialUsages
-  @Test
-  fun `should format local name`() {
-    val prisonLocation = buildLocation("BULLINGDON (HMP)")
-    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
-      listOf(prisonLocation),
-    )
-
-    val nonResLoc =
-      service.getLocationsByPrisonAndNonResidentialUsageType(
-        "prisonId",
-        NonResidentialUsageType.OCCURRENCE,
-        sortByLocalName = false,
-        formatLocalName = true,
-      )
-    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("Bullingdon (HMP)")
-  }
-
-  private var location1 = buildLocation("A")
-  private var location2 = buildLocation("B")
-  private var location3 = buildLocation("CC")
-
-  @Test
-  fun `should sort by localName`() {
-    val locations = listOf(location3, location1, location2)
-
-    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
-      locations,
-    )
-
-    val nonResLoc =
-      service.getLocationsByPrisonAndNonResidentialUsageType(
-        "prisonId",
-        NonResidentialUsageType.OCCURRENCE,
-        sortByLocalName = true,
-        formatLocalName = false,
-      )
-    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("A")
-    Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
-    Assertions.assertThat(nonResLoc[2].localName).isEqualTo("CC")
-  }
-
-  @Test
-  fun `should not sort by localName`() {
-    val locations = listOf(location3, location2, location1)
-
-    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
-      locations,
-    )
-
-    val nonResLoc =
-      service.getLocationsByPrisonAndNonResidentialUsageType("prisonId", NonResidentialUsageType.OCCURRENCE)
-    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("CC")
-    Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
-    Assertions.assertThat(nonResLoc[2].localName).isEqualTo("A")
-  }
-
-  @Test
-  fun `should sort by localName and format localName`() {
-    val locations = listOf(location3, location2, location1)
-
-    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
-      locations,
-    )
-
-    val nonResLoc =
-      service.getLocationsByPrisonAndNonResidentialUsageType(
-        "prisonId",
-        NonResidentialUsageType.OCCURRENCE,
-        sortByLocalName = true,
-        formatLocalName = true,
-      )
-    Assertions.assertThat(nonResLoc[0].localName).isEqualTo("A")
-    Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
-    Assertions.assertThat(nonResLoc[2].localName).isEqualTo("Cc")
   }
 
   // getLocationByPrisonAndLocationType

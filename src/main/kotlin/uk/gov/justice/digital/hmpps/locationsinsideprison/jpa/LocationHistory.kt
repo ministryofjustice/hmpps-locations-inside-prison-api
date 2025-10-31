@@ -105,6 +105,7 @@ enum class LocationAttribute(
   USAGE(description = "Usage", display = true),
   NON_RESIDENTIAL_CAPACITY(description = "Non residential capacity", display = true),
   INTERNAL_MOVEMENT_ALLOWED(description = "Internal movement allowed", display = true),
+  USED_BY_SERVICE(description = "Use by service", display = true),
 
   // These are recorded but not returned as history changes
   CODE(description = "Code"),

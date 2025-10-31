@@ -54,7 +54,7 @@ abstract class Location(
   @Column(name = "id", updatable = false, nullable = false)
   open val id: UUID? = null,
 
-  private var code: String,
+  open var code: String,
 
   private var pathHierarchy: String,
 
@@ -101,15 +101,21 @@ abstract class Location(
   open var whenUpdated: LocalDateTime,
   open var updatedBy: String,
   open var deactivatedBy: String? = null,
-) : Serializable {
+) : Comparable<Location>,
+  Serializable {
 
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
+
+    private val COMPARATOR = compareBy<Location>
+      { it.getKey() }
   }
+
+  override fun compareTo(other: Location) = COMPARATOR.compare(this, other)
 
   fun getKey() = "$prisonId-${getPathHierarchy()}"
 
-  open fun setCode(code: String) {
+  open fun setLocationCode(code: String) {
     this.code = code
     updateHierarchicalPath()
   }
@@ -128,7 +134,7 @@ abstract class Location(
     parent = null
   }
 
-  open fun getCode(): String = code
+  open fun getLocationCode(): String = code
 
   open fun getParent(): Location? = parent
 
@@ -243,7 +249,7 @@ abstract class Location(
 
   private fun getLocationSummary(): LocationSummary = LocationSummary(
     id = id,
-    code = getCode(),
+    code = getLocationCode(),
     type = getDerivedLocationType(),
     pathHierarchy = getPathHierarchy(),
     prisonId = prisonId,
@@ -259,9 +265,9 @@ abstract class Location(
   }
 
   private fun getHierarchicalPath(): String = if (getParent() == null) {
-    getCode()
+    getLocationCode()
   } else {
-    "${getParent()!!.getHierarchicalPath()}-${getCode()}"
+    "${getParent()!!.getHierarchicalPath()}-${getLocationCode()}"
   }
 
   private fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
@@ -358,7 +364,7 @@ abstract class Location(
     val deactivatedLocation = findDeactivatedLocationInHierarchy()
     return LocationDto(
       id = id!!,
-      code = getCode(),
+      code = getLocationCode(),
       status = getDerivedStatus(),
       locked = isLocationLocked(),
       locationType = getDerivedLocationType(),
@@ -471,7 +477,7 @@ abstract class Location(
     return PrisonHierarchyDto(
       locationId = id!!,
       locationType = locationType,
-      locationCode = getCode(),
+      locationCode = getLocationCode(),
       fullLocationPath = getPathHierarchy(),
       localName = getDerivedLocalName(true),
       level = getLevel(),
@@ -492,13 +498,13 @@ abstract class Location(
   open fun toResidentialPrisonerLocation(mapOfPrisoners: Map<String, List<Prisoner>>): ResidentialPrisonerLocation = ResidentialPrisonerLocation(
     locationId = id!!,
     key = getKey(),
-    locationCode = getCode(),
+    locationCode = getLocationCode(),
     locationType = getDerivedLocationType(),
     fullLocationPath = getPathHierarchy(),
     localName = if (isCell()) {
-      getCode()
+      getLocationCode()
     } else {
-      formatLocation(localName ?: getCode())
+      formatLocation(localName ?: getLocationCode())
     },
     prisoners = mapOfPrisoners[getPathHierarchy()] ?: emptyList(),
     deactivatedReason = findDeactivatedLocationInHierarchy()?.deactivatedReason,
@@ -577,9 +583,9 @@ abstract class Location(
   }
 
   open fun updateCode(code: String?, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Location {
-    if (code != null && this.getCode() != code) {
-      addHistory(LocationAttribute.CODE, getCode(), code, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
-      setCode(code)
+    if (code != null && this.getLocationCode() != code) {
+      addHistory(LocationAttribute.CODE, getLocationCode(), code, userOrSystemInContext, LocalDateTime.now(clock), linkedTransaction)
+      setLocationCode(code)
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = LocalDateTime.now(clock)
     }
@@ -589,8 +595,8 @@ abstract class Location(
   open fun isConvertedCell(): Boolean = false
 
   open fun sync(upsert: NomisSyncLocationRequest, clock: Clock, linkedTransaction: LinkedTransaction): Location {
-    addHistory(LocationAttribute.CODE, getCode(), upsert.code, upsert.lastUpdatedBy, LocalDateTime.now(clock), linkedTransaction)
-    setCode(upsert.code)
+    addHistory(LocationAttribute.CODE, getLocationCode(), upsert.code, upsert.lastUpdatedBy, LocalDateTime.now(clock), linkedTransaction)
+    setLocationCode(upsert.code)
 
     addHistory(
       LocationAttribute.LOCATION_TYPE,
@@ -1026,7 +1032,7 @@ abstract class Location(
 
   open fun toLegacyDto(includeHistory: Boolean = false): LegacyLocation = LegacyLocation(
     id = id!!,
-    code = getCode(),
+    code = getLocationCode(),
     locationType = getDerivedLocationType(),
     pathHierarchy = pathHierarchy,
     prisonId = prisonId,

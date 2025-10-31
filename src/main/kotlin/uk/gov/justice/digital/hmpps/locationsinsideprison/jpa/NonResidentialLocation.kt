@@ -5,12 +5,15 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
+import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialLocationDTO
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -40,6 +43,10 @@ class NonResidentialLocation(
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   private val nonResidentialUsages: MutableSet<NonResidentialUsage> = mutableSetOf(),
 
+  @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @SortNatural
+  val services: SortedSet<ServiceUsage> = sortedSetOf(),
+
   private var internalMovementAllowed: Boolean? = false,
 ) : Location(
   id = id,
@@ -60,6 +67,8 @@ class NonResidentialLocation(
   whenUpdated = whenCreated,
   updatedBy = createdBy,
 ) {
+
+  fun toUsageTypes() = nonResidentialUsages.map { it.usageType }
 
   override fun isNonResidential() = true
 
@@ -86,6 +95,40 @@ class NonResidentialLocation(
     }
   }
 
+  fun addService(serviceType: ServiceType): ServiceUsage {
+    val existingService = services.find { it.serviceType == serviceType }
+    if (existingService == null) {
+      val serviceUsage = ServiceUsage(location = this, serviceType = serviceType)
+      services.add(serviceUsage)
+      return serviceUsage
+    }
+    return existingService
+  }
+
+  fun toNonResidentialDto(): NonResidentialLocationDTO {
+    val deactivatedLocation = findDeactivatedLocationInHierarchy()
+
+    return NonResidentialLocationDTO(
+      id = id!!,
+      localName = localName?.let { formatLocation(it) } ?: getPathHierarchy(),
+      code = getLocationCode(),
+      status = getDerivedStatus(),
+      locationType = locationType,
+      pathHierarchy = getPathHierarchy(),
+      prisonId = prisonId,
+      parentId = getParent()?.id,
+      level = getLevel(),
+      active = isActiveAndAllParentsActive(),
+      permanentlyInactive = isPermanentlyDeactivated(),
+      deactivatedDate = deactivatedLocation?.deactivatedDate,
+      deactivatedReason = deactivatedLocation?.deactivatedReason,
+      deactivationReasonDescription = deactivatedLocation?.deactivationReasonDescription,
+      deactivatedBy = deactivatedBy,
+      usedByGroupedServices = services.map { it.serviceType.serviceFamily },
+      usedByServices = services.map { it.serviceType }.sortedBy { it.sequence },
+    )
+  }
+
   override fun toDto(
     includeChildren: Boolean,
     includeParent: Boolean,
@@ -106,6 +149,7 @@ class NonResidentialLocation(
     formatLocalName = formatLocalName,
   ).copy(
     usage = nonResidentialUsages.map { it.toDto() }.sortedBy { it.usageType.sequence },
+    servicesUsingLocation = services.map { it.toDto() }.sortedBy { it.serviceType.sequence },
     internalMovementAllowed = internalMovementAllowed,
   )
 
@@ -118,9 +162,12 @@ class NonResidentialLocation(
     super.update(upsert, userOrSystemInContext, clock, linkedTransaction)
 
     if (upsert is PatchNonResidentialLocationRequest) {
-      updateUsage(upsert.usage, userOrSystemInContext, clock, linkedTransaction)
-
-      upsert.internalMovementAllowed?.let { internalMovementAllowedUpdate ->
+      upsert.servicesUsingLocation?.let {
+        updateServices(it, userOrSystemInContext, clock, linkedTransaction)
+        updateUsage(buildNonResidentialUsageFromService(upsert.toUsages()), userOrSystemInContext, clock, linkedTransaction)
+      }
+      val internalMovementAllowedUpdate = services.find { it.serviceType == ServiceType.INTERNAL_MOVEMENTS } != null
+      if (internalMovementAllowed != internalMovementAllowedUpdate) {
         addHistory(
           attributeName = LocationAttribute.INTERNAL_MOVEMENT_ALLOWED,
           oldValue = this.internalMovementAllowed.toString(),
@@ -148,9 +195,31 @@ class NonResidentialLocation(
     return this
   }
 
+  private fun buildNonResidentialUsageFromService(derivedUsages: Set<NonResidentialUsageType>): Set<NonResidentialUsageDto> {
+    val newSetOfUsages = mutableSetOf<NonResidentialUsageDto>()
+
+    val newUsages = derivedUsages.filter { it !in this.toUsageTypes() }
+    newSetOfUsages.addAll(newUsages.map { NonResidentialUsageDto(it, 99) })
+
+    val existingUsages = this.nonResidentialUsages.filter { it.usageType in derivedUsages }
+    newSetOfUsages.addAll(existingUsages.map { NonResidentialUsageDto(it.usageType, it.capacity, it.sequence) })
+
+    // These are things like PROPERTY and OTHER - we don't want to lose them if they aren't mapped to a service
+    val unmappedUsages = this.nonResidentialUsages.filter { it.usageType !in ServiceType.entries.map { st -> st.nonResidentialUsageType } }
+    newSetOfUsages.addAll(unmappedUsages.map { NonResidentialUsageDto(it.usageType, it.capacity, it.sequence) })
+
+    return newSetOfUsages.toSet()
+  }
+
   override fun sync(upsert: NomisSyncLocationRequest, clock: Clock, linkedTransaction: LinkedTransaction): NonResidentialLocation {
     super.sync(upsert, clock, linkedTransaction)
-    updateUsage(upsert.usage, upsert.lastUpdatedBy, clock, linkedTransaction)
+    upsert.usage?.let { usages ->
+      updateUsage(usages, upsert.lastUpdatedBy, clock, linkedTransaction)
+    }
+    upsert.toServiceTypes()?.let { services ->
+      updateServices(services, upsert.lastUpdatedBy, clock, linkedTransaction)
+    }
+
     upsert.internalMovementAllowed?.let { internalMovementAllowedUpdate ->
       addHistory(
         attributeName = LocationAttribute.INTERNAL_MOVEMENT_ALLOWED,
@@ -167,15 +236,23 @@ class NonResidentialLocation(
   }
 
   fun updateUsage(
-    usage: Set<NonResidentialUsageDto>?,
+    usage: Set<NonResidentialUsageDto>,
     userOrSystemInContext: String,
     clock: Clock,
     linkedTransaction: LinkedTransaction,
   ) {
-    if (usage != null) {
-      recordHistoryOfUsages(usage, userOrSystemInContext, clock, linkedTransaction)
-      nonResidentialUsages.retainAll(usage.map { addUsage(it.usageType, it.capacity, it.sequence) }.toSet())
-    }
+    recordHistoryOfUsages(usage, userOrSystemInContext, clock, linkedTransaction)
+    nonResidentialUsages.retainAll(usage.map { addUsage(it.usageType, it.capacity, it.sequence) }.toSet())
+  }
+
+  fun updateServices(
+    serviceTypes: Set<ServiceType>,
+    userOrSystemInContext: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    recordHistoryOfServices(serviceTypes, userOrSystemInContext, clock, linkedTransaction)
+    services.retainAll(serviceTypes.map { service -> addService(service) }.toSet())
   }
 
   private fun recordHistoryOfUsages(
@@ -213,5 +290,24 @@ class NonResidentialLocation(
       }
     }
     this.nonResidentialUsages
+  }
+
+  private fun recordHistoryOfServices(
+    newServices: Set<ServiceType>,
+    updatedBy: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    val oldServices = this.services.map { it.serviceType }.toSet()
+
+    newServices.subtract(oldServices).forEach { newAttribute ->
+      addHistory(LocationAttribute.USED_BY_SERVICE, null, newAttribute.description, updatedBy, LocalDateTime.now(clock), linkedTransaction)
+    }
+
+    oldServices.subtract(newServices).forEach { removedAttribute ->
+      addHistory(LocationAttribute.USED_BY_SERVICE, removedAttribute.description, null, updatedBy, LocalDateTime.now(clock), linkedTransaction)
+    }
+
+    this.services
   }
 }

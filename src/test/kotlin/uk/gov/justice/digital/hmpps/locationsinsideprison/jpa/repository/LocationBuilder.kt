@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguratio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
@@ -115,13 +116,16 @@ fun buildCell(
 
 fun buildNonResidentialLocation(
   prisonId: String = "MDI",
+  localName: String,
   pathHierarchy: String,
   locationType: LocationType,
   status: LocationStatus = LocationStatus.ACTIVE,
-  nonResidentialUsageType: NonResidentialUsageType,
+  serviceType: ServiceType,
+  usageTypes: Set<NonResidentialUsageType> = emptySet(),
 ): NonResidentialLocation {
   val nonResidentialLocationJPA = NonResidentialLocation(
     prisonId = prisonId,
+    localName = localName,
     code = pathHierarchy.split("-").last(),
     pathHierarchy = pathHierarchy,
     locationType = locationType,
@@ -132,6 +136,8 @@ fun buildNonResidentialLocation(
     childLocations = mutableListOf(),
     orderWithinParentLocation = 99,
   )
-  nonResidentialLocationJPA.addUsage(nonResidentialUsageType, 15, 1)
+  nonResidentialLocationJPA.addService(serviceType)
+  nonResidentialLocationJPA.addUsage(serviceType.nonResidentialUsageType, 15, 1)
+  usageTypes.forEach { nonResidentialLocationJPA.addUsage(it, 10) }
   return nonResidentialLocationJPA
 }
