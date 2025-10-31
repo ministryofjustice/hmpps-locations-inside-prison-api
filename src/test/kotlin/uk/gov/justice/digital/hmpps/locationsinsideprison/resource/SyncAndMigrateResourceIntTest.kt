@@ -116,6 +116,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     )
     nonRes = repository.save(
       buildNonResidentialLocation(
+        localName = "Visit Room 2",
         prisonId = "ZZGHI",
         pathHierarchy = "B-1-VISIT",
         locationType = LocationType.VISITS,
@@ -545,8 +546,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "servicesUsingLocation": [
                 {
                   "serviceType": "OFFICIAL_VISITS",
-                  "serviceName": "Official visits",
-                  "usageType": "VISIT"
+                  "serviceFamilyType":"OFFICIAL_VISITS"
                 }
               ]
              }

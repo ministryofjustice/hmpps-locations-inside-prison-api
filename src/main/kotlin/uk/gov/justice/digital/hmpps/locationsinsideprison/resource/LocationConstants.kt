@@ -27,9 +27,12 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
+import kotlin.collections.sortedBy
 
 @RestController
 @Validated
@@ -152,6 +155,72 @@ class LocationConstants(
   @ResponseBody
   fun nonResidentialUsageTypeConstants(): Map<String, List<Constant>> = mapOf(
     "nonResidentialUsageTypes" to NonResidentialUsageType.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+  )
+
+  @GetMapping("/service-types")
+  @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Get service type reference data",
+    description = "Requires the READ_LOCATION_REFERENCE_DATA role.",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns location reference data",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the READ_LOCATION_REFERENCE_DATA role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @ResponseBody
+  fun nonResidentialServiceTypeConstants(): Map<String, List<Constant>> = mapOf(
+    "nonResidentialServiceTypes" to ServiceType.entries.sortedBy { it.sequence }
+      .map {
+        Constant(
+          key = it.name,
+          description = it.description,
+          attributes = mapOf(
+            "serviceFamilyType" to it.serviceFamily,
+            "serviceFamilyDescription" to it.serviceFamily.description,
+          ),
+        )
+      },
+  )
+
+  @GetMapping("/service-family-types")
+  @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Get service family type reference data",
+    description = "Requires the READ_LOCATION_REFERENCE_DATA role.",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns residential attribute reference data",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the READ_LOCATION_REFERENCE_DATA role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @ResponseBody
+  fun serviceFamilyAndTypes(): Map<String, List<CompoundConstant>> = mapOf(
+    "serviceFamilyTypes" to ServiceFamilyType.entries.sortedBy { it.sequence }.map { it.toDto() },
   )
 
   @GetMapping("/residential-attribute-type")

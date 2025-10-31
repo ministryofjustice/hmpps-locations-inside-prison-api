@@ -1086,7 +1086,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 "key": "${aCell.getKey()}",
                 "id": "${aCell.id}",
                 "prisonId": "${aCell.prisonId}",
-                "code": "${aCell.getCode()}",
+                "code": "${aCell.getLocationCode()}",
                 "pathHierarchy": "${aCell.getPathHierarchy()}",
                 "capacity": {
                   "maxCapacity": ${aCell.getMaxCapacity()},
@@ -1133,7 +1133,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                 "key": "${aCell.getKey()}",
                 "id": "${aCell.id}",
                 "prisonId": "${aCell.prisonId}",
-                "code": "${aCell.getCode()}",
+                "code": "${aCell.getLocationCode()}",
                 "pathHierarchy": "${aCell.getPathHierarchy()}",
                 "capacity": {
                   "maxCapacity": ${aCell.getMaxCapacity()},

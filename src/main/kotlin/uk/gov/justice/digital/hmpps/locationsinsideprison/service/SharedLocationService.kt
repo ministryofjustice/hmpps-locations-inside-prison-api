@@ -78,7 +78,7 @@ class SharedLocationService(
       throw PermanentlyDeactivatedUpdateNotAllowedException(locationToUpdate.getKey())
     }
 
-    val codeChanged = patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getCode()
+    val codeChanged = patchLocationRequest.code != null && patchLocationRequest.code != locationToUpdate.getLocationCode()
     val oldParent = locationToUpdate.getParent()
     val parentChanged = when {
       patchLocationRequest.removeParent == true ->
@@ -91,7 +91,7 @@ class SharedLocationService(
     }
 
     if (codeChanged || parentChanged) {
-      val newCode = patchLocationRequest.code ?: locationToUpdate.getCode()
+      val newCode = patchLocationRequest.code ?: locationToUpdate.getLocationCode()
 
       val theParent = when {
         patchLocationRequest.removeParent == true -> null

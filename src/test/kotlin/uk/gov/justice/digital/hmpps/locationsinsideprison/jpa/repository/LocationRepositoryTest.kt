@@ -123,7 +123,7 @@ class LocationRepositoryTest : TestBase() {
     assertThat(cell2.getCertifiedNormalAccommodation()).isEqualTo(1)
 
     val landing1Retrieved = repository.findOneByPrisonIdAndPathHierarchy(landing1.prisonId, landing1.getPathHierarchy()) ?: throw Exception("Location not found")
-    cell2.setCode("003")
+    cell2.setLocationCode("003")
     cell2.setParent(landing1Retrieved)
 
     repository.save(landing1Retrieved)
@@ -135,9 +135,9 @@ class LocationRepositoryTest : TestBase() {
 
     val cell3 = repository.findOneByPrisonIdAndPathHierarchy(cell2.prisonId, cell2.getPathHierarchy()) ?: throw Exception("Location not found")
     assertThat(cell3.findTopLevelLocation()).isEqualTo(wing)
-    assertThat(cell3.getParent()?.getCode()).isEqualTo(landing1.getCode())
+    assertThat(cell3.getParent()?.getLocationCode()).isEqualTo(landing1.getLocationCode())
 
-    cell3.getParent()?.getParent()?.setCode("T")
+    cell3.getParent()?.getParent()?.setLocationCode("T")
     repository.save(cell3)
 
     TestTransaction.flagForCommit()

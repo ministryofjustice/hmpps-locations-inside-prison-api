@@ -467,7 +467,7 @@ open class ResidentialLocation(
     val approvedLocationIsPartOfHierarchy = approvedLocation?.let { isInHierarchy(it) } ?: false
     return CellCertificateLocation(
       locationType = locationType,
-      locationCode = getCode(),
+      locationCode = getLocationCode(),
       pathHierarchy = getPathHierarchy(),
       localName = localName?.capitalizeWords(),
       cellMark = if (this is Cell) {
@@ -508,7 +508,7 @@ open class ResidentialLocation(
 
     return CertificationApprovalRequestLocation(
       locationType = locationType,
-      locationCode = getCode(),
+      locationCode = getLocationCode(),
       pathHierarchy = getPathHierarchy(),
       localName = localName?.capitalizeWords(),
       cellMark = if (this is Cell) {
