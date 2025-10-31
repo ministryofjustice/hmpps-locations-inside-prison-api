@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeValue
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
@@ -285,6 +286,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         pathHierarchy = "VISIT",
         locationType = LocationType.VISITS,
         serviceType = ServiceType.OFFICIAL_VISITS,
+        usageTypes = setOf(NonResidentialUsageType.PROPERTY, NonResidentialUsageType.OTHER),
       ),
     )
     adjRoom = repository.save(

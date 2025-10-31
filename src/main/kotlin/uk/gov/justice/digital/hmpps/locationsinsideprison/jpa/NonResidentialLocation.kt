@@ -178,6 +178,10 @@ class NonResidentialLocation(
     val existingUsages = this.nonResidentialUsages.filter { it.usageType in derivedUsages }
     newSetOfUsages.addAll(existingUsages.map { NonResidentialUsageDto(it.usageType, it.capacity, it.sequence) })
 
+    // These are things like PROPERTY and OTHER - we don't want to lose them if they aren't mapped to a service
+    val unmappedUsages = this.nonResidentialUsages.filter { it.usageType !in ServiceType.entries.map { st -> st.nonResidentialUsageType } }
+    newSetOfUsages.addAll(unmappedUsages.map { NonResidentialUsageDto(it.usageType, it.capacity, it.sequence) })
+
     return newSetOfUsages.toSet()
   }
 

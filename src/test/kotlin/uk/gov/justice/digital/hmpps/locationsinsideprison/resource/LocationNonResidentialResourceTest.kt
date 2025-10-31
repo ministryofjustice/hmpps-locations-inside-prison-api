@@ -288,6 +288,16 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                   "usageType": "APPOINTMENT",
                   "capacity": 99,
                   "sequence": 99
+                },
+                {
+                  "usageType": "PROPERTY",
+                  "capacity": 10,
+                  "sequence": 99
+                },
+                {
+                  "usageType": "OTHER",
+                  "capacity": 10,
+                  "sequence": 99
                 }
               ]
             }
@@ -317,7 +327,17 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                      "usageType": "APPOINTMENT",
                      "capacity": 99,
                      "sequence": 99
-                   }
+                   },
+                   {
+                    "usageType": "PROPERTY",
+                    "capacity": 10,
+                    "sequence": 99
+                  },
+                  {
+                    "usageType": "OTHER",
+                    "capacity": 10,
+                    "sequence": 99
+                  }
                  ],
                  "changeHistory": [
                    {
@@ -421,7 +441,18 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "locationType": "VISITS",
               "active": true,
               "key": "MDI-Z-VISIT",
-              "usage": [],
+              "usage": [
+                  {
+                    "usageType": "PROPERTY",
+                    "capacity": 10,
+                    "sequence": 99
+                  },
+                  {
+                    "usageType": "OTHER",
+                    "capacity": 10,
+                    "sequence": 99
+                  }
+              ],
               "servicesUsingLocation": [],
               "internalMovementAllowed": false,
               "changeHistory": [
@@ -492,6 +523,16 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                 {
                   "usageType": "MOVEMENT",
                   "capacity": 99,
+                  "sequence": 99
+                },
+                {
+                  "usageType": "PROPERTY",
+                  "capacity": 10,
+                  "sequence": 99
+                },
+                {
+                  "usageType": "OTHER",
+                  "capacity": 10,
                   "sequence": 99
                 }
               ],
@@ -665,6 +706,16 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                   "usageType": "APPOINTMENT",
                   "capacity": 99,
                   "sequence": 99
+                },
+                {
+                  "usageType": "PROPERTY",
+                  "capacity": 10,
+                  "sequence": 99
+                },
+                {
+                  "usageType": "OTHER",
+                  "capacity": 10,
+                  "sequence": 99
                 }
               ]
             }
@@ -694,7 +745,17 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                      "usageType": "APPOINTMENT",
                      "capacity": 99,
                      "sequence": 99
-                   }
+                   },
+                   {
+                      "usageType": "PROPERTY",
+                      "capacity": 10,
+                      "sequence": 99
+                    },
+                    {
+                      "usageType": "OTHER",
+                      "capacity": 10,
+                      "sequence": 99
+                    }
                  ],
                  "changeHistory": [
                    {
@@ -736,7 +797,18 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "locationType": "VISITS",
               "active": true,
               "key": "MDI-Z-VISIT",
-              "usage": [],
+              "usage": [
+               {
+                  "usageType": "PROPERTY",
+                  "capacity": 10,
+                  "sequence": 99
+                },
+                {
+                  "usageType": "OTHER",
+                  "capacity": 10,
+                  "sequence": 99
+                }
+              ],
               "servicesUsingLocation": []
             }
           """,
@@ -758,7 +830,18 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "locationType": "VISITS",
               "active": true,
               "key": "MDI-Z-VISIT",
-              "usage": [],
+              "usage": [
+                {
+                  "usageType": "PROPERTY",
+                  "capacity": 10,
+                  "sequence": 99
+                },
+                {
+                  "usageType": "OTHER",
+                  "capacity": 10,
+                  "sequence": 99
+                }
+              ],
               "changeHistory": [
                 {
                   "attribute": "Use by service",
@@ -863,6 +946,16 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                         "usageType": "VISIT",
                         "capacity": 15,
                         "sequence": 1
+                      },
+                      {
+                        "usageType": "PROPERTY",
+                        "capacity": 10,
+                        "sequence": 99
+                      },
+                      {
+                        "usageType": "OTHER",
+                        "capacity": 10,
+                        "sequence": 99
                       }
                     ],
                     "servicesUsingLocation": [
