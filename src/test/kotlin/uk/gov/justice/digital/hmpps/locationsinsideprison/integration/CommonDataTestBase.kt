@@ -284,6 +284,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     visitRoom = repository.save(
       buildNonResidentialLocation(
         pathHierarchy = "VISIT",
+        localName = "Visit Room",
         locationType = LocationType.VISITS,
         serviceType = ServiceType.OFFICIAL_VISITS,
         usageTypes = setOf(NonResidentialUsageType.PROPERTY, NonResidentialUsageType.OTHER),
@@ -291,6 +292,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     )
     adjRoom = repository.save(
       buildNonResidentialLocation(
+        localName = "ADJUDICATION ROOM",
         pathHierarchy = "ADJUDICATION",
         locationType = LocationType.ADJUDICATION_ROOM,
         serviceType = ServiceType.HEARING_LOCATION,

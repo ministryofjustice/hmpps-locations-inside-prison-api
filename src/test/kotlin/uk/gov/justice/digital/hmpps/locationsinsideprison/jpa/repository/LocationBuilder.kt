@@ -116,6 +116,7 @@ fun buildCell(
 
 fun buildNonResidentialLocation(
   prisonId: String = "MDI",
+  localName: String,
   pathHierarchy: String,
   locationType: LocationType,
   status: LocationStatus = LocationStatus.ACTIVE,
@@ -124,6 +125,7 @@ fun buildNonResidentialLocation(
 ): NonResidentialLocation {
   val nonResidentialLocationJPA = NonResidentialLocation(
     prisonId = prisonId,
+    localName = localName,
     code = pathHierarchy.split("-").last(),
     pathHierarchy = pathHierarchy,
     locationType = locationType,

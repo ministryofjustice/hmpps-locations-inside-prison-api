@@ -264,10 +264,7 @@ data class PendingChangeDto(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ServiceUsingLocationDto(
   val serviceType: ServiceType,
-  val serviceName: String,
-  val usageType: NonResidentialUsageType,
-  val serviceFamilyType: ServiceFamilyType? = null,
-  val serviceFamilyName: String? = null,
+  val serviceFamilyType: ServiceFamilyType,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

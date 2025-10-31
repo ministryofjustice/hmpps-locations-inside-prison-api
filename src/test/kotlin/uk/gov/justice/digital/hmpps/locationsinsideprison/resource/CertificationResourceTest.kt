@@ -661,7 +661,7 @@ class CertificationResourceTest : CommonDataTestBase() {
           .expectBody(CertificationApprovalRequestDto::class.java)
           .returnResult().responseBody!!.id
 
-        webTestClient.get().uri("/locations/residential-summary/${mWing.prisonId}?parentPathHierarchy=${mWing.getCode()}")
+        webTestClient.get().uri("/locations/residential-summary/${mWing.prisonId}?parentPathHierarchy=${mWing.getLocationCode()}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
