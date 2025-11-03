@@ -19,12 +19,20 @@ class EventPublishAndAuditService(
   fun publishEvent(
     eventType: InternalLocationDomainEventType,
     locationDetail: List<LocationDTO>,
-    auditData: Any? = null,
     source: InformationSource = InformationSource.DPS,
   ) {
     locationDetail.forEach {
       publishEvent(eventType = eventType, locationDetail = it, auditData = it, source = source)
     }
+  }
+
+  fun publishEvent(
+    eventType: InternalLocationDomainEventType,
+    locationDetail: NonResidentialLocationDTO,
+    auditData: Any? = null,
+  ) {
+    publishEvent(event = eventType, location = locationDetail)
+    auditData?.let { auditEvent(eventType.auditType, locationDetail.id.toString(), it) }
   }
 
   fun publishEvent(
@@ -37,15 +45,7 @@ class EventPublishAndAuditService(
       publishEvent(event = eventType, location = it, source = source)
     }
     traverseUp(eventType = InternalLocationDomainEventType.LOCATION_AMENDED, location = locationDetail.parentLocation, source = source)
-
-    auditData?.let {
-      auditEvent(
-        auditType = eventType.auditType,
-        id = locationDetail.id.toString(),
-        auditData = it,
-        source = source,
-      )
-    }
+    auditData?.let { auditEvent(eventType.auditType, locationDetail.id.toString(), it) }
   }
 
   private fun traverseUp(eventType: InternalLocationDomainEventType, location: Location?, source: InformationSource) {
@@ -76,7 +76,6 @@ class EventPublishAndAuditService(
         auditType = eventType.auditType,
         id = location.id.toString(),
         auditData = it,
-        source = InformationSource.NOMIS,
       )
     }
   }
@@ -100,11 +99,28 @@ class EventPublishAndAuditService(
     }
   }
 
+  private fun publishEvent(
+    event: InternalLocationDomainEventType,
+    location: NonResidentialLocationDTO,
+  ) {
+    if (location.status != DerivedLocationStatus.DRAFT) {
+      snsService.publishDomainEvent(
+        eventType = event,
+        description = "${location.localName} ${event.description}",
+        occurredAt = LocalDateTime.now(clock),
+        additionalInformation = AdditionalInformation(
+          id = location.id,
+          key = location.localName,
+          source = InformationSource.DPS,
+        ),
+      )
+    }
+  }
+
   fun auditEvent(
     auditType: AuditType,
     id: String,
     auditData: Any,
-    source: InformationSource = InformationSource.DPS,
   ) {
     auditService.sendMessage(
       auditType = auditType,
@@ -133,7 +149,6 @@ class EventPublishAndAuditService(
         auditType = eventType.auditType,
         id = signedOperationCapacity.prisonId,
         auditData = it,
-        source = InformationSource.DPS,
       )
     }
   }

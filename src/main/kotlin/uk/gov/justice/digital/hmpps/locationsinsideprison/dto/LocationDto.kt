@@ -29,12 +29,13 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
+import kotlin.math.abs
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity as CapacityJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell as CellJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification as CertificationJPA
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
-
 @Schema(description = "Location Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Location(
@@ -544,7 +545,7 @@ data class CreateResidentialLocationRequest(
   val inCellSanitation: Boolean = false,
 ) {
 
-  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false, parentLocation: uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location? = null) = if (isCell()) {
+  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false, parentLocation: LocationJPA? = null) = if (isCell()) {
     val request = this
     CellJPA(
       prisonId = prisonId,
@@ -635,6 +636,83 @@ data class CreateResidentialLocationRequest(
   fun isCell() = locationType == ResidentialLocationType.CELL
 }
 
+@Schema(description = "Request to create or update non-residential location")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class CreateOrUpdateNonResidentialLocationRequest(
+  @param:Schema(description = "Description to display for location", example = "Adj Room", required = true)
+  @field:Size(max = 80, message = "Local name must be less than 81 characters")
+  val localName: String,
+
+  @param:Schema(description = "Services that use this location", required = true)
+  val servicesUsingLocation: Set<ServiceType> = emptySet(),
+) {
+  fun toNewEntity(prisonId: String, code: String, createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction) = NonResidentialLocationJPA(
+    id = null,
+    prisonId = prisonId,
+    code = code,
+    locationType = LocationType.LOCATION,
+    pathHierarchy = code,
+    status = LocationStatus.ACTIVE,
+    localName = localName,
+    createdBy = createdBy,
+    whenCreated = LocalDateTime.now(clock),
+    childLocations = mutableListOf(),
+    internalMovementAllowed = isInternalMovement(serviceTypes = servicesUsingLocation),
+  ).apply {
+    setServices(servicesUsingLocation, this)
+    addHistory(
+      attributeName = LocationAttribute.LOCATION_CREATED,
+      oldValue = null,
+      newValue = getKey(),
+      amendedBy = createdBy,
+      amendedDate = LocalDateTime.now(clock),
+      linkedTransaction = linkedTransaction,
+    )
+  }
+
+  /**
+   * Generates a unique code from the local name by extracting consonants and adding a checksum.
+   * The code is the maximum 8 characters: up to 6 consonants + 2 digit checksum.
+   *
+   * @param prisonId The prison ID to include in the checksum calculation for uniqueness
+   * @return Generated code (max 8 characters)
+   */
+  fun generateCode(prisonId: String): String {
+    // Extract consonants from the localName (uppercase letters only, excluding vowels)
+    val consonants = localName
+      .uppercase()
+      .filter { it.isLetter() && it !in setOf('A', 'E', 'I', 'O', 'U') }
+      .take(6) // Take up to 6 consonants to leave room for 2-digit checksum
+
+    // If no consonants found, use first alphanumeric characters
+    val baseCode = consonants.ifEmpty {
+      localName.filter { it.isLetterOrDigit() }.uppercase().take(6)
+    }
+
+    // Calculate checksum from prisonId + localName to ensure uniqueness within prison
+    val checksum = calculateChecksum(prisonId, localName)
+
+    // Combine base code with checksum, ensuring max 8 characters
+    val maxBaseLength = 6.coerceAtMost(8 - 2) // Leave room for 2-digit checksum
+    return baseCode.take(maxBaseLength) + checksum.toString().padStart(2, '0')
+  }
+
+  /**
+   * Calculates a 2-digit checksum (00-99) from prisonId and localName.
+   * Uses a simple hash-based algorithm for consistency.
+   */
+  private fun calculateChecksum(prisonId: String, localName: String): Int {
+    val combined = "$prisonId:$localName"
+    var hash = 0
+
+    combined.forEach { char ->
+      hash = (hash * 31 + char.code) % 100
+    }
+
+    return abs(hash)
+  }
+}
+
 @Schema(description = "Request to create a non-residential location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateNonResidentialLocationRequest(
@@ -670,9 +748,7 @@ data class CreateNonResidentialLocationRequest(
   val servicesUsingLocation: Set<ServiceType>? = null,
 ) {
 
-  fun isInternalMovement() = servicesUsingLocation?.find { it == ServiceType.INTERNAL_MOVEMENTS } != null
-
-  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location? = null) = NonResidentialLocationJPA(
+  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: LocationJPA? = null) = NonResidentialLocationJPA(
     id = null,
     prisonId = prisonId,
     code = code,
@@ -683,14 +759,10 @@ data class CreateNonResidentialLocationRequest(
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
     childLocations = mutableListOf(),
-    internalMovementAllowed = isInternalMovement(),
+    internalMovementAllowed = servicesUsingLocation?.let { isInternalMovement(serviceTypes = servicesUsingLocation) } ?: false,
   ).apply {
     parentLocation?.let { setParent(it) }
-    servicesUsingLocation?.forEach { serviceType ->
-      val usageType = serviceType.nonResidentialUsageType
-      addUsage(usageType, 99)
-      addService(serviceType)
-    }
+    servicesUsingLocation?.let { setServices(servicesUsingLocation, this) }
     addHistory(
       attributeName = LocationAttribute.LOCATION_CREATED,
       oldValue = null,
@@ -701,6 +773,19 @@ data class CreateNonResidentialLocationRequest(
     )
   }
 }
+
+private fun setServices(
+  serviceTypes: Set<ServiceType>,
+  location: NonResidentialLocationJPA,
+) {
+  serviceTypes.forEach { serviceType ->
+    val usageType = serviceType.nonResidentialUsageType
+    location.addUsage(usageType, 99)
+    location.addService(serviceType)
+  }
+}
+
+fun isInternalMovement(serviceTypes: Set<ServiceType>) = serviceTypes.find { it == ServiceType.INTERNAL_MOVEMENTS } != null
 
 /**
  * Request format temporarily deactivating a location

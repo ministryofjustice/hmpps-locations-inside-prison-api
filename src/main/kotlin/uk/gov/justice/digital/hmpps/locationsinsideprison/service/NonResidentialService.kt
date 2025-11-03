@@ -10,6 +10,7 @@ import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
@@ -46,6 +47,8 @@ class NonResidentialService(
   private val commonLocationService: SharedLocationService,
   private val clock: Clock,
 ) {
+
+  fun getById(id: UUID): NonResidentialLocationDTO? = nonResidentialLocationRepository.findById(id).getOrNull()?.toNonResidentialDto()
 
   fun getByPrisonAndServiceType(
     prisonId: String,
@@ -139,6 +142,26 @@ class NonResidentialService(
   }
 
   @Transactional
+  fun createBasicNonResidentialLocation(prisonId: String, request: CreateOrUpdateNonResidentialLocationRequest): NonResidentialLocationDTO {
+    val code = request.generateCode(prisonId)
+    val linkedTransaction = commonLocationService.createLinkedTransaction(
+      prisonId = prisonId,
+      TransactionType.LOCATION_CREATE_NON_RESI,
+      "Create non-residential location $code in prison $prisonId",
+    )
+
+    val locationToCreate = request.toNewEntity(prisonId = prisonId, code = code, createdBy = commonLocationService.getUsername(), clock = clock, linkedTransaction)
+    val createdLocation = nonResidentialLocationRepository.save(locationToCreate)
+
+    log.info("Non-residential location ${createdLocation.id} created")
+    commonLocationService.trackLocationUpdate(createdLocation, "Created Non-Residential Location")
+
+    return createdLocation.toNonResidentialDto().also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  @Transactional
   fun updateNonResidentialLocation(
     id: UUID,
     patchLocationRequest: PatchNonResidentialLocationRequest,
@@ -156,6 +179,35 @@ class NonResidentialService(
       commonLocationService.trackLocationUpdate(it.location)
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
+  }
+
+  @Transactional
+  fun updateNonResidentialLocation(
+    id: UUID,
+    updateRequest: CreateOrUpdateNonResidentialLocationRequest,
+  ): NonResidentialLocationDTO {
+    val nonResLocation =
+      nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
+
+    val linkedTransaction = commonLocationService.createLinkedTransaction(
+      prisonId = nonResLocation.prisonId,
+      TransactionType.LOCATION_UPDATE_NON_RESI,
+      "Update non-residential location ${nonResLocation.getKey()}",
+    )
+
+    nonResLocation.update(
+      PatchNonResidentialLocationRequest(
+        localName = updateRequest.localName,
+        servicesUsingLocation = updateRequest.servicesUsingLocation,
+      ),
+      commonLocationService.getUsername(),
+      clock,
+      linkedTransaction,
+    )
+
+    commonLocationService.trackLocationUpdate(nonResLocation, "Updated non-residential location")
+    linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    return nonResLocation.toNonResidentialDto()
   }
 
   @Transactional

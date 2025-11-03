@@ -8,6 +8,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.EventPublishAndAuditService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialLocationDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
 abstract class EventBase {
@@ -34,6 +35,17 @@ abstract class EventBase {
       locationDetail = location,
       auditData = location.copy(childLocations = null, parentLocation = null, changeHistory = null),
       source = InformationSource.DPS,
+    )
+  }
+
+  protected fun eventPublishNonResiAndAudit(
+    event: InternalLocationDomainEventType,
+    function: () -> NonResidentialLocationDTO,
+  ) = function().also { location ->
+    eventPublishAndAuditService.publishEvent(
+      eventType = event,
+      locationDetail = location,
+      auditData = location,
     )
   }
 
