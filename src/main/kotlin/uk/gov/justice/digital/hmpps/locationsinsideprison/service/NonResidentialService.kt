@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentia
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
@@ -33,6 +34,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationServic
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.*
+import kotlin.collections.isNotEmpty
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
@@ -183,7 +185,7 @@ class NonResidentialService(
     prisonId: String,
     statuses: List<LocationStatus> = emptyList(),
     serviceType: ServiceType? = null,
-    locationTypes: List<LocationType> = emptyList(),
+    locationTypes: List<NonResidentialLocationType> = emptyList(),
     pageable: Pageable = PageRequest.of(0, 100, Sort.by("localName").ascending()),
   ): NonResidentialSummary {
     val specification = Specification.allOf(
@@ -199,7 +201,7 @@ class NonResidentialService(
           add(filterByStatuses(statuses))
         }
         if (locationTypes.isNotEmpty()) {
-          add(filterByTypes(locationTypes))
+          add(filterByTypes(locationTypes.map { it.baseType }))
         }
       },
     )

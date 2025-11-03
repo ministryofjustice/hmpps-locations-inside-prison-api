@@ -31,7 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidenti
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
@@ -453,9 +453,9 @@ class LocationNonResidentialResource(
     @Schema(description = "Filter by given types", example = "[ADJUDICATION_ROOM,VIDEO_LINK]", required = false)
     @Parameter(
       description = "Filter by given types",
-      example = "[[ADJUDICATION_ROOM,VIDEO_LINK]",
+      example = "[ADJUDICATION_ROOM,VIDEO_LINK]",
       array = ArraySchema(
-        schema = Schema(implementation = LocationType::class),
+        schema = Schema(implementation = NonResidentialLocationType::class),
         arraySchema = Schema(
           requiredMode = Schema.RequiredMode.NOT_REQUIRED,
           nullable = true,
@@ -464,7 +464,7 @@ class LocationNonResidentialResource(
       ),
     )
     @RequestParam(required = false)
-    locationType: List<LocationType>? = null,
+    locationType: List<NonResidentialLocationType>? = null,
     @Schema(description = "Service Type", example = "APPOINTMENT", required = false)
     @Parameter(description = "Filter by service type", example = "APPOINTMENT", required = false)
     serviceType: ServiceType? = null,
