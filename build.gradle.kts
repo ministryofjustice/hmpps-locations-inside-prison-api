@@ -20,7 +20,7 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-webflux")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springframework.boot:spring-boot-starter-validation")
-  implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.5.8")
+  implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.6.0")
   implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:5.6.1")
   implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.21.0")
 
