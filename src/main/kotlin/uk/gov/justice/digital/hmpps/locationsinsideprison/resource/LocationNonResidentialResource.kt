@@ -233,9 +233,7 @@ class LocationNonResidentialResource(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
-    @RequestBody
-    @Validated
-    updateRequest: CreateOrUpdateNonResidentialLocationRequest,
+    @RequestBody @Validated updateRequest: CreateOrUpdateNonResidentialLocationRequest,
   ): NonResidentialLocationDTO = eventPublishNonResiAndAudit(
     InternalLocationDomainEventType.LOCATION_AMENDED,
   ) {

@@ -106,11 +106,11 @@ class EventPublishAndAuditService(
     if (location.status != DerivedLocationStatus.DRAFT) {
       snsService.publishDomainEvent(
         eventType = event,
-        description = "${location.localName} ${event.description}",
+        description = "[${location.getKey()}] : ${location.localName} ${event.description}",
         occurredAt = LocalDateTime.now(clock),
         additionalInformation = AdditionalInformation(
           id = location.id,
-          key = location.localName,
+          key = location.getKey(),
           source = InformationSource.DPS,
         ),
       )

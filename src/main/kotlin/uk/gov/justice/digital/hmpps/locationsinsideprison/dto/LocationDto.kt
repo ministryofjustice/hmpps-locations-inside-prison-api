@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
@@ -29,7 +30,6 @@ import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
-import kotlin.math.abs
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity as CapacityJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell as CellJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification as CertificationJPA
@@ -639,8 +639,9 @@ data class CreateResidentialLocationRequest(
 @Schema(description = "Request to create or update non-residential location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateOrUpdateNonResidentialLocationRequest(
-  @param:Schema(description = "Description to display for location", example = "Adj Room", required = true)
-  @field:Size(max = 80, message = "Local name must be less than 81 characters")
+  @param:Schema(description = "Description of the non-residential locations", example = "Adj Room", required = true)
+  @field:Size(min = 1, max = 80, message = "Local name must be between 1 and 80 characters")
+  @field:NotEmpty(message = "Local name cannot be empty")
   val localName: String,
 
   @param:Schema(description = "Services that use this location", required = true)
@@ -668,48 +669,6 @@ data class CreateOrUpdateNonResidentialLocationRequest(
       amendedDate = LocalDateTime.now(clock),
       linkedTransaction = linkedTransaction,
     )
-  }
-
-  /**
-   * Generates a unique code from the local name by extracting consonants and adding a checksum.
-   * The code is the maximum 8 characters: up to 6 consonants + 2 digit checksum.
-   *
-   * @param prisonId The prison ID to include in the checksum calculation for uniqueness
-   * @return Generated code (max 8 characters)
-   */
-  fun generateCode(prisonId: String): String {
-    // Extract consonants from the localName (uppercase letters only, excluding vowels)
-    val consonants = localName
-      .uppercase()
-      .filter { it.isLetter() && it !in setOf('A', 'E', 'I', 'O', 'U') }
-      .take(6) // Take up to 6 consonants to leave room for 2-digit checksum
-
-    // If no consonants found, use first alphanumeric characters
-    val baseCode = consonants.ifEmpty {
-      localName.filter { it.isLetterOrDigit() }.uppercase().take(6)
-    }
-
-    // Calculate checksum from prisonId + localName to ensure uniqueness within prison
-    val checksum = calculateChecksum(prisonId, localName)
-
-    // Combine base code with checksum, ensuring max 8 characters
-    val maxBaseLength = 6.coerceAtMost(8 - 2) // Leave room for 2-digit checksum
-    return baseCode.take(maxBaseLength) + checksum.toString().padStart(2, '0')
-  }
-
-  /**
-   * Calculates a 2-digit checksum (00-99) from prisonId and localName.
-   * Uses a simple hash-based algorithm for consistency.
-   */
-  private fun calculateChecksum(prisonId: String, localName: String): Int {
-    val combined = "$prisonId:$localName"
-    var hash = 0
-
-    combined.forEach { char ->
-      hash = (hash * 31 + char.code) % 100
-    }
-
-    return abs(hash)
   }
 }
 

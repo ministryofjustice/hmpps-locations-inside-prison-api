@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.generateNonResidentialCode
 import java.time.LocalDateTime
 
 fun buildResidentialLocation(
@@ -117,17 +118,18 @@ fun buildCell(
 fun buildNonResidentialLocation(
   prisonId: String = "MDI",
   localName: String,
-  pathHierarchy: String,
-  locationType: LocationType,
+  pathHierarchy: String? = null,
+  locationType: LocationType = LocationType.LOCATION,
   status: LocationStatus = LocationStatus.ACTIVE,
   serviceType: ServiceType,
   usageTypes: Set<NonResidentialUsageType> = emptySet(),
 ): NonResidentialLocation {
+  val code = pathHierarchy?.split("-")?.last() ?: generateNonResidentialCode(prisonId, localName)
   val nonResidentialLocationJPA = NonResidentialLocation(
     prisonId = prisonId,
     localName = localName,
-    code = pathHierarchy.split("-").last(),
-    pathHierarchy = pathHierarchy,
+    code = code,
+    pathHierarchy = code,
     locationType = locationType,
     status = status,
     createdBy = "DIFFERENT_USER",

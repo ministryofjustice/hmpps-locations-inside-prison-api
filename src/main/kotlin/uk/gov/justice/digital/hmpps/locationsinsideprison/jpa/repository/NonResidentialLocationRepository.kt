@@ -30,4 +30,9 @@ interface NonResidentialLocationRepository :
 
   @Query("select nrl from NonResidentialLocation nrl join fetch nrl.services u where nrl.prisonId = :prisonId")
   fun findAllByPrisonIdWithNonResidentialServices(prisonId: String): List<NonResidentialLocation>
+
+  @Query("select nrl from NonResidentialLocation nrl where nrl.prisonId = :prisonId and lower(nrl.localName) = lower(:localName)")
+  fun findAllByPrisonIdAndLocalName(prisonId: String, localName: String): List<NonResidentialLocation>
+
+  fun findOneByPrisonIdAndPathHierarchy(prisonId: String, pathHierarchy: String): NonResidentialLocation?
 }
