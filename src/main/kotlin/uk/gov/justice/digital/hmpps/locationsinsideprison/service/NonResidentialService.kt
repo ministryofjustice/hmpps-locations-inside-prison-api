@@ -10,6 +10,7 @@ import org.springframework.data.jpa.domain.Specification
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
@@ -29,6 +30,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filt
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByStatuses
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByTypes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateNonResidentialLocalNameInPrisonException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService.Companion.log
 import java.time.Clock
@@ -36,6 +38,8 @@ import java.time.LocalDateTime
 import java.util.*
 import kotlin.collections.isNotEmpty
 import kotlin.jvm.optionals.getOrNull
+import kotlin.math.abs
+import kotlin.math.pow
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
 @Service
@@ -46,6 +50,8 @@ class NonResidentialService(
   private val commonLocationService: SharedLocationService,
   private val clock: Clock,
 ) {
+
+  fun getById(id: UUID): NonResidentialLocationDTO? = nonResidentialLocationRepository.findById(id).getOrNull()?.toNonResidentialDto()
 
   fun getByPrisonAndServiceType(
     prisonId: String,
@@ -105,6 +111,97 @@ class NonResidentialService(
       filteredResults.sortedBy { it.localName }
     } else {
       filteredResults
+    }
+  }
+
+  @Transactional
+  fun createBasicNonResidentialLocation(prisonId: String, request: CreateOrUpdateNonResidentialLocationRequest): NonResidentialLocationDTO {
+    validateLocalNameNotDuplicated(prisonId, request.localName)
+
+    val code = generateUniqueNonResidentialCode(prisonId, request.localName)
+
+    val linkedTransaction = commonLocationService.createLinkedTransaction(
+      prisonId = prisonId,
+      TransactionType.LOCATION_CREATE_NON_RESI,
+      "Create non-residential location $code in prison $prisonId",
+    )
+
+    val locationToCreate = request.toNewEntity(prisonId = prisonId, code = code, createdBy = commonLocationService.getUsername(), clock = clock, linkedTransaction)
+    val createdLocation = nonResidentialLocationRepository.save(locationToCreate)
+
+    log.info("Non-residential location ${createdLocation.id} created")
+    commonLocationService.trackLocationUpdate(createdLocation, "Created Non-Residential Location")
+
+    return createdLocation.toNonResidentialDto().also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  private fun generateUniqueNonResidentialCode(prisonId: String, localName: String): String {
+    var checksumDigits = 2
+    var code = generateNonResidentialCode(
+      prisonId = prisonId,
+      localName = localName,
+      checksumDigits = checksumDigits,
+      maxSize = 6 + checksumDigits,
+    )
+
+    while (nonResidentialLocationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code) != null) {
+      checksumDigits++
+      if (checksumDigits > 6) {
+        throw RuntimeException("Unable to generate unique code for non-residential location $localName in prison $prisonId")
+      }
+      code = generateNonResidentialCode(
+        prisonId = prisonId,
+        localName = localName,
+        checksumDigits = checksumDigits,
+        maxSize = 6 + checksumDigits,
+      )
+    }
+
+    return code
+  }
+
+  @Transactional
+  fun updateNonResidentialLocation(
+    id: UUID,
+    updateRequest: CreateOrUpdateNonResidentialLocationRequest,
+  ): NonResidentialLocationDTO {
+    val nonResLocation =
+      nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
+
+    validateLocalNameNotDuplicated(nonResLocation.prisonId, updateRequest.localName, nonResLocation.id!!)
+
+    val linkedTransaction = commonLocationService.createLinkedTransaction(
+      prisonId = nonResLocation.prisonId,
+      TransactionType.LOCATION_UPDATE_NON_RESI,
+      "Update non-residential location ${nonResLocation.getKey()}",
+    )
+
+    nonResLocation.update(
+      PatchNonResidentialLocationRequest(
+        localName = updateRequest.localName,
+        servicesUsingLocation = updateRequest.servicesUsingLocation,
+      ),
+      commonLocationService.getUsername(),
+      clock,
+      linkedTransaction,
+    )
+
+    commonLocationService.trackLocationUpdate(nonResLocation, "Updated non-residential location")
+    linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    return nonResLocation.toNonResidentialDto()
+  }
+
+  private fun validateLocalNameNotDuplicated(prisonId: String, localName: String) {
+    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName).any()) {
+      throw DuplicateNonResidentialLocalNameInPrisonException(prisonId = prisonId, localName = localName)
+    }
+  }
+
+  private fun validateLocalNameNotDuplicated(prisonId: String, localName: String, locationId: UUID) {
+    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName).any { it.id != locationId }) {
+      throw DuplicateNonResidentialLocalNameInPrisonException(prisonId = prisonId, localName = localName)
     }
   }
 
@@ -260,9 +357,6 @@ data class NonResidentialLocationDTO(
   @param:Schema(description = "Status of the location", example = "ACTIVE", required = true)
   val status: DerivedLocationStatus,
 
-  @param:Schema(description = "Indicates the location is enabled", example = "true", required = true, deprecated = true)
-  val active: Boolean = true,
-
   @param:Schema(description = "Date the location was deactivated", example = "2023-01-23T12:23:00", required = false)
   val deactivatedDate: LocalDateTime? = null,
 
@@ -288,5 +382,55 @@ data class NonResidentialLocationDTO(
 
   @param:Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
   val parentId: UUID?,
+) {
+  @Schema(description = "Key for a location", example = "MDI-ADJU", required = true)
+  fun getKey(): String = "$prisonId-$pathHierarchy"
+}
 
-)
+/**
+ * Generates a unique code from the local name by extracting consonants and adding a checksum.
+ * The code is the maximum 8 characters: up to 6 consonants + 2 digit checksum by default
+ *
+ * @param prisonId The prison ID to include in the checksum calculation for uniqueness
+ * @return Generated code (max 8 characters)
+ */
+fun generateNonResidentialCode(
+  prisonId: String,
+  localName: String,
+  numberOfConsonants: Int = 6,
+  checksumDigits: Int = 2,
+  maxSize: Int = 8,
+): String {
+  // Extract consonants from the localName (uppercase letters only, excluding vowels)
+  val consonants = localName
+    .uppercase()
+    .filter { it.isLetter() && it !in setOf('A', 'E', 'I', 'O', 'U') }
+    .take(numberOfConsonants) // Take up to `numberOfConsonants` consonants to leave room for `checksumDigits` digit checksum
+
+  // If no consonants found, use first alphanumeric characters
+  val baseCode = consonants.ifEmpty {
+    localName.filter { it.isLetterOrDigit() }.uppercase().take(numberOfConsonants)
+  }
+
+  // Calculate checksum from prisonId + localName to ensure uniqueness within prison
+  val checksum = calculateChecksum(prisonId, localName, checksumDigits)
+
+  // Combine base code with checksum, ensuring max 8 characters
+  val maxBaseLength = numberOfConsonants.coerceAtMost(maxSize - checksumDigits) // Leave room for `checksumDigits` checksum
+  return baseCode.take(maxBaseLength) + checksum.toString().padStart(checksumDigits, '0')
+}
+
+/**
+ * Calculates a 2-digit checksum (00-99) from prisonId and localName.
+ * Uses a simple hash-based algorithm for consistency.
+ */
+private fun calculateChecksum(prisonId: String, localName: String, checksumDigits: Int): Int {
+  val combined = "$prisonId:$localName"
+  var hash = 0
+
+  combined.forEach { char ->
+    hash = (hash * 31 + char.code) % 10.0.pow(checksumDigits).toInt()
+  }
+
+  return abs(hash)
+}

@@ -118,7 +118,6 @@ class NonResidentialLocation(
       prisonId = prisonId,
       parentId = getParent()?.id,
       level = getLevel(),
-      active = isActiveAndAllParentsActive(),
       permanentlyInactive = isPermanentlyDeactivated(),
       deactivatedDate = deactivatedLocation?.deactivatedDate,
       deactivatedReason = deactivatedLocation?.deactivatedReason,

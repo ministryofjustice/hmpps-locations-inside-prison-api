@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
@@ -32,9 +33,9 @@ import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity as CapacityJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell as CellJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification as CertificationJPA
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
-
 @Schema(description = "Location Information")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Location(
@@ -544,7 +545,7 @@ data class CreateResidentialLocationRequest(
   val inCellSanitation: Boolean = false,
 ) {
 
-  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false, parentLocation: uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location? = null) = if (isCell()) {
+  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false, parentLocation: LocationJPA? = null) = if (isCell()) {
     val request = this
     CellJPA(
       prisonId = prisonId,
@@ -635,6 +636,42 @@ data class CreateResidentialLocationRequest(
   fun isCell() = locationType == ResidentialLocationType.CELL
 }
 
+@Schema(description = "Request to create or update non-residential location")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class CreateOrUpdateNonResidentialLocationRequest(
+  @param:Schema(description = "Description of the non-residential locations", example = "Adj Room", required = true)
+  @field:Size(min = 1, max = 80, message = "Local name must be between 1 and 80 characters")
+  @field:NotEmpty(message = "Local name cannot be empty")
+  val localName: String,
+
+  @param:Schema(description = "Services that use this location", required = true)
+  val servicesUsingLocation: Set<ServiceType> = emptySet(),
+) {
+  fun toNewEntity(prisonId: String, code: String, createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction) = NonResidentialLocationJPA(
+    id = null,
+    prisonId = prisonId,
+    code = code,
+    locationType = LocationType.LOCATION,
+    pathHierarchy = code,
+    status = LocationStatus.ACTIVE,
+    localName = localName,
+    createdBy = createdBy,
+    whenCreated = LocalDateTime.now(clock),
+    childLocations = mutableListOf(),
+    internalMovementAllowed = isInternalMovement(serviceTypes = servicesUsingLocation),
+  ).apply {
+    setServices(servicesUsingLocation, this)
+    addHistory(
+      attributeName = LocationAttribute.LOCATION_CREATED,
+      oldValue = null,
+      newValue = getKey(),
+      amendedBy = createdBy,
+      amendedDate = LocalDateTime.now(clock),
+      linkedTransaction = linkedTransaction,
+    )
+  }
+}
+
 @Schema(description = "Request to create a non-residential location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateNonResidentialLocationRequest(
@@ -670,9 +707,7 @@ data class CreateNonResidentialLocationRequest(
   val servicesUsingLocation: Set<ServiceType>? = null,
 ) {
 
-  fun isInternalMovement() = servicesUsingLocation?.find { it == ServiceType.INTERNAL_MOVEMENTS } != null
-
-  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location? = null) = NonResidentialLocationJPA(
+  fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: LocationJPA? = null) = NonResidentialLocationJPA(
     id = null,
     prisonId = prisonId,
     code = code,
@@ -683,14 +718,10 @@ data class CreateNonResidentialLocationRequest(
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
     childLocations = mutableListOf(),
-    internalMovementAllowed = isInternalMovement(),
+    internalMovementAllowed = servicesUsingLocation?.let { isInternalMovement(serviceTypes = servicesUsingLocation) } ?: false,
   ).apply {
     parentLocation?.let { setParent(it) }
-    servicesUsingLocation?.forEach { serviceType ->
-      val usageType = serviceType.nonResidentialUsageType
-      addUsage(usageType, 99)
-      addService(serviceType)
-    }
+    servicesUsingLocation?.let { setServices(servicesUsingLocation, this) }
     addHistory(
       attributeName = LocationAttribute.LOCATION_CREATED,
       oldValue = null,
@@ -701,6 +732,19 @@ data class CreateNonResidentialLocationRequest(
     )
   }
 }
+
+private fun setServices(
+  serviceTypes: Set<ServiceType>,
+  location: NonResidentialLocationJPA,
+) {
+  serviceTypes.forEach { serviceType ->
+    val usageType = serviceType.nonResidentialUsageType
+    location.addUsage(usageType, 99)
+    location.addService(serviceType)
+  }
+}
+
+fun isInternalMovement(serviceTypes: Set<ServiceType>) = serviceTypes.find { it == ServiceType.INTERNAL_MOVEMENTS } != null
 
 /**
  * Request format temporarily deactivating a location

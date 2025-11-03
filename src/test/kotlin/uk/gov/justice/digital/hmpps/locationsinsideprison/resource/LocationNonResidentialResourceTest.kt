@@ -1,21 +1,474 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.generateNonResidentialCode
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationNonResidentialResourceTest : CommonDataTestBase() {
+
+  @DisplayName("POST /locations/non-residential/{prisonId}")
+  @Nested
+  inner class CreateSimpleNonResidentialLocationTest {
+
+    lateinit var classroom1: NonResidentialLocation
+
+    @BeforeEach
+    fun setUp() {
+      classroom1 = repository.save(
+        buildNonResidentialLocation(
+          localName = "Classroom One",
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+        ),
+      )
+    }
+    var createReq = CreateOrUpdateNonResidentialLocationRequest(
+      localName = "Adjudication Room",
+      servicesUsingLocation = setOf(ServiceType.HEARING_LOCATION, ServiceType.INTERNAL_MOVEMENTS),
+    )
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createReq))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createReq))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createReq))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.post().uri("/locations/non-residential/MDIl")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"localName": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `duplicate location is rejected`() {
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createReq.copy(localName = classroom1.localName!!)))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can create details of a location`() {
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createReq.copy(localName = "Visit Room 2")))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "MDI",
+              "key": "MDI-VSTRM50",
+              "localName": "Visit Room 2",
+              "code": "VSTRM50",
+              "pathHierarchy": "VSTRM50",
+              "locationType": "LOCATION",
+              "permanentlyInactive": false,
+              "usedByGroupedServices": [
+                "ADJUDICATIONS",
+                "INTERNAL_MOVEMENTS"
+              ],
+              "usedByServices": [
+                "HEARING_LOCATION",
+                "INTERNAL_MOVEMENTS"
+              ],
+              "status": "ACTIVE",
+              "level": 1
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        val newKey = "MDI-${generateNonResidentialCode("MDI", "Visit Room 2")}"
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.created" to newKey,
+          )
+        }
+      }
+    }
+  }
+
+  @DisplayName("PUT /locations/non-residential/{id}")
+  @Nested
+  inner class UpdateNonResidentialLocationTest {
+
+    lateinit var classroom2: NonResidentialLocation
+
+    @BeforeEach
+    fun setUp() {
+      classroom2 = repository.save(
+        buildNonResidentialLocation(
+          localName = "Classroom Two",
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+        ),
+      )
+    }
+
+    var updateReq = CreateOrUpdateNonResidentialLocationRequest(
+      localName = "Visit Room",
+      servicesUsingLocation = setOf(ServiceType.OFFICIAL_VISITS),
+    )
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(updateReq))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(updateReq))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with right role, wrong scope`() {
+        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(updateReq))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"localName": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `Duplicate local name is rejected`() {
+        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(localName = "Adjudication Room", servicesUsingLocation = setOf(ServiceType.HEARING_LOCATION)))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `local name can be reused`() {
+        // update classroom 2 to classroom 3
+        webTestClient.put().uri("/locations/non-residential/${classroom2.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(localName = "Classroom Three"))
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(updateReq.copy(localName = classroom2.localName!!)))
+          .exchange()
+          .expectStatus().isCreated
+
+        val newKey = "MDI-${generateNonResidentialCode("MDI", classroom2.localName!!, checksumDigits = 3, maxSize = 9)}"
+        getDomainEvents(2).let {
+          assertThat(it).hasSize(2)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to classroom2.getKey(),
+            "location.inside.prison.created" to newKey,
+          )
+        }
+      }
+
+      @Test
+      fun `can update details of the local name of a non-residential location`() {
+        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              updateReq.copy(localName = "Visit Room 2"),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+        {
+          "prisonId": "MDI",
+          "localName": "Visit Room 2",
+          "code": "VISIT",
+          "pathHierarchy": "Z-VISIT",
+          "locationType": "VISITS",
+          "permanentlyInactive": false,
+          "usedByGroupedServices": [
+            "OFFICIAL_VISITS"
+          ],
+          "usedByServices": [
+            "OFFICIAL_VISITS"
+          ],
+          "status": "ACTIVE",
+          "level": 2,
+          "key": "MDI-Z-VISIT"
+        }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to visitRoom.getKey(),
+          )
+        }
+
+        webTestClient.get().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+            {
+              "prisonId": "MDI",
+              "localName": "Visit Room 2",
+              "code": "VISIT",
+              "pathHierarchy": "Z-VISIT",
+              "locationType": "VISITS",
+              "permanentlyInactive": false,
+              "usedByGroupedServices": [
+                "OFFICIAL_VISITS"
+              ],
+              "usedByServices": [
+                "OFFICIAL_VISITS"
+              ],
+              "status": "ACTIVE",
+              "level": 2,
+              "key": "MDI-Z-VISIT"
+            }
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can remove details of a locations of used by service`() {
+        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(updateReq.copy(servicesUsingLocation = emptySet())))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            {
+              "prisonId": "MDI",
+              "localName": "Visit Room",
+              "code": "VISIT",
+              "pathHierarchy": "Z-VISIT",
+              "locationType": "VISITS",
+              "permanentlyInactive": false,
+              "usedByGroupedServices": [],
+              "usedByServices": [],
+              "status": "ACTIVE",
+              "level": 2,
+              "key": "MDI-Z-VISIT"
+            }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to visitRoom.getKey(),
+          )
+        }
+
+        webTestClient.get().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            {
+              "prisonId": "MDI",
+              "localName": "Visit Room",
+              "code": "VISIT",
+              "pathHierarchy": "Z-VISIT",
+              "locationType": "VISITS",
+              "permanentlyInactive": false,
+              "usedByGroupedServices": [],
+              "usedByServices": [],
+              "status": "ACTIVE",
+              "level": 2,
+              "key": "MDI-Z-VISIT"
+            } 
+        """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can set internal movement using service type`() {
+        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(updateReq.copy(servicesUsingLocation = setOf(ServiceType.INTERNAL_MOVEMENTS))))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+          {
+            "prisonId": "MDI",
+            "localName": "Visit Room",
+            "code": "VISIT",
+            "pathHierarchy": "Z-VISIT",
+            "locationType": "VISITS",
+            "permanentlyInactive": false,
+            "usedByGroupedServices": [
+              "INTERNAL_MOVEMENTS"
+            ],
+            "usedByServices": [
+              "INTERNAL_MOVEMENTS"
+            ],
+            "status": "ACTIVE",
+            "level": 2,
+            "key": "MDI-Z-VISIT"
+          }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to visitRoom.getKey(),
+          )
+        }
+
+        webTestClient.get().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+               {
+                "prisonId": "MDI",
+                "localName": "Visit Room",
+                "code": "VISIT",
+                "pathHierarchy": "Z-VISIT",
+                "locationType": "VISITS",
+                "permanentlyInactive": false,
+                "usedByGroupedServices": [
+                  "INTERNAL_MOVEMENTS"
+                ],
+                "usedByServices": [
+                  "INTERNAL_MOVEMENTS"
+                ],
+                "status": "ACTIVE",
+                "level": 2,
+                "key": "MDI-Z-VISIT"
+              }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+    }
+  }
 
   @DisplayName("POST /locations/non-residential")
   @Nested

@@ -36,4 +36,5 @@ enum class ErrorCode(val errorCode: Int) {
   LocationCannotBeUnlockedWhenNotLocked(errorCode = 127),
   SignedOpCapCannotChangedWithoutApproval(128),
   ApprovalRequestAtWrongLevel(errorCode = 129),
+  DuplicateNonResidentialLocalNameInSamePrison(130),
 }
