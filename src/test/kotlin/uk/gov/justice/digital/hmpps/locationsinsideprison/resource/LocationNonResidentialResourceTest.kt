@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLoca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.generateNonResidentialCode
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
@@ -140,10 +141,12 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
+        val newKey = "MDI-${generateNonResidentialCode("MDI", "Visit Room 2")}"
+
         getDomainEvents(1).let {
           assertThat(it).hasSize(1)
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.created" to "MDI-VSTRM50",
+            "location.inside.prison.created" to newKey,
           )
         }
       }
@@ -253,6 +256,15 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           .bodyValue(jsonString(updateReq.copy(localName = classroom2.localName!!)))
           .exchange()
           .expectStatus().isCreated
+
+        val newKey = "MDI-${generateNonResidentialCode("MDI", classroom2.localName!!, checksumDigits = 3, maxSize = 9)}"
+        getDomainEvents(2).let {
+          assertThat(it).hasSize(2)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to classroom2.getKey(),
+            "location.inside.prison.created" to newKey,
+          )
+        }
       }
 
       @Test
@@ -290,6 +302,13 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         """,
             JsonCompareMode.LENIENT,
           )
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to visitRoom.getKey(),
+          )
+        }
 
         webTestClient.get().uri("/locations/non-residential/${visitRoom.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
@@ -346,6 +365,13 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         """,
             JsonCompareMode.LENIENT,
           )
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to visitRoom.getKey(),
+          )
+        }
 
         webTestClient.get().uri("/locations/non-residential/${visitRoom.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
@@ -404,6 +430,13 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         """,
             JsonCompareMode.LENIENT,
           )
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to visitRoom.getKey(),
+          )
+        }
 
         webTestClient.get().uri("/locations/non-residential/${visitRoom.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
