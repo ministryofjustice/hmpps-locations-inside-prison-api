@@ -20,7 +20,7 @@ enum class SpecialistCellType(
   ),
   CSU("Care and separation cell", sequence = 3, affectsCapacity = true),
   CAT_A("Cat A cell", sequence = 4),
-  CONSTANT_SUPERVISION("Constant supervision cell", sequence = 5),
+  CONSTANT_SUPERVISION("Constant supervision cell", sequence = 5, affectsCapacity = true),
   DRY("Dry cell", sequence = 6, affectsCapacity = true),
   ESCAPE_LIST("Escape list cell", sequence = 7),
   ISOLATION_DISEASES("Isolation cell for communicable diseases", sequence = 8),
