@@ -1249,7 +1249,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "key": "CONSTANT_SUPERVISION",
                   "description": "Constant supervision cell",
                   "attributes": {
-                    "affectsCapacity": false
+                    "affectsCapacity": true
                   }
                 },
                 {

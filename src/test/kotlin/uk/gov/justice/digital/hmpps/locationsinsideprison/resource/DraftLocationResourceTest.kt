@@ -190,7 +190,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               createCellInitialisationRequest(
                 workingCap = 0,
                 cna = 0,
-                specialistCellTypes = setOf(SpecialistCellType.CONSTANT_SUPERVISION),
+                specialistCellTypes = setOf(SpecialistCellType.ESCAPE_LIST),
               ),
             )
             .exchange()
