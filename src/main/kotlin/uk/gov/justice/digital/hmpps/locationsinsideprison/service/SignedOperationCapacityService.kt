@@ -38,7 +38,7 @@ class SignedOperationCapacityService(
   @Transactional
   fun saveSignedOperationalCapacity(request: SignedOperationCapacityValidRequest): SignOpCapResult {
     val prisonConfiguration = prisonConfigurationService.getPrisonConfiguration(request.prisonId)
-    if (prisonConfiguration.certificationApprovalRequired == ResidentialStatus.ACTIVE) {
+    if (prisonConfiguration.certificationApprovalRequired == ServiceStatus.ACTIVE) {
       throw SignedOpCapCannotChangedWithoutApprovalException(prisonConfiguration.prisonId)
     }
 

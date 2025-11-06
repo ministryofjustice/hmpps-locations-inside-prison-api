@@ -30,4 +30,9 @@ class ActivePrisonService(
   fun setResiLocationServiceActive(prisonId: String, resiLocationServiceActive: Boolean) {
     getPrisonConfiguration(prisonId)?.resiLocationServiceActive = resiLocationServiceActive
   }
+
+  @CacheEvict(CacheConfiguration.ACTIVE_PRISONS_CACHE_NAME)
+  fun setNonResiServiceActive(prisonId: String, nonResiServiceActive: Boolean) {
+    getPrisonConfiguration(prisonId)?.nonResiServiceActive = nonResiServiceActive
+  }
 }

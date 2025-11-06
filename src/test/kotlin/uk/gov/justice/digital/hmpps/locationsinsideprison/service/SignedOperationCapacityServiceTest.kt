@@ -41,9 +41,10 @@ class SignedOperationCapacityServiceTest {
     whenever(prisonConfigurationService.getPrisonConfiguration(any())).thenReturn(
       PrisonConfigurationDto(
         prisonId = "MDI",
-        resiLocationServiceActive = ResidentialStatus.ACTIVE,
-        includeSegregationInRollCount = ResidentialStatus.INACTIVE,
-        certificationApprovalRequired = ResidentialStatus.INACTIVE,
+        resiLocationServiceActive = ServiceStatus.ACTIVE,
+        includeSegregationInRollCount = ServiceStatus.INACTIVE,
+        certificationApprovalRequired = ServiceStatus.INACTIVE,
+        nonResiServiceActive = ServiceStatus.INACTIVE,
       ),
     )
   }
