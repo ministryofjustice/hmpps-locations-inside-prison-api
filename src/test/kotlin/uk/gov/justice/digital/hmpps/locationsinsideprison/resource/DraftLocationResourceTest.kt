@@ -759,38 +759,38 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       }
     }
   }
-
-  private fun createCellInitialisationRequest(
-    prisonId: String = "MDI",
-    startingCellNumber: Int = 1,
-    numberOfCells: Int = 1,
-    aboveLevelCode: String = "J",
-    parentLocation: UUID? = null,
-    workingCap: Int = 1,
-    cna: Int = 1,
-    specialistCellTypes: Set<SpecialistCellType> = setOf(SpecialistCellType.ACCESSIBLE_CELL),
-    locationType: ResidentialStructuralType = ResidentialStructuralType.LANDING,
-    accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
-  ) = CellInitialisationRequest(
-    prisonId = prisonId,
-    parentLocation = parentLocation,
-    newLevelAboveCells = LevelAboveCells(
-      levelCode = aboveLevelCode,
-      locationType = locationType,
-      levelLocalName = "$locationType $aboveLevelCode",
-    ),
-    accommodationType = accommodationType,
-    cellsUsedFor = setOf(UsedForType.STANDARD_ACCOMMODATION),
-    cells = (1..numberOfCells).map { index ->
-      NewCellRequest(
-        code = "%03d".format(index - 1 + startingCellNumber),
-        cellMark = "$aboveLevelCode-%03d".format(index - 1 + startingCellNumber),
-        maxCapacity = 1,
-        workingCapacity = workingCap,
-        certifiedNormalAccommodation = cna,
-        specialistCellTypes = specialistCellTypes,
-        inCellSanitation = true,
-      )
-    }.toSet(),
-  )
 }
+
+fun createCellInitialisationRequest(
+  prisonId: String = "MDI",
+  startingCellNumber: Int = 1,
+  numberOfCells: Int = 1,
+  aboveLevelCode: String = "J",
+  parentLocation: UUID? = null,
+  workingCap: Int = 1,
+  cna: Int = 1,
+  specialistCellTypes: Set<SpecialistCellType> = setOf(SpecialistCellType.ACCESSIBLE_CELL),
+  locationType: ResidentialStructuralType = ResidentialStructuralType.LANDING,
+  accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+) = CellInitialisationRequest(
+  prisonId = prisonId,
+  parentLocation = parentLocation,
+  newLevelAboveCells = LevelAboveCells(
+    levelCode = aboveLevelCode,
+    locationType = locationType,
+    levelLocalName = "$locationType $aboveLevelCode",
+  ),
+  accommodationType = accommodationType,
+  cellsUsedFor = setOf(UsedForType.STANDARD_ACCOMMODATION),
+  cells = (1..numberOfCells).map { index ->
+    NewCellRequest(
+      code = "%03d".format(index - 1 + startingCellNumber),
+      cellMark = "$aboveLevelCode-%03d".format(index - 1 + startingCellNumber),
+      maxCapacity = 1,
+      workingCapacity = workingCap,
+      certifiedNormalAccommodation = cna,
+      specialistCellTypes = specialistCellTypes,
+      inCellSanitation = true,
+    )
+  }.toSet(),
+)

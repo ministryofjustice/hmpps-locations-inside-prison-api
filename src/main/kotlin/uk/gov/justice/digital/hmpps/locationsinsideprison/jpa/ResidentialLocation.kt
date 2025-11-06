@@ -572,7 +572,7 @@ open class ResidentialLocation(
       workingCapacity = calcWorkingCapacity(),
     ),
     topLevelApprovalLocationId = findHighestLevelPending()?.id,
-    pendingApprovalRequestId = findHighestLevelPending()?.approvalRequests?.firstOrNull { it.isPending() }?.id,
+    pendingApprovalRequestId = getPendingApprovalRequest()?.id,
 
     pendingChanges = if (hasPendingChanges() || hasPendingChangesBelowThisLevel()) {
       PendingChangeDto(
@@ -605,6 +605,8 @@ open class ResidentialLocation(
       null
     },
   )
+
+  fun getPendingApprovalRequest(): LocationCertificationApprovalRequest? = findHighestLevelPending()?.approvalRequests?.firstOrNull { it.isPending() }
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
     residentialHousingType = residentialHousingType,

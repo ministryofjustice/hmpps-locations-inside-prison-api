@@ -537,6 +537,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(LocationCannotBeCreatedWithPendingApprovalException::class)
+  fun handleLocationCannotBeCreatedWithPendingChangesAboveException(e: LocationCannotBeCreatedWithPendingApprovalException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Cannot create location as changes pending approval above this level: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.CreationForbiddenWhenApprovalPending,
+          userMessage = "Cannot create location here: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(ApprovalRequiredAboveThisLevelException::class)
   fun handleApprovalRequiredAboveThisLevelException(e: ApprovalRequiredAboveThisLevelException): ResponseEntity<ErrorResponse?>? {
     log.debug("Approval request at wrong level: {}", e.message)
@@ -614,3 +629,4 @@ class CellCertificateNotFoundException(id: UUID) : Exception("Cell certificate w
 class CurrentCellCertificateNotFoundException(prisonId: String) : Exception("No current cell certificate found for prison $prisonId")
 class SignedOpCapCannotChangedWithoutApprovalException(prisonId: String) : Exception("Signed op cap cannot be updated in $prisonId without approval")
 class ApprovalRequiredAboveThisLevelException(key: String, parentKey: String) : Exception("Location $key cannot be approved, approval should be from location $parentKey")
+class LocationCannotBeCreatedWithPendingApprovalException(key: String) : Exception("Location $key cannot be created")
