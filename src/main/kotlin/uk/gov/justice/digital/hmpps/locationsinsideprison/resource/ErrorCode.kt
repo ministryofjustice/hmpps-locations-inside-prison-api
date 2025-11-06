@@ -37,4 +37,5 @@ enum class ErrorCode(val errorCode: Int) {
   SignedOpCapCannotChangedWithoutApproval(128),
   ApprovalRequestAtWrongLevel(errorCode = 129),
   DuplicateNonResidentialLocalNameInSamePrison(130),
+  CreationForbiddenWhenApprovalPending(errorCode = 131),
 }

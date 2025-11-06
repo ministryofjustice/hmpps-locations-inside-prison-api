@@ -54,6 +54,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLoc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateLocalNameForSameHierarchyException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeCreatedWithPendingApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeDeletedWhenNotDraftException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
@@ -340,6 +341,11 @@ class LocationService(
 
     if (createCellsRequest.newLevelAboveCells == null && parentLocation == null) {
       throw ValidationException("Either a parent location or new level above cells must be provided")
+    }
+
+    val hasPendingApproval = parentLocation?.getPendingApprovalRequest() != null
+    if (hasPendingApproval) {
+      throw LocationCannotBeCreatedWithPendingApprovalException(parentLocation.getKey())
     }
 
     val linkedTransaction = createCellsRequest.newLevelAboveCells?.let {
