@@ -102,7 +102,7 @@ class SignedOperationCapacityServiceTest {
     whenever(signedOpCapResponse.toSignedOperationCapacityDto()).thenReturn(prisonSignedOperationCap)
     whenever(signedOperationCapacityRepository.findById(any())).thenReturn(Optional.empty())
     whenever(signedOperationCapacityRepository.save(any())).thenReturn(signedOpCapResponse)
-    whenever(locationService.getResidentialLocations(prisonId = prisonId)).thenReturn(residentialSummary)
+    whenever(locationService.calculateMaxCapOfPrison(prisonId = prisonId)).thenReturn(130)
     val result = service.saveSignedOperationalCapacity(request)
     assertThat(result.newRecord).isTrue()
 
@@ -137,7 +137,7 @@ class SignedOperationCapacityServiceTest {
     whenever(request.updatedBy).thenReturn(updatedBy)
     whenever(signedOperationCapacityRepository.findByPrisonId(any())).thenReturn(existingRecord)
     whenever(signedOperationCapacityRepository.save(any())).thenReturn(signedOperationCapacityResponse)
-    whenever(locationService.getResidentialLocations(prisonId = prisonId)).thenReturn(residentialSummary)
+    whenever(locationService.calculateMaxCapOfPrison(prisonId = prisonId)).thenReturn(130)
 
     service.saveSignedOperationalCapacity(request)
 
