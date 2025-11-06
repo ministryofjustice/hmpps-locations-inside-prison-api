@@ -94,7 +94,7 @@ class CertificationService(
       throw PendingApprovalAlreadyExistsException(requestToApprove.prisonId)
     }
 
-    signedOperationCapacityService.validateSignedOpCap(requestToApprove.prisonId, requestToApprove.signedOperationalCapacity)
+    signedOperationCapacityService.validateSignedOpCap(requestToApprove.prisonId, requestToApprove.signedOperationalCapacity, includePendingOrDraft = true)
 
     val username = getUsername()
     val now = LocalDateTime.now(clock)

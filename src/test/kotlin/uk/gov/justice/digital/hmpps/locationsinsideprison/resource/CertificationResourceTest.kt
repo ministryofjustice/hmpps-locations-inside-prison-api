@@ -151,7 +151,7 @@ class CertificationResourceTest : CommonDataTestBase() {
               jsonString(
                 SignedOpCapApprovalRequest(
                   prisonId = "LEI",
-                  signedOperationalCapacity = 50,
+                  signedOperationalCapacity = 26,
                   reasonForChange = "We built more cells",
                 ),
               ),
@@ -176,8 +176,8 @@ class CertificationResourceTest : CommonDataTestBase() {
             jsonString(
               SignedOpCapApprovalRequest(
                 prisonId = "LEI",
-                signedOperationalCapacity = 10,
-                reasonForChange = "Damp cells",
+                signedOperationalCapacity = 25,
+                reasonForChange = "New Wing",
               ),
             ),
           )
@@ -190,9 +190,9 @@ class CertificationResourceTest : CommonDataTestBase() {
               "approvalType":"SIGNED_OP_CAP",
               "prisonId":"LEI",
               "status": "PENDING",
-              "currentSignedOperationCapacity": 200,
-              "signedOperationCapacityChange": -190,
-              "reasonForSignedOpChange": "Damp cells"
+              "currentSignedOperationCapacity": 12,
+              "signedOperationCapacityChange": 13,
+              "reasonForSignedOpChange": "New Wing"
               }
           """,
             JsonCompareMode.LENIENT,

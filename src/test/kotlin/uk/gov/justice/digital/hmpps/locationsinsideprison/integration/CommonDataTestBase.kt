@@ -84,7 +84,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       listOf(
         SignedOperationCapacity(prisonId = "MDI", signedOperationCapacity = 200, whenUpdated = LocalDateTime.now(clock), updatedBy = SYSTEM_USERNAME),
         SignedOperationCapacity(prisonId = "NMI", signedOperationCapacity = 10, whenUpdated = LocalDateTime.now(clock), updatedBy = SYSTEM_USERNAME),
-        SignedOperationCapacity(prisonId = "LEI", signedOperationCapacity = 200, whenUpdated = LocalDateTime.now(clock), updatedBy = SYSTEM_USERNAME),
+        SignedOperationCapacity(prisonId = "LEI", signedOperationCapacity = 12, whenUpdated = LocalDateTime.now(clock), updatedBy = SYSTEM_USERNAME),
       ),
     )
 

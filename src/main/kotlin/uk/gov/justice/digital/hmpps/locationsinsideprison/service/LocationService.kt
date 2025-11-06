@@ -1074,6 +1074,14 @@ class LocationService(
     }
   }
 
+  fun calculateMaxCapOfPrison(prisonId: String, includePendingOrDraft: Boolean = false): Int {
+    val locations = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+      .filter { !it.isPermanentlyDeactivated() }
+      .filter { it.isLocationShownOnResidentialSummary() }
+
+    return locations.sumOf { it.calcMaxCapacity(includePendingOrDraft = includePendingOrDraft) }
+  }
+
   fun getResidentialLocations(
     prisonId: String,
     parentLocationId: UUID? = null,
