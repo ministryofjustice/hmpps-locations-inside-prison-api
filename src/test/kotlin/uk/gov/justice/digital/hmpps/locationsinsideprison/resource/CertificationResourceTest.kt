@@ -273,6 +273,35 @@ class CertificationResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `cannot attempt to create a new location when pending approval above`() {
+        webTestClient.put().uri("/certification/location/request-approval")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              LocationApprovalRequest(
+                locationId = mWing.id!!,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        val aLandingInDraft = mWing.findSubLocations().find { it.getKey() == "LEI-M-1" } ?: throw RuntimeException("Landing not found")
+
+        Assertions.assertThat(
+          webTestClient.post().uri("/locations/create-cells")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(createCellInitialisationRequest(startingCellNumber = 88, parentLocation = aLandingInDraft.id).copy(newLevelAboveCells = null))
+            .exchange()
+            .expectStatus().isEqualTo(400)
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.CreationForbiddenWhenApprovalPending.errorCode)
+      }
+
+      @Test
       fun `cannot request approval for a location which has already been sent for approval`() {
         val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
 
