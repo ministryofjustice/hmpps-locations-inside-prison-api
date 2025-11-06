@@ -31,10 +31,10 @@ class PrisonConfigurationService(
   }
 
   @Transactional
-  fun updateResiLocationServiceActiveStatus(prisonId: String, residentialStatus: ResidentialStatus): PrisonConfigurationDto {
+  fun updateResiLocationServiceActiveStatus(prisonId: String, residentialStatus: ServiceStatus): PrisonConfigurationDto {
     val prisonConfig = activePrisonService.getPrisonConfiguration(prisonId) ?: throw PrisonNotFoundException(prisonId)
 
-    val activeResi = residentialStatus == ResidentialStatus.ACTIVE
+    val activeResi = residentialStatus == ServiceStatus.ACTIVE
     if (prisonConfig.resiLocationServiceActive != activeResi) {
       val tx = LinkedTransaction(
         transactionType = TransactionType.RESI_SERVICE_ACTIVATION,
@@ -65,10 +65,44 @@ class PrisonConfigurationService(
   }
 
   @Transactional
-  fun updateCertificationApprovalProcess(prisonId: String, certificationApprovalProcessStatus: ResidentialStatus): PrisonConfigurationDto {
+  fun updateNonResiLocationServiceActiveStatus(prisonId: String, nonResiStatus: ServiceStatus): PrisonConfigurationDto {
     val prisonConfig = activePrisonService.getPrisonConfiguration(prisonId) ?: throw PrisonNotFoundException(prisonId)
 
-    val approvalActive = certificationApprovalProcessStatus == ResidentialStatus.ACTIVE
+    val activeNonResi = nonResiStatus == ServiceStatus.ACTIVE
+    if (prisonConfig.nonResiServiceActive != activeNonResi) {
+      val tx = LinkedTransaction(
+        transactionType = TransactionType.NON_RESI_SERVICE_ACTIVATION,
+        prisonId = prisonId,
+        transactionDetail = "Non-resi service status changed to $nonResiStatus",
+        transactionInvokedBy = authenticationHolder.username ?: SYSTEM_USERNAME,
+        txStartTime = LocalDateTime.now(clock),
+      )
+      linkedTransactionRepository.save(tx)
+      activePrisonService.setNonResiServiceActive(prisonId, activeNonResi)
+
+      telemetryClient.trackEvent(
+        "Residential service configuration update",
+        mapOf(
+          "prisonId" to prisonId,
+          "nonResiStatus" to nonResiStatus.name,
+          "tx" to tx.transactionId.toString(),
+        ),
+        null,
+      )
+      log.info("Updated non-resi service status [$tx]")
+      tx.txEndTime = LocalDateTime.now(clock)
+    } else {
+      log.warn("No change applied to non-resi service already is $nonResiStatus")
+    }
+
+    return prisonConfig.toPrisonConfiguration()
+  }
+
+  @Transactional
+  fun updateCertificationApprovalProcess(prisonId: String, certificationApprovalProcessStatus: ServiceStatus): PrisonConfigurationDto {
+    val prisonConfig = activePrisonService.getPrisonConfiguration(prisonId) ?: throw PrisonNotFoundException(prisonId)
+
+    val approvalActive = certificationApprovalProcessStatus == ServiceStatus.ACTIVE
     if (prisonConfig.certificationApprovalRequired != approvalActive) {
       val tx = LinkedTransaction(
         transactionType = TransactionType.APPROVAL_PROCESS_ACTIVATION,
@@ -99,10 +133,10 @@ class PrisonConfigurationService(
   }
 
   @Transactional
-  fun updateIncludeSegInRollCount(prisonId: String, includeSegInRollCountStatus: ResidentialStatus): PrisonConfigurationDto {
+  fun updateIncludeSegInRollCount(prisonId: String, includeSegInRollCountStatus: ServiceStatus): PrisonConfigurationDto {
     val prisonConfig = activePrisonService.getPrisonConfiguration(prisonId) ?: throw PrisonNotFoundException(prisonId)
 
-    val includeSegActive = includeSegInRollCountStatus == ResidentialStatus.ACTIVE
+    val includeSegActive = includeSegInRollCountStatus == ServiceStatus.ACTIVE
     if (prisonConfig.includeSegregationInRollCount != includeSegActive) {
       val tx = LinkedTransaction(
         transactionType = TransactionType.INCLUDE_SEG_IN_ROLL_COUNT_ACTIVATION,
@@ -141,14 +175,16 @@ data class PrisonConfigurationDto(
   @param:Schema(description = "Prison ID", example = "MDI", required = true)
   val prisonId: String,
   @param:Schema(description = "Indicates that the residential service is active", example = "ACTIVE", required = true)
-  val resiLocationServiceActive: ResidentialStatus,
+  val resiLocationServiceActive: ServiceStatus,
+  @param:Schema(description = "Indicates that the non-resi service is active", example = "ACTIVE", required = true)
+  val nonResiServiceActive: ServiceStatus,
   @param:Schema(description = "Indicates that roll count should include segregation in its calculations for net vacancies", example = "INACTIVE", required = true)
-  val includeSegregationInRollCount: ResidentialStatus,
+  val includeSegregationInRollCount: ServiceStatus,
   @param:Schema(description = "Indicates that this prison must go through the certification process to create or change cells", example = "INACTIVE", required = true)
-  var certificationApprovalRequired: ResidentialStatus,
+  var certificationApprovalRequired: ServiceStatus,
 )
 
-enum class ResidentialStatus {
+enum class ServiceStatus {
   ACTIVE,
   INACTIVE,
 }

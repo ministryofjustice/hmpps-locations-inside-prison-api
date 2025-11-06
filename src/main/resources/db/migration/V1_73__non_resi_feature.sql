@@ -1,0 +1,1 @@
+ALTER TABLE prison_configuration ADD COLUMN non_resi_service_active boolean NOT NULL DEFAULT FALSE;
