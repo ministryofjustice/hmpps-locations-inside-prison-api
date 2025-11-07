@@ -272,7 +272,7 @@ open class ResidentialLocation(
 
     if (isDraft()) {
       temporarilyDeactivate(
-        deactivationReasonDescription = "Approved pending activation",
+        deactivationReasonDescription = "New location",
         deactivatedReason = DeactivatedReason.OTHER,
         deactivatedDate = approvedDate,
         linkedTransaction = linkedTransaction,
