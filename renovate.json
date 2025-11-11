@@ -10,5 +10,6 @@
       "groupSlug": "all-gradle-minor-patch"
     }
   ],
-  "rebaseWhen": "conflicted"
+  "rebaseWhen": "conflicted",
+  "schedule": ["before 7am every weekday", "after 1am every weekday"]
 }
