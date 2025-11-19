@@ -41,7 +41,7 @@ generic-service:
               {
                 "repoUrl": "https://github.com/ministryofjustice/hmpps-locations-inside-prison",
                 "branch": "main",
-                "path": "wiremock"
+                "path": "wiremock-docker"
               }
             ]
       livenessProbe:
