@@ -7,11 +7,11 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.test.json.JsonCompareMode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LevelAboveCells
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NewCellRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
@@ -783,7 +783,7 @@ fun createCellInitialisationRequest(
   accommodationType = accommodationType,
   cellsUsedFor = setOf(UsedForType.STANDARD_ACCOMMODATION),
   cells = (1..numberOfCells).map { index ->
-    NewCellRequest(
+    CellInformation(
       code = "%03d".format(index - 1 + startingCellNumber),
       cellMark = "$aboveLevelCode-%03d".format(index - 1 + startingCellNumber),
       maxCapacity = 1,
