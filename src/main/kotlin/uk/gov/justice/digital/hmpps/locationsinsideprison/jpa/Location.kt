@@ -325,22 +325,26 @@ abstract class Location(
     amendedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ): LocationHistory? {
-    val old = if (oldValue.isNullOrBlank()) null else oldValue
-    val new = if (newValue.isNullOrBlank()) null else newValue
-    return if (old != new) {
-      val locationHistory = LocationHistory(
-        location = this,
-        attributeName = attributeName,
-        oldValue = old,
-        newValue = new,
-        amendedBy = amendedBy,
-        amendedDate = amendedDate,
-        linkedTransaction = linkedTransaction,
-      )
-      history.add(locationHistory)
-      return locationHistory
+    if (!isDraft()) {
+      val old = if (oldValue.isNullOrBlank()) null else oldValue
+      val new = if (newValue.isNullOrBlank()) null else newValue
+      return if (old != new) {
+        val locationHistory = LocationHistory(
+          location = this,
+          attributeName = attributeName,
+          oldValue = old,
+          newValue = new,
+          amendedBy = amendedBy,
+          amendedDate = amendedDate,
+          linkedTransaction = linkedTransaction,
+        )
+        history.add(locationHistory)
+        return locationHistory
+      } else {
+        null
+      }
     } else {
-      null
+      return null
     }
   }
 
