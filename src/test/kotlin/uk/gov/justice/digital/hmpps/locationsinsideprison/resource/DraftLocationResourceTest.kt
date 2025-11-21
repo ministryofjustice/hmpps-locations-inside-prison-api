@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.test.json.JsonCompareMode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellDraftUpdateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
@@ -16,6 +17,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
@@ -30,6 +32,7 @@ import java.util.*
 class DraftLocationResourceTest : CommonDataTestBase() {
 
   lateinit var draftWing: ResidentialLocation
+  lateinit var landing1G: ResidentialLocation
 
   @BeforeEach
   override fun setUp() {
@@ -42,7 +45,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
         numberOfCellsPerSection = 3,
         numberOfLandings = 2,
         numberOfSpurs = 0,
-        wingDescription = "Wing A",
+        wingDescription = "Wing G",
       ).toEntity(
         createInDraft = true,
         createdBy = "TEST_USER",
@@ -58,6 +61,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
         ),
       ),
     )
+    landing1G = resiRepository.findOneByKey("LEI-G-1") ?: throw AssertionError("Not found LEI-G-1")
   }
 
   @DisplayName("POST /locations/create-cells")
@@ -238,7 +242,13 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       webTestClient.post().uri(url)
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
         .header("Content-Type", "application/json")
-        .bodyValue(createCellInitialisationRequest(accommodationType = AccommodationType.CARE_AND_SEPARATION, workingCap = 0, cna = 0))
+        .bodyValue(
+          createCellInitialisationRequest(
+            workingCap = 0,
+            cna = 0,
+            accommodationType = AccommodationType.CARE_AND_SEPARATION,
+          ),
+        )
         .exchange()
         .expectStatus().isCreated
     }
@@ -248,7 +258,13 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       webTestClient.post().uri(url)
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
         .header("Content-Type", "application/json")
-        .bodyValue(createCellInitialisationRequest(accommodationType = AccommodationType.HEALTHCARE_INPATIENTS, workingCap = 0, cna = 0))
+        .bodyValue(
+          createCellInitialisationRequest(
+            workingCap = 0,
+            cna = 0,
+            accommodationType = AccommodationType.HEALTHCARE_INPATIENTS,
+          ),
+        )
         .exchange()
         .expectStatus().isCreated
     }
@@ -541,6 +557,201 @@ class DraftLocationResourceTest : CommonDataTestBase() {
     }
   }
 
+  @DisplayName("PUT /locations/edit-cells")
+  @Nested
+  inner class EditCellsTest {
+    private val url = "/locations/edit-cells"
+
+    @DisplayName("is secured")
+    @Nested
+    inner class Security {
+      @DisplayName("by role and scope")
+      @TestFactory
+      fun endpointRequiresAuthorisation() = endpointRequiresAuthorisation(
+        webTestClient.put(),
+        url,
+        createCellDraftUpdateRequest(parentLocation = landing1G.id!!),
+        "ROLE_MAINTAIN_LOCATIONS",
+        "write",
+      )
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad data`() {
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"prisonId": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `request without a parent location is rejected`() {
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{"prisonId": "MDI"}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can update cells`() {
+        val request = createCellDraftUpdateRequest(
+          parentLocation = landing1G.id!!,
+          cells = landing1G.cellLocations().map { it.toCellInformation(specialistCellTypes = setOf(SpecialistCellType.ISOLATION_DISEASES, SpecialistCellType.ACCESSIBLE_CELL)) },
+          usedForTypes = setOf(UsedForType.THERAPEUTIC_COMMUNITY),
+          accommodationType = AccommodationType.HEALTHCARE_INPATIENTS,
+        )
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(request)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "${landing1G.prisonId}",
+              "code": "${landing1G.getLocationCode()}",
+              "pathHierarchy": "${landing1G.getPathHierarchy()}",
+              "locationType": "LANDING",
+              "status": "DRAFT",
+              "localName": "Landing 1 on Wing G",
+              "pendingChanges": {
+                "maxCapacity": 3,
+                "workingCapacity": 3,
+                "certifiedNormalAccommodation": 3
+              },
+              "accommodationTypes": [
+                "HEALTHCARE_INPATIENTS"
+              ],
+              "specialistCellTypes": [
+                "ACCESSIBLE_CELL",
+                "ISOLATION_DISEASES"
+              ],
+              "usedFor": [
+                "THERAPEUTIC_COMMUNITY"
+              ]
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
+      fun `can remove cells`() {
+        val request = createCellDraftUpdateRequest(
+          parentLocation = landing1G.id!!,
+          cells = landing1G.cellLocations().minus(landing1G.cellLocations().first()).map { it.toCellInformation() },
+        )
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(request)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "${landing1G.prisonId}",
+              "code": "${landing1G.getLocationCode()}",
+              "pathHierarchy": "${landing1G.getPathHierarchy()}",
+              "locationType": "LANDING",
+              "status": "DRAFT",
+              "localName": "Landing 1 on Wing G",
+              "pendingChanges": {
+                "maxCapacity": 2,
+                "workingCapacity": 2,
+                "certifiedNormalAccommodation": 2
+              },
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "specialistCellTypes": [
+                "ACCESSIBLE_CELL"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ]
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
+      fun `can add cells`() {
+        val request = createCellDraftUpdateRequest(
+          parentLocation = landing1G.id!!,
+          cells = landing1G.cellLocations().map { it.toCellInformation() }.plus(
+            CellInformation(
+              code = "010",
+              cellMark = "NEW10",
+              maxCapacity = 2,
+              workingCapacity = 1,
+              certifiedNormalAccommodation = 1,
+              specialistCellTypes = setOf(SpecialistCellType.ESCAPE_LIST),
+              inCellSanitation = false,
+            ),
+          ),
+        )
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(request)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "${landing1G.prisonId}",
+              "code": "${landing1G.getLocationCode()}",
+              "pathHierarchy": "${landing1G.getPathHierarchy()}",
+              "locationType": "LANDING",
+              "status": "DRAFT",
+              "localName": "Landing 1 on Wing G",
+              "pendingChanges": {
+                "maxCapacity": 5,
+                "workingCapacity": 4,
+                "certifiedNormalAccommodation": 4
+              },
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "specialistCellTypes": [
+                "ESCAPE_LIST",
+                "ACCESSIBLE_CELL"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ]
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+    }
+  }
+
   @DisplayName("POST /locations/create-wing")
   @Nested
   inner class CreateWingTest {
@@ -767,6 +978,7 @@ fun createCellInitialisationRequest(
   numberOfCells: Int = 1,
   aboveLevelCode: String = "J",
   parentLocation: UUID? = null,
+  maxCap: Int = 1,
   workingCap: Int = 1,
   cna: Int = 1,
   specialistCellTypes: Set<SpecialistCellType> = setOf(SpecialistCellType.ACCESSIBLE_CELL),
@@ -782,15 +994,40 @@ fun createCellInitialisationRequest(
   ),
   accommodationType = accommodationType,
   cellsUsedFor = setOf(UsedForType.STANDARD_ACCOMMODATION),
-  cells = (1..numberOfCells).map { index ->
+  cells = (maxCap..numberOfCells).map { index ->
     CellInformation(
-      code = "%03d".format(index - 1 + startingCellNumber),
-      cellMark = "$aboveLevelCode-%03d".format(index - 1 + startingCellNumber),
-      maxCapacity = 1,
+      code = "%03d".format(index - maxCap + startingCellNumber),
+      cellMark = "$aboveLevelCode-%03d".format(index - maxCap + startingCellNumber),
+      maxCapacity = maxCap,
       workingCapacity = workingCap,
       certifiedNormalAccommodation = cna,
       specialistCellTypes = specialistCellTypes,
       inCellSanitation = true,
     )
   }.toSet(),
+)
+
+fun createCellDraftUpdateRequest(
+  prisonId: String = "LEI",
+  parentLocation: UUID,
+  cells: List<CellInformation> = listOf(),
+  accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+  usedForTypes: Set<UsedForType> = setOf(UsedForType.STANDARD_ACCOMMODATION),
+) = CellDraftUpdateRequest(
+  prisonId = prisonId,
+  parentLocation = parentLocation,
+  cellsUsedFor = usedForTypes,
+  accommodationType = accommodationType,
+  cells = cells.toSet(),
+)
+
+fun Cell.toCellInformation(specialistCellTypes: Set<SpecialistCellType> = setOf(SpecialistCellType.ACCESSIBLE_CELL)) = CellInformation(
+  id = id!!,
+  code = getLocationCode(),
+  cellMark = cellMark,
+  maxCapacity = getMaxCapacity()!!,
+  workingCapacity = getWorkingCapacity()!!,
+  certifiedNormalAccommodation = getCertifiedNormalAccommodation()!!,
+  specialistCellTypes = specialistCellTypes,
+  inCellSanitation = inCellSanitation ?: false,
 )

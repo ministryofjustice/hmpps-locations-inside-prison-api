@@ -428,8 +428,8 @@ class LocationService(
     val userOrSystemInContext = sharedLocationService.getUsername()
 
     // find cells missing from `cellDraftUpdateRequest.cells` that are currently under this parentLocation
-    val cellIdsToRemove = cellDraftUpdateRequest.cells.mapNotNull { it.id }
-    val cellsToRemove = parentLocation.cellLocations().filter { cell -> cell.id in cellIdsToRemove }
+    val listOfIds = cellDraftUpdateRequest.cells.mapNotNull { it.id }
+    val cellsToRemove = parentLocation.cellLocations().filter { cell -> cell.id !in listOfIds }
     val deletedCells = cellsToRemove.size
     cellsToRemove.forEach { cell -> parentLocation.removeCell(cell) }
 
@@ -442,16 +442,17 @@ class LocationService(
         code = cell.code,
         prisonId = cellDraftUpdateRequest.prisonId,
       )
-
-      addCellToParent(
-        prisonId = cellDraftUpdateRequest.prisonId,
-        accommodationType = cellDraftUpdateRequest.accommodationType,
-        cellsUsedFor = cellDraftUpdateRequest.cellsUsedFor,
-        cell = cell,
-        parentLocation = parentLocation,
-        createdBy = userOrSystemInContext,
-        clock = clock,
-        linkedTransaction = linkedTransaction,
+      cellLocationRepository.save(
+        addCellToParent(
+          prisonId = cellDraftUpdateRequest.prisonId,
+          accommodationType = cellDraftUpdateRequest.accommodationType,
+          cellsUsedFor = cellDraftUpdateRequest.cellsUsedFor,
+          cell = cell,
+          parentLocation = parentLocation,
+          createdBy = userOrSystemInContext,
+          clock = clock,
+          linkedTransaction = linkedTransaction,
+        ),
       )
       createdCells = createdCells.inc()
     }
