@@ -431,7 +431,10 @@ class LocationService(
     val listOfIds = cellDraftUpdateRequest.cells.mapNotNull { it.id }
     val cellsToRemove = parentLocation.cellLocations().filter { cell -> cell.id !in listOfIds }
     val deletedCells = cellsToRemove.size
-    cellsToRemove.forEach { cell -> parentLocation.removeCell(cell) }
+    cellsToRemove.forEach { cell ->
+      parentLocation.removeCell(cell)
+      cellLocationRepository.deleteById(cell.id) // TODO: fix this so don't have to explicitly delete by ID
+    }
 
     var createdCells = 0
     // create cells
