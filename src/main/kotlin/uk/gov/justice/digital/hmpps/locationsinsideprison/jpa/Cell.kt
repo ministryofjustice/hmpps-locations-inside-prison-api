@@ -15,8 +15,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LockedLocationCannotBeUpdatedException
 import java.time.Clock
@@ -296,18 +294,17 @@ class Cell(
   }
 
   override fun setCapacity(maxCapacity: Int, workingCapacity: Int, userOrSystemInContext: String, amendedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
-    if (!(isPermanentlyDeactivated() || isTemporarilyDeactivated()) &&
-      workingCapacity == 0 &&
-      isCapacityRequired(
-        getSpecialistCellTypesForCell(),
-      )
-    ) {
-      throw CapacityException(
-        getKey(),
-        "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
-        ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
-      )
-    }
+    validateCapacity(
+      locationKey = getKey(),
+      accommodationType = accommodationType,
+      workingCapacity = workingCapacity,
+      maxCapacity = maxCapacity,
+      certifiedNormalAccommodation = getCertifiedNormalAccommodation(includePendingChange = true) ?: 0,
+      specialistCellTypes = getSpecialistCellTypesForCell(),
+      temporarilyDeactivated = isTemporarilyDeactivated(),
+      permanentlyDeactivated = isPermanentlyDeactivated(),
+    )
+
     if (isLocationLocked()) {
       throw LockedLocationCannotBeUpdatedException(getKey())
     }
@@ -345,9 +342,6 @@ class Cell(
       )
     }
   }
-
-  fun isCapacityRequired(typesToCheck: Set<SpecialistCellType>): Boolean = accommodationType == AccommodationType.NORMAL_ACCOMMODATION &&
-    (typesToCheck.isEmpty() || typesToCheck.any { !it.affectsCapacity })
 
   fun certifyCell(
     cellUpdatedBy: String,
