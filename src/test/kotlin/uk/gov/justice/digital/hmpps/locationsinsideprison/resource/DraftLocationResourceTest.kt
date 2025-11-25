@@ -151,6 +151,21 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `cannot create a cell with max cap greater than working cap`() {
+        val request = createCellInitialisationRequest(parentLocation = wingZ.id, maxCap = 1, workingCap = 2)
+        assertThat(
+          webTestClient.post().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.WorkingCapacityExceedsMaxCapacity.errorCode)
+      }
+
+      @Test
       fun `request with normal cells without specialist cells do not allow zero CNA or Working Capacity`() {
         assertThat(
           webTestClient.post().uri(url)
@@ -597,6 +612,54 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().is4xxClientError
       }
+
+      @Test
+      fun `cannot update a cell with max cap greater than working cap`() {
+        val request = createCellDraftUpdateRequest(
+          parentLocation = landing1G.id!!,
+          cells = landing1G.cellLocations().map { it.toCellInformation(specialistCellTypes = setOf(SpecialistCellType.ISOLATION_DISEASES, SpecialistCellType.ACCESSIBLE_CELL)).copy(maxCapacity = 1, workingCapacity = 2) },
+          usedForTypes = setOf(UsedForType.THERAPEUTIC_COMMUNITY),
+          accommodationType = AccommodationType.HEALTHCARE_INPATIENTS,
+        )
+        assertThat(
+          webTestClient.put().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.WorkingCapacityExceedsMaxCapacity.errorCode)
+      }
+
+      @Test
+      fun `cannot create a cell with max cap greater than working cap`() {
+        val request = createCellDraftUpdateRequest(
+          parentLocation = landing1G.id!!,
+          cells = landing1G.cellLocations().map { it.toCellInformation() }.plus(
+            CellInformation(
+              code = "010",
+              cellMark = "NEW10",
+              maxCapacity = 1,
+              workingCapacity = 2,
+              certifiedNormalAccommodation = 1,
+              specialistCellTypes = setOf(SpecialistCellType.ESCAPE_LIST),
+              inCellSanitation = false,
+            ),
+          ),
+        )
+        assertThat(
+          webTestClient.put().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.WorkingCapacityExceedsMaxCapacity.errorCode)
+      }
     }
 
     @Nested
@@ -650,6 +713,51 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `can update cells and remove usedFor and specialistCellTypes`() {
+        val request = createCellDraftUpdateRequest(
+          parentLocation = landing1G.id!!,
+          cells = landing1G.cellLocations().map { it.toCellInformation(specialistCellTypes = null) },
+          usedForTypes = null,
+        )
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(request)
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "${landing1G.prisonId}",
+              "code": "${landing1G.getLocationCode()}",
+              "pathHierarchy": "${landing1G.getPathHierarchy()}",
+              "locationType": "LANDING",
+              "status": "DRAFT",
+              "localName": "Landing 1 on Wing G",
+              "pendingChanges": {
+                "maxCapacity": 3,
+                "workingCapacity": 3,
+                "certifiedNormalAccommodation": 3
+              },
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "specialistCellTypes": [
+              ],
+              "usedFor": [
+               
+              ]
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
       fun `can remove cells`() {
         val request = createCellDraftUpdateRequest(
           parentLocation = landing1G.id!!,
@@ -692,6 +800,43 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           )
 
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+
+        // Check location has been removed
+        webTestClient.get().uri("/locations/key/${landing1G.getKey()}?includeChildren=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """ 
+             {
+              "key": "${landing1G.prisonId}-${landing1G.getPathHierarchy()}",
+              "pendingChanges": {
+                "maxCapacity": 2,
+                "workingCapacity": 2,
+                "certifiedNormalAccommodation": 2
+              },
+              "accommodationTypes": [
+                "NORMAL_ACCOMMODATION"
+              ],
+              "specialistCellTypes": [
+                "ACCESSIBLE_CELL"
+              ],
+              "usedFor": [
+                "STANDARD_ACCOMMODATION"
+              ],
+              "childLocations": [
+                {
+                  "key": "${landing1G.prisonId}-${landing1G.getPathHierarchy()}-002"
+                },
+                {
+                  "key": "${landing1G.prisonId}-${landing1G.getPathHierarchy()}-003"
+                }
+              ]
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
       }
 
       @Test
@@ -1012,7 +1157,7 @@ fun createCellDraftUpdateRequest(
   parentLocation: UUID,
   cells: List<CellInformation> = listOf(),
   accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
-  usedForTypes: Set<UsedForType> = setOf(UsedForType.STANDARD_ACCOMMODATION),
+  usedForTypes: Set<UsedForType>? = setOf(UsedForType.STANDARD_ACCOMMODATION),
 ) = CellDraftUpdateRequest(
   prisonId = prisonId,
   parentLocation = parentLocation,
@@ -1021,7 +1166,7 @@ fun createCellDraftUpdateRequest(
   cells = cells.toSet(),
 )
 
-fun Cell.toCellInformation(specialistCellTypes: Set<SpecialistCellType> = setOf(SpecialistCellType.ACCESSIBLE_CELL)) = CellInformation(
+fun Cell.toCellInformation(specialistCellTypes: Set<SpecialistCellType>? = setOf(SpecialistCellType.ACCESSIBLE_CELL)) = CellInformation(
   id = id!!,
   code = getLocationCode(),
   cellMark = cellMark,
