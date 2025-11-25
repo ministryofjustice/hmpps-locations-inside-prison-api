@@ -466,13 +466,6 @@ class LocationService(
       val cellToUpdate = cellLocationRepository.findById(cell.id!!)
         .orElseThrow { LocationNotFoundException(cell.id.toString()) }
 
-      if (!cell.isCapacityValid(cellDraftUpdateRequest.accommodationType)) {
-        throw CapacityException(
-          cell.code,
-          "Normal accommodation must not have a CNA or working capacity of 0",
-          ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
-        )
-      }
       // update the cell
       cellToUpdate.update(
         upsert = PatchResidentialLocationRequest(
@@ -486,13 +479,6 @@ class LocationService(
       )
       cellToUpdate.cellMark = cell.cellMark
       cellToUpdate.inCellSanitation = cell.inCellSanitation
-      cellToUpdate.setCapacity(
-        maxCapacity = cell.maxCapacity,
-        workingCapacity = cell.workingCapacity,
-        userOrSystemInContext = userOrSystemInContext,
-        amendedDate = LocalDateTime.now(clock),
-        linkedTransaction = linkedTransaction,
-      )
 
       cellToUpdate.updateCellSpecialistCellTypes(
         specialistCellTypes = cell.specialistCellTypes ?: emptySet(),
@@ -500,14 +486,19 @@ class LocationService(
         clock = clock,
         linkedTransaction = linkedTransaction,
       )
-
       cellToUpdate.setCertifiedNormalAccommodation(
         certifiedNormalAccommodation = cell.certifiedNormalAccommodation,
         userOrSystemInContext = userOrSystemInContext,
         updatedAt = LocalDateTime.now(clock),
         linkedTransaction = linkedTransaction,
       )
-
+      cellToUpdate.setCapacity(
+        maxCapacity = cell.maxCapacity,
+        workingCapacity = cell.workingCapacity,
+        userOrSystemInContext = userOrSystemInContext,
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
       updatedCells = updatedCells.inc()
     }
 
@@ -660,7 +651,7 @@ class LocationService(
     }
 
     // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialist cell types
-    if (cell.isCapacityRequired(specialistCellTypes) && cell.getWorkingCapacity() == 0) {
+    if (isCapacityRequired(specialistCellTypes, cell.accommodationType) && cell.getWorkingCapacity() == 0) {
       throw CapacityException(
         cell.getKey(),
         "Cannot removes specialist cell types for a normal accommodation with a working capacity of 0",

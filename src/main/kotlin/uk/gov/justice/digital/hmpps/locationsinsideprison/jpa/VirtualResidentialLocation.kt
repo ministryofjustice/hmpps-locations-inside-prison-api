@@ -112,6 +112,24 @@ open class VirtualResidentialLocation(
     0
   }
 
+  override fun setCapacity(
+    maxCapacity: Int,
+    workingCapacity: Int,
+    userOrSystemInContext: String,
+    amendedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    validateCapacity(
+      locationKey = getKey(),
+      workingCapacity = workingCapacity,
+      maxCapacity = maxCapacity,
+      certifiedNormalAccommodation = 0,
+      temporarilyDeactivated = isTemporarilyDeactivated(),
+      permanentlyDeactivated = isPermanentlyDeactivated(),
+    )
+
+    super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, amendedDate, linkedTransaction)
+  }
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
     ignoreWorkingCapacity = false,
     capacity = CapacityDto(
