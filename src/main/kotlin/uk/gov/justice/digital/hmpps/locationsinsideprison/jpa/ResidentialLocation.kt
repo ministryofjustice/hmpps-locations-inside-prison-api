@@ -675,27 +675,6 @@ open class ResidentialLocation(
     linkedTransaction: LinkedTransaction,
   ) {
     if (isCell() || isVirtualResidentialLocation()) {
-      if (workingCapacity > 99) {
-        throw CapacityException(
-          getKey(),
-          "Working capacity must be less than 100",
-          ErrorCode.WorkingCapacityLimitExceeded,
-        )
-      }
-      if (maxCapacity > 99) {
-        throw CapacityException(getKey(), "Max capacity must be less than 100", ErrorCode.MaxCapacityLimitExceeded)
-      }
-      if (workingCapacity > maxCapacity) {
-        throw CapacityException(
-          getKey(),
-          "Working capacity ($workingCapacity) cannot be more than max capacity ($maxCapacity)",
-          ErrorCode.WorkingCapacityExceedsMaxCapacity,
-        )
-      }
-      if (maxCapacity == 0 && !isPermanentlyDeactivated()) {
-        throw CapacityException(getKey(), "Max capacity cannot be zero", ErrorCode.MaxCapacityCannotBeZero)
-      }
-
       addHistory(
         LocationAttribute.MAX_CAPACITY,
         capacity?.maxCapacity?.toString() ?: "None",
@@ -727,6 +706,53 @@ open class ResidentialLocation(
     }
   }
 }
+
+fun validateCapacity(locationKey: String, certifiedNormalAccommodation: Int, workingCapacity: Int, maxCapacity: Int, accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION, specialistCellTypes: Set<SpecialistCellType> = emptySet(), permanentlyDeactivated: Boolean = false, temporarilyDeactivated: Boolean = false, virtualLocation: Boolean = false) {
+  if (workingCapacity > 99) {
+    throw CapacityException(
+      locationKey,
+      "Working capacity must be less than 100",
+      ErrorCode.WorkingCapacityLimitExceeded,
+    )
+  }
+  if (maxCapacity > 99) {
+    throw CapacityException(locationKey, "Max capacity must be less than 100", ErrorCode.MaxCapacityLimitExceeded)
+  }
+  if (workingCapacity > maxCapacity) {
+    throw CapacityException(
+      locationKey,
+      "Working capacity ($workingCapacity) cannot be more than max capacity ($maxCapacity)",
+      ErrorCode.WorkingCapacityExceedsMaxCapacity,
+    )
+  }
+  if (maxCapacity == 0 && !permanentlyDeactivated) {
+    throw CapacityException(locationKey, "Max capacity cannot be zero", ErrorCode.MaxCapacityCannotBeZero)
+  }
+
+  if (!(permanentlyDeactivated || temporarilyDeactivated || virtualLocation)) {
+    if (!isCapacityValid(
+        workingCapacity,
+        certifiedNormalAccommodation,
+        accommodationType = accommodationType,
+        specialistCellTypes = specialistCellTypes,
+      )
+    ) {
+      throw CapacityException(
+        locationKey,
+        "Normal accommodation must not have a CNA or working capacity of 0",
+        ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
+      )
+    }
+  }
+}
+
+private fun isCapacityValid(workingCapacity: Int, certifiedNormalAccommodation: Int, accommodationType: AccommodationType, specialistCellTypes: Set<SpecialistCellType>? = null): Boolean {
+  val cellIsSpecialistCellAllowingZeroCapacity = (specialistCellTypes?.isNotEmpty() ?: false && specialistCellTypes.all { it.affectsCapacity }) || accommodationType != AccommodationType.NORMAL_ACCOMMODATION
+  return cellIsSpecialistCellAllowingZeroCapacity || (certifiedNormalAccommodation != 0 && workingCapacity != 0)
+}
+
+fun isCapacityRequired(typesToCheck: Set<SpecialistCellType>, accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION): Boolean = accommodationType == AccommodationType.NORMAL_ACCOMMODATION &&
+  (typesToCheck.isEmpty() || typesToCheck.any { !it.affectsCapacity })
 
 enum class ResidentialHousingType(
   val description: String,

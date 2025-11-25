@@ -30,11 +30,11 @@ data class CellDraftUpdateRequest(
   )
   val parentLocation: UUID,
 
-  @param:Schema(description = "Used For Types for all cells", required = false)
+  @param:Schema(description = "Used for types for all cells", required = false)
   val cellsUsedFor: Set<UsedForType>? = null,
 
   @param:Schema(
-    description = "Accommodation Type for all cells",
+    description = "Accommodation type for all cells",
     required = false,
     defaultValue = "NORMAL_ACCOMMODATION",
     example = "NORMAL_ACCOMMODATION",
