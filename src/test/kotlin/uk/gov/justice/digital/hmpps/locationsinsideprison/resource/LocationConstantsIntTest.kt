@@ -1479,16 +1479,6 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     inner class Validation {
 
       @Test
-      fun `cannot retrieve used-for-type when prison does not exist in register`() {
-        prisonRegisterMockServer.stubLookupPrison("XXI", returnResult = false)
-
-        webTestClient.get().uri("/constants/used-for-type/XXI")
-          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-
-      @Test
       fun `cannot retrieve used-for-type when prison Id in invalid format`() {
         webTestClient.get().uri("/constants/used-for-type/YYYYYYYYYY")
           .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
@@ -1708,6 +1698,69 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 }
               ]
             }
+            """.trimIndent(),
+            JsonCompareMode.STRICT,
+          )
+      }
+
+      @Test
+      fun `cam retrieve used-for-type when prison does not exist in register`() {
+        prisonRegisterMockServer.stubLookupPrison("ZZGHI", returnResult = false)
+
+        webTestClient.get().uri("/constants/used-for-type/ZZGHI")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "usedForTypes": [
+                  {
+                    "key": "SUB_MISUSE_DRUG_RECOVERY",
+                    "description": "Drug recovery / Incentivised substance free living (ISFL)"
+                  },
+                  {
+                    "key": "FIRST_NIGHT_CENTRE",
+                    "description": "First night centre / Induction"
+                  },  
+                  {
+                    "key": "IPP_LONG_TERM_SENTENCES",
+                    "description": "Long-term sentences / Imprisonment for public protection (IPP)"
+                  },
+                  {
+                    "key": "OPEN_UNIT",
+                    "description": "Open unit in a closed establishment"
+                  },
+                  {
+                    "key": "PERSONALITY_DISORDER",
+                    "description": "Personality disorder unit"
+                  },
+                  {
+                    "key": "PIPE",
+                    "description": "Psychologically informed planned environment (PIPE)"
+                  },
+                  {
+                    "key": "REMAND",
+                    "description": "Remand"
+                  }, 
+                  {
+                    "key": "STANDARD_ACCOMMODATION",
+                    "description": "Standard accommodation"
+                  },
+                  {
+                    "key": "THERAPEUTIC_COMMUNITY",
+                    "description": "Therapeutic community"
+                  },
+                  {
+                    "key": "VULNERABLE_PRISONERS",
+                    "description": "Vulnerable prisoners"
+                  },
+                  {
+                    "key": "YOUNG_PERSONS",
+                    "description": "Young persons"
+                  }    
+                ]
+              }
             """.trimIndent(),
             JsonCompareMode.STRICT,
           )
