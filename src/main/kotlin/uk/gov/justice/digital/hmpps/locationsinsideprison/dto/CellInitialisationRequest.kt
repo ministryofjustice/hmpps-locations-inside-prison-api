@@ -230,7 +230,7 @@ data class CellInformation(
   @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
   val workingCapacity: Int = 0,
 
-  @param:Schema(description = "Specialist Cell Types", required = false)
+  @param:Schema(description = "Specialist cell types", required = false)
   val specialistCellTypes: Set<SpecialistCellType>? = null,
 
   @param:Schema(description = "In-cell sanitation for cell", required = false, defaultValue = "true")

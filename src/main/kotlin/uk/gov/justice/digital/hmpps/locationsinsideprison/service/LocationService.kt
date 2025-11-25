@@ -472,7 +472,7 @@ class LocationService(
         upsert = PatchResidentialLocationRequest(
           code = cell.code,
           accommodationType = cellDraftUpdateRequest.accommodationType,
-          usedFor = cellDraftUpdateRequest.cellsUsedFor,
+          usedFor = cellDraftUpdateRequest.cellsUsedFor ?: emptySet(),
         ),
         userOrSystemInContext = userOrSystemInContext,
         clock = clock,
