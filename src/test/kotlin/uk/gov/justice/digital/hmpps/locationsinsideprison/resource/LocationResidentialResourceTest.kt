@@ -512,6 +512,32 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
       }
+
+      @Test
+      fun `can retrieve details of a locations at establishment level of a prison not in the register`() {
+        webTestClient.get().uri("/locations/residential-summary/ZZGHI")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "prisonSummary": {
+                  "prisonName": "ZZGHI",
+                  "workingCapacity": 0,
+                  "signedOperationalCapacity": 0,
+                  "maxCapacity": 0,
+                  "numberOfCellLocations": 0
+                },
+                "topLevelLocationType": "Wings",
+                "subLocationName": "Wings",
+                "subLocations": []
+              }
+          """,
+            JsonCompareMode.STRICT,
+          )
+      }
     }
   }
 
