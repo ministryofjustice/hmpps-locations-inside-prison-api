@@ -323,6 +323,13 @@ open class ResidentialLocation(
       .forEach { it.updateUsedFor(newUsedFor, userOrSystemInContext, clock, linkedTransaction) }
   }
 
+  fun removeCell(cell: Cell): Boolean {
+    if (cell.isDraft()) {
+      return childLocations.remove(cell)
+    }
+    return false
+  }
+
   open fun addUsedFor(
     usedForType: UsedForType,
     userOrSystemInContext: String,

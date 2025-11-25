@@ -19,6 +19,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.*
@@ -62,7 +64,11 @@ data class CellInitialisationRequest(
   )
   val accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 
-  val cells: Set<NewCellRequest>? = null,
+  @param:Schema(
+    description = "Set of cells that are to be created",
+    required = false,
+  )
+  val cells: Set<CellInformation>? = null,
 ) {
 
   companion object {
@@ -73,54 +79,86 @@ data class CellInitialisationRequest(
     createdBy: String,
     clock: Clock,
     linkedTransaction: LinkedTransaction,
-    location: ResidentialLocation,
+    parentLocation: ResidentialLocation,
   ) = cells?.map { cell ->
-    Cell(
-      prisonId = prisonId,
-      code = cell.code,
-      cellMark = cell.cellMark,
-      pathHierarchy = "${location.getPathHierarchy()}-${cell.code}",
-      status = LocationStatus.DRAFT,
-      accommodationType = accommodationType,
-      createdBy = createdBy,
-      whenCreated = LocalDateTime.now(clock),
-      childLocations = mutableListOf(),
-      capacity = Capacity(
-        maxCapacity = cell.maxCapacity,
-        workingCapacity = cell.workingCapacity,
-      ),
-      certification = Certification(certifiedNormalAccommodation = cell.certifiedNormalAccommodation),
-      inCellSanitation = cell.inCellSanitation,
-    ).apply {
-      cell.specialistCellTypes?.forEach {
-        addSpecialistCellType(
-          specialistCellType = it,
-          userOrSystemInContext = createdBy,
-          clock = clock,
-          linkedTransaction = linkedTransaction,
-        )
-      }
-      cellsUsedFor?.forEach {
-        addUsedFor(
-          usedForType = it,
-          userOrSystemInContext = createdBy,
-          clock = clock,
-          linkedTransaction = linkedTransaction,
-        )
-      }
-      location.addChildLocation(this)
-      addHistory(
-        attributeName = LocationAttribute.LOCATION_CREATED,
-        oldValue = null,
-        newValue = getKey(),
-        amendedBy = createdBy,
-        amendedDate = LocalDateTime.now(clock),
-        linkedTransaction = linkedTransaction,
+
+    if (!cell.isCapacityValid(accommodationType)) {
+      throw CapacityException(
+        cell.code,
+        "Normal accommodation must not have a CNA or working capacity of 0",
+        ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
       )
-      log.info("Created cell ${this.getKey()}")
     }
+
+    addCellToParent(
+      prisonId = prisonId,
+      accommodationType = accommodationType,
+      cellsUsedFor = cellsUsedFor,
+      cell = cell,
+      parentLocation = parentLocation,
+      createdBy = createdBy,
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
   }
 }
+
+fun addCellToParent(
+  prisonId: String,
+  accommodationType: AccommodationType,
+  cellsUsedFor: Set<UsedForType>?,
+  cell: CellInformation,
+  parentLocation: ResidentialLocation,
+  createdBy: String,
+  clock: Clock,
+  linkedTransaction: LinkedTransaction,
+): Cell = Cell(
+  prisonId = prisonId,
+  code = cell.code,
+  cellMark = cell.cellMark,
+  pathHierarchy = "${parentLocation.getPathHierarchy()}-${cell.code}",
+  status = LocationStatus.DRAFT,
+  accommodationType = accommodationType,
+  createdBy = createdBy,
+  whenCreated = LocalDateTime.now(clock),
+  childLocations = mutableListOf(),
+  capacity = Capacity(
+    maxCapacity = cell.maxCapacity,
+    workingCapacity = cell.workingCapacity,
+  ),
+  certification = Certification(certifiedNormalAccommodation = cell.certifiedNormalAccommodation),
+  inCellSanitation = cell.inCellSanitation,
+).apply {
+  cell.specialistCellTypes?.forEach {
+    addSpecialistCellType(
+      specialistCellType = it,
+      userOrSystemInContext = createdBy,
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
+  }
+  cellsUsedFor?.forEach {
+    addUsedFor(
+      usedForType = it,
+      userOrSystemInContext = createdBy,
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
+  }
+  parentLocation.addChildLocation(this)
+  addHistory(
+    attributeName = LocationAttribute.LOCATION_CREATED,
+    oldValue = null,
+    newValue = getKey(),
+    amendedBy = createdBy,
+    amendedDate = LocalDateTime.now(clock),
+    linkedTransaction = linkedTransaction,
+  )
+  log.info("Created cell ${this.getKey()}")
+}
+
+@Schema(description = "Holds information about the level above which the cells should be created")
+@JsonInclude(JsonInclude.Include.NON_NULL)
 data class LevelAboveCells(
   @param:Schema(description = "Code assigned to the new structural location", example = "1", required = true)
   @field:Size(max = 12, message = "Max of 12 characters")
@@ -156,7 +194,13 @@ data class LevelAboveCells(
   }
 }
 
-data class NewCellRequest(
+@Schema(description = "Information about cells to be created or updated")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class CellInformation(
+
+  @param:Schema(description = "ID of the location, update only", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = false)
+  val id: UUID? = null,
+
   @param:Schema(description = "Code of the location", required = true, example = "001", minLength = 1)
   @field:Size(min = 1, message = "Code cannot be blank")
   @field:Size(max = 12, message = "Code must be up to 12 characters")

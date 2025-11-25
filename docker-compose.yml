@@ -102,5 +102,15 @@ services:
       - "8083:8080"
     volumes:
       - ./wiremock:/home/wiremock
+
+  manage-users-api:
+    image: wiremock/wiremock:latest
+    networks:
+      - hmpps
+    container_name: manage-users-wiremock
+    ports:
+      - "8093:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
 networks:
   hmpps:

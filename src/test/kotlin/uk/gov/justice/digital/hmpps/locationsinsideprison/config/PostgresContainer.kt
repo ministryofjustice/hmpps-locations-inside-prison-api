@@ -10,6 +10,7 @@ object PostgresContainer {
   val instance: PostgreSQLContainer<Nothing>? by lazy { startPostgresqlContainer() }
 
   private fun startPostgresqlContainer(): PostgreSQLContainer<Nothing>? {
+    TestContainersUtil.setDockerApiVersion()
     if (isPostgresRunning()) {
       log.warn("Using existing Postgres database")
       return null
