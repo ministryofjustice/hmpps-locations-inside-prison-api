@@ -28,6 +28,7 @@ object LocalStackContainer {
       DockerImageName.parse("localstack/localstack").withTag("4"),
     ).apply {
       withServices(LocalStackContainer.Service.SQS, LocalStackContainer.Service.SNS)
+      withEnv("DEFAULT_REGION", "eu-west-2")
       waitingFor(
         Wait.forLogMessage(".*Ready.*", 1),
       )
