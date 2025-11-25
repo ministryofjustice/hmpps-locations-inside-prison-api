@@ -19,8 +19,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.validateCapacity
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.*
@@ -82,14 +81,6 @@ data class CellInitialisationRequest(
     parentLocation: ResidentialLocation,
   ) = cells?.map { cell ->
 
-    if (!cell.isCapacityValid(accommodationType)) {
-      throw CapacityException(
-        cell.code,
-        "Normal accommodation must not have a CNA or working capacity of 0",
-        ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
-      )
-    }
-
     addCellToParent(
       prisonId = prisonId,
       accommodationType = accommodationType,
@@ -112,49 +103,62 @@ fun addCellToParent(
   createdBy: String,
   clock: Clock,
   linkedTransaction: LinkedTransaction,
-): Cell = Cell(
-  prisonId = prisonId,
-  code = cell.code,
-  cellMark = cell.cellMark,
-  pathHierarchy = "${parentLocation.getPathHierarchy()}-${cell.code}",
-  status = LocationStatus.DRAFT,
-  accommodationType = accommodationType,
-  createdBy = createdBy,
-  whenCreated = LocalDateTime.now(clock),
-  childLocations = mutableListOf(),
-  capacity = Capacity(
-    maxCapacity = cell.maxCapacity,
+): Cell {
+  val pathHierarchy = "${parentLocation.getPathHierarchy()}-${cell.code}"
+  val key = "$prisonId-$pathHierarchy"
+
+  validateCapacity(
+    locationKey = key,
+    certifiedNormalAccommodation = cell.certifiedNormalAccommodation,
     workingCapacity = cell.workingCapacity,
-  ),
-  certification = Certification(certifiedNormalAccommodation = cell.certifiedNormalAccommodation),
-  inCellSanitation = cell.inCellSanitation,
-).apply {
-  cell.specialistCellTypes?.forEach {
-    addSpecialistCellType(
-      specialistCellType = it,
-      userOrSystemInContext = createdBy,
-      clock = clock,
-      linkedTransaction = linkedTransaction,
-    )
-  }
-  cellsUsedFor?.forEach {
-    addUsedFor(
-      usedForType = it,
-      userOrSystemInContext = createdBy,
-      clock = clock,
-      linkedTransaction = linkedTransaction,
-    )
-  }
-  parentLocation.addChildLocation(this)
-  addHistory(
-    attributeName = LocationAttribute.LOCATION_CREATED,
-    oldValue = null,
-    newValue = getKey(),
-    amendedBy = createdBy,
-    amendedDate = LocalDateTime.now(clock),
-    linkedTransaction = linkedTransaction,
+    maxCapacity = cell.maxCapacity,
+    accommodationType = accommodationType,
+    specialistCellTypes = cell.specialistCellTypes ?: emptySet(),
   )
-  log.info("Created cell ${this.getKey()}")
+  return Cell(
+    prisonId = prisonId,
+    code = cell.code,
+    cellMark = cell.cellMark,
+    pathHierarchy = pathHierarchy,
+    status = LocationStatus.DRAFT,
+    accommodationType = accommodationType,
+    createdBy = createdBy,
+    whenCreated = LocalDateTime.now(clock),
+    childLocations = mutableListOf(),
+    capacity = Capacity(
+      maxCapacity = cell.maxCapacity,
+      workingCapacity = cell.workingCapacity,
+    ),
+    certification = Certification(certifiedNormalAccommodation = cell.certifiedNormalAccommodation),
+    inCellSanitation = cell.inCellSanitation,
+  ).apply {
+    cell.specialistCellTypes?.forEach {
+      addSpecialistCellType(
+        specialistCellType = it,
+        userOrSystemInContext = createdBy,
+        clock = clock,
+        linkedTransaction = linkedTransaction,
+      )
+    }
+    cellsUsedFor?.forEach {
+      addUsedFor(
+        usedForType = it,
+        userOrSystemInContext = createdBy,
+        clock = clock,
+        linkedTransaction = linkedTransaction,
+      )
+    }
+    parentLocation.addChildLocation(this)
+    addHistory(
+      attributeName = LocationAttribute.LOCATION_CREATED,
+      oldValue = null,
+      newValue = getKey(),
+      amendedBy = createdBy,
+      amendedDate = LocalDateTime.now(clock),
+      linkedTransaction = linkedTransaction,
+    )
+    log.info("Created cell ${this.getKey()}")
+  }
 }
 
 @Schema(description = "Holds information about the level above which the cells should be created")
@@ -226,18 +230,12 @@ data class CellInformation(
   @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
   val workingCapacity: Int = 0,
 
-  @param:Schema(description = "Specialist Cell Types", required = false)
+  @param:Schema(description = "Specialist cell types", required = false)
   val specialistCellTypes: Set<SpecialistCellType>? = null,
 
   @param:Schema(description = "In-cell sanitation for cell", required = false, defaultValue = "true")
   val inCellSanitation: Boolean = true,
-) {
-  fun isCapacityValid(accommodationType: AccommodationType): Boolean {
-    val cellIsSpecialistCellAllowingZeroCapacity = (specialistCellTypes?.isNotEmpty() ?: false && specialistCellTypes.all { it.affectsCapacity }) || accommodationType != AccommodationType.NORMAL_ACCOMMODATION
-    return cellIsSpecialistCellAllowingZeroCapacity || (certifiedNormalAccommodation != 0 && workingCapacity != 0)
-  }
-}
-
+)
 enum class ResidentialStructuralType(
   val locationType: LocationType,
   val defaultNextLevel: ResidentialStructuralType? = null,
