@@ -16,6 +16,7 @@ import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellDraftUpdateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
@@ -27,6 +28,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.addCellToParent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
@@ -384,21 +386,13 @@ class LocationService(
           code = cell.code,
           prisonId = createCellsRequest.prisonId,
         )
-
-        if (!cell.isCapacityValid(createCellsRequest.accommodationType)) {
-          throw CapacityException(
-            cell.code,
-            "Normal accommodation must not have a CNA or working capacity of 0",
-            ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
-          )
-        }
       }
 
       val createdCells = createCellsRequest.createCells(
         createdBy = sharedLocationService.getUsername(),
         clock = clock,
         linkedTransaction = linkedTransaction,
-        location = parentAboveCells,
+        parentLocation = parentAboveCells,
       )
       log.info("Created ${createdCells?.size} cells under location ${parentAboveCells.getKey()}")
     }
@@ -408,6 +402,123 @@ class LocationService(
       includeNonResidential = false,
     ).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  @Transactional
+  fun updateCells(cellDraftUpdateRequest: CellDraftUpdateRequest): LocationDTO {
+    val parentLocation = cellDraftUpdateRequest.parentLocation.let {
+      residentialLocationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
+    }
+
+    if (!parentLocation.isDraft()) {
+      throw ValidationException("Cannot update cells for a non-draft location")
+    }
+
+    val hasPendingApproval = parentLocation.getPendingApprovalRequest() != null
+    if (hasPendingApproval) {
+      throw LocationCannotBeCreatedWithPendingApprovalException(parentLocation.getKey())
+    }
+
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      prisonId = cellDraftUpdateRequest.prisonId,
+      TransactionType.LOCATION_UPDATE,
+      "Updating cells ${cellDraftUpdateRequest.cells.joinToString { it.code }} in prison ${cellDraftUpdateRequest.prisonId}",
+    )
+    val userOrSystemInContext = sharedLocationService.getUsername()
+
+    // find cells missing from `cellDraftUpdateRequest.cells` that are currently under this parentLocation
+    val listOfIds = cellDraftUpdateRequest.cells.mapNotNull { it.id }
+    val cellsToRemove = parentLocation.cellLocations().filter { cell -> cell.id !in listOfIds }
+    val deletedCells = cellsToRemove.size
+    cellsToRemove.forEach { cell ->
+      parentLocation.removeCell(cell)
+      cellLocationRepository.deleteById(cell.id) // TODO: fix this so don't have to explicitly delete by ID
+    }
+
+    var createdCells = 0
+    // create cells
+    cellDraftUpdateRequest.cells.filter { it.id == null }.forEach { cell ->
+      // check that code doesn't clash with the existing location
+      sharedLocationService.checkParentValid(
+        parentLocation = parentLocation,
+        code = cell.code,
+        prisonId = cellDraftUpdateRequest.prisonId,
+      )
+      cellLocationRepository.save(
+        addCellToParent(
+          prisonId = cellDraftUpdateRequest.prisonId,
+          accommodationType = cellDraftUpdateRequest.accommodationType,
+          cellsUsedFor = cellDraftUpdateRequest.cellsUsedFor,
+          cell = cell,
+          parentLocation = parentLocation,
+          createdBy = userOrSystemInContext,
+          clock = clock,
+          linkedTransaction = linkedTransaction,
+        ),
+      )
+      createdCells = createdCells.inc()
+    }
+
+    // update cells
+    var updatedCells = 0
+    cellDraftUpdateRequest.cells.filter { it.id != null }.forEach { cell ->
+      val cellToUpdate = cellLocationRepository.findById(cell.id!!)
+        .orElseThrow { LocationNotFoundException(cell.id.toString()) }
+
+      if (!cell.isCapacityValid(cellDraftUpdateRequest.accommodationType)) {
+        throw CapacityException(
+          cell.code,
+          "Normal accommodation must not have a CNA or working capacity of 0",
+          ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
+        )
+      }
+      // update the cell
+      cellToUpdate.update(
+        upsert = PatchResidentialLocationRequest(
+          code = cell.code,
+          accommodationType = cellDraftUpdateRequest.accommodationType,
+          usedFor = cellDraftUpdateRequest.cellsUsedFor,
+        ),
+        userOrSystemInContext = userOrSystemInContext,
+        clock = clock,
+        linkedTransaction = linkedTransaction,
+      )
+      cellToUpdate.cellMark = cell.cellMark
+      cellToUpdate.inCellSanitation = cell.inCellSanitation
+      cellToUpdate.setCapacity(
+        maxCapacity = cell.maxCapacity,
+        workingCapacity = cell.workingCapacity,
+        userOrSystemInContext = userOrSystemInContext,
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+
+      cellToUpdate.updateCellSpecialistCellTypes(
+        specialistCellTypes = cell.specialistCellTypes ?: emptySet(),
+        userOrSystemInContext = userOrSystemInContext,
+        clock = clock,
+        linkedTransaction = linkedTransaction,
+      )
+
+      cellToUpdate.setCertifiedNormalAccommodation(
+        certifiedNormalAccommodation = cell.certifiedNormalAccommodation,
+        userOrSystemInContext = userOrSystemInContext,
+        updatedAt = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+
+      updatedCells = updatedCells.inc()
+    }
+
+    return parentLocation.toDto(
+      includeChildren = true,
+      includeNonResidential = false,
+    ).also {
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      val txMessage = "Created $createdCells, updated $updatedCells and deleted $deletedCells cells under location ${parentLocation.getKey()}"
+      linkedTransaction.transactionDetail = txMessage
+      log.info(txMessage)
     }
   }
 
