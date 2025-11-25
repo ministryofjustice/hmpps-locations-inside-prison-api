@@ -65,7 +65,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateCapacityRequest
@@ -1218,10 +1217,10 @@ class LocationService(
     return ResidentialSummary(
       topLevelLocationType = currentLocation?.let { it.getHierarchy()[0].type.getPlural() } ?: "Wings",
       prisonSummary = if (id == null) {
-        val prisonDetails = prisonService.lookupPrisonDetails(prisonId) ?: throw PrisonNotFoundException(prisonId)
+        val prisonDetails = prisonService.lookupPrisonDetails(prisonId)
 
         PrisonSummary(
-          prisonName = prisonDetails.prisonName,
+          prisonName = prisonDetails?.prisonName ?: prisonId,
           workingCapacity = locations.sumOf { it.capacity?.workingCapacity ?: 0 },
           maxCapacity = locations.sumOf { it.capacity?.maxCapacity ?: 0 },
           numberOfCellLocations = locations.sumOf { it.numberOfCellLocations ?: 0 },
@@ -1355,8 +1354,8 @@ class LocationService(
   }
 
   fun getUsedForTypesForPrison(prisonId: String): List<UsedForType> {
-    val prisonDetails = prisonService.lookupPrisonDetails(prisonId) ?: throw PrisonNotFoundException(prisonId)
-    return UsedForType.entries.filter { it.isStandard() || (prisonDetails.female && it.femaleOnly) || (prisonDetails.lthse && it.secureEstateOnly) }
+    val prisonDetails = prisonService.lookupPrisonDetails(prisonId)
+    return UsedForType.entries.filter { it.isStandard() || (true == prisonDetails?.female && it.femaleOnly) || (true == prisonDetails?.lthse && it.secureEstateOnly) }
   }
 
   fun findAllByPrisonIdTopParentAndLocalName(prisonId: String, localName: String, parentLocationId: UUID? = null): List<LocationDTO> {
