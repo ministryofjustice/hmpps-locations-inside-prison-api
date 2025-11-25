@@ -29,6 +29,9 @@ class ResourceSecurityTest : SqsIntegrationTestBase() {
     "GET /definitions/{dataProductDefinitionId}/dashboards/{dashboardId}",
     "GET /statements",
     "GET /async",
+    "GET /productCollections",
+    "GET /reports/{reportId}/dashboards/{dashboardId}",
+    "GET /productCollections/{id}",
   )
 
   @Test
