@@ -126,6 +126,7 @@ open class VirtualResidentialLocation(
       certifiedNormalAccommodation = 0,
       temporarilyDeactivated = isTemporarilyDeactivated(),
       permanentlyDeactivated = isPermanentlyDeactivated(),
+      virtualLocation = isVirtualResidentialLocation(),
     )
 
     super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, amendedDate, linkedTransaction)

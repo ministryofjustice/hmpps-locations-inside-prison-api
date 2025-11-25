@@ -707,7 +707,7 @@ open class ResidentialLocation(
   }
 }
 
-fun validateCapacity(locationKey: String, certifiedNormalAccommodation: Int, workingCapacity: Int, maxCapacity: Int, accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION, specialistCellTypes: Set<SpecialistCellType> = emptySet(), permanentlyDeactivated: Boolean = false, temporarilyDeactivated: Boolean = false) {
+fun validateCapacity(locationKey: String, certifiedNormalAccommodation: Int, workingCapacity: Int, maxCapacity: Int, accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION, specialistCellTypes: Set<SpecialistCellType> = emptySet(), permanentlyDeactivated: Boolean = false, temporarilyDeactivated: Boolean = false, virtualLocation: Boolean = false) {
   if (workingCapacity > 99) {
     throw CapacityException(
       locationKey,
@@ -729,21 +729,20 @@ fun validateCapacity(locationKey: String, certifiedNormalAccommodation: Int, wor
     throw CapacityException(locationKey, "Max capacity cannot be zero", ErrorCode.MaxCapacityCannotBeZero)
   }
 
-  if (!(permanentlyDeactivated || temporarilyDeactivated) && workingCapacity == 0 && isCapacityRequired(specialistCellTypes)
-  ) {
-    throw CapacityException(
-      locationKey,
-      "Cannot have a 0 working capacity with normal accommodation and not specialist cell",
-      ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
-    )
-  }
-
-  if (isCapacityValid(workingCapacity, certifiedNormalAccommodation, accommodationType = accommodationType, specialistCellTypes = specialistCellTypes)) {
-    throw CapacityException(
-      locationKey,
-      "Normal accommodation must not have a CNA or working capacity of 0",
-      ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
-    )
+  if (!(permanentlyDeactivated || temporarilyDeactivated || virtualLocation)) {
+    if (!isCapacityValid(
+        workingCapacity,
+        certifiedNormalAccommodation,
+        accommodationType = accommodationType,
+        specialistCellTypes = specialistCellTypes,
+      )
+    ) {
+      throw CapacityException(
+        locationKey,
+        "Normal accommodation must not have a CNA or working capacity of 0",
+        ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed,
+      )
+    }
   }
 }
 

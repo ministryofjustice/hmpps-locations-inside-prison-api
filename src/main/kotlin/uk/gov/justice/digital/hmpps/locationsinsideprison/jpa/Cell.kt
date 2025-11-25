@@ -303,6 +303,7 @@ class Cell(
       specialistCellTypes = getSpecialistCellTypesForCell(),
       temporarilyDeactivated = isTemporarilyDeactivated(),
       permanentlyDeactivated = isPermanentlyDeactivated(),
+      virtualLocation = isVirtualResidentialLocation(),
     )
 
     if (isLocationLocked()) {

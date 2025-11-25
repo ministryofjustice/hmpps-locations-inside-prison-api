@@ -151,6 +151,21 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `cannot create a cell with max cap greater than working cap`() {
+        val request = createCellInitialisationRequest(parentLocation = wingZ.id, maxCap = 1, workingCap = 2)
+        assertThat(
+          webTestClient.post().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.WorkingCapacityExceedsMaxCapacity.errorCode)
+      }
+
+      @Test
       fun `request with normal cells without specialist cells do not allow zero CNA or Working Capacity`() {
         assertThat(
           webTestClient.post().uri(url)
@@ -596,6 +611,54 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           .bodyValue("""{"prisonId": "MDI"}""")
           .exchange()
           .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `cannot update a cell with max cap greater than working cap`() {
+        val request = createCellDraftUpdateRequest(
+          parentLocation = landing1G.id!!,
+          cells = landing1G.cellLocations().map { it.toCellInformation(specialistCellTypes = setOf(SpecialistCellType.ISOLATION_DISEASES, SpecialistCellType.ACCESSIBLE_CELL)).copy(maxCapacity = 1, workingCapacity = 2) },
+          usedForTypes = setOf(UsedForType.THERAPEUTIC_COMMUNITY),
+          accommodationType = AccommodationType.HEALTHCARE_INPATIENTS,
+        )
+        assertThat(
+          webTestClient.put().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.WorkingCapacityExceedsMaxCapacity.errorCode)
+      }
+
+      @Test
+      fun `cannot create a cell with max cap greater than working cap`() {
+        val request = createCellDraftUpdateRequest(
+          parentLocation = landing1G.id!!,
+          cells = landing1G.cellLocations().map { it.toCellInformation() }.plus(
+            CellInformation(
+              code = "010",
+              cellMark = "NEW10",
+              maxCapacity = 1,
+              workingCapacity = 2,
+              certifiedNormalAccommodation = 1,
+              specialistCellTypes = setOf(SpecialistCellType.ESCAPE_LIST),
+              inCellSanitation = false,
+            ),
+          ),
+        )
+        assertThat(
+          webTestClient.put().uri(url)
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody(ErrorResponse::class.java)
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.WorkingCapacityExceedsMaxCapacity.errorCode)
       }
     }
 

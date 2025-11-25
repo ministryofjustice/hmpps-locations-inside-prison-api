@@ -67,8 +67,8 @@ fun buildCell(
   prisonId: String = "MDI",
   pathHierarchy: String,
   status: LocationStatus = LocationStatus.ACTIVE,
-  capacity: Capacity? = null,
-  certification: Certification? = null,
+  capacity: Capacity = Capacity(maxCapacity = 1, workingCapacity = 1),
+  certification: Certification = Certification(certified = true, certifiedNormalAccommodation = 1),
   residentialAttributeValues: Set<ResidentialAttributeValue> = setOf(
     ResidentialAttributeValue.DOUBLE_OCCUPANCY,
     ResidentialAttributeValue.CAT_B,
