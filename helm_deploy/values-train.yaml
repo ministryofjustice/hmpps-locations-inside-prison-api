@@ -17,13 +17,6 @@ generic-service:
           return 401;
         }
 
-  # This exposes port 8090 for wiremock to be called by the frontend service
-  service:
-    additionalPorts:
-      - name: wiremock
-        port: 8090
-        targetPort: 8090
-
   env:
     APPLICATIONINSIGHTS_CONFIGURATION_FILE: applicationinsights.dev.json
     API_BASE_URL_OAUTH: https://sign-in-preprod.hmpps.service.justice.gov.uk/auth

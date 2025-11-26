@@ -1,0 +1,27 @@
+{{- if eq .Values.environment.name "train" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "generic-service.fullname" . }}
+  labels:
+    helm.sh/chart: generic-service-{{ (index .Chart.Dependencies 0).Version }}
+    app: {{ include "generic-service.name" . }}
+    release: {{ .Release.Name }}
+    app.kubernetes.io/version: "app_version"
+    app.kubernetes.io/managed-by: Helm
+    hmpps.justice.gov.uk/product-id: {{ index .Values "generic-service" "productId" }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: http
+    - name: wiremock
+      protocol: TCP
+      port: 8090
+      targetPort: 8090
+  selector:
+    app: {{ include "generic-service.name" . }}
+    release: {{ .Release.Name }}
+{{- end }}
