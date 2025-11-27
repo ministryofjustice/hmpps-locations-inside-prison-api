@@ -935,7 +935,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "attributes": {
                     "serviceFamilyType": "ACTIVITIES_APPOINTMENTS",
                     "serviceFamilyDescription": "Activities and appointments"
-                  }
+                  },
+                  "additionalInformation": "For example a counselling session"
                 },
                 {
                   "key": "PROGRAMMES_AND_ACTIVITIES",
@@ -943,7 +944,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "attributes": {
                     "serviceFamilyType": "ACTIVITIES_APPOINTMENTS",
                     "serviceFamilyDescription": "Activities and appointments"
-                  }
+                  },
+                  "additionalInformation": "For example a workshop or lesson"
                 },
                 {
                   "key": "HEARING_LOCATION",
@@ -951,7 +953,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "attributes": {
                     "serviceFamilyType": "ADJUDICATIONS",
                     "serviceFamilyDescription": "Adjudications"
-                  }
+                  },
+                  "additionalInformation": "For adjudication hearings"
                 },
                 {
                   "key": "LOCATION_OF_INCIDENT",
@@ -959,7 +962,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "attributes": {
                     "serviceFamilyType": "ADJUDICATIONS",
                     "serviceFamilyDescription": "Adjudications"
-                  }
+                  },
+                  "additionalInformation": "For example a location where an occurrence led to an adjudication hearing"
                 },
                 {
                   "key": "INTERNAL_MOVEMENTS",
@@ -967,7 +971,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "attributes": {
                     "serviceFamilyType": "INTERNAL_MOVEMENTS",
                     "serviceFamilyDescription": "Internal movements"
-                  }
+                  },
+                  "additionalInformation": "To record the location of unlocked prisoners within this establishment"
                 },
                 {
                   "key": "OFFICIAL_VISITS",
@@ -975,7 +980,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "attributes": {
                     "serviceFamilyType": "OFFICIAL_VISITS",
                     "serviceFamilyDescription": "Official visits"
-                  }
+                  },
+                  "additionalInformation": "For example, arranging a face to face visit with a solicitor"
                 },
                 {
                   "key": "USE_OF_FORCE",
@@ -983,7 +989,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "attributes": {
                     "serviceFamilyType": "USE_OF_FORCE",
                     "serviceFamilyDescription": "Use of force"
-                  }
+                  },
+                  "additionalInformation": "To report where a use of force incident took place"
                 }
               ]
             }              
