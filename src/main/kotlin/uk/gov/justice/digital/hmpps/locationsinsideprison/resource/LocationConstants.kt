@@ -191,6 +191,7 @@ class LocationConstants(
             "serviceFamilyType" to it.serviceFamily,
             "serviceFamilyDescription" to it.serviceFamily.description,
           ),
+          additionalInformation = it.additionalInformation,
         )
       },
   )
