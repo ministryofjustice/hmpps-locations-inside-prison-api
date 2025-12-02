@@ -16,7 +16,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -102,7 +101,7 @@ class LocationRepositoryTest : TestBase() {
     assertThat(location.findAllLeafLocations()).containsExactlyInAnyOrder(cell001L1, cell002L1, cell002L2, adjRoom)
     location.findAllLeafLocations().forEach {
       if (it is Cell) {
-        it.setCapacity(workingCapacity = 2, maxCapacity = 2, userOrSystemInContext = "test", amendedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
+        it.setCapacity(workingCapacity = 2, maxCapacity = 2, certifiedNormalAccommodation = 1, userOrSystemInContext = "test", amendedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
         it.certifyCell(
           cellUpdatedBy = "test",
           updatedDate = LocalDateTime.now(clock),
@@ -225,8 +224,8 @@ class LocationRepositoryTest : TestBase() {
       createdBy = SYSTEM_USERNAME,
       whenCreated = now,
       parent = parent,
-      capacity = Capacity(maxCapacity = 1, workingCapacity = 1),
-      certification = Certification(certified = true, certifiedNormalAccommodation = 1),
+      capacity = Capacity(maxCapacity = 1, workingCapacity = 1, certifiedNormalAccommodation = 1),
+      certifiedCell = true,
       localName = "CELL $prisonId $pathHierarchy",
       deactivatedDate = LocalDateTime.now(clock).minusYears(1),
       proposedReactivationDate = LocalDate.now(clock).minusDays(1),

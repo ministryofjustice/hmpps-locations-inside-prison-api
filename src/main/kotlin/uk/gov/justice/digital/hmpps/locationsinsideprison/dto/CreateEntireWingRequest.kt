@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -171,11 +170,9 @@ data class CreateEntireWingRequest(
           capacity = Capacity(
             maxCapacity = defaultMaxCapacity,
             workingCapacity = defaultWorkingCapacity,
-          ),
-          certification = Certification(
-            certified = status != LocationStatus.DRAFT,
             certifiedNormalAccommodation = defaultCNA,
           ),
+          certifiedCell = status != LocationStatus.DRAFT,
         ).apply {
           addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction = linkedTransaction)
           addSpecialistCellType(SpecialistCellType.ESCAPE_LIST, linkedTransaction = linkedTransaction, userOrSystemInContext = createdBy, clock = clock)

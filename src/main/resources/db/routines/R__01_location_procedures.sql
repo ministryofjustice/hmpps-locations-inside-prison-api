@@ -6,10 +6,6 @@ BEGIN
     FROM capacity c
     where EXISTS (select 1 from location l where l.capacity_id = c.id and l.prison_id = p_prison_id);
 
-    DELETE
-    FROM certification c
-    where NOT EXISTS (select 1 from location l where l.certification_id = c.id);
-
     DELETE FROM location l where l.prison_id = p_prison_id;
     DELETE FROM signed_operation_capacity soc where soc.prison_id = p_prison_id;
     DELETE FROM prison_configuration where prison_id = p_prison_id;
@@ -54,14 +50,13 @@ BEGIN
     else
         SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_parent_path;
 
-        INSERT INTO capacity (max_capacity, working_capacity) VALUES (p_max_cap, p_working_cap) returning id INTO v_capacity_id;
-        INSERT INTO certification (certified, certified_normal_accommodation) VALUES (p_certified, p_max_cap)  returning id INTO v_certification_id;
+        INSERT INTO capacity (max_capacity, working_capacity, certified_normal_accommodation) VALUES (p_max_cap, p_working_cap, p_max_cap) returning id INTO v_capacity_id;
 
         INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status,
-                              capacity_id, certification_id, locked, in_cell_sanitation, cell_mark,
+                              capacity_id, locked, in_cell_sanitation, cell_mark, certified_cell,
                               accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
-        values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, p_status, v_capacity_id, v_certification_id,
-                p_locked, true, concat(p_parent_path,p_code), p_accommodation_type, map_accommodation_type(p_accommodation_type),
+        values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, p_status, v_capacity_id,
+                p_locked, true, concat(p_parent_path,p_code), true, p_accommodation_type, map_accommodation_type(p_accommodation_type),
                 now(), now(), p_username) RETURNING id INTO v_location_id;
 
         FOREACH v_used_for IN ARRAY p_used_for
@@ -98,13 +93,14 @@ DECLARE v_location_id UUID;
     DECLARE v_cell_type varchar(80);
 BEGIN
 
-    SELECT id, capacity_id, certification_id INTO v_location_id, v_capacity_id, v_certification_id
+    SELECT id, capacity_id INTO v_location_id, v_capacity_id
     from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_cell_path;
 
     UPDATE location
         SET accommodation_type = p_accommodation_type,
             residential_housing_type = map_accommodation_type(p_accommodation_type),
             status = p_status,
+            certified_cell = p_certified,
             updated_by = p_username,
             when_updated = now()
     WHERE id = v_location_id;
@@ -116,8 +112,6 @@ BEGIN
     IF p_working_cap IS NOT NULL THEN
         UPDATE capacity SET working_capacity = p_working_cap WHERE id = v_capacity_id;
     END IF;
-
-    UPDATE certification SET certified = p_certified WHERE id = v_certification_id;
 
     DELETE FROM cell_used_for WHERE location_id = v_location_id;
     FOREACH v_used_for IN ARRAY p_used_for
@@ -174,10 +168,9 @@ AS $$
 DECLARE v_location_id UUID;
     DECLARE v_current_parent_id UUID;
     DECLARE v_capacity_id bigint;
-    DECLARE v_certification_id bigint;
 BEGIN
 
-    SELECT id, capacity_id, certification_id INTO v_location_id, v_capacity_id, v_certification_id
+    SELECT id, capacity_id INTO v_location_id, v_capacity_id
     from location l where l.prison_id = p_prison_id and l.path_hierarchy = concat(p_parent_path,'-',p_code);
     IF FOUND THEN
         delete from cell_used_for where location_id = v_location_id;
@@ -187,7 +180,7 @@ BEGIN
             SET converted_cell_type = p_non_res_cell_type,
                 other_converted_cell_type = null,
                 capacity_id = null,
-                certification_id = null,
+                certified_cell = false,
                 residential_housing_type = map_accommodation_type('NORMAL_ACCOMMODATION'),
                 accommodation_type = 'NORMAL_ACCOMMODATION',
                 updated_by = p_username,
@@ -195,15 +188,14 @@ BEGIN
         WHERE id = v_location_id;
 
         delete from capacity where id = v_capacity_id;
-        delete from certification where id = v_certification_id;
 
     ELSE
         SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_parent_path;
 
-        INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status, converted_cell_type, other_converted_cell_type,
+        INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status, converted_cell_type, other_converted_cell_type, certified_cell,
                               accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
         values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, 'ACTIVE',
-                p_non_res_cell_type, null,
+                p_non_res_cell_type, null, false,
                 'NORMAL_ACCOMMODATION', map_accommodation_type('NORMAL_ACCOMMODATION'),
                 now(), now(), p_username) RETURNING id INTO v_location_id;
     END IF;
@@ -221,10 +213,9 @@ CREATE OR REPLACE FUNCTION convert_to_non_res_cell(
 AS $$
     DECLARE v_location_id UUID;
     DECLARE v_capacity_id integer;
-    DECLARE v_certification_id integer;
 BEGIN
 
-    SELECT id, capacity_id, certification_id INTO v_location_id, v_capacity_id, v_certification_id
+    SELECT id, capacity_id INTO v_location_id, v_capacity_id
     from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_path_hierarchy;
 
     UPDATE location
@@ -232,6 +223,7 @@ BEGIN
             other_converted_cell_type = p_other_converted_cell_type,
             capacity_id = null,
             location_type = 'CELL',
+            certified_cell = false,
             residential_housing_type = 'NORMAL_ACCOMMODATION',
             accommodation_type = 'OTHER_NON_RESIDENTIAL',
             updated_by = p_username,
@@ -239,10 +231,6 @@ BEGIN
     WHERE id = v_location_id;
 
     delete from capacity where id = v_capacity_id;
-
-    update certification
-        set certified = false
-    where id = v_certification_id;
 
     delete from cell_used_for where location_id = v_location_id;
     delete from specialist_cell where location_id = v_location_id;
@@ -263,10 +251,9 @@ DECLARE v_location_id UUID;
     DECLARE v_current_parent_id UUID;
     DECLARE v_path_hierarchy varchar;
     DECLARE v_capacity_id integer;
-    DECLARE v_certification_id integer;
 BEGIN
 
-    SELECT id, capacity_id, certification_id INTO v_location_id, v_capacity_id, v_certification_id
+    SELECT id, capacity_id INTO v_location_id, v_capacity_id
     from location l where l.prison_id = p_prison_id and l.path_hierarchy = concat(p_parent_path,'-',p_code);
     IF FOUND THEN
         delete from cell_used_for where location_id = v_location_id;
@@ -282,7 +269,7 @@ BEGIN
             converted_cell_type = null,
             other_converted_cell_type = null,
             capacity_id = null,
-            certification_id = null,
+            certified_cell = false,
             residential_housing_type = map_accommodation_type('NORMAL_ACCOMMODATION'),
             accommodation_type = 'NORMAL_ACCOMMODATION',
             updated_by = p_username,
@@ -290,7 +277,6 @@ BEGIN
         WHERE id = v_location_id;
 
         delete from capacity where id = v_capacity_id;
-        delete from certification where id = v_certification_id;
 
     ELSE
         SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_parent_path;
@@ -301,10 +287,10 @@ BEGIN
         end if;
 
         INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status, archived_reason,
-                              deactivated_by, deactivated_date,
+                              deactivated_by, deactivated_date, certified_cell,
                               accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
         values (p_prison_id, v_path_hierarchy, p_code, p_location_type, p_location_type_discriminator, v_current_parent_id, 'ARCHIVED', p_archive_reason,
-                p_username, now(),
+                p_username, now(), false,
                 'NORMAL_ACCOMMODATION', map_accommodation_type('NORMAL_ACCOMMODATION'),
                 now(), now(), p_username) RETURNING id INTO v_location_id;
     END IF;
@@ -362,8 +348,8 @@ AS $$
         SELECT id INTO v_location_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_location_path;
 
         IF FOUND THEN
-            select SUM(c.max_capacity), sum(c.working_capacity), sum(cert.certified_normal_accommodation)
-                From location l join capacity c on c.id = l.capacity_id left join certification cert on cert.id = l.certification_id
+            select SUM(c.max_capacity), sum(c.working_capacity), sum(c.certified_normal_accommodation)
+                From location l join capacity c on c.id = l.capacity_id
                 where prison_id = p_prison_id and path_hierarchy like concat(p_location_path, '%')
             INTO v_max_capacity_change, v_working_capacity_change, v_certified_normal_accommodation_change;
 
@@ -394,7 +380,7 @@ AS $$
                    l.local_name,
                    l.path_hierarchy,
                    (CHAR_LENGTH(l.path_hierarchy) - CHAR_LENGTH(REPLACE(l.path_hierarchy, '-', ''))) / CHAR_LENGTH('-') +1,
-                   cert.certified_normal_accommodation,
+                   c.certified_normal_accommodation,
                    c.working_capacity,
                    c.max_capacity,
                    l.in_cell_sanitation,
@@ -402,7 +388,7 @@ AS $$
                    (select string_agg( distinct uf.used_for, ',') from cell_used_for uf join location l3 on l3.id = uf.location_id where l3.prison_id = p_prison_id and l3.path_hierarchy like concat(p_location_path, '%')),
                    (select string_agg( distinct l3.accommodation_type, ',') from location l3 where l3.prison_id = p_prison_id and l3.path_hierarchy like concat(p_location_path, '%')),
                    (select string_agg( distinct sc.specialist_cell_type, ',') from specialist_cell sc join location l3 on l3.id = sc.location_id where l3.prison_id = p_prison_id and l3.path_hierarchy like concat(p_location_path, '%'))
-            From location l left join capacity c on c.id = l.capacity_id left join certification cert on cert.id = l.certification_id
+            From location l left join capacity c on c.id = l.capacity_id
                 where prison_id = p_prison_id and path_hierarchy like concat(p_location_path, '%')
             order by l.path_hierarchy;
 

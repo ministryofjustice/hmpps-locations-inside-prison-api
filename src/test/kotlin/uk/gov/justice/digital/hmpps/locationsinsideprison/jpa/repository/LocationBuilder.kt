@@ -6,7 +6,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.C
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -67,8 +66,8 @@ fun buildCell(
   prisonId: String = "MDI",
   pathHierarchy: String,
   status: LocationStatus = LocationStatus.ACTIVE,
-  capacity: Capacity = Capacity(maxCapacity = 1, workingCapacity = 1),
-  certification: Certification = Certification(certified = true, certifiedNormalAccommodation = 1),
+  capacity: Capacity = Capacity(maxCapacity = 1, workingCapacity = 1, certifiedNormalAccommodation = 1),
+  certifiedCell: Boolean = true,
   residentialAttributeValues: Set<ResidentialAttributeValue> = setOf(
     ResidentialAttributeValue.DOUBLE_OCCUPANCY,
     ResidentialAttributeValue.CAT_B,
@@ -91,7 +90,7 @@ fun buildCell(
     childLocations = mutableListOf(),
     orderWithinParentLocation = 99,
     capacity = capacity,
-    certification = certification,
+    certifiedCell = certifiedCell,
     accommodationType = accommodationType,
     residentialHousingType = residentialHousingType,
     deactivatedReason = if (status != LocationStatus.ACTIVE) {

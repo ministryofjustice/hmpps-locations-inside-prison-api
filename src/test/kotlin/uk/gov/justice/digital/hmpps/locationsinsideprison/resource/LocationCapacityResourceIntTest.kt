@@ -13,7 +13,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_U
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
@@ -86,8 +85,8 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
     cell1 = repository.save(
       buildCell(
         pathHierarchy = "Z-1-001",
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 1),
-        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 1, certifiedNormalAccommodation = 2),
+        certifiedCell = true,
         specialistCellType = SpecialistCellType.LOCATE_FLAT_CELL,
         linkedTransaction = linkedTransaction,
       ),
@@ -95,8 +94,8 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
     cell2 = repository.save(
       buildCell(
         pathHierarchy = "Z-1-002",
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        certifiedCell = true,
         specialistCellType = SpecialistCellType.LISTENER_CRISIS,
         linkedTransaction = linkedTransaction,
       ),
@@ -104,8 +103,8 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
     cell3 = repository.save(
       buildCell(
         pathHierarchy = "Z-2-001",
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 0),
-        certification = Certification(certified = true, certifiedNormalAccommodation = 1),
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 0, certifiedNormalAccommodation = 1),
+        certifiedCell = true,
         specialistCellType = SpecialistCellType.SAFE_CELL,
         linkedTransaction = linkedTransaction,
       ),
@@ -113,8 +112,8 @@ class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
     cell4 = repository.save(
       buildCell(
         pathHierarchy = "Z-2-002",
-        capacity = Capacity(maxCapacity = 1, workingCapacity = 0),
-        certification = Certification(certified = false, certifiedNormalAccommodation = 0),
+        capacity = Capacity(maxCapacity = 1, workingCapacity = 0, certifiedNormalAccommodation = 0),
+        certifiedCell = false,
         linkedTransaction = linkedTransaction,
       ),
     )

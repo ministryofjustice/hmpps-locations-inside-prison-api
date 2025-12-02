@@ -32,7 +32,6 @@ import java.time.LocalDateTime
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity as CapacityJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell as CellJPA
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification as CertificationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location as LocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation as NonResidentialLocationJPA
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
@@ -89,7 +88,15 @@ data class Location(
   @param:Schema(description = "When a cell is inactive, show the active working capacity value", required = false)
   val oldWorkingCapacity: Int? = null,
 
+  @param:Schema(
+    description = "Indicates that this location is certified for use as a cell",
+    example = "true",
+    required = false,
+  )
+  val certifiedCell: Boolean? = null,
+
   @param:Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
+  @Deprecated("Use certified instead")
   val certification: Certification? = null,
 
   @param:Schema(description = "Location Usage", required = false)
@@ -310,16 +317,19 @@ data class NonResidentialUsageDto(
 @Schema(description = "Capacity")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class Capacity(
-  @param:Schema(description = "Max capacity of the location", example = "2", required = true)
+  @param:Schema(description = "Max capacity of the cell", example = "2", required = true)
   @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
   @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
   val maxCapacity: Int = 0,
-  @param:Schema(description = "Working capacity of the location", example = "2", required = true)
+  @param:Schema(description = "Working capacity of the cell", example = "1", required = true)
   @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
   @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
   val workingCapacity: Int = 0,
+  @param:Schema(description = "CNA of the cell", example = "2", required = false)
+  @field:Max(value = 99, message = "CNA cannot be greater than 99")
+  @field:PositiveOrZero(message = "CNA cannot be less than 0")
+  val certifiedNormalAccommodation: Int? = null,
 ) {
-
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -328,6 +338,7 @@ data class Capacity(
 
     if (maxCapacity != other.maxCapacity) return false
     if (workingCapacity != other.workingCapacity) return false
+    if (certifiedNormalAccommodation != other.certifiedNormalAccommodation) return false
 
     return true
   }
@@ -335,6 +346,7 @@ data class Capacity(
   override fun hashCode(): Int {
     var result = maxCapacity
     result = 31 * result + workingCapacity
+    result = 31 * result + (certifiedNormalAccommodation ?: 0)
     return result
   }
 }
@@ -442,6 +454,7 @@ data class TransactionHistory(
 
 @Schema(description = "Certification")
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Deprecated("CNA and certified marker have moved under capacity and location")
 data class Certification(
   @param:Schema(
     description = "Indicates that this location is certified for use as a residential location",
@@ -454,6 +467,7 @@ data class Certification(
   val capacityOfCertifiedCell: Int = 0,
 
   @param:Schema(description = "CNA (Certified normal accommodation)", example = "1", required = false)
+  @Deprecated("Use certifiedNormalAccommodation in capacity instead")
   val certifiedNormalAccommodation: Int? = null,
 ) {
 
@@ -539,6 +553,7 @@ data class CreateResidentialLocationRequest(
   @param:Schema(description = "CNA value", required = false, defaultValue = "0")
   @field:Max(value = 99, message = "CNA cannot be greater than 99")
   @field:PositiveOrZero(message = "CNA cannot be less than 0")
+  @Deprecated("Use certifiedNormalAccommodation in capacity instead")
   val certifiedNormalAccommodation: Int = 0,
 
   @param:Schema(description = "In-cell sanitation", required = false, defaultValue = "false")
@@ -560,13 +575,9 @@ data class CreateResidentialLocationRequest(
       whenCreated = LocalDateTime.now(clock),
       childLocations = mutableListOf(),
       accommodationType = accommodationType,
-      capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
+      capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity, certifiedNormalAccommodation = it.certifiedNormalAccommodation ?: certifiedNormalAccommodation) },
       inCellSanitation = inCellSanitation,
-      certification =
-      CertificationJPA(
-        certified = if (createInDraft) false else certified,
-        certifiedNormalAccommodation = certifiedNormalAccommodation,
-      ),
+      certifiedCell = if (createInDraft) false else certified,
     ).apply {
       if (request.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
         addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction)

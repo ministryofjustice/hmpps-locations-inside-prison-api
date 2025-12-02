@@ -913,7 +913,7 @@ abstract class Location(
 
       if (this is ResidentialLocation) {
         this.cellLocations().filter { !it.isConvertedCell() }.forEach { cellLocation ->
-          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, userOrSystemInContext, amendedDate = amendedDate, linkedTransaction)
+          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0, userOrSystemInContext, amendedDate = amendedDate, linkedTransaction)
           cellLocation.deCertifyCell(userOrSystemInContext, clock, linkedTransaction)
         }
       }
@@ -929,6 +929,7 @@ abstract class Location(
     locationsReactivated: MutableSet<Location>? = null,
     maxCapacity: Int? = null,
     workingCapacity: Int? = null,
+    certifiedNormalAccommodation: Int? = null,
     reactivatedLocations: MutableSet<Location>? = null,
     amendedLocations: MutableSet<Location>? = null,
   ): Boolean {
@@ -954,6 +955,7 @@ abstract class Location(
       setCapacity(
         maxCapacity = maxCapacity ?: getMaxCapacity(includePendingChange = true) ?: 0,
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
+        certifiedNormalAccommodation = certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
         userOrSystemInContext = userOrSystemInContext,
         amendedDate = amendedDate,
         linkedTransaction = linkedTransaction,

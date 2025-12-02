@@ -2590,11 +2590,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
               UpdateCapacityRequest(
                 locations = mapOf(
                   cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, certifiedNormalAccommodation = 3, inCellSanitation = true, cellMark = "X001"),
-                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0, inCellSanitation = null, cellMark = "X002"),
+                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0, inCellSanitation = null, cellMark = "X002"),
                   cell1N.getKey() to CellCapacityUpdateDetail(maxCapacity = 4, workingCapacity = 1, inCellSanitation = true, cellMark = "X001-N"),
                   "MDI-1-2-008" to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, cellMark = "X008"),
                   archivedCell.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, inCellSanitation = false, cellMark = "X001-ARCH"),
-                  inactiveCellB3001.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
+                  inactiveCellB3001.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, certifiedNormalAccommodation = 3),
                 ),
               ),
             ),
@@ -2637,7 +2637,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "NMI-A-1-001":[
                   {
                     "key":"NMI-A-1-001",
-                    "message":"Update failed: Location NMI-A-1-001 cannot be updated as it is locked"
+                    "message":"Update failed: Normal accommodation must not have a CNA or working capacity of 0"
                   }
                 ],
                 "MDI-1-2-008": [
@@ -2664,6 +2664,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "key": "MDI-B-A-001",
                     "message": "Working capacity from 2 ==> 3",
                     "type": "workingCapacity",
+                    "previousValue": 2,
+                    "newValue": 3
+                  },
+                   {
+                    "key": "MDI-B-A-001",
+                    "message": "Baseline CNA from 2 ==> 3",
+                    "type": "CNA",
                     "previousValue": 2,
                     "newValue": 3
                   }

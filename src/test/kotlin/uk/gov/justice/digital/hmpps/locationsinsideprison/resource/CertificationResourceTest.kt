@@ -43,7 +43,6 @@ class CertificationResourceTest : CommonDataTestBase() {
   override fun setUp() {
     cellCertificateRepository.deleteAll()
     super.setUp()
-    approvalRequestId = getApprovalRequestId()
 
     prisonRegisterMockServer.stubLookupPrison("LEI")
 
@@ -1178,44 +1177,5 @@ class CertificationResourceTest : CommonDataTestBase() {
         assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(2)
       }
     }
-  }
-
-  private fun getApprovalRequestId(): UUID {
-    val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
-    prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
-    webTestClient.put().uri("/locations/${aCell.id}/capacity")
-      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-      .header("Content-Type", "application/json")
-      .bodyValue(
-        jsonString(
-          Capacity(
-            workingCapacity = 1,
-            maxCapacity = 3,
-          ),
-        ),
-      )
-      .exchange()
-      .expectStatus().isOk
-
-    getDomainEvents(1).let {
-      assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-        "location.inside.prison.amended" to aCell.getKey(),
-      )
-    }
-
-    return webTestClient.put().uri("/certification/location/request-approval")
-      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
-      .header("Content-Type", "application/json")
-      .bodyValue(
-        jsonString(
-          LocationApprovalRequest(
-            locationId = aCell.id!!,
-          ),
-        ),
-      )
-      .exchange()
-      .expectStatus().isOk
-      .expectBody(CertificationApprovalRequestDto::class.java)
-      .returnResult().responseBody!!.id
   }
 }
