@@ -56,4 +56,4 @@ DROP TABLE _missing_locs;
 CREATE TABLE certification_backup AS SELECT l.id location_id, c.id certificate_id, certified, certified_normal_accommodation FROM certification c join location l on l.certification_id = c.id;
 
 ALTER TABLE location DROP COLUMN certification_id;
-DROP TABLE certification;
+DROP TABLE certification CASCADE;
