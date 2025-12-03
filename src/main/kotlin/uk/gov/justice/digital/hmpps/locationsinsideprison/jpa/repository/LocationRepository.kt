@@ -25,15 +25,15 @@ interface LocationRepository : JpaRepository<Location, UUID> {
   @Query("select l from Location l where concat(l.prisonId,'-',l.pathHierarchy) IN (:keys)")
   fun findAllByKeys(keys: List<String>): List<Location>
 
-  @Query("update location set residential_housing_type = :residentialHousingType, accommodation_type = :accommodationType, location_type_discriminator = (case when location_type = 'CELL' then 'CELL' when code IN ('RECP', 'COURT', 'TAP', 'CSWAP') then 'VIRTUAL' else 'RESIDENTIAL' end) where id = :id", nativeQuery = true)
+  @Query("update location set residential_housing_type = :residentialHousingType, certified_cell = false, accommodation_type = :accommodationType, location_type_discriminator = (case when location_type = 'CELL' then 'CELL' when code IN ('RECP', 'COURT', 'TAP', 'CSWAP') then 'VIRTUAL' else 'RESIDENTIAL' end) where id = :id", nativeQuery = true)
   @Modifying
   fun updateResidentialHousingType(id: UUID, residentialHousingType: String, accommodationType: String)
 
-  @Query("update location set residential_housing_type = null, accommodation_type = null, location_type_discriminator = 'NON_RESIDENTIAL' where id = :id", nativeQuery = true)
+  @Query("update location set residential_housing_type = null, certified_cell = null, accommodation_type = null, location_type_discriminator = 'NON_RESIDENTIAL' where id = :id", nativeQuery = true)
   @Modifying
   fun updateResidentialHousingTypeToNull(id: UUID)
 
-  @Query("update location set location_type = :locationType, location_type_discriminator = (case when residential_housing_type IS NULL then 'NON_RESIDENTIAL' when :locationType = 'CELL' then 'CELL' when code IN ('RECP', 'COURT', 'TAP', 'CSWAP') then 'VIRTUAL' else 'RESIDENTIAL' end) where id = :id", nativeQuery = true)
+  @Query("update location set location_type = :locationType, certified_cell = false, location_type_discriminator = (case when residential_housing_type IS NULL then 'NON_RESIDENTIAL' when :locationType = 'CELL' then 'CELL' when code IN ('RECP', 'COURT', 'TAP', 'CSWAP') then 'VIRTUAL' else 'RESIDENTIAL' end) where id = :id", nativeQuery = true)
   @Modifying
   fun updateLocationType(id: UUID, locationType: String)
 

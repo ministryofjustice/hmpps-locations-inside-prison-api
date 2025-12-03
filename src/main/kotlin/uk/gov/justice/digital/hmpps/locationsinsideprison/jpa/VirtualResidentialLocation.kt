@@ -93,12 +93,19 @@ open class VirtualResidentialLocation(
     capacity = CapacityDto(
       maxCapacity = getMaxCapacity(),
       workingCapacity = getWorkingCapacity(),
+      certifiedNormalAccommodation = getCertifiedNormalAccommodation(),
     ),
     certification = null,
     accommodationTypes = null,
     usedFor = null,
     specialistCellTypes = null,
   )
+
+  private fun getCertifiedNormalAccommodation(): Int = if (isActiveAndAllParentsActive()) {
+    capacity?.certifiedNormalAccommodation ?: 0
+  } else {
+    0
+  }
 
   private fun getWorkingCapacity(): Int = if (isActiveAndAllParentsActive()) {
     capacity?.workingCapacity ?: 0
@@ -115,6 +122,7 @@ open class VirtualResidentialLocation(
   override fun setCapacity(
     maxCapacity: Int,
     workingCapacity: Int,
+    certifiedNormalAccommodation: Int,
     userOrSystemInContext: String,
     amendedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
@@ -129,13 +137,14 @@ open class VirtualResidentialLocation(
       virtualLocation = isVirtualResidentialLocation(),
     )
 
-    super.setCapacity(maxCapacity, workingCapacity, userOrSystemInContext, amendedDate, linkedTransaction)
+    super.setCapacity(maxCapacity, workingCapacity, certifiedNormalAccommodation, userOrSystemInContext, amendedDate, linkedTransaction)
   }
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
     ignoreWorkingCapacity = false,
     capacity = CapacityDto(
       maxCapacity = getMaxCapacity(),
       workingCapacity = getWorkingCapacity(),
+      certifiedNormalAccommodation = getCertifiedNormalAccommodation(),
     ),
   )
 

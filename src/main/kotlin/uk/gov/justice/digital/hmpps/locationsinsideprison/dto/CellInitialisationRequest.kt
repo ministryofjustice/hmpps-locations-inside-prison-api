@@ -12,7 +12,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -128,8 +127,8 @@ fun addCellToParent(
     capacity = Capacity(
       maxCapacity = cell.maxCapacity,
       workingCapacity = cell.workingCapacity,
+      certifiedNormalAccommodation = cell.certifiedNormalAccommodation,
     ),
-    certification = Certification(certifiedNormalAccommodation = cell.certifiedNormalAccommodation),
     inCellSanitation = cell.inCellSanitation,
   ).apply {
     cell.specialistCellTypes?.forEach {
