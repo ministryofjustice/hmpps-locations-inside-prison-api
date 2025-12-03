@@ -64,6 +64,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationConta
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
@@ -515,7 +516,7 @@ class LocationService(
 
     val hasPendingApproval = residentialLocation.getPendingApprovalRequest() != null
     if (hasPendingApproval) {
-      throw LocationCannotBeCreatedWithPendingApprovalException(residentialLocation.getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -539,7 +540,7 @@ class LocationService(
 
     val hasPendingApproval = residentialLocation.getPendingApprovalRequest() != null
     if (hasPendingApproval) {
-      throw LocationCannotBeCreatedWithPendingApprovalException(residentialLocation.getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -561,7 +562,7 @@ class LocationService(
 
     val hasPendingApproval = residentialLocation.getPendingApprovalRequest() != null
     if (hasPendingApproval) {
-      throw LocationCannotBeCreatedWithPendingApprovalException(residentialLocation.getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -592,7 +593,7 @@ class LocationService(
 
     val hasPendingApproval = locCapChange.getPendingApprovalRequest() != null
     if (hasPendingApproval) {
-      throw LocationCannotBeCreatedWithPendingApprovalException(locCapChange.getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(locCapChange.getKey())
     }
 
     if (locCapChange.isPermanentlyDeactivated()) {
@@ -657,7 +658,7 @@ class LocationService(
 
     val hasPendingApproval = cell.getPendingApprovalRequest() != null
     if (hasPendingApproval) {
-      throw LocationCannotBeCreatedWithPendingApprovalException(cell.getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(cell.getKey())
     }
     if (cell.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(cell.getKey())
@@ -1074,7 +1075,7 @@ class LocationService(
 
     val hasPendingApproval = nonResCellToUpdate.getPendingApprovalRequest() != null
     if (hasPendingApproval) {
-      throw LocationCannotBeCreatedWithPendingApprovalException(nonResCellToUpdate.getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(nonResCellToUpdate.getKey())
     }
     if (!nonResCellToUpdate.isConvertedCell()) {
       throw LocationNotFoundException("${nonResCellToUpdate.getKey()} is not a non-residential cell")
@@ -1111,7 +1112,7 @@ class LocationService(
 
     val hasPendingApproval = locationToConvert.getPendingApprovalRequest() != null
     if (hasPendingApproval) {
-      throw LocationCannotBeCreatedWithPendingApprovalException(locationToConvert.getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(locationToConvert.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -1167,7 +1168,7 @@ class LocationService(
 
     val hasPendingApproval = locationToConvert.getPendingApprovalRequest() != null
     if (hasPendingApproval) {
-      throw LocationCannotBeCreatedWithPendingApprovalException(locationToConvert.getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(locationToConvert.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(

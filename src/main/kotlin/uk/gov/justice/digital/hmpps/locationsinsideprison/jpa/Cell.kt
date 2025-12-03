@@ -18,7 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LockedLocationCannotBeUpdatedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -130,7 +130,7 @@ class Cell(
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
 
     addHistory(
@@ -187,7 +187,7 @@ class Cell(
 
   fun updateNonResidentialCellType(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     addHistory(
       LocationAttribute.CONVERTED_CELL_TYPE,
@@ -218,7 +218,7 @@ class Cell(
 
   fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
 
     val amendedDate = LocalDateTime.now(clock)
@@ -266,7 +266,7 @@ class Cell(
     )
 
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     super.setCapacity(
       maxCapacity = maxCapacity,
@@ -378,7 +378,7 @@ class Cell(
     linkedTransaction: LinkedTransaction,
   ) {
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     recordRemovedSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction)
     this.specialistCellTypes.retainAll(

@@ -9,8 +9,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
@@ -24,6 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
@@ -31,10 +34,11 @@ import java.util.UUID
 
 @DisplayName("Certification Resource")
 @WithMockAuthUser(username = EXPECTED_USERNAME)
-class CertificationResourceTest : CommonDataTestBase() {
+class CertificationResourceTest(@param:Autowired private val locationService: LocationService) : CommonDataTestBase() {
 
   private lateinit var approvalRequestId: UUID
   private lateinit var mWing: ResidentialLocation
+  private lateinit var aCell: Cell
 
   @Autowired
   lateinit var cellCertificateRepository: CellCertificateRepository
@@ -43,6 +47,38 @@ class CertificationResourceTest : CommonDataTestBase() {
   override fun setUp() {
     cellCertificateRepository.deleteAll()
     super.setUp()
+
+    locationService.createCells(
+      createCellsRequest = CellInitialisationRequest(
+        prisonId = wingZ.prisonId,
+        parentLocation = repository.findOneByKey("${wingZ.getKey()}-1")!!.id!!,
+        cells = setOf(
+          CellInformation(
+            code = "NEW",
+            cellMark = "NEW",
+            certifiedNormalAccommodation = 2,
+            maxCapacity = 3,
+            workingCapacity = 2,
+          ),
+        ),
+      ),
+    )
+    aCell = repository.findOneByKey("${wingZ.getKey()}-1-NEW") as Cell
+
+    approvalRequestId = webTestClient.put().uri("/certification/location/request-approval")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          LocationApprovalRequest(
+            locationId = aCell.id!!,
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CertificationApprovalRequestDto>()
+      .returnResult().responseBody!!.id
 
     prisonRegisterMockServer.stubLookupPrison("LEI")
 
@@ -168,6 +204,22 @@ class CertificationResourceTest : CommonDataTestBase() {
 
       @Test
       fun `can request approval for a signed op cap change`() {
+        locationService.createCells(
+          createCellsRequest = CellInitialisationRequest(
+            prisonId = mWing.prisonId,
+            parentLocation = repository.findOneByKey("${mWing.getKey()}-1")!!.id!!,
+            cells = setOf(
+              CellInformation(
+                code = "NEW",
+                cellMark = "NEW",
+                certifiedNormalAccommodation = 1,
+                maxCapacity = 1,
+                workingCapacity = 1,
+              ),
+            ),
+          ),
+        )
+
         webTestClient.put().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
           .header("Content-Type", "application/json")
@@ -302,7 +354,18 @@ class CertificationResourceTest : CommonDataTestBase() {
 
       @Test
       fun `cannot request approval for a location which has already been sent for approval`() {
-        val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              LocationApprovalRequest(
+                locationId = mWing.id!!,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
 
         assertThat(
           webTestClient.put().uri(url)
@@ -311,7 +374,7 @@ class CertificationResourceTest : CommonDataTestBase() {
             .bodyValue(
               jsonString(
                 LocationApprovalRequest(
-                  locationId = aCell.id!!,
+                  locationId = mWing.id!!,
                 ),
               ),
             )
@@ -325,74 +388,6 @@ class CertificationResourceTest : CommonDataTestBase() {
 
     @Nested
     inner class HappyPath {
-
-      @Test
-      fun `can request approval for a location that has pending changes`() {
-        val aCell = repository.findOneByKey("LEI-A-1-002") as Cell
-        prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
-        webTestClient.put().uri("/locations/${aCell.id}/capacity")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              Capacity(
-                workingCapacity = 1,
-                maxCapacity = 3,
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isOk
-
-        getDomainEvents(1).let {
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to aCell.getKey(),
-          )
-        }
-        webTestClient.put().uri(url)
-          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              LocationApprovalRequest(
-                locationId = aCell.id!!,
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-              {
-              "locationId": "${aCell.id}",
-              "locationKey": "${aCell.getKey()}",
-              "status": "PENDING",
-              "maxCapacityChange": 1,
-              "workingCapacityChange": 0,
-              "certifiedNormalAccommodationChange": 0,
-              "locations": [
-                {
-                  "locationCode": "002",
-                  "cellMark": "A-2",
-                  "localName": "Cell 2 On 1",
-                  "pathHierarchy": "A-1-002",
-                  "level": 3,
-                  "certifiedNormalAccommodation": 1,
-                  "workingCapacity": 1,
-                  "maxCapacity": 3,
-                  "inCellSanitation": true,
-                  "locationType": "CELL"
-                }
-              ]
-              }
-          """,
-            JsonCompareMode.LENIENT,
-          )
-
-        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
-      }
-
       @Test
       fun `can request approval for a location that is a draft location`() {
         webTestClient.put().uri(url)
@@ -843,7 +838,7 @@ class CertificationResourceTest : CommonDataTestBase() {
 
       @Test
       fun `can approve a location that has pending CNA changes`() {
-        webTestClient.get().uri("/locations/${cell1N.id}")
+        webTestClient.get().uri("/locations/${aCell.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -851,26 +846,25 @@ class CertificationResourceTest : CommonDataTestBase() {
             // language=json
             """
               {
-              "key": "${cell1N.getKey()}",
+              "key": "${aCell.getKey()}",
               "capacity": {
-                "maxCapacity": 2,
-                "workingCapacity": 2
+                "maxCapacity": 0,
+                "workingCapacity": 0,
+                "certifiedNormalAccommodation": 0
               },
               "pendingChanges": {
                 "maxCapacity": 3,
-                "certifiedNormalAccommodation": 3
+                "workingCapacity": 2,
+                "certifiedNormalAccommodation": 2
               },
-              "certification": {
-                "certifiedNormalAccommodation": 2,
-                "certified": true
-              },
-              "status": "LOCKED_ACTIVE"
+              "certifiedCell": false,
+              "status": "LOCKED_DRAFT"
               }
           """,
             JsonCompareMode.LENIENT,
           )
 
-        val approvalRequestId = certificationApprovalRequestRepository.findByPrisonIdAndStatusOrderByRequestedDateDesc(cell1N.prisonId, ApprovalRequestStatus.PENDING).first()
+        val approvalRequestId = certificationApprovalRequestRepository.findByPrisonIdAndStatusOrderByRequestedDateDesc(aCell.prisonId, ApprovalRequestStatus.PENDING).first()
         webTestClient.put().uri(url)
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
           .header("Content-Type", "application/json")
@@ -887,7 +881,7 @@ class CertificationResourceTest : CommonDataTestBase() {
             // language=json
             """
               {
-              "locationKey": "${cell1N.getKey()}",
+              "locationKey": "${aCell.getKey()}",
               "status": "APPROVED"
               }
           """,
@@ -895,15 +889,15 @@ class CertificationResourceTest : CommonDataTestBase() {
           )
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to cell1N.getKey(),
-            "location.inside.prison.amended" to landingN1.getKey(),
-            "location.inside.prison.amended" to landingN1.getParent()?.getKey(),
+            "location.inside.prison.created" to aCell.getKey(),
+            "location.inside.prison.amended" to aCell.getParent()?.getKey(),
+            "location.inside.prison.amended" to aCell.getParent()?.getParent()?.getKey(),
           )
         }
 
-        assertThat((repository.findOneByKey(cell1N.getKey()) as Cell).getCertifiedNormalAccommodation()).isEqualTo(3)
+        assertThat((repository.findOneByKey(aCell.getKey()) as Cell).getCertifiedNormalAccommodation()).isEqualTo(2)
 
-        webTestClient.get().uri("/locations/${cell1N.id}?includeChildren=true")
+        webTestClient.get().uri("/locations/${aCell.id}?includeChildren=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -911,16 +905,15 @@ class CertificationResourceTest : CommonDataTestBase() {
             // language=json
             """
               {
-              "key": "${cell1N.getKey()}",
+              "key": "${aCell.getKey()}",
               "capacity": {
                 "maxCapacity": 3,
-                "workingCapacity": 2
+                "workingCapacity": 0,
+                "certifiedNormalAccommodation": 2
               },
-              "certification": {
-                "certifiedNormalAccommodation": 3,
-                "certified": true
-              },
-              "status": "ACTIVE"
+              "oldWorkingCapacity": 2,
+              "certifiedCell": true,
+              "status": "INACTIVE"
               }
           """,
             JsonCompareMode.LENIENT,
@@ -945,7 +938,7 @@ class CertificationResourceTest : CommonDataTestBase() {
             // language=json
             """
               {
-              "locationKey": "LEI-A-1-001",
+              "locationKey": "MDI-Z-1-NEW",
               "status": "APPROVED"
               }
           """,
@@ -953,15 +946,15 @@ class CertificationResourceTest : CommonDataTestBase() {
           )
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to "LEI-A-1-001",
-            "location.inside.prison.amended" to "LEI-A-1",
-            "location.inside.prison.amended" to "LEI-A",
+            "location.inside.prison.created" to "MDI-Z-1-NEW",
+            "location.inside.prison.amended" to "MDI-Z-1",
+            "location.inside.prison.amended" to "MDI-Z",
           )
         }
 
-        assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(3)
+        assertThat((repository.findOneByKey("MDI-Z-1-NEW") as Cell).getMaxCapacity()).isEqualTo(3)
 
-        webTestClient.get().uri("/locations/key/LEI-A-1-001")
+        webTestClient.get().uri("/locations/key/MDI-Z-1-NEW")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .exchange()
           .expectStatus().isOk
@@ -969,79 +962,15 @@ class CertificationResourceTest : CommonDataTestBase() {
             // language=json
             """
               {
-              "key": "LEI-A-1-001",
+              "key": "MDI-Z-1-NEW",
               "capacity": {
                 "maxCapacity": 3,
-                "workingCapacity": 1
+                "workingCapacity": 0,
+                "certifiedNormalAccommodation": 2
               },
-              "certification": {
-                "certifiedNormalAccommodation": 1,
-                "certified": true
-              },
-              "status": "ACTIVE"
-              }
-          """,
-            JsonCompareMode.LENIENT,
-          )
-      }
-
-      @Test
-      fun `after approval capacity is again back into pending`() {
-        webTestClient.put().uri(url)
-          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              ApproveCertificationRequestDto(
-                approvalRequestReference = approvalRequestId,
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isOk
-
-        Assertions.assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(3)
-
-        val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
-        prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
-
-        webTestClient.put().uri("/locations/${aCell.id}/capacity")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              Capacity(
-                workingCapacity = aCell.getWorkingCapacity() ?: 0,
-                maxCapacity = 10,
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isOk
-        getDomainEvents(1).let {
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to aCell.getKey(),
-          )
-        }
-        assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(3)
-
-        webTestClient.get().uri("/locations/key/LEI-A-1-001")
-          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-          .exchange()
-          .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-              {
-              "key": "LEI-A-1-001",
-              "capacity": {
-                "maxCapacity": 3,
-                "workingCapacity": 1
-              },
-              "pendingChanges": {
-                "maxCapacity": 10
-              },
-              "status": "ACTIVE"
+              "oldWorkingCapacity": 2,
+              "certifiedCell": true,
+              "status": "INACTIVE"
               }
           """,
             JsonCompareMode.LENIENT,
@@ -1095,21 +1024,13 @@ class CertificationResourceTest : CommonDataTestBase() {
             // language=json
             """
               {
-              "locationKey": "LEI-A-1-001",
+              "locationKey": "${aCell.getKey()}",
               "status": "REJECTED"
               }
           """,
             JsonCompareMode.LENIENT,
           )
-        getDomainEvents(3).let {
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to "LEI-A-1-001",
-            "location.inside.prison.amended" to "LEI-A-1",
-            "location.inside.prison.amended" to "LEI-A",
-          )
-        }
-
-        assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(2)
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
       }
     }
   }
@@ -1160,21 +1081,13 @@ class CertificationResourceTest : CommonDataTestBase() {
             // language=json
             """
               {
-              "locationKey": "LEI-A-1-001",
+              "locationKey": "MDI-Z-1-NEW",
               "status": "WITHDRAWN"
               }
           """,
             JsonCompareMode.LENIENT,
           )
-        getDomainEvents(3).let {
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to "LEI-A-1-001",
-            "location.inside.prison.amended" to "LEI-A-1",
-            "location.inside.prison.amended" to "LEI-A",
-          )
-        }
-
-        assertThat((repository.findOneByKey("LEI-A-1-001") as Cell).getMaxCapacity()).isEqualTo(2)
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
     }
   }

@@ -955,7 +955,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .expectStatus().isEqualTo(409)
             .expectBody(ErrorResponse::class.java)
             .returnResult().responseBody!!.errorCode,
-        ).isEqualTo(ErrorCode.LockedLocationCannotBeUpdated.errorCode)
+        ).isEqualTo(ErrorCode.PendingApprovalLocationCannotBeUpdated.errorCode)
       }
     }
 
