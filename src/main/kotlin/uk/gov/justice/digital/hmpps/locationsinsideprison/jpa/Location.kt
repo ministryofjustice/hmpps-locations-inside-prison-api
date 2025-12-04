@@ -14,9 +14,12 @@ import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedEntityGraphs
+import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
-import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -45,6 +48,27 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 
 val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
+@NamedEntityGraphs(
+  value = [
+    NamedEntityGraph(
+      name = "location.eager",
+      attributeNodes = [
+        NamedAttributeNode("prisonConfiguration"),
+        NamedAttributeNode("parent"),
+        NamedAttributeNode("childLocations", subgraph = "childLocations.eager.subgraph"),
+      ],
+      subgraphs = [
+        NamedSubgraph(
+          name = "childLocations.eager.subgraph",
+          attributeNodes = [
+            NamedAttributeNode("parent"),
+            NamedAttributeNode("childLocations"),
+          ],
+        ),
+      ],
+    ),
+  ],
+)
 @Entity
 @DiscriminatorColumn(name = "location_type_discriminator")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
@@ -88,11 +112,9 @@ abstract class Location(
   open var proposedReactivationDate: LocalDate? = null,
   open var planetFmReference: String? = null,
 
-  @BatchSize(size = 1000)
-  @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
-  protected open val childLocations: MutableList<Location> = mutableListOf(),
+  @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  protected open val childLocations: SortedSet<Location> = sortedSetOf(),
 
-  @BatchSize(size = 100)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
   protected open val history: SortedSet<LocationHistory> = sortedSetOf(),

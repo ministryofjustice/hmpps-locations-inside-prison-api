@@ -60,8 +60,7 @@ class CellCertificateService(
   }
 
   fun getCellCertificate(id: UUID): CellCertificateDto {
-    val cellCertificate = cellCertificateRepository.findById(id)
-      .orElseThrow { CellCertificateNotFoundException(id) }
+    val cellCertificate = cellCertificateRepository.findById(id).orElseThrow { CellCertificateNotFoundException(id) }
     return cellCertificate.toDto(showLocations = true)
   }
 

@@ -7,6 +7,9 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
 import jakarta.persistence.GenerationType
 import jakarta.persistence.Id
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedEntityGraphs
 import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
 import org.hibernate.annotations.SortNatural
@@ -14,6 +17,16 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCap
 import java.time.LocalDateTime
 import java.util.SortedSet
 
+@NamedEntityGraphs(
+  value = [
+    NamedEntityGraph(
+      name = "signedOperationCapacity.eager",
+      attributeNodes = [
+        NamedAttributeNode("approvalRequests"),
+      ],
+    ),
+  ],
+)
 @Entity
 class SignedOperationCapacity(
 
@@ -31,7 +44,14 @@ class SignedOperationCapacity(
 
   var whenUpdated: LocalDateTime,
   var updatedBy: String,
-) {
+) : Comparable<SignedOperationCapacity> {
+
+  companion object {
+    private val COMPARATOR = compareBy<SignedOperationCapacity>
+      { it.prisonId }
+  }
+
+  override fun compareTo(other: SignedOperationCapacity) = COMPARATOR.compare(this, other)
 
   fun findPendingApprovalRequest(): SignedOpCapCertificationApprovalRequest? = approvalRequests.findLast { it.isPending() }
 

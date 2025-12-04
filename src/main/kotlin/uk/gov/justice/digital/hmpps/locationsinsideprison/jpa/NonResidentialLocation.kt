@@ -36,12 +36,12 @@ class NonResidentialLocation(
   deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
-  childLocations: MutableList<Location>,
+  childLocations: SortedSet<Location>,
   whenCreated: LocalDateTime,
   createdBy: String,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  private val nonResidentialUsages: MutableSet<NonResidentialUsage> = mutableSetOf(),
+  private val nonResidentialUsages: SortedSet<NonResidentialUsage> = sortedSetOf(),
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural

@@ -130,7 +130,7 @@ class LocationServiceTest {
         deactivatedReason = null,
         proposedReactivationDate = null,
         createdBy = "User 1 ",
-        childLocations = mutableListOf(),
+        childLocations = sortedSetOf(),
         whenCreated = LocalDateTime.now(clock),
       )
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(location))
@@ -157,7 +157,7 @@ class LocationServiceTest {
         deactivatedReason = null,
         proposedReactivationDate = null,
         createdBy = "User 1 ",
-        childLocations = mutableListOf(),
+        childLocations = sortedSetOf(),
         whenCreated = LocalDateTime.now(clock),
       )
     whenever(locationRepository.findById(any())).thenReturn(Optional.of(location))
@@ -286,7 +286,7 @@ class LocationServiceTest {
     prisonId = "prisonId",
     status = LocationStatus.ACTIVE,
     whenCreated = LocalDateTime.now(),
-    childLocations = mutableListOf(),
+    childLocations = sortedSetOf(),
     createdBy = "createdBy",
   )
 
@@ -295,7 +295,7 @@ class LocationServiceTest {
   fun `should return no attributes if none set`() {
     val mockCell: Cell = mock()
 
-    whenever(mockCell.specialistCellTypes).thenReturn(mutableSetOf())
+    whenever(mockCell.specialistCellTypes).thenReturn(sortedSetOf())
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(activePrisonService.isActivePrison(any())).thenReturn(true)
 
@@ -309,7 +309,7 @@ class LocationServiceTest {
     val specialistCellType: SpecialistCellType = SpecialistCellType.CAT_A
     val mockCell: Cell = mock()
 
-    whenever(mockCell.specialistCellTypes).thenReturn(mutableSetOf(SpecialistCell(1, location, specialistCellType)))
+    whenever(mockCell.specialistCellTypes).thenReturn(sortedSetOf(SpecialistCell(1, location, specialistCellType)))
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(activePrisonService.isActivePrison(any())).thenReturn(false)
 
@@ -323,7 +323,7 @@ class LocationServiceTest {
     val specialistCellType: SpecialistCellType = SpecialistCellType.CAT_A
     val mockCell: Cell = mock()
 
-    whenever(mockCell.specialistCellTypes).thenReturn(mutableSetOf(SpecialistCell(1, location, specialistCellType)))
+    whenever(mockCell.specialistCellTypes).thenReturn(sortedSetOf(SpecialistCell(1, location, specialistCellType)))
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(mockCell.prisonId).thenReturn("MDI")
     whenever(activePrisonService.isActivePrison(any())).thenReturn(true)
@@ -339,7 +339,7 @@ class LocationServiceTest {
     val residentialCellValue: ResidentialAttributeValue = ResidentialAttributeValue.CAT_A_CELL
     val mockCell: Cell = mock()
 
-    whenever(mockCell.attributes).thenReturn(mutableSetOf(ResidentialAttribute(1, location, residentialCellType, residentialCellValue)))
+    whenever(mockCell.attributes).thenReturn(sortedSetOf(ResidentialAttribute(1, location, residentialCellType, residentialCellValue)))
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(activePrisonService.isActivePrison(any())).thenReturn(false)
 
@@ -355,8 +355,8 @@ class LocationServiceTest {
     val residentialCellValue: ResidentialAttributeValue = ResidentialAttributeValue.CAT_A_CELL
     val mockCell: Cell = mock()
 
-    whenever(mockCell.specialistCellTypes).thenReturn(mutableSetOf(SpecialistCell(1, location, specialistCellType)))
-    whenever(mockCell.attributes).thenReturn(mutableSetOf(ResidentialAttribute(1, location, residentialCellType, residentialCellValue)))
+    whenever(mockCell.specialistCellTypes).thenReturn(sortedSetOf(SpecialistCell(1, location, specialistCellType)))
+    whenever(mockCell.attributes).thenReturn(sortedSetOf(ResidentialAttribute(1, location, residentialCellType, residentialCellValue)))
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(mockCell.prisonId).thenReturn("MDI")
     whenever(activePrisonService.isActivePrison(any())).thenReturn(true)
@@ -406,7 +406,7 @@ class LocationServiceTest {
       deactivatedDate = LocalDateTime.now(),
       proposedReactivationDate = null,
       createdBy = "Test User",
-      childLocations = mutableListOf(),
+      childLocations = sortedSetOf(),
       whenCreated = LocalDateTime.now(),
     ),
     ResidentialLocation(
@@ -423,7 +423,7 @@ class LocationServiceTest {
       deactivatedDate = LocalDateTime.now(),
       proposedReactivationDate = null,
       createdBy = "Test User",
-      childLocations = mutableListOf(),
+      childLocations = sortedSetOf(),
       whenCreated = LocalDateTime.now(),
     ),
   )

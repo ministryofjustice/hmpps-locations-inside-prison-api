@@ -78,7 +78,7 @@ data class CreateEntireWingRequest(
       orderWithinParentLocation = 1,
       createdBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
-      childLocations = mutableListOf(),
+      childLocations = sortedSetOf(),
     ).apply {
       wingStructure?.let { setStructure(it) }
       addHistory(
@@ -104,7 +104,7 @@ data class CreateEntireWingRequest(
           orderWithinParentLocation = spurNumber,
           createdBy = createdBy,
           whenCreated = LocalDateTime.now(clock),
-          childLocations = mutableListOf(),
+          childLocations = sortedSetOf(),
         ).apply {
           wing.addChildLocation(this)
           addHistory(
@@ -133,7 +133,7 @@ data class CreateEntireWingRequest(
             orderWithinParentLocation = landingNumber,
             createdBy = createdBy,
             whenCreated = LocalDateTime.now(clock),
-            childLocations = mutableListOf(),
+            childLocations = sortedSetOf(),
           ).apply {
             spur.addChildLocation(this)
 
@@ -166,7 +166,7 @@ data class CreateEntireWingRequest(
           orderWithinParentLocation = cellNumber,
           createdBy = createdBy,
           whenCreated = LocalDateTime.now(clock),
-          childLocations = mutableListOf(),
+          childLocations = sortedSetOf(),
           capacity = Capacity(
             maxCapacity = defaultMaxCapacity,
             workingCapacity = defaultWorkingCapacity,

@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository
 
+import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
@@ -10,18 +11,30 @@ import java.util.*
 
 @Repository
 interface LocationRepository : JpaRepository<Location, UUID> {
+
+  @EntityGraph(value = "location.eager", type = EntityGraph.EntityGraphType.LOAD)
+  override fun findById(id: UUID): Optional<Location>
+
+  @EntityGraph(value = "location.eager", type = EntityGraph.EntityGraphType.LOAD)
   fun findAllByPrisonIdOrderByPathHierarchy(prisonId: String): List<Location>
 
+  @EntityGraph(value = "location.eager", type = EntityGraph.EntityGraphType.LOAD)
   fun findOneByPrisonIdAndPathHierarchy(prisonId: String, pathHierarchy: String): Location?
 
+  @EntityGraph(value = "location.eager", type = EntityGraph.EntityGraphType.LOAD)
   fun findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId: String, locationType: LocationType): List<Location>
 
+  @EntityGraph(value = "location.eager", type = EntityGraph.EntityGraphType.LOAD)
   fun findAllByPrisonIdAndParentIdAndLocalName(prisonId: String, parentId: UUID, localName: String): List<Location>
+
+  @EntityGraph(value = "location.eager", type = EntityGraph.EntityGraphType.LOAD)
   fun findAllByPrisonIdAndParentIsNullAndLocalName(prisonId: String, localName: String): List<Location>
 
+  @EntityGraph(value = "location.eager", type = EntityGraph.EntityGraphType.LOAD)
   @Query("select l from Location l where concat(l.prisonId,'-',l.pathHierarchy) = :key")
   fun findOneByKey(key: String): Location?
 
+  @EntityGraph(value = "location.eager", type = EntityGraph.EntityGraphType.LOAD)
   @Query("select l from Location l where concat(l.prisonId,'-',l.pathHierarchy) IN (:keys)")
   fun findAllByKeys(keys: List<String>): List<Location>
 

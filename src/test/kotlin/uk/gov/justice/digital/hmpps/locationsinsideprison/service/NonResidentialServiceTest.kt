@@ -124,7 +124,7 @@ class NonResidentialServiceTest {
     prisonId = "prisonId",
     status = LocationStatus.ACTIVE,
     whenCreated = LocalDateTime.now(),
-    childLocations = mutableListOf(),
+    childLocations = sortedSetOf(),
     createdBy = "createdBy",
   )
 }
