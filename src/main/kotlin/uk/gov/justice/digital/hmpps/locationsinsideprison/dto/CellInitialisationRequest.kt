@@ -123,7 +123,7 @@ fun addCellToParent(
     accommodationType = accommodationType,
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
-    childLocations = mutableListOf(),
+    childLocations = sortedSetOf(),
     capacity = Capacity(
       maxCapacity = cell.maxCapacity,
       workingCapacity = cell.workingCapacity,
@@ -182,7 +182,7 @@ data class LevelAboveCells(
     localName = levelLocalName,
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
-    childLocations = mutableListOf(),
+    childLocations = sortedSetOf(),
   ).apply {
     parentLocation?.let { setParent(it) }
     addHistory(

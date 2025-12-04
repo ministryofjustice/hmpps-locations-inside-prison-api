@@ -48,7 +48,7 @@ open class ResidentialLocation(
   deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
-  childLocations: MutableList<Location>,
+  childLocations: SortedSet<Location>,
   whenCreated: LocalDateTime,
   createdBy: String,
 
@@ -63,7 +63,7 @@ open class ResidentialLocation(
   private var residentialStructure: String? = null,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  private val approvalRequests: MutableList<LocationCertificationApprovalRequest> = mutableListOf(),
+  private val approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
 
 ) : Location(
   id = id,

@@ -123,7 +123,7 @@ fun generateWingLocation(localName: String?) = ResidentialLocation(
   pathHierarchy = "MDI-A",
   createdBy = "user",
   whenCreated = LocalDateTime.now(),
-  childLocations = mutableListOf(),
+  childLocations = sortedSetOf(),
 )
 
 fun generateLandingLocation(localName: String?) = ResidentialLocation(
@@ -136,7 +136,7 @@ fun generateLandingLocation(localName: String?) = ResidentialLocation(
   pathHierarchy = "MDI-A-1",
   createdBy = "user",
   whenCreated = LocalDateTime.now(),
-  childLocations = mutableListOf(),
+  childLocations = sortedSetOf(),
 )
 
 fun generateCellLocation() = Cell(
@@ -149,7 +149,7 @@ fun generateCellLocation() = Cell(
   pathHierarchy = "MDI-001",
   createdBy = "user",
   whenCreated = LocalDateTime.now(),
-  childLocations = mutableListOf(),
+  childLocations = sortedSetOf(),
 )
 
 fun generateLocationGroupDto(childLocationList: MutableList<LocationGroupDto>) = LocationGroupDto(

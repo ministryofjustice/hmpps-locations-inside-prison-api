@@ -43,7 +43,7 @@ data class CreateWingAndStructureRequest(
     localName = wingDescription,
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
-    childLocations = mutableListOf(),
+    childLocations = sortedSetOf(),
   ).apply {
     setStructure(wingStructure)
     addHistory(

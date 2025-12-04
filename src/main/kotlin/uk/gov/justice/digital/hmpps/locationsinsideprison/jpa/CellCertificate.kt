@@ -8,6 +8,10 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedEntityGraphs
+import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import org.hibernate.Hibernate
@@ -19,6 +23,25 @@ import java.time.LocalDateTime
 import java.util.SortedSet
 import java.util.UUID
 
+@NamedEntityGraphs(
+  value = [
+    NamedEntityGraph(
+      name = "CellCertificate.eager",
+      attributeNodes = [
+        NamedAttributeNode("certificationApprovalRequest"),
+        NamedAttributeNode("locations", subgraph = "certificate.eager.subgraph"),
+      ],
+      subgraphs = [
+        NamedSubgraph(
+          name = "certificate.eager.subgraph",
+          attributeNodes = [
+            NamedAttributeNode("subLocations"),
+          ],
+        ),
+      ],
+    ),
+  ],
+)
 @Entity
 open class CellCertificate(
   @Id

@@ -16,7 +16,17 @@ class Capacity(
   var maxCapacity: Int = 0,
   var workingCapacity: Int = 0,
   var certifiedNormalAccommodation: Int = 0,
-) {
+) : Comparable<Capacity> {
+
+  companion object {
+    private val COMPARATOR = compareBy<Capacity>
+      { it.maxCapacity }
+      .thenBy { it.workingCapacity }
+      .thenBy { it.certifiedNormalAccommodation }
+  }
+
+  override fun compareTo(other: Capacity) = COMPARATOR.compare(this, other)
+
   fun toDto() = (
     CapacityDTO(
       maxCapacity = maxCapacity,

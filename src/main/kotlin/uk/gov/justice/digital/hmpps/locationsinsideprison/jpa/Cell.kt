@@ -9,7 +9,6 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
-import org.hibernate.annotations.BatchSize
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
@@ -42,7 +41,7 @@ class Cell(
   deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
-  childLocations: MutableList<Location>,
+  childLocations: SortedSet<Location>,
   whenCreated: LocalDateTime,
   createdBy: String,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
@@ -53,20 +52,17 @@ class Cell(
   @Column(nullable = false)
   var certifiedCell: Boolean = false,
 
-  @BatchSize(size = 10)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val attributes: MutableSet<ResidentialAttribute> = mutableSetOf(),
+  val attributes: SortedSet<ResidentialAttribute> = sortedSetOf(),
 
   @Enumerated(EnumType.STRING)
   var accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 
-  @BatchSize(size = 100)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val usedFor: MutableSet<CellUsedFor> = mutableSetOf(),
+  val usedFor: SortedSet<CellUsedFor> = sortedSetOf(),
 
-  @BatchSize(size = 100)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val specialistCellTypes: MutableSet<SpecialistCell> = mutableSetOf(),
+  val specialistCellTypes: SortedSet<SpecialistCell> = sortedSetOf(),
 
   @Enumerated(EnumType.STRING)
   var convertedCellType: ConvertedCellType? = null,

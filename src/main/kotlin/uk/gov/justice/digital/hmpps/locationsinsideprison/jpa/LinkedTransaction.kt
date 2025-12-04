@@ -30,8 +30,18 @@ class LinkedTransaction(
   var txEndTime: LocalDateTime? = null,
 
   @OneToMany(mappedBy = "linkedTransaction", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val auditChanges: MutableList<LocationHistory> = mutableListOf(),
-) {
+  val auditChanges: SortedSet<LocationHistory> = sortedSetOf(),
+) : Comparable<LinkedTransaction> {
+
+  companion object {
+    private val COMPARATOR = compareBy<LinkedTransaction>
+      { it.transactionId }
+      .thenBy { it.transactionType }
+      .thenBy { it.transactionInvokedBy }
+      .thenBy { it.txStartTime }
+  }
+
+  override fun compareTo(other: LinkedTransaction) = COMPARATOR.compare(this, other)
 
   fun toDto(filterLocation: Location? = null) = TransactionHistory(
     transactionId = transactionId!!,

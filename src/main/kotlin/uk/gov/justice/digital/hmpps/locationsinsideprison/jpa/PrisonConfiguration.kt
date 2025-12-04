@@ -19,7 +19,14 @@ class PrisonConfiguration(
   var certificationApprovalRequired: Boolean = false,
   var whenUpdated: LocalDateTime,
   var updatedBy: String,
-) {
+) : Comparable<PrisonConfiguration> {
+
+  companion object {
+    private val COMPARATOR = compareBy<PrisonConfiguration>
+      { it.id }
+  }
+
+  override fun compareTo(other: PrisonConfiguration) = COMPARATOR.compare(this, other)
 
   fun toPrisonConfiguration() = PrisonConfigurationDto(
     prisonId = id,
