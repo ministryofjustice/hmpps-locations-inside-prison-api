@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.jdbc.Sql
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 
@@ -208,7 +209,7 @@ class SignedOperationCapacityResourceTest : SqsIntegrationTestBase() {
             )
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.SignedOpCapCannotChangedWithoutApproval.errorCode)
       }

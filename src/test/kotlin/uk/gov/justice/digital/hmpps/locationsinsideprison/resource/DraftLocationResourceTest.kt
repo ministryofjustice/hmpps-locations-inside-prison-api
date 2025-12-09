@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellDraftUpdateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
@@ -61,7 +62,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
         ),
       ),
     )
-    landing1G = resiRepository.findOneByKey("LEI-G-1") ?: throw AssertionError("Not found LEI-G-1")
+
+    landing1G = draftWing.findSubLocations().find { it.getKey() == "LEI-G-1" } as ResidentialLocation
   }
 
   @DisplayName("POST /locations/create-cells")
@@ -160,7 +162,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             .bodyValue(request)
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.WorkingCapacityExceedsMaxCapacity.errorCode)
       }
@@ -174,7 +176,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             .bodyValue(createCellInitialisationRequest(workingCap = 0, cna = 0, specialistCellTypes = emptySet()))
             .exchange()
             .expectStatus().is4xxClientError
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
       }
@@ -194,7 +196,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             )
             .exchange()
             .expectStatus().is4xxClientError
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
       }
@@ -214,7 +216,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             )
             .exchange()
             .expectStatus().is4xxClientError
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
       }
@@ -628,7 +630,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             .bodyValue(request)
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.WorkingCapacityExceedsMaxCapacity.errorCode)
       }
@@ -656,7 +658,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             .bodyValue(request)
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.WorkingCapacityExceedsMaxCapacity.errorCode)
       }
@@ -989,7 +991,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
             .exchange()
             .expectStatus().isOk
-            .expectBody(ResidentialSummary::class.java)
+            .expectBody<ResidentialSummary>()
             .returnResult().responseBody!!.subLocationName,
         ).isEqualTo("Landings")
       }
@@ -1044,7 +1046,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
             .exchange()
             .expectStatus().isOk
-            .expectBody(ResidentialSummary::class.java)
+            .expectBody<ResidentialSummary>()
             .returnResult().responseBody!!.subLocationName,
         ).isEqualTo("Spurs")
       }
@@ -1091,13 +1093,12 @@ class DraftLocationResourceTest : CommonDataTestBase() {
 
       @Test
       fun `can delete a landing draft location`() {
-        val landing1 = draftWing.findSubLocations().find { it.getKey() == "LEI-G-1" }
-        webTestClient.delete().uri("/locations/${landing1!!.id}")
+        webTestClient.delete().uri("/locations/${landing1G.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .exchange()
           .expectStatus().isNoContent
 
-        assertThat(repository.findById(landing1.id!!)).isEmpty
+        assertThat(repository.findById(landing1G.id!!)).isEmpty
 
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }

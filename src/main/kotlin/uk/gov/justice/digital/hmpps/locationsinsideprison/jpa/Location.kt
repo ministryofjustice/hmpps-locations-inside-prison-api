@@ -51,18 +51,28 @@ val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 @NamedEntityGraphs(
   value = [
     NamedEntityGraph(
-      name = "location.eager",
+      name = "resi.location.graph",
       attributeNodes = [
         NamedAttributeNode("prisonConfiguration"),
         NamedAttributeNode("parent"),
-        NamedAttributeNode("childLocations", subgraph = "childLocations.eager.subgraph"),
+        NamedAttributeNode(value = "childLocations"),
       ],
-      subgraphs = [
+      subclassSubgraphs = [
         NamedSubgraph(
-          name = "childLocations.eager.subgraph",
+          name = "residential-subgraph",
+          type = ResidentialLocation::class,
           attributeNodes = [
-            NamedAttributeNode("parent"),
-            NamedAttributeNode("childLocations"),
+            NamedAttributeNode("capacity"),
+          ],
+        ),
+        NamedSubgraph(
+          name = "cell-subgraph",
+          type = Cell::class,
+          attributeNodes = [
+            NamedAttributeNode("usedFor"),
+            NamedAttributeNode("specialistCellTypes"),
+            NamedAttributeNode("attributes"),
+            NamedAttributeNode("pendingChange"),
           ],
         ),
       ],
@@ -91,7 +101,7 @@ abstract class Location(
   @JoinColumn(insertable = false, updatable = false, nullable = true, name = "prisonId")
   private val prisonConfiguration: PrisonConfiguration? = null,
 
-  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST])
+  @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST])
   @JoinColumn(name = "parent_id")
   private var parent: Location? = null,
 
@@ -113,6 +123,7 @@ abstract class Location(
   open var planetFmReference: String? = null,
 
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  @SortNatural
   protected open val childLocations: SortedSet<Location> = sortedSetOf(),
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
@@ -159,8 +170,6 @@ abstract class Location(
   open fun getLocationCode(): String = code
 
   open fun getParent(): Location? = parent
-
-  fun isCertificationApprovalProcessRequired() = prisonConfiguration?.certificationApprovalRequired == true
 
   private fun findArchivedParent(): Location? {
     fun findArchivedLocation(location: Location?): Location? {
@@ -361,7 +370,7 @@ abstract class Location(
           linkedTransaction = linkedTransaction,
         )
         history.add(locationHistory)
-        return locationHistory
+        locationHistory
       } else {
         null
       }
@@ -469,8 +478,7 @@ abstract class Location(
       .mapNotNull { it.linkedTransaction }
       .distinct()
       .sortedByDescending { it.txStartTime }
-      .map { tx -> tx.toDto(this).toChangeHistory() }
-      .flatten()
+      .flatMap { tx -> tx.toDto(this).toChangeHistory() }
       .toList()
 
     val withoutTx = history.asSequence()

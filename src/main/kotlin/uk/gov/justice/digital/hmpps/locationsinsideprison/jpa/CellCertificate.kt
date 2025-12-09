@@ -26,16 +26,26 @@ import java.util.UUID
 @NamedEntityGraphs(
   value = [
     NamedEntityGraph(
-      name = "CellCertificate.eager",
+      name = "cell.certificate.graph",
       attributeNodes = [
-        NamedAttributeNode("certificationApprovalRequest"),
-        NamedAttributeNode("locations", subgraph = "certificate.eager.subgraph"),
+        NamedAttributeNode("locations", "cell.location.certificate.subgraph"),
+        NamedAttributeNode("certificationApprovalRequest", subgraph = "approval.subgraph"),
       ],
       subgraphs = [
         NamedSubgraph(
-          name = "certificate.eager.subgraph",
+          name = "cell.location.certificate.subgraph",
           attributeNodes = [
             NamedAttributeNode("subLocations"),
+          ],
+        ),
+      ],
+      subclassSubgraphs = [
+        NamedSubgraph(
+          name = "approval.subgraph",
+          type = LocationCertificationApprovalRequest::class,
+          attributeNodes = [
+            NamedAttributeNode("location"),
+            NamedAttributeNode("locations"),
           ],
         ),
       ],
@@ -58,7 +68,7 @@ open class CellCertificate(
   @Column(nullable = false)
   private val approvedDate: LocalDateTime,
 
-  @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST, CascadeType.MERGE], optional = false)
+  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST, CascadeType.MERGE], optional = false)
   @JoinColumn(name = "certification_approval_request_id", nullable = false)
   private val certificationApprovalRequest: CertificationApprovalRequest,
 
@@ -159,6 +169,7 @@ open class CellCertificateLocation(
 
   @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "parent_location_id")
+  @SortNatural
   private val subLocations: SortedSet<CellCertificateLocation> = sortedSetOf(),
 
 ) : Comparable<CellCertificateLocation> {

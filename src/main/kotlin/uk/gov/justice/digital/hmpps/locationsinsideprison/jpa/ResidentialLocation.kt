@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
+import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -19,7 +20,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequiredAboveThisLevelException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeUnlockedWhenNotLockedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
@@ -55,14 +55,13 @@ open class ResidentialLocation(
   @Enumerated(EnumType.STRING)
   open var residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
 
-  @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
+  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
   open var capacity: Capacity? = null,
-
-  private var locked: Boolean = false,
 
   private var residentialStructure: String? = null,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @SortNatural
   private val approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
 
 ) : Location(
@@ -128,15 +127,7 @@ open class ResidentialLocation(
   private fun hasCertifiedCells(): Boolean = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .any { it.isCertified() }
 
-  override fun isLocationLocked() = locked
-
-  private fun lockLocation() {
-    this.locked = true
-  }
-
-  private fun unlockLocation() {
-    this.locked = false
-  }
+  override fun isLocationLocked() = getPendingApprovalRequest() != null
 
   private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingChanges() }
 
@@ -152,36 +143,6 @@ open class ResidentialLocation(
     }
 
     return highestPending
-  }
-
-  private fun lock(lockTime: LocalDateTime, lockingUser: String, linkedTransaction: LinkedTransaction) {
-    val oldStatus = getDerivedStatus(ignoreParentStatus = true).description
-    lockLocation()
-    addHistory(
-      LocationAttribute.STATUS,
-      oldStatus,
-      getDerivedStatus(ignoreParentStatus = true).description,
-      lockingUser,
-      lockTime,
-      linkedTransaction,
-    )
-    updatedBy = lockingUser
-    whenUpdated = lockTime
-  }
-
-  private fun unlock(unlockTime: LocalDateTime, unlockingUser: String, linkedTransaction: LinkedTransaction) {
-    val oldStatus = getDerivedStatus(ignoreParentStatus = true).description
-    unlockLocation()
-    addHistory(
-      LocationAttribute.STATUS,
-      oldStatus,
-      getDerivedStatus(ignoreParentStatus = true).description,
-      unlockingUser,
-      unlockTime,
-      linkedTransaction,
-    )
-    updatedBy = unlockingUser
-    whenUpdated = unlockTime
   }
 
   fun setStructure(wingStructure: List<ResidentialStructuralType>) {
@@ -202,7 +163,6 @@ open class ResidentialLocation(
   fun requestApproval(
     requestedDate: LocalDateTime,
     requestedBy: String,
-    linkedTransaction: LinkedTransaction,
   ): LocationCertificationApprovalRequest {
     val topLevelPendingLocation = findHighestLevelPending()
     if (topLevelPendingLocation != null && this != topLevelPendingLocation) {
@@ -213,11 +173,6 @@ open class ResidentialLocation(
       throw PendingApprovalAlreadyExistsException(getKey())
     }
 
-    fun traverseAndLock(location: ResidentialLocation) {
-      location.lock(requestedDate, requestedBy, linkedTransaction)
-      location.childLocations.filterIsInstance<ResidentialLocation>().forEach { traverseAndLock(it) }
-    }
-    traverseAndLock(this)
     val approvalRequest = LocationCertificationApprovalRequest(
       approvalType = ApprovalType.DRAFT,
       location = this,
@@ -235,20 +190,6 @@ open class ResidentialLocation(
 
     approvalRequests.add(approvalRequest)
     return approvalRequest
-  }
-
-  private fun traverseAndUnlock(
-    unlockedDate: LocalDateTime,
-    unlockedBy: String,
-    linkedTransaction: LinkedTransaction,
-  ) {
-    if (isLocationLocked()) {
-      unlock(unlockedDate, unlockedBy, linkedTransaction)
-      childLocations.filterIsInstance<ResidentialLocation>()
-        .forEach { it.traverseAndUnlock(unlockedDate, unlockedBy, linkedTransaction) }
-    } else {
-      throw LocationCannotBeUnlockedWhenNotLockedException(getKey())
-    }
   }
 
   open fun linkPendingChangesToApprovalRequest(approvalRequest: LocationCertificationApprovalRequest) {
@@ -270,16 +211,11 @@ open class ResidentialLocation(
     }
   }
 
-  open fun clearPendingChanges() {
-    childLocations.filterIsInstance<ResidentialLocation>().forEach { it.clearPendingChanges() }
-  }
-
   fun approve(
     approvedDate: LocalDateTime,
     approvedBy: String,
     linkedTransaction: LinkedTransaction,
   ) {
-    traverseAndUnlock(approvedDate, approvedBy, linkedTransaction)
     applyPendingChanges(approvedDate = approvedDate, approvedBy = approvedBy, linkedTransaction = linkedTransaction)
 
     if (isDraft()) {
@@ -291,15 +227,6 @@ open class ResidentialLocation(
         userOrSystemInContext = approvedBy,
       )
     }
-  }
-
-  fun reject(
-    rejectedDate: LocalDateTime,
-    rejectedBy: String,
-    linkedTransaction: LinkedTransaction,
-  ) {
-    traverseAndUnlock(rejectedDate, rejectedBy, linkedTransaction)
-    clearPendingChanges()
   }
 
   private fun getAttributes(): Set<ResidentialAttribute> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }

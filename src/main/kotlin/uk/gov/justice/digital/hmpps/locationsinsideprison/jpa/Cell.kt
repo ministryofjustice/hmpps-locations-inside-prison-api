@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
+import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
@@ -53,15 +54,18 @@ class Cell(
   var certifiedCell: Boolean = false,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @SortNatural
   val attributes: SortedSet<ResidentialAttribute> = sortedSetOf(),
 
   @Enumerated(EnumType.STRING)
   var accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @SortNatural
   val usedFor: SortedSet<CellUsedFor> = sortedSetOf(),
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @SortNatural
   val specialistCellTypes: SortedSet<SpecialistCell> = sortedSetOf(),
 
   @Enumerated(EnumType.STRING)
@@ -535,12 +539,6 @@ class Cell(
     if (isDraft()) {
       certifyCell(approvedBy, approvedDate, linkedTransaction)
     }
-
-    clearPendingChanges()
-  }
-
-  override fun clearPendingChanges() {
-    pendingChange = null
   }
 
   override fun toDto(

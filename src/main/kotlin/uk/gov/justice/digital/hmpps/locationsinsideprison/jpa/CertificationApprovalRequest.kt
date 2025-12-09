@@ -7,6 +7,10 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
 import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedEntityGraphs
+import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.Table
 import org.hibernate.Hibernate
 import org.hibernate.annotations.DiscriminatorFormula
@@ -15,6 +19,30 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUu
 import java.time.LocalDateTime
 import java.util.UUID
 
+@NamedEntityGraphs(
+  value = [
+    NamedEntityGraph(
+      name = "cert.approval.graph",
+      subclassSubgraphs = [
+        NamedSubgraph(
+          name = "location-cert-approval-subgraph",
+          type = LocationCertificationApprovalRequest::class,
+          attributeNodes = [
+            NamedAttributeNode("location"),
+            NamedAttributeNode("subLocations"),
+          ],
+        ),
+        NamedSubgraph(
+          name = "signed-op-cap-approval-subgraph",
+          type = SignedOpCapCertificationApprovalRequest::class,
+          attributeNodes = [
+            NamedAttributeNode("signedOperationCapacity"),
+          ],
+        ),
+      ],
+    ),
+  ],
+)
 @Entity
 @DiscriminatorFormula("CASE WHEN approval_type = 'SIGNED_OP_CAP' THEN 'SIGNED_OP_CAP_APPROVAL_REQUEST' ELSE 'LOCATION_APPROVAL_REQUEST' END")
 @Table(name = "certification_approval_request")
@@ -55,9 +83,9 @@ abstract class CertificationApprovalRequest(
   companion object {
     private val COMPARATOR = compareBy<CertificationApprovalRequest>
       { it.prisonId }
-      .thenBy { it.approvalType }
       .thenBy { it.requestedDate }
       .thenBy { it.status }
+      .thenBy { it.approvalType }
   }
 
   override fun compareTo(other: CertificationApprovalRequest) = COMPARATOR.compare(this, other)
@@ -69,18 +97,18 @@ abstract class CertificationApprovalRequest(
     other as CertificationApprovalRequest
 
     if (prisonId != other.prisonId) return false
-    if (approvalType != other.approvalType) return false
     if (!requestedDate.isEqual(other.requestedDate)) return false
     if (status != other.status) return false
+    if (approvalType != other.approvalType) return false
 
     return true
   }
 
   override fun hashCode(): Int {
     var result = prisonId.hashCode()
-    result = 31 * result + approvalType.hashCode()
     result = 31 * result + requestedDate.hashCode()
     result = 31 * result + status.hashCode()
+    result = 31 * result + approvalType.hashCode()
     return result
   }
 

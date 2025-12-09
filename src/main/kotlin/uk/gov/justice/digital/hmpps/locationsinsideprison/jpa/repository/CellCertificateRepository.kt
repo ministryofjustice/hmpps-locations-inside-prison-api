@@ -9,12 +9,12 @@ import java.util.UUID
 
 @Repository
 interface CellCertificateRepository : JpaRepository<CellCertificate, UUID> {
-  @EntityGraph(value = "cellCertificate.eager", type = EntityGraph.EntityGraphType.LOAD)
+  @EntityGraph(value = "cell.certificate.graph", type = EntityGraph.EntityGraphType.LOAD)
   fun findByPrisonIdOrderByApprovedDateDesc(prisonId: String): List<CellCertificate>
 
-  @EntityGraph(value = "cellCertificate.eager", type = EntityGraph.EntityGraphType.LOAD)
+  @EntityGraph(value = "cell.certificate.graph", type = EntityGraph.EntityGraphType.LOAD)
   fun findByPrisonIdAndCurrentIsTrue(prisonId: String): CellCertificate?
 
-  @EntityGraph(value = "cellCertificate.eager", type = EntityGraph.EntityGraphType.LOAD)
+  @EntityGraph(value = "cell.certificate.graph", type = EntityGraph.EntityGraphType.LOAD)
   override fun findById(id: UUID): Optional<CellCertificate>
 }

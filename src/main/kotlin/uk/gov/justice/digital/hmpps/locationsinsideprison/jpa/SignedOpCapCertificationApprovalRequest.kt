@@ -25,7 +25,7 @@ open class SignedOpCapCertificationApprovalRequest(
   @Column
   private val reasonForChange: String,
 
-  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
+  @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   private val signedOperationCapacity: SignedOperationCapacity,
 
   @Column(nullable = false)

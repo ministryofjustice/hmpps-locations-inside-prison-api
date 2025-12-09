@@ -7,35 +7,12 @@ import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
-import jakarta.persistence.NamedAttributeNode
-import jakarta.persistence.NamedEntityGraph
-import jakarta.persistence.NamedEntityGraphs
-import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToMany
 import org.hibernate.annotations.SortNatural
 import java.time.LocalDateTime
 import java.util.SortedSet
 import java.util.UUID
 
-@NamedEntityGraphs(
-  value = [
-    NamedEntityGraph(
-      name = "locationCertificationApprovalRequest.eager",
-      attributeNodes = [
-        NamedAttributeNode("location"),
-        NamedAttributeNode("locations", subgraph = "locationCertificationApprovalRequest.eager.subgraph"),
-      ],
-      subgraphs = [
-        NamedSubgraph(
-          name = "locationCertificationApprovalRequest.eager.subgraph",
-          attributeNodes = [
-            NamedAttributeNode("subLocations"),
-          ],
-        ),
-      ],
-    ),
-  ],
-)
 @Entity
 @DiscriminatorValue("LOCATION_APPROVAL_REQUEST")
 open class LocationCertificationApprovalRequest(
@@ -49,7 +26,7 @@ open class LocationCertificationApprovalRequest(
   approvedOrRejectedDate: LocalDateTime? = null,
   comments: String? = null,
 
-  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
+  @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   @JoinColumn(name = "location_id", nullable = false)
   open val location: ResidentialLocation,
 
@@ -99,24 +76,6 @@ open class LocationCertificationApprovalRequest(
     location.approve(
       approvedDate = approvedDate,
       approvedBy = approvedBy,
-      linkedTransaction = linkedTransaction,
-    )
-  }
-
-  override fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
-    super.reject(rejectedBy, rejectedDate, linkedTransaction, comments)
-    location.reject(
-      rejectedDate = rejectedDate,
-      rejectedBy = rejectedBy,
-      linkedTransaction = linkedTransaction,
-    )
-  }
-
-  override fun withdraw(withdrawnBy: String, withdrawnDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
-    super.withdraw(withdrawnBy, withdrawnDate, linkedTransaction, comments)
-    location.reject(
-      rejectedDate = withdrawnDate,
-      rejectedBy = withdrawnBy,
       linkedTransaction = linkedTransaction,
     )
   }

@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
@@ -26,7 +27,7 @@ import java.util.UUID
 
 @DisplayName("Cell Certificate Resource")
 @WithMockAuthUser(username = EXPECTED_USERNAME)
-class CellCertificateResourceTest(@Autowired private val locationService: LocationService) : CommonDataTestBase() {
+class CellCertificateResourceTest(@param:Autowired private val locationService: LocationService) : CommonDataTestBase() {
 
   private lateinit var wingApprovedRequestId: UUID
   private lateinit var cellPendingApprovalRequestId: UUID
@@ -81,7 +82,7 @@ class CellCertificateResourceTest(@Autowired private val locationService: Locati
       )
       .exchange()
       .expectStatus().isOk
-      .expectBody(CertificationApprovalRequestDto::class.java)
+      .expectBody<CertificationApprovalRequestDto>()
       .returnResult().responseBody!!.id
 
     // Approve the request to generate a cell certificate
@@ -131,7 +132,7 @@ class CellCertificateResourceTest(@Autowired private val locationService: Locati
       )
       .exchange()
       .expectStatus().isOk
-      .expectBody(CertificationApprovalRequestDto::class.java)
+      .expectBody<CertificationApprovalRequestDto>()
       .returnResult().responseBody!!.id
   }
 

@@ -41,6 +41,7 @@ class NonResidentialLocation(
   createdBy: String,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @SortNatural
   private val nonResidentialUsages: SortedSet<NonResidentialUsage> = sortedSetOf(),
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)

@@ -67,7 +67,7 @@ class CertificationService(
       now,
       username,
     )
-    val approvalRequest = certificationApprovalRequestRepository.save(location.requestApproval(requestedBy = username, requestedDate = now, linkedTransaction = linkedTransaction))
+    val approvalRequest = certificationApprovalRequestRepository.save(location.requestApproval(requestedBy = username, requestedDate = now))
 
     telemetryClient.trackEvent(
       "certification-approval-requested",
