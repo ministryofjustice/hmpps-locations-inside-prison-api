@@ -128,7 +128,7 @@ data class NomisSyncLocationRequest(
           deactivatedDate = null,
           deactivatedReason = null,
           proposedReactivationDate = null,
-          childLocations = mutableListOf(),
+          childLocations = sortedSetOf(),
           accommodationType = residentialHousingType.mapToAccommodationType(),
           parent = null,
           capacity = capacity?.let {
@@ -170,7 +170,7 @@ data class NomisSyncLocationRequest(
               workingCapacity = it.workingCapacity,
             )
           },
-          childLocations = mutableListOf(),
+          childLocations = sortedSetOf(),
         )
       } else {
         ResidentialLocation(
@@ -185,7 +185,7 @@ data class NomisSyncLocationRequest(
           orderWithinParentLocation = orderWithinParentLocation,
           createdBy = lastUpdatedBy,
           whenCreated = createDate ?: LocalDateTime.now(clock),
-          childLocations = mutableListOf(),
+          childLocations = sortedSetOf(),
         )
       }
     } else {
@@ -201,7 +201,7 @@ data class NomisSyncLocationRequest(
         internalMovementAllowed = internalMovementAllowed,
         createdBy = lastUpdatedBy,
         whenCreated = createDate ?: LocalDateTime.now(clock),
-        childLocations = mutableListOf(),
+        childLocations = sortedSetOf(),
       ).also {
         usage?.forEach { usage ->
           it.addUsage(usage.usageType, usage.capacity, usage.sequence)

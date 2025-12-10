@@ -171,7 +171,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
             )
             .exchange()
             .expectStatus().isEqualTo(409)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ApprovalRequestAlreadyExists.errorCode)
       }
@@ -193,7 +193,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
             )
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.SignedOpCapCannotBeMoreThanMaxCap.errorCode)
       }
@@ -296,7 +296,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
             )
             .exchange()
             .expectStatus().isEqualTo(400)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.LocationDoesNotRequireApproval.errorCode)
       }
@@ -318,7 +318,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
             )
             .exchange()
             .expectStatus().isEqualTo(400)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ApprovalRequestAtWrongLevel.errorCode)
       }
@@ -347,7 +347,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
             .bodyValue(createCellInitialisationRequest(startingCellNumber = 88, parentLocation = aLandingInDraft.id).copy(newLevelAboveCells = null))
             .exchange()
             .expectStatus().isEqualTo(400)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.CreationForbiddenWhenApprovalPending.errorCode)
       }
@@ -380,7 +380,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
             )
             .exchange()
             .expectStatus().isEqualTo(409)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ApprovalRequestAlreadyExists.errorCode)
       }
@@ -602,7 +602,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
             ),
           )
           .exchange()
-          .expectBody(CertificationApprovalRequestDto::class.java)
+          .expectBody<CertificationApprovalRequestDto>()
           .returnResult().responseBody!!.id
 
         webTestClient.put().uri(url)
@@ -681,7 +681,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
             ),
           )
           .exchange()
-          .expectBody(CertificationApprovalRequestDto::class.java)
+          .expectBody<CertificationApprovalRequestDto>()
           .returnResult().responseBody!!.id
 
         webTestClient.get().uri("/locations/residential-summary/${mWing.prisonId}?parentPathHierarchy=${mWing.getLocationCode()}")
@@ -889,9 +889,9 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
           )
         getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.created" to aCell.getKey(),
-            "location.inside.prison.amended" to aCell.getParent()?.getKey(),
-            "location.inside.prison.amended" to aCell.getParent()?.getParent()?.getKey(),
+            "location.inside.prison.created" to "${wingZ.getKey()}-1-NEW",
+            "location.inside.prison.amended" to "${wingZ.getKey()}-1",
+            "location.inside.prison.amended" to wingZ.getKey(),
           )
         }
 

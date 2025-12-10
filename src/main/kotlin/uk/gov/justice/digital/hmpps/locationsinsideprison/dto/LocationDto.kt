@@ -573,7 +573,7 @@ data class CreateResidentialLocationRequest(
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       createdBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
-      childLocations = mutableListOf(),
+      childLocations = sortedSetOf(),
       accommodationType = accommodationType,
       capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity, certifiedNormalAccommodation = it.certifiedNormalAccommodation ?: certifiedNormalAccommodation) },
       inCellSanitation = inCellSanitation,
@@ -607,7 +607,7 @@ data class CreateResidentialLocationRequest(
       capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity) },
       createdBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
-      childLocations = mutableListOf(),
+      childLocations = sortedSetOf(),
     ).apply {
       parentLocation?.let { setParent(it) }
       addHistory(
@@ -630,7 +630,7 @@ data class CreateResidentialLocationRequest(
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       createdBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
-      childLocations = mutableListOf(),
+      childLocations = sortedSetOf(),
     ).apply {
       parentLocation?.let { setParent(it) }
       addHistory(
@@ -668,7 +668,7 @@ data class CreateOrUpdateNonResidentialLocationRequest(
     localName = localName,
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
-    childLocations = mutableListOf(),
+    childLocations = sortedSetOf(),
     internalMovementAllowed = isInternalMovement(serviceTypes = servicesUsingLocation),
   ).apply {
     setServices(servicesUsingLocation, this)
@@ -728,7 +728,7 @@ data class CreateNonResidentialLocationRequest(
     localName = localName,
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
-    childLocations = mutableListOf(),
+    childLocations = sortedSetOf(),
     internalMovementAllowed = servicesUsingLocation?.let { isInternalMovement(serviceTypes = servicesUsingLocation) } ?: false,
   ).apply {
     parentLocation?.let { setParent(it) }

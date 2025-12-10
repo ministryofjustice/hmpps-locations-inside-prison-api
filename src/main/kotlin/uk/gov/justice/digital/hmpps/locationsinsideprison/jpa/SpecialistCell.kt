@@ -22,7 +22,16 @@ class SpecialistCell(
   @Enumerated(EnumType.STRING)
   val specialistCellType: SpecialistCellType,
 
-) {
+) : Comparable<SpecialistCell> {
+
+  companion object {
+    private val COMPARATOR = compareBy<SpecialistCell>
+      { it.location }
+      .thenBy { it.specialistCellType }
+  }
+
+  override fun compareTo(other: SpecialistCell) = COMPARATOR.compare(this, other)
+
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false

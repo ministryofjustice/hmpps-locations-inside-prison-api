@@ -22,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCap
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -43,6 +44,9 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var resiRepository: ResidentialLocationRepository
+
+  @Autowired
+  lateinit var cellRepository: CellLocationRepository
 
   @Autowired
   lateinit var certificationApprovalRequestRepository: CertificationApprovalRequestRepository

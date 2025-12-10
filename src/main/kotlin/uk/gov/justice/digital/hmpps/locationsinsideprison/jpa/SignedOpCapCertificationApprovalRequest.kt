@@ -45,10 +45,11 @@ open class SignedOpCapCertificationApprovalRequest(
   approvedOrRejectedDate = approvedOrRejectedDate,
   comments = comments,
 ) {
-  override fun toDto(showLocations: Boolean) = super.toDto(showLocations).copy(
+  override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     reasonForSignedOpChange = reasonForChange,
     currentSignedOperationCapacity = currentSignedOperationCapacity,
     signedOperationCapacityChange = signedOperationCapacityChange,
+    certificateId = cellCertificateId,
   )
 
   override fun approve(

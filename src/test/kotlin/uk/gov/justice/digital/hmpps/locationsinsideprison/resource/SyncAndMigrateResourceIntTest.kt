@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisDeactivatedReason
@@ -1051,7 +1052,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LegacyLocation::class.java)
+          .expectBody<LegacyLocation>()
           .returnResult().responseBody!!
 
         Assertions.assertEquals(cell.prisonId, legacyLocation.prisonId)
@@ -1068,7 +1069,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         .header("Content-Type", "application/json")
         .exchange()
         .expectStatus().isOk
-        .expectBody(LegacyLocation::class.java)
+        .expectBody<LegacyLocation>()
         .returnResult().responseBody!!
 
       Assertions.assertEquals(wingB.prisonId, legacyLocation.prisonId)

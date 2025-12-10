@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
@@ -204,7 +205,7 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
       )
       .exchange()
       .expectStatus().isOk
-      .expectBody(CertificationApprovalRequestDto::class.java)
+      .expectBody<CertificationApprovalRequestDto>()
       .returnResult().responseBody!!.id
   }
 }

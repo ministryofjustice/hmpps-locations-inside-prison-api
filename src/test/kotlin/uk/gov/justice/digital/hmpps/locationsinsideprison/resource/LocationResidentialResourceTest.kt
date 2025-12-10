@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
@@ -38,7 +39,7 @@ import java.time.LocalDateTime
 import java.util.*
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
-class LocationResidentialResourceTest(@Autowired private val locationService: LocationService) : CommonDataTestBase() {
+class LocationResidentialResourceTest(@param:Autowired private val locationService: LocationService) : CommonDataTestBase() {
 
   @DisplayName("GET /locations/residential-summary/{prisonId}")
   @Nested
@@ -930,7 +931,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
             .header("Content-Type", "application/json")
             .bodyValue(""" { "localName": "Landing 1"} """)
             .exchange()
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.DuplicateLocalNameAtSameLevel.errorCode)
       }
@@ -943,7 +944,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
             .header("Content-Type", "application/json")
             .bodyValue(""" { "localName": "Wing B"} """)
             .exchange()
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.DuplicateLocalNameAtSameLevel.errorCode)
       }
@@ -959,7 +960,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue(""" { "localName": "New Local Name"} """)
           .exchange()
           .expectStatus().isEqualTo(409)
-          .expectBody(ErrorResponse::class.java)
+          .expectBody<ErrorResponse>()
           .returnResult().responseBody!!.also {
           assertThat(it.errorCode).isEqualTo(ErrorCode.PendingApprovalLocationCannotBeUpdated.errorCode)
           assertThat(it.userMessage).contains("Location with pending approval cannot be updated: Location ${aCell.getKey()} cannot be updated as it has a pending approval request")
@@ -977,7 +978,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue(jsonString(localNameChange))
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(locationChanged.localName).isEqualTo("Landing Z1 - CHANGED")
@@ -1005,7 +1006,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(beforeChange.localName).isEqualTo(newLocalName)
@@ -1016,7 +1017,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue("{}")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(locationChanged.localName).isNull()
@@ -1037,7 +1038,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue("""{  "localName": "${landingZ1.localName}" } """)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(locationChanged.localName).isEqualTo(landingZ1.localName)
@@ -1097,7 +1098,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue("""{  "localName": "${landingZ1.localName}" } """)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(locationChanged.localName).isEqualTo(landingZ1.localName)
@@ -1142,7 +1143,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
       )
       .exchange()
       .expectStatus().isOk
-      .expectBody(CertificationApprovalRequestDto::class.java)
+      .expectBody<CertificationApprovalRequestDto>()
       .returnResult().responseBody!!.id
     return aCell
   }
@@ -1226,7 +1227,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(foundLocation.getKey()).isEqualTo(wingB.getKey())
@@ -1239,7 +1240,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(foundLocation.getKey()).isEqualTo(landingZ1.getKey())
@@ -1317,7 +1318,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue(jsonString(PatchResidentialLocationRequest(comments = "Change comment")))
           .exchange()
           .expectStatus().isEqualTo(409)
-          .expectBody(ErrorResponse::class.java)
+          .expectBody<ErrorResponse>()
           .returnResult().responseBody!!.also {
           assertThat(it.errorCode).isEqualTo(ErrorCode.PendingApprovalLocationCannotBeUpdated.errorCode)
           assertThat(it.userMessage).contains("Location with pending approval cannot be updated: Location ${aCell.getKey()} cannot be updated as it has a pending approval request")
@@ -1342,7 +1343,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
             .header("Content-Type", "application/json")
             .exchange()
             .expectStatus().isOk
-            .expectBody(LegacyLocation::class.java)
+            .expectBody<LegacyLocation>()
             .returnResult().responseBody!!.comments,
         ).isEqualTo("Change comment")
 
@@ -2527,7 +2528,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
           .exchange()
           .expectStatus().isEqualTo(409)
-          .expectBody(ErrorResponse::class.java)
+          .expectBody<ErrorResponse>()
           .returnResult().responseBody!!.also {
           assertThat(it.errorCode).isEqualTo(ErrorCode.PendingApprovalLocationCannotBeUpdated.errorCode)
           assertThat(it.userMessage).contains("Location with pending approval cannot be updated: Location ${aCell.getKey()} cannot be updated as it has a pending approval request")
@@ -2547,7 +2548,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue(convertCellToNonResidentialLocationRequest)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.convertedCellType).isEqualTo(ConvertedCellType.OTHER)
@@ -2614,7 +2615,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
             .header("Content-Type", "application/json")
             .exchange()
             .expectStatus().isOk
-            .expectBody(LocationTest::class.java)
+            .expectBody<LocationTest>()
             .returnResult().responseBody!!.localName,
         ).isEqualTo(store.localName)
 
@@ -2625,7 +2626,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue(nonResStoreRoomRequest)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.convertedCellType == ConvertedCellType.STORE)
@@ -2766,7 +2767,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue(""" { "convertedCellType": "OFFICE" } """)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.findByPathHierarchy("Z-1-001")!!.convertedCellType == ConvertedCellType.OFFICE)
@@ -2974,7 +2975,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           )
           .exchange()
           .expectStatus().isEqualTo(400)
-          .expectBody(ErrorResponse::class.java)
+          .expectBody<ErrorResponse>()
           .returnResult().responseBody!!
 
         assertThat(response.userMessage).contains("not one of the values accepted for Enum class: [NORMAL_ACCOMMODATION, CARE_AND_SEPARATION, HEALTHCARE_INPATIENTS]")
@@ -3026,7 +3027,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .bodyValue(convertToCellRequest)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
@@ -3059,7 +3060,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!.changeHistory?.firstOrNull()?.transactionId
         assertThat(tx).isNotNull()
 
@@ -3084,7 +3085,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
             .header("Content-Type", "application/json")
             .exchange()
             .expectStatus().isOk()
-            .expectBody(LegacyLocation::class.java)
+            .expectBody<LegacyLocation>()
             .returnResult().responseBody!!.residentialHousingType,
         ).isEqualTo(ResidentialHousingType.NORMAL_ACCOMMODATION)
       }
@@ -3106,7 +3107,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
         .bodyValue(convertToCellRequestValidCareAndSeparation)
         .exchange()
         .expectStatus().isOk
-        .expectBody(LocationTest::class.java)
+        .expectBody<LocationTest>()
         .returnResult().responseBody!!
 
       val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
@@ -3141,7 +3142,7 @@ class LocationResidentialResourceTest(@Autowired private val locationService: Lo
         .bodyValue(convertToCellRequestValidHealthCareInpatients)
         .exchange()
         .expectStatus().isOk
-        .expectBody(LocationTest::class.java)
+        .expectBody<LocationTest>()
         .returnResult().responseBody!!
 
       val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")

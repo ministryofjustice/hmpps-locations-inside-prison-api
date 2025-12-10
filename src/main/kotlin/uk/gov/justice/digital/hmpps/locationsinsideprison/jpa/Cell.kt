@@ -9,7 +9,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
-import org.hibernate.annotations.BatchSize
+import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
@@ -42,7 +42,7 @@ class Cell(
   deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
-  childLocations: MutableList<Location>,
+  childLocations: SortedSet<Location>,
   whenCreated: LocalDateTime,
   createdBy: String,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
@@ -53,20 +53,20 @@ class Cell(
   @Column(nullable = false)
   var certifiedCell: Boolean = false,
 
-  @BatchSize(size = 10)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val attributes: MutableSet<ResidentialAttribute> = mutableSetOf(),
+  @SortNatural
+  val attributes: SortedSet<ResidentialAttribute> = sortedSetOf(),
 
   @Enumerated(EnumType.STRING)
   var accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 
-  @BatchSize(size = 100)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val usedFor: MutableSet<CellUsedFor> = mutableSetOf(),
+  @SortNatural
+  val usedFor: SortedSet<CellUsedFor> = sortedSetOf(),
 
-  @BatchSize(size = 100)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val specialistCellTypes: MutableSet<SpecialistCell> = mutableSetOf(),
+  @SortNatural
+  val specialistCellTypes: SortedSet<SpecialistCell> = sortedSetOf(),
 
   @Enumerated(EnumType.STRING)
   var convertedCellType: ConvertedCellType? = null,
@@ -427,7 +427,7 @@ class Cell(
     }
   }
 
-  @Deprecated("Seperate certification upsert not needed")
+  @Deprecated("Separate certification upsert not needed")
   private fun handleNomisCertSync(
     upsert: NomisSyncLocationRequest,
     userOrSystemInContext: String,
@@ -539,12 +539,6 @@ class Cell(
     if (isDraft()) {
       certifyCell(approvedBy, approvedDate, linkedTransaction)
     }
-
-    clearPendingChanges()
-  }
-
-  override fun clearPendingChanges() {
-    pendingChange = null
   }
 
   override fun toDto(
