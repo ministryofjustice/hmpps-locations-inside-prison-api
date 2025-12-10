@@ -88,7 +88,7 @@ open class CellCertificate(
   private var current: Boolean = true,
 
   @SortNatural
-  @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "cell_certificate_id", nullable = false)
   open var locations: SortedSet<CellCertificateLocation> = sortedSetOf(),
 ) {
@@ -167,7 +167,7 @@ open class CellCertificateLocation(
   @Enumerated(EnumType.STRING)
   private val convertedCellType: ConvertedCellType? = null,
 
-  @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "parent_location_id")
   @SortNatural
   private val subLocations: SortedSet<CellCertificateLocation> = sortedSetOf(),

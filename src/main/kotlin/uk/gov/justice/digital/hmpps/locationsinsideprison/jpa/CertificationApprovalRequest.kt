@@ -25,7 +25,7 @@ import java.util.UUID
       name = "cert.approval.graph",
       subclassSubgraphs = [
         NamedSubgraph(
-          name = "location-cert-approval-subgraph",
+          name = "location.cert.approval.subgraph",
           type = LocationCertificationApprovalRequest::class,
           attributeNodes = [
             NamedAttributeNode("location"),
@@ -33,7 +33,7 @@ import java.util.UUID
           ],
         ),
         NamedSubgraph(
-          name = "signed-op-cap-approval-subgraph",
+          name = "signed.op.cap.approval.subgraph",
           type = SignedOpCapCertificationApprovalRequest::class,
           attributeNodes = [
             NamedAttributeNode("signedOperationCapacity"),
