@@ -114,7 +114,7 @@ abstract class CertificationApprovalRequest(
 
   fun isPending() = status == ApprovalRequestStatus.PENDING
 
-  open fun toDto(showLocations: Boolean = false): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
+  open fun toDto(showLocations: Boolean = false, cellCertificateId: UUID? = null): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
     id = id!!,
     approvalType = approvalType,
     prisonId = prisonId,
@@ -124,6 +124,7 @@ abstract class CertificationApprovalRequest(
     approvedOrRejectedBy = approvedOrRejectedBy,
     approvedOrRejectedDate = approvedOrRejectedDate,
     comments = comments,
+    certificateId = cellCertificateId,
   )
 
   open fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {

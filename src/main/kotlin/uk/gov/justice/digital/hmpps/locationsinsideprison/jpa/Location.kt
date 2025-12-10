@@ -101,7 +101,7 @@ abstract class Location(
   @JoinColumn(insertable = false, updatable = false, nullable = true, name = "prisonId")
   private val prisonConfiguration: PrisonConfiguration? = null,
 
-  @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST])
+  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST])
   @JoinColumn(name = "parent_id")
   private var parent: Location? = null,
 
@@ -122,7 +122,7 @@ abstract class Location(
   open var proposedReactivationDate: LocalDate? = null,
   open var planetFmReference: String? = null,
 
-  @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
   @SortNatural
   protected open val childLocations: SortedSet<Location> = sortedSetOf(),
 
@@ -301,7 +301,7 @@ abstract class Location(
     "${getParent()!!.getHierarchicalPath()}-${getLocationCode()}"
   }
 
-  private fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
+  private fun getActiveResidentialLocationsBelowThisLevel() = getResidentialLocationsBelowThisLevel().filter { it.isActiveAndAllParentsActive() }
 
   fun getResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>()
 
@@ -328,6 +328,8 @@ abstract class Location(
   }
 
   fun countCellAndNonResLocations() = leafResidentialLocations().count()
+
+  fun findLocation(key: String) = findSubLocations().find { it.getKey() == key }
 
   fun findSubLocations(parentsAfterChildren: Boolean = false): List<Location> {
     val subLocations = mutableListOf<Location>()

@@ -36,7 +36,7 @@ class CellCertificateService(
     cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(approvalRequest.prisonId)?.markAsNotCurrent()
 
     // Create the cell certificate
-    val cellCertificate = cellCertificateRepository.save(
+    val cellCertificate = cellCertificateRepository.saveAndFlush(
       CellCertificate(
         prisonId = approvalRequest.prisonId,
         approvedBy = approvedBy,

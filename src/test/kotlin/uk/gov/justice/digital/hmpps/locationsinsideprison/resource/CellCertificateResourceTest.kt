@@ -43,7 +43,7 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
     super.setUp()
 
     // Create a new wing in Leeds prison
-    mWing = repository.saveAndFlush(
+    mWing = resiRepository.saveAndFlush(
       CreateEntireWingRequest(
         prisonId = "LEI",
         wingCode = "M",
@@ -103,10 +103,17 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
     val certificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue("LEI")
     cellCertificateId = certificate!!.id!!
 
+    // activate the wing
+    webTestClient.put().uri("/locations/${mWing.id}/reactivate?cascade-reactivation=true")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .exchange()
+      .expectStatus().isOk
+
     locationService.createCells(
       createCellsRequest = CellInitialisationRequest(
         prisonId = mWing.prisonId,
-        parentLocation = repository.findOneByKey("LEI-M-1")!!.id!!,
+        parentLocation = resiRepository.findOneByKey("LEI-M-1")!!.id!!,
         cells = setOf(
           CellInformation(
             code = "NEW",
@@ -118,7 +125,7 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
         ),
       ),
     )
-    val aCell = repository.findOneByKey("LEI-M-1-NEW") as Cell
+    val aCell = cellRepository.findOneByKey("LEI-M-1-NEW") as Cell
 
     cellPendingApprovalRequestId = webTestClient.put().uri("/certification/location/request-approval")
       .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -314,7 +321,7 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
     fun `successful approval of a single cell change generates a cell certificate that captures all cells in the prison`() {
       // Verify that the cell certificate was created with the correct data
       // Approve the request to generate a cell certificate
-      webTestClient.put().uri("/certification/location/approve")
+      val latestCertificateId = webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(user = EXPECTED_USERNAME, roles = listOf("ROLE_LOCATION_CERTIFICATION")))
         .header("Content-Type", "application/json")
         .bodyValue(
@@ -325,10 +332,8 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
           ),
         )
         .exchange()
-        .expectStatus().isOk
-
-      // Get the cell certificate ID
-      val latestCertificateId = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue("LEI")!!.id
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!.certificateId
 
       webTestClient.get().uri("/cell-certificates/$latestCertificateId")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -341,7 +346,7 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
         .jsonPath("$.current").isEqualTo(true)
         .jsonPath("$.locations").isArray()
         .jsonPath("$.totalMaxCapacity").isEqualTo(27)
-        .jsonPath("$.totalWorkingCapacity").isEqualTo(6)
+        .jsonPath("$.totalWorkingCapacity").isEqualTo(14)
         .jsonPath("$.totalCertifiedNormalAccommodation").isEqualTo(14)
         // Verify that there are locations in the response
         .jsonPath("$.locations.length()").isEqualTo(2)

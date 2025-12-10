@@ -193,7 +193,7 @@ open class ResidentialLocation(
   }
 
   open fun linkPendingChangesToApprovalRequest(approvalRequest: LocationCertificationApprovalRequest) {
-    childLocations.filterIsInstance<ResidentialLocation>()
+    getResidentialLocationsBelowThisLevel()
       .forEach { it.linkPendingChangesToApprovalRequest(approvalRequest = approvalRequest) }
   }
 
@@ -202,7 +202,7 @@ open class ResidentialLocation(
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
-    childLocations.filterIsInstance<ResidentialLocation>().forEach {
+    getResidentialLocationsBelowThisLevel().forEach {
       it.applyPendingChanges(
         approvedDate = approvedDate,
         approvedBy = approvedBy,
@@ -424,12 +424,12 @@ open class ResidentialLocation(
   }
 
   fun toCellCertificateLocation(approvedLocation: ResidentialLocation? = null): CellCertificateLocation {
-    val subLocations: List<CellCertificateLocation> = childLocations
-      .filterIsInstance<ResidentialLocation>()
+    val subLocations: List<CellCertificateLocation> = getResidentialLocationsBelowThisLevel()
       .filter { !it.isDraft() && (it.isStructural() || it.isCell() || it.isConvertedCell()) }
       .map { it.toCellCertificateLocation(approvedLocation) }
 
-    val approvedLocationIsPartOfHierarchy = approvedLocation?.let { isInHierarchy(it) } ?: false
+    val approvedLocationIsPartOfHierarchy = approvedLocation?.let { locToFind -> isInHierarchy(locToFind) || findLocation(locToFind.getKey()) != null } ?: false
+
     return CellCertificateLocation(
       locationType = locationType,
       locationCode = getLocationCode(),
@@ -466,8 +466,7 @@ open class ResidentialLocation(
   }
 
   private fun toCertificationApprovalRequestLocation(): CertificationApprovalRequestLocation {
-    val subLocations: List<CertificationApprovalRequestLocation> = childLocations
-      .filterIsInstance<ResidentialLocation>()
+    val subLocations: List<CertificationApprovalRequestLocation> = getResidentialLocationsBelowThisLevel()
       .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
       .map { it.toCertificationApprovalRequestLocation() }
 

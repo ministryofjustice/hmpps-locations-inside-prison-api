@@ -26,7 +26,7 @@ open class LocationCertificationApprovalRequest(
   approvedOrRejectedDate: LocalDateTime? = null,
   comments: String? = null,
 
-  @ManyToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
   @JoinColumn(name = "location_id", nullable = false)
   open val location: ResidentialLocation,
 
@@ -43,7 +43,7 @@ open class LocationCertificationApprovalRequest(
   private var maxCapacityChange: Int = 0,
 
   @SortNatural
-  @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "certification_approval_request_id", nullable = false)
   open var locations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
 
@@ -58,12 +58,13 @@ open class LocationCertificationApprovalRequest(
   approvedOrRejectedDate = approvedOrRejectedDate,
   comments = comments,
 ) {
-  override fun toDto(showLocations: Boolean) = super.toDto(showLocations).copy(
+  override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     locationKey = locationKey,
     locationId = location.id!!,
     certifiedNormalAccommodationChange = certifiedNormalAccommodationChange,
     workingCapacityChange = workingCapacityChange,
     maxCapacityChange = maxCapacityChange,
+    certificateId = cellCertificateId,
     locations = if (showLocations) {
       locations.filter { it.pathHierarchy == location.getPathHierarchy() }.map { it.toDto() }
     } else {

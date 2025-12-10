@@ -427,7 +427,7 @@ class Cell(
     }
   }
 
-  @Deprecated("Seperate certification upsert not needed")
+  @Deprecated("Separate certification upsert not needed")
   private fun handleNomisCertSync(
     upsert: NomisSyncLocationRequest,
     userOrSystemInContext: String,

@@ -17,7 +17,7 @@ interface ResidentialLocationRepository : JpaRepository<ResidentialLocation, UUI
   fun findAllByPrisonIdAndParentId(prisonId: String, parentId: UUID): List<ResidentialLocation>
 
   @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
-  @Query("select l from ResidentialLocation l left join fetch l.capacity c where l.prisonId = :prisonId and l.parent is null")
+  @Query("select l from ResidentialLocation l where l.prisonId = :prisonId and l.parent is null")
   fun findAllByPrisonIdAndParentIsNull(prisonId: String): List<ResidentialLocation>
 
   @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
