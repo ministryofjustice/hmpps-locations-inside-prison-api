@@ -199,5 +199,61 @@ class DprReportingIntegrationTest : CommonDataTestBase() {
         }
       }
     }
+
+    @DisplayName("GET /reports/transactions/cell-details")
+    @Nested
+    inner class RunCellDetailsReport {
+      private val url = "/reports/transactions/cell-details"
+
+      @DisplayName("is secured")
+      @Nested
+      inner class Security {
+        @DisplayName("by role and scope")
+        @TestFactory
+        fun endpointRequiresAuthorisation() = endpointRequiresAuthorisation(
+          webTestClient.get().uri(url),
+          systemRole,
+        )
+      }
+
+      @Test
+      fun `returns 403 when user does not have the role`() {
+        manageUsersApiMockServer.stubLookupUsersRoles(REQUESTING_USER, listOf("ANOTHER_USER_ROLE"))
+
+        webTestClient.get().uri(url)
+          .headers(setAuthorisation(user = REQUESTING_USER, roles = listOf(systemRole), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @DisplayName("works")
+      @Nested
+      inner class HappyPath {
+
+        @Test
+        fun `returns a page of the report`() {
+          webTestClient.get().uri("$url?filters.status=Active")
+            .headers(setAuthorisation(user = REQUESTING_USER, roles = listOf(systemRole), scopes = listOf("read")))
+            .header("Content-Type", "application/json")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody().jsonPath("$.length()").isEqualTo(10)
+        }
+
+        @Test
+        fun `returns no data when user does not have the caseload`() {
+          manageUsersApiMockServer.stubLookupUserCaseload(REQUESTING_USER, "BXI", listOf("BXI"))
+
+          webTestClient.get().uri("$url?filters.status=Active")
+            .headers(setAuthorisation(user = REQUESTING_USER, roles = listOf(systemRole), scopes = listOf("read")))
+            .header("Content-Type", "application/json")
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.length()").isEqualTo(0)
+        }
+      }
+    }
   }
 }

@@ -26,6 +26,7 @@ generic-service:
     API_BASE_URL_MANAGE_USERS: http://localhost:8090
     HMPPS_SQS_LOCALSTACK_URL: http://localhost:4566
     SPRING_PROFILES_ACTIVE: train
+    URL_ENV_SUFFIX: train
 
   extraContainers:
     - name: wiremock
