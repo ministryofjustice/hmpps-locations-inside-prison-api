@@ -24,7 +24,16 @@ class CellUsedFor(
   @Enumerated(EnumType.STRING)
   val usedFor: UsedForType,
 
-) {
+) : Comparable<CellUsedFor> {
+
+  companion object {
+    private val COMPARATOR = compareBy<CellUsedFor>
+      { it.location }
+      .thenBy { it.usedFor }
+  }
+
+  override fun compareTo(other: CellUsedFor) = COMPARATOR.compare(this, other)
+
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) return false

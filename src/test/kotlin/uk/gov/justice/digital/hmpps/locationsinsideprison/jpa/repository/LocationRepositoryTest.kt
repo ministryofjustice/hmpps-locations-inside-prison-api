@@ -202,7 +202,7 @@ class LocationRepositoryTest : TestBase() {
       orderWithinParentLocation = 1,
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "comments",
-      childLocations = mutableListOf(),
+      childLocations = sortedSetOf(),
     )
   }
 
@@ -232,7 +232,7 @@ class LocationRepositoryTest : TestBase() {
       orderWithinParentLocation = 1,
       residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
       comments = "comments",
-      childLocations = mutableListOf(),
+      childLocations = sortedSetOf(),
     )
     location.addAttributes(residentialAttributeValues)
     return location
@@ -258,7 +258,7 @@ class LocationRepositoryTest : TestBase() {
       localName = "$locationType $prisonId $pathHierarchy",
       orderWithinParentLocation = 1,
       comments = "Non Res comments",
-      childLocations = mutableListOf(),
+      childLocations = sortedSetOf(),
     )
     location.addUsage(NonResidentialUsageType.ADJUDICATION_HEARING)
     return location

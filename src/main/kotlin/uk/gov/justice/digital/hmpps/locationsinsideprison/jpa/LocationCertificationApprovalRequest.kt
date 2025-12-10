@@ -43,7 +43,7 @@ open class LocationCertificationApprovalRequest(
   private var maxCapacityChange: Int = 0,
 
   @SortNatural
-  @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "certification_approval_request_id", nullable = false)
   open var locations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
 
@@ -58,12 +58,13 @@ open class LocationCertificationApprovalRequest(
   approvedOrRejectedDate = approvedOrRejectedDate,
   comments = comments,
 ) {
-  override fun toDto(showLocations: Boolean) = super.toDto(showLocations).copy(
+  override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     locationKey = locationKey,
     locationId = location.id!!,
     certifiedNormalAccommodationChange = certifiedNormalAccommodationChange,
     workingCapacityChange = workingCapacityChange,
     maxCapacityChange = maxCapacityChange,
+    certificateId = cellCertificateId,
     locations = if (showLocations) {
       locations.filter { it.pathHierarchy == location.getPathHierarchy() }.map { it.toDto() }
     } else {
@@ -76,24 +77,6 @@ open class LocationCertificationApprovalRequest(
     location.approve(
       approvedDate = approvedDate,
       approvedBy = approvedBy,
-      linkedTransaction = linkedTransaction,
-    )
-  }
-
-  override fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
-    super.reject(rejectedBy, rejectedDate, linkedTransaction, comments)
-    location.reject(
-      rejectedDate = rejectedDate,
-      rejectedBy = rejectedBy,
-      linkedTransaction = linkedTransaction,
-    )
-  }
-
-  override fun withdraw(withdrawnBy: String, withdrawnDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
-    super.withdraw(withdrawnBy, withdrawnDate, linkedTransaction, comments)
-    location.reject(
-      rejectedDate = withdrawnDate,
-      rejectedBy = withdrawnBy,
       linkedTransaction = linkedTransaction,
     )
   }

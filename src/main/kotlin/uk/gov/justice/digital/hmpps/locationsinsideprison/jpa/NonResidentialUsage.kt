@@ -24,7 +24,16 @@ class NonResidentialUsage(
   var capacity: Int? = null,
   var sequence: Int = 99,
 
-) {
+) : Comparable<NonResidentialUsage> {
+
+  companion object {
+    private val COMPARATOR = compareBy<NonResidentialUsage>
+      { it.location }
+      .thenBy { it.usageType }
+  }
+
+  override fun compareTo(other: NonResidentialUsage) = COMPARATOR.compare(this, other)
+
   fun toDto() = NonResidentialUsageDto(
     usageType = usageType,
     capacity = capacity,

@@ -32,8 +32,7 @@ CREATE OR REPLACE FUNCTION create_cell(IN p_code varchar,
                                         IN p_cell_type varchar(80)[] = ARRAY[]::varchar[],
                                         IN p_used_for varchar(80)[] = ARRAY['STANDARD_ACCOMMODATION'],
                                         IN p_certified boolean = true,
-                                        IN p_status varchar(20) = 'ACTIVE',
-                                        IN p_locked boolean = false
+                                        IN p_status varchar(20) = 'ACTIVE'
 ) RETURNS UUID
 AS $$
 DECLARE v_location_id UUID;
@@ -53,10 +52,10 @@ BEGIN
         INSERT INTO capacity (max_capacity, working_capacity, certified_normal_accommodation) VALUES (p_max_cap, p_working_cap, p_max_cap) returning id INTO v_capacity_id;
 
         INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status,
-                              capacity_id, locked, in_cell_sanitation, cell_mark, certified_cell,
+                              capacity_id, in_cell_sanitation, cell_mark, certified_cell,
                               accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
         values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, p_status, v_capacity_id,
-                p_locked, true, concat(p_parent_path,p_code), true, p_accommodation_type, map_accommodation_type(p_accommodation_type),
+                 true, concat(p_parent_path,p_code), true, p_accommodation_type, map_accommodation_type(p_accommodation_type),
                 now(), now(), p_username) RETURNING id INTO v_location_id;
 
         FOREACH v_used_for IN ARRAY p_used_for
@@ -396,17 +395,6 @@ AS $$
                set certification_approval_request_id = null,
                    parent_location_id = (select id from certification_approval_request_location where path_hierarchy = regexp_replace (c.path_hierarchy, '[|-][^|-]*$', '') and certification_approval_request_id = v_approval_id)
             where certification_approval_request_id = v_approval_id and parent_location_id is null and path_hierarchy != p_location_path;
-
-            UPDATE location
-            SET locked = true,
-                updated_by = p_username,
-                when_updated = now()
-            WHERE id = v_location_id;
-            UPDATE location
-            SET locked = true,
-                updated_by = p_username,
-                when_updated = now()
-            WHERE prison_id = p_prison_id and path_hierarchy like concat(p_location_path, '-%');
         ELSE
             RAISE EXCEPTION 'Location not found';
         END IF;

@@ -14,9 +14,12 @@ import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedEntityGraphs
+import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
-import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -45,6 +48,37 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 
 val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
+@NamedEntityGraphs(
+  value = [
+    NamedEntityGraph(
+      name = "resi.location.graph",
+      attributeNodes = [
+        NamedAttributeNode("prisonConfiguration"),
+        NamedAttributeNode("parent"),
+        NamedAttributeNode(value = "childLocations"),
+      ],
+      subclassSubgraphs = [
+        NamedSubgraph(
+          name = "residential-subgraph",
+          type = ResidentialLocation::class,
+          attributeNodes = [
+            NamedAttributeNode("capacity"),
+          ],
+        ),
+        NamedSubgraph(
+          name = "cell-subgraph",
+          type = Cell::class,
+          attributeNodes = [
+            NamedAttributeNode("usedFor"),
+            NamedAttributeNode("specialistCellTypes"),
+            NamedAttributeNode("attributes"),
+            NamedAttributeNode("pendingChange"),
+          ],
+        ),
+      ],
+    ),
+  ],
+)
 @Entity
 @DiscriminatorColumn(name = "location_type_discriminator")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
@@ -88,11 +122,10 @@ abstract class Location(
   open var proposedReactivationDate: LocalDate? = null,
   open var planetFmReference: String? = null,
 
-  @BatchSize(size = 1000)
   @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
-  protected open val childLocations: MutableList<Location> = mutableListOf(),
+  @SortNatural
+  protected open val childLocations: SortedSet<Location> = sortedSetOf(),
 
-  @BatchSize(size = 100)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
   protected open val history: SortedSet<LocationHistory> = sortedSetOf(),
@@ -137,8 +170,6 @@ abstract class Location(
   open fun getLocationCode(): String = code
 
   open fun getParent(): Location? = parent
-
-  fun isCertificationApprovalProcessRequired() = prisonConfiguration?.certificationApprovalRequired == true
 
   private fun findArchivedParent(): Location? {
     fun findArchivedLocation(location: Location?): Location? {
@@ -270,7 +301,7 @@ abstract class Location(
     "${getParent()!!.getHierarchicalPath()}-${getLocationCode()}"
   }
 
-  private fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
+  private fun getActiveResidentialLocationsBelowThisLevel() = getResidentialLocationsBelowThisLevel().filter { it.isActiveAndAllParentsActive() }
 
   fun getResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>()
 
@@ -297,6 +328,8 @@ abstract class Location(
   }
 
   fun countCellAndNonResLocations() = leafResidentialLocations().count()
+
+  fun findLocation(key: String) = findSubLocations().find { it.getKey() == key }
 
   fun findSubLocations(parentsAfterChildren: Boolean = false): List<Location> {
     val subLocations = mutableListOf<Location>()
@@ -339,7 +372,7 @@ abstract class Location(
           linkedTransaction = linkedTransaction,
         )
         history.add(locationHistory)
-        return locationHistory
+        locationHistory
       } else {
         null
       }
@@ -447,8 +480,7 @@ abstract class Location(
       .mapNotNull { it.linkedTransaction }
       .distinct()
       .sortedByDescending { it.txStartTime }
-      .map { tx -> tx.toDto(this).toChangeHistory() }
-      .flatten()
+      .flatMap { tx -> tx.toDto(this).toChangeHistory() }
       .toList()
 
     val withoutTx = history.asSequence()

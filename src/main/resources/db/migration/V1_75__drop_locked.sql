@@ -1,0 +1,1 @@
+ALTER table location drop column locked;

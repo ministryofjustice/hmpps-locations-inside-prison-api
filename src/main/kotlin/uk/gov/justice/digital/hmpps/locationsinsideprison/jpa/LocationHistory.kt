@@ -22,7 +22,7 @@ class LocationHistory(
   @ManyToOne(fetch = FetchType.LAZY)
   val location: Location,
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = true)
+  @ManyToOne(fetch = FetchType.EAGER, optional = true)
   val linkedTransaction: LinkedTransaction? = null,
 
   @Enumerated(EnumType.STRING)

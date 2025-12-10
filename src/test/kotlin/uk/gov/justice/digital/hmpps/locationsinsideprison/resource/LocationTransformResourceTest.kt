@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
@@ -111,7 +112,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           .bodyValue(jsonString(setOf(UsedForType.PERSONALITY_DISORDER)))
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.usedFor == expectedUsedFor)
@@ -151,7 +152,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           .bodyValue("[]")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.usedFor!!.isEmpty())
@@ -207,7 +208,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           .bodyValue("[]")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.usedFor == expectedTypes)
@@ -508,7 +509,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .bodyValue(jsonString(emptySet<SpecialistCellType>()))
             .exchange()
             .expectStatus().isEqualTo(400)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
       }
@@ -532,7 +533,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .bodyValue(jsonString(setOf(SpecialistCellType.ACCESSIBLE_CELL)))
             .exchange()
             .expectStatus().isEqualTo(400)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
       }
@@ -591,7 +592,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.specialistCellTypes!! == expectedSpecialistCell)
@@ -613,7 +614,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           .bodyValue(jsonString(emptySet<SpecialistCellType>()))
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.specialistCellTypes == specialistCellTypes)
@@ -633,7 +634,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
           .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST, SpecialistCellType.SAFE_CELL, SpecialistCellType.CONSTANT_SUPERVISION)))
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
@@ -802,7 +803,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             )
             .exchange()
             .expectStatus().is4xxClientError
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(102)
       }
@@ -825,7 +826,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             )
             .exchange()
             .expectStatus().isEqualTo(400)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(117)
       }
@@ -848,7 +849,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             )
             .exchange()
             .expectStatus().isEqualTo(400)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(114)
       }
@@ -873,7 +874,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             )
             .exchange()
             .expectStatus().isEqualTo(400)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.MaxCapacityCannotBeZero.errorCode)
       }
@@ -896,7 +897,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             )
             .exchange()
             .expectStatus().isEqualTo(400)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
       }
@@ -953,7 +954,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             )
             .exchange()
             .expectStatus().isEqualTo(409)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.PendingApprovalLocationCannotBeUpdated.errorCode)
       }
