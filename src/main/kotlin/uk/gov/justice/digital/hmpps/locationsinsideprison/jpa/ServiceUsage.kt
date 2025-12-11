@@ -78,7 +78,7 @@ enum class ServiceFamilyType(
     description = description,
     values = ServiceType.entries.sortedBy { it.sequence }
       .filter { it.serviceFamily == this }
-      .map { Constant(key = it.name, description = it.description) },
+      .map { Constant(key = it.name, description = it.description, additionalInformation = it.additionalInformation) },
   )
 }
 
