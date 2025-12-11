@@ -8,6 +8,10 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedEntityGraphs
+import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import org.hibernate.Hibernate
@@ -19,6 +23,35 @@ import java.time.LocalDateTime
 import java.util.SortedSet
 import java.util.UUID
 
+@NamedEntityGraphs(
+  value = [
+    NamedEntityGraph(
+      name = "cell.certificate.graph",
+      attributeNodes = [
+        NamedAttributeNode("locations", "cell.location.certificate.subgraph"),
+        NamedAttributeNode("certificationApprovalRequest", subgraph = "approval.subgraph"),
+      ],
+      subgraphs = [
+        NamedSubgraph(
+          name = "cell.location.certificate.subgraph",
+          attributeNodes = [
+            NamedAttributeNode("subLocations"),
+          ],
+        ),
+      ],
+      subclassSubgraphs = [
+        NamedSubgraph(
+          name = "approval.subgraph",
+          type = LocationCertificationApprovalRequest::class,
+          attributeNodes = [
+            NamedAttributeNode("location"),
+            NamedAttributeNode("locations"),
+          ],
+        ),
+      ],
+    ),
+  ],
+)
 @Entity
 open class CellCertificate(
   @Id
@@ -35,7 +68,7 @@ open class CellCertificate(
   @Column(nullable = false)
   private val approvedDate: LocalDateTime,
 
-  @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST, CascadeType.MERGE], optional = false)
+  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST, CascadeType.MERGE], optional = false)
   @JoinColumn(name = "certification_approval_request_id", nullable = false)
   private val certificationApprovalRequest: CertificationApprovalRequest,
 
@@ -55,7 +88,7 @@ open class CellCertificate(
   private var current: Boolean = true,
 
   @SortNatural
-  @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "cell_certificate_id", nullable = false)
   open var locations: SortedSet<CellCertificateLocation> = sortedSetOf(),
 ) {
@@ -134,8 +167,9 @@ open class CellCertificateLocation(
   @Enumerated(EnumType.STRING)
   private val convertedCellType: ConvertedCellType? = null,
 
-  @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "parent_location_id")
+  @SortNatural
   private val subLocations: SortedSet<CellCertificateLocation> = sortedSetOf(),
 
 ) : Comparable<CellCertificateLocation> {

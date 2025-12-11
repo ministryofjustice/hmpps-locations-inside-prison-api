@@ -31,7 +31,14 @@ class SignedOperationCapacity(
 
   var whenUpdated: LocalDateTime,
   var updatedBy: String,
-) {
+) : Comparable<SignedOperationCapacity> {
+
+  companion object {
+    private val COMPARATOR = compareBy<SignedOperationCapacity>
+      { it.prisonId }
+  }
+
+  override fun compareTo(other: SignedOperationCapacity) = COMPARATOR.compare(this, other)
 
   fun findPendingApprovalRequest(): SignedOpCapCertificationApprovalRequest? = approvalRequests.findLast { it.isPending() }
 

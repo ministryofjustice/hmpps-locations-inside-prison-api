@@ -64,6 +64,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationConta
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
@@ -486,15 +487,10 @@ class LocationService(
         clock = clock,
         linkedTransaction = linkedTransaction,
       )
-      cellToUpdate.setCertifiedNormalAccommodation(
-        certifiedNormalAccommodation = cell.certifiedNormalAccommodation,
-        userOrSystemInContext = userOrSystemInContext,
-        updatedAt = LocalDateTime.now(clock),
-        linkedTransaction = linkedTransaction,
-      )
       cellToUpdate.setCapacity(
         maxCapacity = cell.maxCapacity,
         workingCapacity = cell.workingCapacity,
+        certifiedNormalAccommodation = cell.certifiedNormalAccommodation,
         userOrSystemInContext = userOrSystemInContext,
         amendedDate = LocalDateTime.now(clock),
         linkedTransaction = linkedTransaction,
@@ -518,6 +514,11 @@ class LocationService(
     val residentialLocation =
       residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
 
+    val hasPendingApproval = residentialLocation.getPendingApprovalRequest() != null
+    if (hasPendingApproval) {
+      throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
+    }
+
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = residentialLocation.prisonId,
       TransactionType.LOCATION_UPDATE,
@@ -537,6 +538,11 @@ class LocationService(
   ): UpdateLocationResult {
     val residentialLocation = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
 
+    val hasPendingApproval = residentialLocation.getPendingApprovalRequest() != null
+    if (hasPendingApproval) {
+      throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
+    }
+
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = residentialLocation.prisonId,
       TransactionType.LOCATION_UPDATE,
@@ -553,6 +559,11 @@ class LocationService(
   fun updateResidentialLocationUsedForTypes(id: UUID, usedFor: Set<UsedForType>): LocationDTO {
     val residentialLocation = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    val hasPendingApproval = residentialLocation.getPendingApprovalRequest() != null
+    if (hasPendingApproval) {
+      throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
+    }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = residentialLocation.prisonId,
@@ -576,54 +587,51 @@ class LocationService(
   }
 
   @Transactional
-  fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int, linkedTransaction: LinkedTransaction? = null): LocationDTO {
+  fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int, certifiedNormalAccommodation: Int? = null, linkedTransaction: LinkedTransaction? = null): LocationDTO {
     val locCapChange = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    val hasPendingApproval = locCapChange.getPendingApprovalRequest() != null
+    if (hasPendingApproval) {
+      throw PendingApprovalOnLocationCannotBeUpdatedException(locCapChange.getKey())
+    }
 
     if (locCapChange.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(locCapChange.getKey())
     }
 
-    val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
-    if (maxCapacity < prisoners.size) {
-      throw CapacityException(
-        locCapChange.getKey(),
-        "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})",
-        ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
-      )
+    if (!locCapChange.isDraft()) {
+      val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
+      if (maxCapacity < prisoners.size) {
+        throw CapacityException(
+          locCapChange.getKey(),
+          "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})",
+          ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
+        )
+      }
     }
 
-    val pendingChange = activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId) && locCapChange.calcMaxCapacity(true) != maxCapacity && locCapChange.calcWorkingCapacity() == workingCapacity
+    val changeToCNA = certifiedNormalAccommodation ?: locCapChange.calcCertifiedNormalAccommodation()
 
-    val trackingTx = linkedTransaction ?: sharedLocationService.createLinkedTransaction(
-      prisonId = locCapChange.prisonId,
-      type = if (pendingChange) TransactionType.PENDING_CELL_CHANGE else TransactionType.CAPACITY_CHANGE,
-      detail = if (pendingChange) {
-        "Pending max capacity change for ${locCapChange.getKey()} from ${locCapChange.capacity?.maxCapacity} to $maxCapacity"
-      } else {
-        "Capacities for ${locCapChange.getKey()} w/c changed from ${locCapChange.calcWorkingCapacity()} to $workingCapacity and max capacity changed from ${locCapChange.capacity?.maxCapacity} to $maxCapacity"
-      },
-    )
-
-    locCapChange.setCapacity(
-      maxCapacity = maxCapacity,
-      workingCapacity = workingCapacity,
-      userOrSystemInContext = sharedLocationService.getUsername(),
-      amendedDate = LocalDateTime.now(clock),
-      linkedTransaction = trackingTx,
-    )
-
-    if (pendingChange) {
-      telemetryClient.trackEvent(
-        "Pending capacity change",
-        mapOf(
-          "id" to id.toString(),
-          "key" to locCapChange.getKey(),
-          "maxCapacity" to maxCapacity.toString(),
-        ),
-        null,
+    if (locCapChange.calcWorkingCapacity() != workingCapacity ||
+      locCapChange.capacity?.maxCapacity != maxCapacity ||
+      locCapChange.capacity?.certifiedNormalAccommodation != changeToCNA
+    ) {
+      val trackingTx = linkedTransaction ?: sharedLocationService.createLinkedTransaction(
+        prisonId = locCapChange.prisonId,
+        type = TransactionType.CAPACITY_CHANGE,
+        detail = "Capacities for ${locCapChange.getKey()} w/c changed from ${locCapChange.calcWorkingCapacity()} to $workingCapacity, max capacity changed from ${locCapChange.capacity?.maxCapacity} to $maxCapacity and CNA changed from ${locCapChange.capacity?.certifiedNormalAccommodation} to $changeToCNA",
       )
-    } else {
+
+      locCapChange.setCapacity(
+        maxCapacity = maxCapacity,
+        workingCapacity = workingCapacity,
+        certifiedNormalAccommodation = changeToCNA,
+        userOrSystemInContext = sharedLocationService.getUsername(),
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = trackingTx,
+      )
+
       telemetryClient.trackEvent(
         "Capacity updated",
         mapOf(
@@ -631,14 +639,16 @@ class LocationService(
           "key" to locCapChange.getKey(),
           "maxCapacity" to maxCapacity.toString(),
           "workingCapacity" to workingCapacity.toString(),
+          "CNA" to changeToCNA.toString(),
         ),
         null,
       )
-    }
 
-    return locCapChange.toDto(includeParent = !pendingChange, includeNonResidential = false).also {
-      trackingTx.txEndTime = LocalDateTime.now(clock)
+      return locCapChange.toDto(includeParent = !locCapChange.isDraft(), includeNonResidential = false).also {
+        trackingTx.txEndTime = LocalDateTime.now(clock)
+      }
     }
+    return locCapChange.toDto(includeNonResidential = false)
   }
 
   @Transactional
@@ -646,6 +656,10 @@ class LocationService(
     val cell = cellLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
+    val hasPendingApproval = cell.getPendingApprovalRequest() != null
+    if (hasPendingApproval) {
+      throw PendingApprovalOnLocationCannotBeUpdatedException(cell.getKey())
+    }
     if (cell.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(cell.getKey())
     }
@@ -927,10 +941,12 @@ class LocationService(
                 try {
                   val oldWorkingCapacity = location.getWorkingCapacity()
                   val oldMaxCapacity = location.getMaxCapacity(includePendingChange = true)
+                  val oldCertifiedNormalAccommodation = location.getCertifiedNormalAccommodation()
                   updateCellCapacity(
                     location.id!!,
                     maxCapacity = maxCapacity,
                     workingCapacity = workingCapacity,
+                    certifiedNormalAccommodation = certifiedNormalAccommodation ?: 0,
                     linkedTransaction = linkedTransaction,
                   )
                   if (oldMaxCapacity != maxCapacity) {
@@ -939,23 +955,15 @@ class LocationService(
                   if (oldWorkingCapacity != workingCapacity) {
                     changes.add(CapacityChanges(key, message = "Working capacity from $oldWorkingCapacity ==> $workingCapacity", type = "workingCapacity", previousValue = oldWorkingCapacity, newValue = workingCapacity))
                   }
+                  if (oldCertifiedNormalAccommodation != certifiedNormalAccommodation) {
+                    changes.add(CapacityChanges(key, message = "Baseline CNA from $oldCertifiedNormalAccommodation ==> $certifiedNormalAccommodation", type = "CNA", previousValue = oldCertifiedNormalAccommodation, newValue = certifiedNormalAccommodation))
+                  }
                   updatedCapacities.add(location)
                 } catch (e: Exception) {
                   changes.add(CapacityChanges(key, message = "Update failed: ${e.message}"))
                 }
               } else {
                 changes.add(CapacityChanges(key, message = "Capacity not changed"))
-              }
-              if (certifiedNormalAccommodation != null && certifiedNormalAccommodation != location.getCertifiedNormalAccommodation()) {
-                val oldCertifiedNormalAccommodation = location.getCertifiedNormalAccommodation()
-                location.setCertifiedNormalAccommodation(
-                  certifiedNormalAccommodation,
-                  sharedLocationService.getUsername(),
-                  LocalDateTime.now(clock),
-                  linkedTransaction,
-                )
-                changes.add(CapacityChanges(key, message = "Baseline CNA from $oldCertifiedNormalAccommodation ==> $certifiedNormalAccommodation", type = "CNA", previousValue = oldCertifiedNormalAccommodation, newValue = certifiedNormalAccommodation))
-                updatedCapacities.add(location)
               }
 
               location.cellMark = cellMark
@@ -1065,6 +1073,10 @@ class LocationService(
     val nonResCellToUpdate = cellLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
+    val hasPendingApproval = nonResCellToUpdate.getPendingApprovalRequest() != null
+    if (hasPendingApproval) {
+      throw PendingApprovalOnLocationCannotBeUpdatedException(nonResCellToUpdate.getKey())
+    }
     if (!nonResCellToUpdate.isConvertedCell()) {
       throw LocationNotFoundException("${nonResCellToUpdate.getKey()} is not a non-residential cell")
     }
@@ -1097,6 +1109,11 @@ class LocationService(
   ): LocationDTO {
     var locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    val hasPendingApproval = locationToConvert.getPendingApprovalRequest() != null
+    if (hasPendingApproval) {
+      throw PendingApprovalOnLocationCannotBeUpdatedException(locationToConvert.getKey())
+    }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = locationToConvert.prisonId,
@@ -1148,6 +1165,11 @@ class LocationService(
   ): LocationDTO {
     val locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    val hasPendingApproval = locationToConvert.getPendingApprovalRequest() != null
+    if (hasPendingApproval) {
+      throw PendingApprovalOnLocationCannotBeUpdatedException(locationToConvert.getKey())
+    }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = locationToConvert.prisonId,

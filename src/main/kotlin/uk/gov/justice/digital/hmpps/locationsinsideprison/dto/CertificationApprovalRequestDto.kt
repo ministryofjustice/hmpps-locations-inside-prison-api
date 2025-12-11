@@ -63,6 +63,9 @@ data class CertificationApprovalRequestDto(
 
   @param:Schema(description = "Locations affected by the approval", required = false)
   val locations: List<CertificationApprovalRequestLocationDto>? = null,
+
+  @param:Schema(description = "The ID of the certificate once approved", required = false)
+  val certificateId: UUID? = null,
 )
 
 @Schema(description = "Request to approve a certification request")

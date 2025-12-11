@@ -1,19 +1,22 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
-import io.opentelemetry.sdk.testing.assertj.OpenTelemetryAssertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.test.json.JsonCompareMode
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
+import java.time.LocalDateTime
 import java.util.UUID
 
 @DisplayName("Approval Request Resource")
@@ -21,11 +24,36 @@ import java.util.UUID
 class ApprovalRequestResourceTest : CommonDataTestBase() {
 
   private lateinit var approvalRequestId: UUID
+  lateinit var draftWing: ResidentialLocation
 
   @BeforeEach
   override fun setUp() {
     super.setUp()
-    approvalRequestId = getApprovalRequestId()
+    // Create a draft wing in Leeds prison
+    draftWing = repository.saveAndFlush(
+      CreateEntireWingRequest(
+        prisonId = "LEI",
+        wingCode = "G",
+        numberOfCellsPerSection = 3,
+        numberOfLandings = 2,
+        numberOfSpurs = 0,
+        wingDescription = "Wing G",
+      ).toEntity(
+        createInDraft = true,
+        createdBy = "TEST_USER",
+        clock = clock,
+        linkedTransaction = linkedTransactionRepository.saveAndFlush(
+          LinkedTransaction(
+            prisonId = "LEI",
+            transactionType = TransactionType.LOCATION_CREATE,
+            transactionDetail = "Initial Data Load for Leeds",
+            transactionInvokedBy = EXPECTED_USERNAME,
+            txStartTime = LocalDateTime.now(clock).minusDays(1),
+          ),
+        ),
+      ),
+    )
+    approvalRequestId = getApprovalRequestId("LEI-G")
   }
 
   @DisplayName("GET /certification-approvals")
@@ -127,21 +155,32 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
             """
               {
                 "id": "$approvalRequestId",
+                "prisonId": "LEI",
                 "status": "PENDING",
-                "locationKey": "LEI-A-1-001",
-                "maxCapacityChange": 1,
-                "workingCapacityChange": 0,
-                "certifiedNormalAccommodationChange": 0,
+                "locationKey": "LEI-G",
+                "maxCapacityChange": 6,
+                "workingCapacityChange": 6,
+                "certifiedNormalAccommodationChange": 6,
                  "locations": [
-                  {
-                    "cellMark": "A-1",
-                    "pathHierarchy": "A-1-001",
-                    "level": 3,
-                    "certifiedNormalAccommodation": 1,
-                    "workingCapacity": 1,
-                    "maxCapacity": 3,
-                    "inCellSanitation": true
-                  }
+                    {
+                      "locationCode": "G",
+                      "localName": "Wing G",
+                      "pathHierarchy": "G",
+                      "level": 1,
+                      "certifiedNormalAccommodation": 6,
+                      "workingCapacity": 6,
+                      "maxCapacity": 6,
+                      "locationType": "WING",
+                      "accommodationTypes": [
+                        "NORMAL_ACCOMMODATION"
+                      ],
+                      "specialistCellTypes": [
+                        "ESCAPE_LIST"
+                      ],
+                      "usedFor": [
+                        "STANDARD_ACCOMMODATION"
+                      ]
+                    }
                 ]
               }
             """,
@@ -151,41 +190,22 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
     }
   }
 
-  private fun getApprovalRequestId(): UUID {
-    val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
-    prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
+  private fun getApprovalRequestId(key: String): UUID {
+    val aLocation = repository.findOneByKey(key) as ResidentialLocation
 
-    webTestClient.put().uri("/locations/${aCell.id}/capacity")
-      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-      .header("Content-Type", "application/json")
-      .bodyValue(
-        jsonString(
-          Capacity(
-            workingCapacity = 1,
-            maxCapacity = 3,
-          ),
-        ),
-      )
-      .exchange()
-      .expectStatus().isOk
-    getDomainEvents(1).let {
-      assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-        "location.inside.prison.amended" to aCell.getKey(),
-      )
-    }
     return webTestClient.put().uri("/certification/location/request-approval")
       .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
       .header("Content-Type", "application/json")
       .bodyValue(
         jsonString(
           LocationApprovalRequest(
-            locationId = aCell.id!!,
+            locationId = aLocation.id!!,
           ),
         ),
       )
       .exchange()
       .expectStatus().isOk
-      .expectBody(CertificationApprovalRequestDto::class.java)
+      .expectBody<CertificationApprovalRequestDto>()
       .returnResult().responseBody!!.id
   }
 }

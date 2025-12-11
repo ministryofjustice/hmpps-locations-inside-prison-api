@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
+import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -19,7 +20,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequiredAboveThisLevelException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeUnlockedWhenNotLockedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
@@ -48,22 +48,21 @@ open class ResidentialLocation(
   deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
-  childLocations: MutableList<Location>,
+  childLocations: SortedSet<Location>,
   whenCreated: LocalDateTime,
   createdBy: String,
 
   @Enumerated(EnumType.STRING)
   open var residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
 
-  @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
+  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
   open var capacity: Capacity? = null,
-
-  private var locked: Boolean = false,
 
   private var residentialStructure: String? = null,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  private val approvalRequests: MutableList<LocationCertificationApprovalRequest> = mutableListOf(),
+  @SortNatural
+  private val approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
 
 ) : Location(
   id = id,
@@ -122,21 +121,13 @@ open class ResidentialLocation(
   fun calcMaxCapacity(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
     .sumOf { it.getMaxCapacity(includePendingOrDraft) ?: 0 }
 
-  private fun calcCertifiedNormalAccommodation(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
+  fun calcCertifiedNormalAccommodation(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
     .sumOf { it.getCertifiedNormalAccommodation(includePendingOrDraft) ?: 0 }
 
   private fun hasCertifiedCells(): Boolean = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .any { it.isCertified() }
 
-  override fun isLocationLocked() = locked
-
-  private fun lockLocation() {
-    this.locked = true
-  }
-
-  private fun unlockLocation() {
-    this.locked = false
-  }
+  override fun isLocationLocked() = getPendingApprovalRequest() != null
 
   private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingChanges() }
 
@@ -154,36 +145,6 @@ open class ResidentialLocation(
     return highestPending
   }
 
-  private fun lock(lockTime: LocalDateTime, lockingUser: String, linkedTransaction: LinkedTransaction) {
-    val oldStatus = getDerivedStatus(ignoreParentStatus = true).description
-    lockLocation()
-    addHistory(
-      LocationAttribute.STATUS,
-      oldStatus,
-      getDerivedStatus(ignoreParentStatus = true).description,
-      lockingUser,
-      lockTime,
-      linkedTransaction,
-    )
-    updatedBy = lockingUser
-    whenUpdated = lockTime
-  }
-
-  private fun unlock(unlockTime: LocalDateTime, unlockingUser: String, linkedTransaction: LinkedTransaction) {
-    val oldStatus = getDerivedStatus(ignoreParentStatus = true).description
-    unlockLocation()
-    addHistory(
-      LocationAttribute.STATUS,
-      oldStatus,
-      getDerivedStatus(ignoreParentStatus = true).description,
-      unlockingUser,
-      unlockTime,
-      linkedTransaction,
-    )
-    updatedBy = unlockingUser
-    whenUpdated = unlockTime
-  }
-
   fun setStructure(wingStructure: List<ResidentialStructuralType>) {
     this.residentialStructure = wingStructure.joinToString(separator = ",") { it.name }
   }
@@ -199,7 +160,10 @@ open class ResidentialLocation(
 
   fun getResidentialStructuralType() = ResidentialStructuralType.entries.firstOrNull { it.locationType == locationType }
 
-  fun requestApproval(requestedDate: LocalDateTime, requestedBy: String, linkedTransaction: LinkedTransaction): LocationCertificationApprovalRequest {
+  fun requestApproval(
+    requestedDate: LocalDateTime,
+    requestedBy: String,
+  ): LocationCertificationApprovalRequest {
     val topLevelPendingLocation = findHighestLevelPending()
     if (topLevelPendingLocation != null && this != topLevelPendingLocation) {
       throw ApprovalRequiredAboveThisLevelException(this.getKey(), topLevelPendingLocation.getKey())
@@ -209,11 +173,6 @@ open class ResidentialLocation(
       throw PendingApprovalAlreadyExistsException(getKey())
     }
 
-    fun traverseAndLock(location: ResidentialLocation) {
-      location.lock(requestedDate, requestedBy, linkedTransaction)
-      location.childLocations.filterIsInstance<ResidentialLocation>().forEach { traverseAndLock(it) }
-    }
-    traverseAndLock(this)
     val approvalRequest = LocationCertificationApprovalRequest(
       approvalType = ApprovalType.DRAFT,
       location = this,
@@ -233,21 +192,9 @@ open class ResidentialLocation(
     return approvalRequest
   }
 
-  private fun traverseAndUnlock(
-    unlockedDate: LocalDateTime,
-    unlockedBy: String,
-    linkedTransaction: LinkedTransaction,
-  ) {
-    if (isLocationLocked()) {
-      unlock(unlockedDate, unlockedBy, linkedTransaction)
-      childLocations.filterIsInstance<ResidentialLocation>().forEach { it.traverseAndUnlock(unlockedDate, unlockedBy, linkedTransaction) }
-    } else {
-      throw LocationCannotBeUnlockedWhenNotLockedException(getKey())
-    }
-  }
-
   open fun linkPendingChangesToApprovalRequest(approvalRequest: LocationCertificationApprovalRequest) {
-    childLocations.filterIsInstance<ResidentialLocation>().forEach { it.linkPendingChangesToApprovalRequest(approvalRequest = approvalRequest) }
+    getResidentialLocationsBelowThisLevel()
+      .forEach { it.linkPendingChangesToApprovalRequest(approvalRequest = approvalRequest) }
   }
 
   open fun applyPendingChanges(
@@ -255,11 +202,13 @@ open class ResidentialLocation(
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
-    childLocations.filterIsInstance<ResidentialLocation>().forEach { it.applyPendingChanges(approvedDate = approvedDate, approvedBy = approvedBy, linkedTransaction = linkedTransaction) }
-  }
-
-  open fun clearPendingChanges() {
-    childLocations.filterIsInstance<ResidentialLocation>().forEach { it.clearPendingChanges() }
+    getResidentialLocationsBelowThisLevel().forEach {
+      it.applyPendingChanges(
+        approvedDate = approvedDate,
+        approvedBy = approvedBy,
+        linkedTransaction = linkedTransaction,
+      )
+    }
   }
 
   fun approve(
@@ -267,7 +216,6 @@ open class ResidentialLocation(
     approvedBy: String,
     linkedTransaction: LinkedTransaction,
   ) {
-    traverseAndUnlock(approvedDate, approvedBy, linkedTransaction)
     applyPendingChanges(approvedDate = approvedDate, approvedBy = approvedBy, linkedTransaction = linkedTransaction)
 
     if (isDraft()) {
@@ -279,15 +227,6 @@ open class ResidentialLocation(
         userOrSystemInContext = approvedBy,
       )
     }
-  }
-
-  fun reject(
-    rejectedDate: LocalDateTime,
-    rejectedBy: String,
-    linkedTransaction: LinkedTransaction,
-  ) {
-    traverseAndUnlock(rejectedDate, rejectedBy, linkedTransaction)
-    clearPendingChanges()
   }
 
   private fun getAttributes(): Set<ResidentialAttribute> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
@@ -417,6 +356,8 @@ open class ResidentialLocation(
   ) {
     upsert.capacity?.let {
       with(upsert.capacity) {
+        val changeCNA = certifiedNormalAccommodation ?: capacity?.certifiedNormalAccommodation ?: 0
+
         addHistory(
           LocationAttribute.MAX_CAPACITY,
           capacity?.maxCapacity?.toString() ?: "None",
@@ -434,10 +375,27 @@ open class ResidentialLocation(
           linkedTransaction,
         )
 
+        addHistory(
+          LocationAttribute.CERTIFIED_CAPACITY,
+          capacity?.certifiedNormalAccommodation?.toString() ?: "None",
+          changeCNA.toString(),
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+          linkedTransaction,
+        )
+
         if (capacity != null) {
-          capacity?.setCapacity(maxCapacity, workingCapacity)
+          capacity?.setCapacity(
+            maxCapacity = maxCapacity,
+            workingCapacity = workingCapacity,
+            certifiedNormalAccommodation = changeCNA,
+          )
         } else {
-          capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+          capacity = Capacity(
+            maxCapacity = maxCapacity,
+            workingCapacity = workingCapacity,
+            certifiedNormalAccommodation = changeCNA,
+          )
         }
       }
     }
@@ -466,12 +424,12 @@ open class ResidentialLocation(
   }
 
   fun toCellCertificateLocation(approvedLocation: ResidentialLocation? = null): CellCertificateLocation {
-    val subLocations: List<CellCertificateLocation> = childLocations
-      .filterIsInstance<ResidentialLocation>()
+    val subLocations: List<CellCertificateLocation> = getResidentialLocationsBelowThisLevel()
       .filter { !it.isDraft() && (it.isStructural() || it.isCell() || it.isConvertedCell()) }
       .map { it.toCellCertificateLocation(approvedLocation) }
 
-    val approvedLocationIsPartOfHierarchy = approvedLocation?.let { isInHierarchy(it) } ?: false
+    val approvedLocationIsPartOfHierarchy = approvedLocation?.let { locToFind -> isInHierarchy(locToFind) || findLocation(locToFind.getKey()) != null } ?: false
+
     return CellCertificateLocation(
       locationType = locationType,
       locationCode = getLocationCode(),
@@ -508,8 +466,7 @@ open class ResidentialLocation(
   }
 
   private fun toCertificationApprovalRequestLocation(): CertificationApprovalRequestLocation {
-    val subLocations: List<CertificationApprovalRequestLocation> = childLocations
-      .filterIsInstance<ResidentialLocation>()
+    val subLocations: List<CertificationApprovalRequestLocation> = getResidentialLocationsBelowThisLevel()
       .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
       .map { it.toCertificationApprovalRequestLocation() }
 
@@ -577,6 +534,7 @@ open class ResidentialLocation(
     capacity = CapacityDto(
       maxCapacity = calcMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),
+      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
     ),
     topLevelApprovalLocationId = findHighestLevelPending()?.id,
     pendingApprovalRequestId = getPendingApprovalRequest()?.id,
@@ -591,6 +549,7 @@ open class ResidentialLocation(
       null
     },
 
+    certifiedCell = hasCertifiedCells(),
     certification = CertificationDto(
       certified = hasCertifiedCells(),
       capacityOfCertifiedCell = calcCertifiedNormalAccommodation(),
@@ -619,9 +578,11 @@ open class ResidentialLocation(
     residentialHousingType = residentialHousingType,
 
     ignoreWorkingCapacity = true,
+
     capacity = CapacityDto(
       maxCapacity = calcMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),
+      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
     ),
 
     certification = CertificationDto(
@@ -670,44 +631,72 @@ open class ResidentialLocation(
   open fun setCapacity(
     maxCapacity: Int = 0,
     workingCapacity: Int = 0,
+    certifiedNormalAccommodation: Int = 0,
     userOrSystemInContext: String,
     amendedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
     if (isCell() || isVirtualResidentialLocation()) {
-      addHistory(
-        LocationAttribute.MAX_CAPACITY,
-        capacity?.maxCapacity?.toString() ?: "None",
-        maxCapacity.toString(),
-        userOrSystemInContext,
-        amendedDate,
-        linkedTransaction,
-      )
-      addHistory(
-        LocationAttribute.WORKING_CAPACITY,
-        capacity?.workingCapacity?.let { calcWorkingCapacity().toString() } ?: "None",
-        workingCapacity.toString(),
-        userOrSystemInContext,
-        amendedDate,
-        linkedTransaction,
-      )
+      if (maxCapacity != (capacity?.maxCapacity ?: 0) ||
+        certifiedNormalAccommodation != (capacity?.certifiedNormalAccommodation ?: 0) ||
+        workingCapacity != (capacity?.workingCapacity ?: 0)
+      ) {
+        log.info("${getKey()}: Updating max capacity from ${capacity?.maxCapacity ?: 0} to $maxCapacity, CNA from ${capacity?.certifiedNormalAccommodation ?: 0} to $certifiedNormalAccommodation and working capacity from ${capacity?.workingCapacity ?: 0} to $workingCapacity")
 
-      log.info("${getKey()}: Updating max capacity from ${capacity?.maxCapacity ?: 0} to $maxCapacity and working capacity from ${capacity?.workingCapacity ?: 0} to $workingCapacity")
-      if (capacity != null) {
-        capacity?.setCapacity(maxCapacity, workingCapacity)
+        addHistory(
+          LocationAttribute.MAX_CAPACITY,
+          capacity?.maxCapacity?.toString() ?: "None",
+          maxCapacity.toString(),
+          userOrSystemInContext,
+          amendedDate,
+          linkedTransaction,
+        )
+        addHistory(
+          LocationAttribute.WORKING_CAPACITY,
+          capacity?.workingCapacity?.let { calcWorkingCapacity().toString() } ?: "None",
+          workingCapacity.toString(),
+          userOrSystemInContext,
+          amendedDate,
+          linkedTransaction,
+        )
+        addHistory(
+          LocationAttribute.CERTIFIED_CAPACITY,
+          capacity?.certifiedNormalAccommodation?.let { calcCertifiedNormalAccommodation().toString() } ?: "None",
+          certifiedNormalAccommodation.toString(),
+          userOrSystemInContext,
+          amendedDate,
+          linkedTransaction,
+        )
+
+        if (capacity != null) {
+          capacity?.setCapacity(maxCapacity, workingCapacity, certifiedNormalAccommodation)
+        } else {
+          capacity = Capacity(
+            maxCapacity = maxCapacity,
+            workingCapacity = workingCapacity,
+            certifiedNormalAccommodation = certifiedNormalAccommodation,
+          )
+        }
+
+        this.updatedBy = userOrSystemInContext
+        this.whenUpdated = amendedDate
       } else {
-        capacity = Capacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity)
+        log.warn("Capacity cannot be set, not a cell or virtual location")
       }
-
-      this.updatedBy = userOrSystemInContext
-      this.whenUpdated = amendedDate
-    } else {
-      log.warn("Capacity cannot be set, not a cell or virtual location")
     }
   }
 }
-
-fun validateCapacity(locationKey: String, certifiedNormalAccommodation: Int, workingCapacity: Int, maxCapacity: Int, accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION, specialistCellTypes: Set<SpecialistCellType> = emptySet(), permanentlyDeactivated: Boolean = false, temporarilyDeactivated: Boolean = false, virtualLocation: Boolean = false) {
+fun validateCapacity(
+  locationKey: String,
+  certifiedNormalAccommodation: Int,
+  workingCapacity: Int,
+  maxCapacity: Int,
+  accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+  specialistCellTypes: Set<SpecialistCellType> = emptySet(),
+  permanentlyDeactivated: Boolean = false,
+  temporarilyDeactivated: Boolean = false,
+  virtualLocation: Boolean = false,
+) {
   if (workingCapacity > 99) {
     throw CapacityException(
       locationKey,
@@ -746,12 +735,21 @@ fun validateCapacity(locationKey: String, certifiedNormalAccommodation: Int, wor
   }
 }
 
-private fun isCapacityValid(workingCapacity: Int, certifiedNormalAccommodation: Int, accommodationType: AccommodationType, specialistCellTypes: Set<SpecialistCellType>? = null): Boolean {
-  val cellIsSpecialistCellAllowingZeroCapacity = (specialistCellTypes?.isNotEmpty() ?: false && specialistCellTypes.all { it.affectsCapacity }) || accommodationType != AccommodationType.NORMAL_ACCOMMODATION
+private fun isCapacityValid(
+  workingCapacity: Int,
+  certifiedNormalAccommodation: Int,
+  accommodationType: AccommodationType,
+  specialistCellTypes: Set<SpecialistCellType>? = null,
+): Boolean {
+  val cellIsSpecialistCellAllowingZeroCapacity =
+    (specialistCellTypes?.isNotEmpty() ?: false && specialistCellTypes.all { it.affectsCapacity }) || accommodationType != AccommodationType.NORMAL_ACCOMMODATION
   return cellIsSpecialistCellAllowingZeroCapacity || (certifiedNormalAccommodation != 0 && workingCapacity != 0)
 }
 
-fun isCapacityRequired(typesToCheck: Set<SpecialistCellType>, accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION): Boolean = accommodationType == AccommodationType.NORMAL_ACCOMMODATION &&
+fun isCapacityRequired(
+  typesToCheck: Set<SpecialistCellType>,
+  accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+): Boolean = accommodationType == AccommodationType.NORMAL_ACCOMMODATION &&
   (typesToCheck.isEmpty() || typesToCheck.any { !it.affectsCapacity })
 
 enum class ResidentialHousingType(

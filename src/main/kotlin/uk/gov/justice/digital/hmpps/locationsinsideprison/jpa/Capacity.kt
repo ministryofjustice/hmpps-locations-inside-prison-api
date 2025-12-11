@@ -15,11 +15,23 @@ class Capacity(
 
   var maxCapacity: Int = 0,
   var workingCapacity: Int = 0,
-) {
+  var certifiedNormalAccommodation: Int = 0,
+) : Comparable<Capacity> {
+
+  companion object {
+    private val COMPARATOR = compareBy<Capacity>
+      { it.maxCapacity }
+      .thenBy { it.workingCapacity }
+      .thenBy { it.certifiedNormalAccommodation }
+  }
+
+  override fun compareTo(other: Capacity) = COMPARATOR.compare(this, other)
+
   fun toDto() = (
     CapacityDTO(
       maxCapacity = maxCapacity,
       workingCapacity = workingCapacity,
+      certifiedNormalAccommodation = certifiedNormalAccommodation,
     )
     )
 
@@ -31,6 +43,7 @@ class Capacity(
 
     if (maxCapacity != other.maxCapacity) return false
     if (workingCapacity != other.workingCapacity) return false
+    if (certifiedNormalAccommodation != other.certifiedNormalAccommodation) return false
 
     return true
   }
@@ -38,13 +51,13 @@ class Capacity(
   override fun hashCode(): Int {
     var result = maxCapacity
     result = 31 * result + workingCapacity
+    result = 31 * result + (certifiedNormalAccommodation)
     return result
   }
 
-  override fun toString(): String = "Capacity(max capacity=$maxCapacity, working capacity=$workingCapacity)"
-
-  fun setCapacity(maxCapacity: Int, workingCapacity: Int) {
+  fun setCapacity(maxCapacity: Int, workingCapacity: Int, certifiedNormalAccommodation: Int) {
     this.maxCapacity = maxCapacity
     this.workingCapacity = workingCapacity
+    this.certifiedNormalAccommodation = certifiedNormalAccommodation
   }
 }

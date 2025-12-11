@@ -43,7 +43,15 @@ data class LegacyLocation(
   @param:Schema(description = "Capacity details of the location", required = false)
   val capacity: Capacity? = null,
 
+  @param:Schema(
+    description = "Indicates that this location is certified for use as a cell",
+    example = "true",
+    required = false,
+  )
+  val certifiedCell: Boolean? = null,
+
   @param:Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
+  @Deprecated("Use certifiedCell instead")
   val certification: Certification? = null,
 
   @param:Schema(description = "Location Attributes", required = false)

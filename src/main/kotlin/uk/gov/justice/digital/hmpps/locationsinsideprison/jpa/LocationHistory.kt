@@ -22,7 +22,7 @@ class LocationHistory(
   @ManyToOne(fetch = FetchType.LAZY)
   val location: Location,
 
-  @ManyToOne(fetch = FetchType.LAZY, optional = true)
+  @ManyToOne(fetch = FetchType.EAGER, optional = true)
   val linkedTransaction: LinkedTransaction? = null,
 
   @Enumerated(EnumType.STRING)
@@ -96,6 +96,7 @@ enum class LocationAttribute(
   CONVERTED_CELL_TYPE(description = "Non-residential room", display = true, displayOrder = 25),
   WORKING_CAPACITY(description = "Working capacity", display = true, displayOrder = 30),
   MAX_CAPACITY(description = "Maximum capacity", display = true, displayOrder = 35),
+  CERTIFIED_CAPACITY(description = "Certified normal accommodation", displayOrder = 36),
   DEACTIVATION_REASON(description = "Deactivation reason", display = true, displayOrder = 40),
   PROPOSED_REACTIVATION_DATE(description = "Estimated reactivation date", display = true, displayOrder = 45),
   PLANET_FM_NUMBER(description = "Planet FM reference number", display = true, displayOrder = 50),
@@ -111,7 +112,6 @@ enum class LocationAttribute(
   CODE(description = "Code"),
   LOCATION_TYPE(description = "Location type"),
   RESIDENTIAL_HOUSING_TYPE(description = "Residential housing type"),
-  CERTIFIED_CAPACITY(description = "Certified normal accommodation"),
   PARENT_LOCATION(description = "Parent location"),
   ORDER_WITHIN_PARENT_LOCATION(description = "Order within parent location"),
   COMMENTS(description = "Comments"),

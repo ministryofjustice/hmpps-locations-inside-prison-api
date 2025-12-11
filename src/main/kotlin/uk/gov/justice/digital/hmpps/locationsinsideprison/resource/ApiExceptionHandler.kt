@@ -267,16 +267,16 @@ class ApiExceptionHandler {
       )
   }
 
-  @ExceptionHandler(LockedLocationCannotBeUpdatedException::class)
-  fun handleLockedLocationCannotBeUpdated(e: LockedLocationCannotBeUpdatedException): ResponseEntity<ErrorResponse?>? {
-    log.debug("Location LOCKED: {}", e.message)
+  @ExceptionHandler(PendingApprovalOnLocationCannotBeUpdatedException::class)
+  fun handlePendingApprovalOnLocationCannotBeUpdated(e: PendingApprovalOnLocationCannotBeUpdatedException): ResponseEntity<ErrorResponse?>? {
+    log.debug("Location has pending approval: {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
       .body(
         ErrorResponse(
           status = CONFLICT,
-          errorCode = ErrorCode.LockedLocationCannotBeUpdated,
-          userMessage = "Location LOCKED and cannot be updated: ${e.message}",
+          errorCode = ErrorCode.PendingApprovalLocationCannotBeUpdated,
+          userMessage = "Location with pending approval cannot be updated: ${e.message}",
           developerMessage = e.message,
         ),
       )
@@ -619,7 +619,7 @@ class DuplicateNonResidentialLocalNameInPrisonException(prisonId: String, localN
 class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated as it is active")
 class LocationIsNotACellException(key: String) : Exception("$key: Location must be a cell in order to perform this operation")
 class ApprovalRequestNotFoundException(approvalRequestId: UUID) : Exception("Approval request $approvalRequestId not found")
-class LockedLocationCannotBeUpdatedException(key: String) : Exception("Location $key cannot be updated as it is locked")
+class PendingApprovalOnLocationCannotBeUpdatedException(key: String) : Exception("Location $key cannot be updated as it has a pending approval request")
 class PendingApprovalAlreadyExistsException(key: String) : Exception("Location $key already has a pending approval request")
 class LocationCannotBeDeletedWhenNotDraftException(key: String) : Exception("Location $key cannot be deleted when not DRAFT")
 class ApprovalRequestNotInPendingStatusException(approvalRequestId: UUID) : Exception("Approval request $approvalRequestId is not in PENDING status")

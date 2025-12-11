@@ -36,7 +36,7 @@ class CellCertificateService(
     cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(approvalRequest.prisonId)?.markAsNotCurrent()
 
     // Create the cell certificate
-    val cellCertificate = cellCertificateRepository.save(
+    val cellCertificate = cellCertificateRepository.saveAndFlush(
       CellCertificate(
         prisonId = approvalRequest.prisonId,
         approvedBy = approvedBy,
@@ -60,8 +60,7 @@ class CellCertificateService(
   }
 
   fun getCellCertificate(id: UUID): CellCertificateDto {
-    val cellCertificate = cellCertificateRepository.findById(id)
-      .orElseThrow { CellCertificateNotFoundException(id) }
+    val cellCertificate = cellCertificateRepository.findById(id).orElseThrow { CellCertificateNotFoundException(id) }
     return cellCertificate.toDto(showLocations = true)
   }
 

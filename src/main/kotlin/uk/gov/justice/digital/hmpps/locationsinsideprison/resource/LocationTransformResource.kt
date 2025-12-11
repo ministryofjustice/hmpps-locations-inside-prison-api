@@ -168,6 +168,7 @@ class LocationTransformResource(
       id = id,
       maxCapacity = capacity.maxCapacity,
       workingCapacity = capacity.workingCapacity,
+      certifiedNormalAccommodation = capacity.certifiedNormalAccommodation,
     )
   }
 }

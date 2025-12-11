@@ -81,6 +81,10 @@ data class NomisSyncLocationRequest(
   val capacity: Capacity? = null,
 
   @param:Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
+  val certifiedCell: Boolean? = null,
+
+  @param:Schema(description = "Deprecated mechanism for displaying and updating CNA and certified status", required = false)
+  @Deprecated("Use capacity and certifiedCell instead")
   val certification: Certification? = null,
 
   @param:Schema(description = "Location Attributes", required = false)
@@ -124,21 +128,17 @@ data class NomisSyncLocationRequest(
           deactivatedDate = null,
           deactivatedReason = null,
           proposedReactivationDate = null,
-          childLocations = mutableListOf(),
+          childLocations = sortedSetOf(),
           accommodationType = residentialHousingType.mapToAccommodationType(),
           parent = null,
           capacity = capacity?.let {
             uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity(
               maxCapacity = it.maxCapacity,
               workingCapacity = it.workingCapacity,
+              certifiedNormalAccommodation = it.certifiedNormalAccommodation ?: certification?.certifiedNormalAccommodation ?: 0,
             )
           },
-          certification = certification?.let {
-            uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification(
-              certified = it.certified,
-              certifiedNormalAccommodation = it.getCNA(),
-            )
-          },
+          certifiedCell = (certifiedCell ?: certification?.certified) == true,
         ).also {
           attributes?.forEach { attribute ->
             it.addAttribute(attribute)
@@ -170,7 +170,7 @@ data class NomisSyncLocationRequest(
               workingCapacity = it.workingCapacity,
             )
           },
-          childLocations = mutableListOf(),
+          childLocations = sortedSetOf(),
         )
       } else {
         ResidentialLocation(
@@ -185,7 +185,7 @@ data class NomisSyncLocationRequest(
           orderWithinParentLocation = orderWithinParentLocation,
           createdBy = lastUpdatedBy,
           whenCreated = createDate ?: LocalDateTime.now(clock),
-          childLocations = mutableListOf(),
+          childLocations = sortedSetOf(),
         )
       }
     } else {
@@ -201,7 +201,7 @@ data class NomisSyncLocationRequest(
         internalMovementAllowed = internalMovementAllowed,
         createdBy = lastUpdatedBy,
         whenCreated = createDate ?: LocalDateTime.now(clock),
-        childLocations = mutableListOf(),
+        childLocations = sortedSetOf(),
       ).also {
         usage?.forEach { usage ->
           it.addUsage(usage.usageType, usage.capacity, usage.sequence)

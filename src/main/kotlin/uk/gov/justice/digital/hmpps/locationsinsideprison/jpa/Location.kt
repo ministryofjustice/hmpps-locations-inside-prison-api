@@ -14,9 +14,12 @@ import jakarta.persistence.Inheritance
 import jakarta.persistence.InheritanceType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedEntityGraphs
+import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
-import org.hibernate.annotations.BatchSize
 import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -31,7 +34,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ActiveLocationCannotBePermanentlyDeactivatedException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LockedLocationCannotBeUpdatedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NaturalOrderComparator
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
@@ -45,6 +48,37 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 
 val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
+@NamedEntityGraphs(
+  value = [
+    NamedEntityGraph(
+      name = "resi.location.graph",
+      attributeNodes = [
+        NamedAttributeNode("prisonConfiguration"),
+        NamedAttributeNode("parent"),
+        NamedAttributeNode(value = "childLocations"),
+      ],
+      subclassSubgraphs = [
+        NamedSubgraph(
+          name = "residential-subgraph",
+          type = ResidentialLocation::class,
+          attributeNodes = [
+            NamedAttributeNode("capacity"),
+          ],
+        ),
+        NamedSubgraph(
+          name = "cell-subgraph",
+          type = Cell::class,
+          attributeNodes = [
+            NamedAttributeNode("usedFor"),
+            NamedAttributeNode("specialistCellTypes"),
+            NamedAttributeNode("attributes"),
+            NamedAttributeNode("pendingChange"),
+          ],
+        ),
+      ],
+    ),
+  ],
+)
 @Entity
 @DiscriminatorColumn(name = "location_type_discriminator")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
@@ -88,11 +122,10 @@ abstract class Location(
   open var proposedReactivationDate: LocalDate? = null,
   open var planetFmReference: String? = null,
 
-  @BatchSize(size = 1000)
   @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
-  protected open val childLocations: MutableList<Location> = mutableListOf(),
+  @SortNatural
+  protected open val childLocations: SortedSet<Location> = sortedSetOf(),
 
-  @BatchSize(size = 100)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
   protected open val history: SortedSet<LocationHistory> = sortedSetOf(),
@@ -137,8 +170,6 @@ abstract class Location(
   open fun getLocationCode(): String = code
 
   open fun getParent(): Location? = parent
-
-  fun isCertificationApprovalProcessRequired() = prisonConfiguration?.certificationApprovalRequired == true
 
   private fun findArchivedParent(): Location? {
     fun findArchivedLocation(location: Location?): Location? {
@@ -270,7 +301,7 @@ abstract class Location(
     "${getParent()!!.getHierarchicalPath()}-${getLocationCode()}"
   }
 
-  private fun getActiveResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { it.isActiveAndAllParentsActive() }
+  private fun getActiveResidentialLocationsBelowThisLevel() = getResidentialLocationsBelowThisLevel().filter { it.isActiveAndAllParentsActive() }
 
   fun getResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>()
 
@@ -297,6 +328,8 @@ abstract class Location(
   }
 
   fun countCellAndNonResLocations() = leafResidentialLocations().count()
+
+  fun findLocation(key: String) = findSubLocations().find { it.getKey() == key }
 
   fun findSubLocations(parentsAfterChildren: Boolean = false): List<Location> {
     val subLocations = mutableListOf<Location>()
@@ -339,7 +372,7 @@ abstract class Location(
           linkedTransaction = linkedTransaction,
         )
         history.add(locationHistory)
-        return locationHistory
+        locationHistory
       } else {
         null
       }
@@ -447,8 +480,7 @@ abstract class Location(
       .mapNotNull { it.linkedTransaction }
       .distinct()
       .sortedByDescending { it.txStartTime }
-      .map { tx -> tx.toDto(this).toChangeHistory() }
-      .flatten()
+      .flatMap { tx -> tx.toDto(this).toChangeHistory() }
       .toList()
 
     val withoutTx = history.asSequence()
@@ -562,7 +594,7 @@ abstract class Location(
 
   open fun updateLocalName(localName: String?, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     if (!isCell()) {
       addHistory(
@@ -685,7 +717,7 @@ abstract class Location(
 
     if (!isPermanentlyDeactivated()) {
       if (isLocationLocked()) {
-        throw LockedLocationCannotBeUpdatedException(getKey())
+        throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
       }
       val amendedDate = deactivatedDate
 
@@ -811,7 +843,7 @@ abstract class Location(
       log.warn("Location [${getKey()}] is not deactivated")
     } else {
       if (isLocationLocked()) {
-        throw LockedLocationCannotBeUpdatedException(getKey())
+        throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
       }
       val amendedDate = LocalDateTime.now(clock)
       addHistory(
@@ -880,7 +912,7 @@ abstract class Location(
         throw ActiveLocationCannotBePermanentlyDeactivatedException(getKey())
       }
       if (isLocationLocked()) {
-        throw LockedLocationCannotBeUpdatedException(getKey())
+        throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
       }
       val amendedDate = LocalDateTime.now(clock)
       addHistory(
@@ -913,7 +945,7 @@ abstract class Location(
 
       if (this is ResidentialLocation) {
         this.cellLocations().filter { !it.isConvertedCell() }.forEach { cellLocation ->
-          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, userOrSystemInContext, amendedDate = amendedDate, linkedTransaction)
+          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0, userOrSystemInContext, amendedDate = amendedDate, linkedTransaction)
           cellLocation.deCertifyCell(userOrSystemInContext, clock, linkedTransaction)
         }
       }
@@ -929,11 +961,12 @@ abstract class Location(
     locationsReactivated: MutableSet<Location>? = null,
     maxCapacity: Int? = null,
     workingCapacity: Int? = null,
+    certifiedNormalAccommodation: Int? = null,
     reactivatedLocations: MutableSet<Location>? = null,
     amendedLocations: MutableSet<Location>? = null,
   ): Boolean {
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     this.getParent()?.reactivate(
       userOrSystemInContext = userOrSystemInContext,
@@ -954,6 +987,7 @@ abstract class Location(
       setCapacity(
         maxCapacity = maxCapacity ?: getMaxCapacity(includePendingChange = true) ?: 0,
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
+        certifiedNormalAccommodation = certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
         userOrSystemInContext = userOrSystemInContext,
         amendedDate = amendedDate,
         linkedTransaction = linkedTransaction,

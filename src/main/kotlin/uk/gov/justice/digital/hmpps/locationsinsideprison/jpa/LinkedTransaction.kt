@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
+import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TransactionHistory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
@@ -30,8 +31,19 @@ class LinkedTransaction(
   var txEndTime: LocalDateTime? = null,
 
   @OneToMany(mappedBy = "linkedTransaction", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val auditChanges: MutableList<LocationHistory> = mutableListOf(),
-) {
+  @SortNatural
+  val auditChanges: SortedSet<LocationHistory> = sortedSetOf(),
+) : Comparable<LinkedTransaction> {
+
+  companion object {
+    private val COMPARATOR = compareBy<LinkedTransaction>
+      { it.transactionId }
+      .thenBy { it.transactionType }
+      .thenBy { it.transactionInvokedBy }
+      .thenBy { it.txStartTime }
+  }
+
+  override fun compareTo(other: LinkedTransaction) = COMPARATOR.compare(this, other)
 
   fun toDto(filterLocation: Location? = null) = TransactionHistory(
     transactionId = transactionId!!,

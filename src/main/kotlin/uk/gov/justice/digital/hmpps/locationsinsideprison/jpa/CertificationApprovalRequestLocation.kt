@@ -10,6 +10,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
+import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.util.SortedSet
@@ -65,6 +66,7 @@ open class CertificationApprovalRequestLocation(
 
   @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "parent_location_id")
+  @SortNatural
   private val subLocations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
 
 ) : Comparable<CertificationApprovalRequestLocation> {

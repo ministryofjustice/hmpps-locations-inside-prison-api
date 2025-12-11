@@ -9,7 +9,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
@@ -23,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCap
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -44,6 +44,9 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var resiRepository: ResidentialLocationRepository
+
+  @Autowired
+  lateinit var cellRepository: CellLocationRepository
 
   @Autowired
   lateinit var certificationApprovalRequestRepository: CertificationApprovalRequestRepository
@@ -174,18 +177,14 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     cell1N = repository.save(
       buildCell(
         pathHierarchy = "A-1-001",
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 1),
-        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
+        capacity = Capacity(maxCapacity = 3, workingCapacity = 2, certifiedNormalAccommodation = 3),
+        certifiedCell = true,
         prisonId = "NMI",
         residentialHousingType = ResidentialHousingType.OTHER_USE,
         linkedTransaction = linkedTransaction,
         prisonConfiguration = nmiConfig,
       ),
     )
-    cell1N.setCapacity(maxCapacity = 3, workingCapacity = 2, userOrSystemInContext = EXPECTED_USERNAME, amendedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
-    cell1N.setCertifiedNormalAccommodation(certifiedNormalAccommodation = 3, userOrSystemInContext = EXPECTED_USERNAME, updatedAt = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
-    cell1N.requestApproval(requestedBy = EXPECTED_USERNAME, requestedDate = LocalDateTime.now(clock), linkedTransaction = linkedTransaction)
-    cell1N = repository.saveAndFlush(cell1N)
 
     landingN1 = repository.save(
       buildResidentialLocation(
@@ -236,16 +235,16 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     cell1 = repository.save(
       buildCell(
         pathHierarchy = "Z-1-001",
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        certifiedCell = true,
         linkedTransaction = linkedTransaction,
       ),
     )
     cell2 = repository.save(
       buildCell(
         pathHierarchy = "Z-1-002",
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        certifiedCell = true,
         residentialAttributeValues = setOf(
           ResidentialAttributeValue.CAT_A,
           ResidentialAttributeValue.SAFE_CELL,
@@ -268,8 +267,8 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       buildCell(
         pathHierarchy = "B-A-001",
         status = LocationStatus.INACTIVE,
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        certifiedCell = true,
         specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
         linkedTransaction = linkedTransaction,
       ),
@@ -278,8 +277,8 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     archivedCell = repository.save(
       buildCell(
         pathHierarchy = "Z-1-003",
-        capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-        certification = Certification(certified = true, certifiedNormalAccommodation = 2),
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        certifiedCell = true,
         status = LocationStatus.ARCHIVED,
         linkedTransaction = linkedTransaction,
       ),

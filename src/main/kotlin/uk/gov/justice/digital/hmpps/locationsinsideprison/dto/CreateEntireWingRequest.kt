@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
@@ -79,7 +78,7 @@ data class CreateEntireWingRequest(
       orderWithinParentLocation = 1,
       createdBy = createdBy,
       whenCreated = LocalDateTime.now(clock),
-      childLocations = mutableListOf(),
+      childLocations = sortedSetOf(),
     ).apply {
       wingStructure?.let { setStructure(it) }
       addHistory(
@@ -105,7 +104,7 @@ data class CreateEntireWingRequest(
           orderWithinParentLocation = spurNumber,
           createdBy = createdBy,
           whenCreated = LocalDateTime.now(clock),
-          childLocations = mutableListOf(),
+          childLocations = sortedSetOf(),
         ).apply {
           wing.addChildLocation(this)
           addHistory(
@@ -134,7 +133,7 @@ data class CreateEntireWingRequest(
             orderWithinParentLocation = landingNumber,
             createdBy = createdBy,
             whenCreated = LocalDateTime.now(clock),
-            childLocations = mutableListOf(),
+            childLocations = sortedSetOf(),
           ).apply {
             spur.addChildLocation(this)
 
@@ -167,15 +166,13 @@ data class CreateEntireWingRequest(
           orderWithinParentLocation = cellNumber,
           createdBy = createdBy,
           whenCreated = LocalDateTime.now(clock),
-          childLocations = mutableListOf(),
+          childLocations = sortedSetOf(),
           capacity = Capacity(
             maxCapacity = defaultMaxCapacity,
             workingCapacity = defaultWorkingCapacity,
-          ),
-          certification = Certification(
-            certified = status != LocationStatus.DRAFT,
             certifiedNormalAccommodation = defaultCNA,
           ),
+          certifiedCell = status != LocationStatus.DRAFT,
         ).apply {
           addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction = linkedTransaction)
           addSpecialistCellType(SpecialistCellType.ESCAPE_LIST, linkedTransaction = linkedTransaction, userOrSystemInContext = createdBy, clock = clock)

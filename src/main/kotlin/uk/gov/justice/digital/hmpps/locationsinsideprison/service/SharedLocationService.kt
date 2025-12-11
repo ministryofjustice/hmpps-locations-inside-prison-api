@@ -13,7 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedT
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LockedLocationCannotBeUpdatedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService.Companion.log
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
@@ -52,7 +52,7 @@ class SharedLocationService(
     linkedTransaction: LinkedTransaction,
   ): UpdateLocationResult {
     if (location.isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(location.getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(location.getKey())
     }
 
     val (codeChanged, oldParent, parentChanged) = updateCoreLocationDetails(location, patchLocationRequest, linkedTransaction)

@@ -67,7 +67,7 @@ class CertificationService(
       now,
       username,
     )
-    val approvalRequest = certificationApprovalRequestRepository.save(location.requestApproval(requestedBy = username, requestedDate = now, linkedTransaction = linkedTransaction))
+    val approvalRequest = certificationApprovalRequestRepository.save(location.requestApproval(requestedBy = username, requestedDate = now))
 
     telemetryClient.trackEvent(
       "certification-approval-requested",
@@ -153,7 +153,7 @@ class CertificationService(
     )
 
     // Create the cell certificate
-    cellCertificateService.createCellCertificate(
+    val cellCertificate = cellCertificateService.createCellCertificate(
       approvalRequest = approvalRequest,
       approvedBy = transactionInvokedBy,
       approvedDate = now,
@@ -177,14 +177,15 @@ class CertificationService(
 
     val locationKeySuffix = approvedLocation?.let { "at ${it.getKey()}" } ?: ""
     log.info(
-      "Certification of {} {} APPROVED by {}",
+      "Certification {} of {} {} APPROVED by {}",
+      cellCertificate.id,
       approvalRequest.prisonId,
       locationKeySuffix,
       transactionInvokedBy,
     )
 
     return ApprovalResponse(
-      approvalRequest = approvalRequest.toDto(),
+      approvalRequest = approvalRequest.toDto(cellCertificateId = cellCertificate.id),
       prisonId = approvalRequest.prisonId,
       newLocation = wasDraft,
       location = approvedLocation?.toDto(includeChildren = true, includeParent = true),

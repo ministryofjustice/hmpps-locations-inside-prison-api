@@ -11,6 +11,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisDeactivatedReason
@@ -20,7 +21,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_U
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
@@ -108,8 +108,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
     cell = buildCell(
       prisonId = "ZZGHI",
       pathHierarchy = "B-1-001",
-      capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
-      certification = Certification(certified = true, certifiedNormalAccommodation = 1),
+      capacity = Capacity(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 1),
+      certifiedCell = true,
       residentialAttributeValues = setOf(ResidentialAttributeValue.CAT_A),
       specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
       linkedTransaction = linkedTransaction,
@@ -395,7 +395,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
-      fun `can sync an existing res location and update it`() {
+      fun `can sync an existing res location and update it - deprecated`() {
         webTestClient.post().uri("/sync/upsert")
           .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
@@ -407,6 +407,54 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 attributes = setOf(ResidentialAttributeValue.CAT_A),
                 capacity = CapacityDTO(3, 3),
                 certification = CertificationDTO(certified = false, capacityOfCertifiedCell = 0),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """ 
+             {
+              "prisonId": "ZZGHI",
+              "code": "001",
+              "pathHierarchy": "B-1-001",
+              "locationType": "CELL",
+              "residentialHousingType": "NORMAL_ACCOMMODATION",
+              "active": true,
+              "key": "ZZGHI-B-1-001",
+              "orderWithinParentLocation": 1,
+              "attributes": [
+                "CAT_A"
+              ],
+              "ignoreWorkingCapacity": false,
+              "capacity": {
+                "maxCapacity": 3,
+                "workingCapacity": 3
+              },
+              "certification": {
+                "certified": false,
+                "certifiedNormalAccommodation": 0
+              }
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can sync an existing res location and update it`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncResRequest.copy(
+                id = cell.id,
+                code = "001",
+                attributes = setOf(ResidentialAttributeValue.CAT_A),
+                capacity = CapacityDTO(3, 3, 0),
+                certifiedCell = false,
               ),
             ),
           )
@@ -566,7 +614,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 id = room.id,
                 code = "012",
                 locationType = LocationType.CELL,
-                capacity = CapacityDTO(1, 1),
+                certifiedCell = true,
+                capacity = CapacityDTO(1, 1, 1),
                 certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 1),
               ),
             ),
@@ -647,8 +696,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 parentLocationPath = "B-1",
                 residentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
                 locationType = LocationType.CELL,
-                capacity = CapacityDTO(1, 1),
-                certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 1),
+                certifiedCell = true,
+                capacity = CapacityDTO(1, 1, 1),
               ),
             ),
           )
@@ -1003,7 +1052,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LegacyLocation::class.java)
+          .expectBody<LegacyLocation>()
           .returnResult().responseBody!!
 
         Assertions.assertEquals(cell.prisonId, legacyLocation.prisonId)
@@ -1020,7 +1069,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         .header("Content-Type", "application/json")
         .exchange()
         .expectStatus().isOk
-        .expectBody(LegacyLocation::class.java)
+        .expectBody<LegacyLocation>()
         .returnResult().responseBody!!
 
       Assertions.assertEquals(wingB.prisonId, legacyLocation.prisonId)

@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
 import jakarta.persistence.CascadeType
+import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
@@ -8,7 +9,8 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
-import org.hibernate.annotations.BatchSize
+import org.hibernate.annotations.SortNatural
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
@@ -16,7 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LockedLocationCannotBeUpdatedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -40,7 +42,7 @@ class Cell(
   deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,
-  childLocations: MutableList<Location>,
+  childLocations: SortedSet<Location>,
   whenCreated: LocalDateTime,
   createdBy: String,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
@@ -48,23 +50,23 @@ class Cell(
 
   var cellMark: String? = null,
 
-  @OneToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
-  private var certification: Certification? = null,
+  @Column(nullable = false)
+  var certifiedCell: Boolean = false,
 
-  @BatchSize(size = 10)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val attributes: MutableSet<ResidentialAttribute> = mutableSetOf(),
+  @SortNatural
+  val attributes: SortedSet<ResidentialAttribute> = sortedSetOf(),
 
   @Enumerated(EnumType.STRING)
   var accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 
-  @BatchSize(size = 100)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val usedFor: MutableSet<CellUsedFor> = mutableSetOf(),
+  @SortNatural
+  val usedFor: SortedSet<CellUsedFor> = sortedSetOf(),
 
-  @BatchSize(size = 100)
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
-  val specialistCellTypes: MutableSet<SpecialistCell> = mutableSetOf(),
+  @SortNatural
+  val specialistCellTypes: SortedSet<SpecialistCell> = sortedSetOf(),
 
   @Enumerated(EnumType.STRING)
   var convertedCellType: ConvertedCellType? = null,
@@ -107,56 +109,12 @@ class Cell(
   }
 
   fun getCertifiedNormalAccommodation(includePendingChange: Boolean = false) = if (includePendingChange) {
-    pendingChange?.certifiedNormalAccommodation ?: certification?.certifiedNormalAccommodation
+    pendingChange?.certifiedNormalAccommodation ?: capacity?.certifiedNormalAccommodation
   } else {
-    certification?.certifiedNormalAccommodation
+    capacity?.certifiedNormalAccommodation
   }
 
-  fun setCertifiedNormalAccommodation(certifiedNormalAccommodation: Int, userOrSystemInContext: String, updatedAt: LocalDateTime, linkedTransaction: LinkedTransaction): Boolean {
-    if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
-    }
-
-    if (isCertificationApprovalProcessRequired()) {
-      if (pendingChange?.approvalRequest?.status == ApprovalRequestStatus.APPROVED) {
-        if (setCna(certifiedNormalAccommodation, userOrSystemInContext, updatedAt, linkedTransaction)) return true
-      } else {
-        if (getCertifiedNormalAccommodation(includePendingChange = true) != certifiedNormalAccommodation) {
-          if (pendingChange == null) {
-            pendingChange = PendingLocationChange()
-          }
-          pendingChange?.let { it.certifiedNormalAccommodation = certifiedNormalAccommodation }
-        }
-      }
-    } else {
-      if (setCna(certifiedNormalAccommodation, userOrSystemInContext, updatedAt, linkedTransaction)) return true
-    }
-    return false
-  }
-
-  private fun setCna(
-    certifiedNormalAccommodation: Int,
-    userOrSystemInContext: String,
-    updatedAt: LocalDateTime,
-    linkedTransaction: LinkedTransaction,
-  ): Boolean {
-    addHistory(
-      LocationAttribute.CERTIFIED_CAPACITY,
-      certification?.certifiedNormalAccommodation?.toString(),
-      certifiedNormalAccommodation.toString(),
-      userOrSystemInContext,
-      updatedAt,
-      linkedTransaction,
-    )
-
-    if (certification != null) {
-      certification!!.certifiedNormalAccommodation = certifiedNormalAccommodation
-      return true
-    }
-    return false
-  }
-
-  fun isCertified() = certification?.certified == true
+  fun isCertified() = certifiedCell
 
   override fun getDerivedLocationType() = if (isConvertedCell()) {
     LocationType.ROOM
@@ -172,7 +130,7 @@ class Cell(
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
 
     addHistory(
@@ -229,7 +187,7 @@ class Cell(
 
   fun updateNonResidentialCellType(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     addHistory(
       LocationAttribute.CONVERTED_CELL_TYPE,
@@ -255,12 +213,12 @@ class Cell(
     usedFor.clear()
     specialistCellTypes.clear()
     capacity = null
-    certification = null
+    certifiedCell = false
   }
 
   fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
 
     val amendedDate = LocalDateTime.now(clock)
@@ -284,7 +242,8 @@ class Cell(
 
     specialistCellTypes?.let { updateSpecialistCellTypes(specialistCellTypes = it, clock = clock, userOrSystemInContext = userOrSystemInContext, linkedTransaction = linkedTransaction) }
 
-    setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, userOrSystemInContext = userOrSystemInContext, amendedDate = amendedDate, linkedTransaction = linkedTransaction)
+    setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, certifiedNormalAccommodation = workingCapacity, userOrSystemInContext = userOrSystemInContext, amendedDate = amendedDate, linkedTransaction = linkedTransaction)
+
     if (hasDeactivatedParent()) {
       reactivate(userOrSystemInContext, clock, linkedTransaction)
     }
@@ -293,13 +252,13 @@ class Cell(
     this.whenUpdated = amendedDate
   }
 
-  override fun setCapacity(maxCapacity: Int, workingCapacity: Int, userOrSystemInContext: String, amendedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
+  override fun setCapacity(maxCapacity: Int, workingCapacity: Int, certifiedNormalAccommodation: Int, userOrSystemInContext: String, amendedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
     validateCapacity(
       locationKey = getKey(),
       accommodationType = accommodationType,
       workingCapacity = workingCapacity,
       maxCapacity = maxCapacity,
-      certifiedNormalAccommodation = getCertifiedNormalAccommodation(includePendingChange = true) ?: 0,
+      certifiedNormalAccommodation = certifiedNormalAccommodation,
       specialistCellTypes = getSpecialistCellTypesForCell(),
       temporarilyDeactivated = isTemporarilyDeactivated(),
       permanentlyDeactivated = isPermanentlyDeactivated(),
@@ -307,41 +266,22 @@ class Cell(
     )
 
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
-    if (isCertificationApprovalProcessRequired()) {
-      if (pendingChange?.approvalRequest?.status == ApprovalRequestStatus.APPROVED) {
-        super.setCapacity(
-          maxCapacity = maxCapacity,
-          workingCapacity = workingCapacity,
-          userOrSystemInContext = userOrSystemInContext,
-          amendedDate = amendedDate,
-          linkedTransaction = linkedTransaction,
-        )
-      } else {
-        super.setCapacity(
-          maxCapacity = getMaxCapacity() ?: 0,
-          workingCapacity = workingCapacity,
-          userOrSystemInContext = userOrSystemInContext,
-          amendedDate = amendedDate,
-          linkedTransaction = linkedTransaction,
-        )
-        if (getMaxCapacity(includePendingChange = true) != maxCapacity) {
-          if (pendingChange == null) {
-            pendingChange = PendingLocationChange()
-          }
-          pendingChange!!.maxCapacity = maxCapacity
-        }
-      }
-    } else {
-      super.setCapacity(
-        maxCapacity = maxCapacity,
-        workingCapacity = workingCapacity,
-        userOrSystemInContext = userOrSystemInContext,
-        amendedDate = amendedDate,
-        linkedTransaction = linkedTransaction,
-      )
-    }
+    super.setCapacity(
+      maxCapacity = maxCapacity,
+      workingCapacity = workingCapacity,
+      certifiedNormalAccommodation = certifiedNormalAccommodation,
+      userOrSystemInContext = userOrSystemInContext,
+      amendedDate = amendedDate,
+      linkedTransaction = linkedTransaction,
+    )
+  }
+
+  fun getCertifiedSummary() = if (certifiedCell) {
+    "Certified"
+  } else {
+    "Uncertified"
   }
 
   fun certifyCell(
@@ -349,17 +289,13 @@ class Cell(
     updatedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
-    val oldCertification = getCertifiedSummary(this.certification)
-    if (certification != null) {
-      certification?.setCertification(true, certification?.certifiedNormalAccommodation ?: 0)
-    } else {
-      certification = Certification(certified = true, certifiedNormalAccommodation = 0)
-    }
+    val oldCertification = getCertifiedSummary()
+    certifiedCell = true
 
     addHistory(
       LocationAttribute.CERTIFICATION,
       oldCertification,
-      getCertifiedSummary(this.certification),
+      getCertifiedSummary(),
       cellUpdatedBy,
       updatedDate,
       linkedTransaction,
@@ -372,26 +308,14 @@ class Cell(
   fun deCertifyCell(userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.CERTIFICATION,
-      getCertifiedSummary(this.certification),
+      getCertifiedSummary(),
       "Uncertified",
       userOrSystemInContext,
       LocalDateTime.now(clock),
       linkedTransaction,
     )
-    addHistory(
-      LocationAttribute.CERTIFIED_CAPACITY,
-      certification?.certifiedNormalAccommodation?.toString(),
-      (certification?.certifiedNormalAccommodation ?: 0).toString(),
-      userOrSystemInContext,
-      LocalDateTime.now(clock),
-      linkedTransaction,
-    )
 
-    if (certification != null) {
-      certification?.setCertification(false, certification?.certifiedNormalAccommodation ?: 0)
-    } else {
-      certification = Certification(certified = false, certifiedNormalAccommodation = 0)
-    }
+    certifiedCell = false
 
     this.updatedBy = userOrSystemInContext
     this.whenUpdated = LocalDateTime.now(clock)
@@ -454,7 +378,7 @@ class Cell(
     linkedTransaction: LinkedTransaction,
   ) {
     if (isLocationLocked()) {
-      throw LockedLocationCannotBeUpdatedException(getKey())
+      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     recordRemovedSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction)
     this.specialistCellTypes.retainAll(
@@ -474,6 +398,7 @@ class Cell(
 
     setAccommodationTypeForCell(residentialHousingType.mapToAccommodationType(), upsert.lastUpdatedBy, clock, linkedTransaction)
     handleNomisCapacitySync(upsert, upsert.lastUpdatedBy, clock, linkedTransaction)
+    upsert.certifiedCell?.let { certifiedCell = it }
     handleNomisCertSync(upsert, upsert.lastUpdatedBy, clock, linkedTransaction)
 
     if (upsert.attributes != null) {
@@ -502,6 +427,7 @@ class Cell(
     }
   }
 
+  @Deprecated("Separate certification upsert not needed")
   private fun handleNomisCertSync(
     upsert: NomisSyncLocationRequest,
     userOrSystemInContext: String,
@@ -510,29 +436,27 @@ class Cell(
   ) {
     upsert.certification?.let { cert ->
       with(cert) {
-        val oldCertification = if (certified) {
-          "Certified"
-        } else {
-          "Uncertified"
-        }
         addHistory(
           LocationAttribute.CERTIFIED_CAPACITY,
-          certification?.certifiedNormalAccommodation?.toString(),
+          capacity?.certifiedNormalAccommodation?.toString(),
           getCNA().toString(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
           linkedTransaction,
         )
-        if (certification != null) {
-          certification?.setCertification(certified, getCNA())
+
+        if (capacity != null) {
+          capacity!!.certifiedNormalAccommodation = getCNA()
         } else {
-          certification = Certification(certified = certified, certifiedNormalAccommodation = getCNA())
+          capacity = Capacity(certifiedNormalAccommodation = getCNA())
         }
 
+        val oldCertification = getCertifiedSummary()
+        certifiedCell = certified
         addHistory(
           LocationAttribute.CERTIFICATION,
           oldCertification,
-          getCertifiedSummary(certification),
+          getCertifiedSummary(),
           userOrSystemInContext,
           LocalDateTime.now(clock),
           linkedTransaction,
@@ -600,34 +524,21 @@ class Cell(
   ) {
     pendingChange?.let { pc ->
 
-      pc.maxCapacity?.let { maxCap ->
+      if (pc.maxCapacity != null || pc.certifiedNormalAccommodation != null) {
         setCapacity(
-          maxCapacity = maxCap,
+          maxCapacity = pc.maxCapacity ?: getMaxCapacity() ?: 0,
           workingCapacity = getWorkingCapacity() ?: 0,
+          certifiedNormalAccommodation = pc.certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
           userOrSystemInContext = approvedBy,
           amendedDate = approvedDate,
           linkedTransaction = linkedTransaction,
         )
       }
-
-      pc.certifiedNormalAccommodation?.let { cna ->
-        setCna(
-          certifiedNormalAccommodation = cna,
-          linkedTransaction = linkedTransaction,
-          userOrSystemInContext = approvedBy,
-          updatedAt = approvedDate,
-        )
-      }
     }
+
     if (isDraft()) {
       certifyCell(approvedBy, approvedDate, linkedTransaction)
     }
-
-    clearPendingChanges()
-  }
-
-  override fun clearPendingChanges() {
-    pendingChange = null
   }
 
   override fun toDto(
@@ -663,6 +574,10 @@ class Cell(
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
     ignoreWorkingCapacity = false,
     capacity = capacity?.toDto(),
-    certification = certification?.toDto(),
+    certifiedCell = certifiedCell,
+    certification = Certification(
+      certifiedNormalAccommodation = capacity?.certifiedNormalAccommodation,
+      certified = certifiedCell,
+    ),
   )
 }

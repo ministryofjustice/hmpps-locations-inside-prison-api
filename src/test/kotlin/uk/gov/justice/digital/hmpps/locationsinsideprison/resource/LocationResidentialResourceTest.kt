@@ -5,8 +5,13 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
@@ -27,12 +32,14 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 import java.util.*
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
-class LocationResidentialResourceTest : CommonDataTestBase() {
+class LocationResidentialResourceTest(@param:Autowired private val locationService: LocationService) : CommonDataTestBase() {
 
   @DisplayName("GET /locations/residential-summary/{prisonId}")
   @Nested
@@ -924,7 +931,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             .header("Content-Type", "application/json")
             .bodyValue(""" { "localName": "Landing 1"} """)
             .exchange()
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.DuplicateLocalNameAtSameLevel.errorCode)
       }
@@ -937,14 +944,14 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             .header("Content-Type", "application/json")
             .bodyValue(""" { "localName": "Wing B"} """)
             .exchange()
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.DuplicateLocalNameAtSameLevel.errorCode)
       }
 
       @Test
       fun `cannot update local name of a locked location`() {
-        val aCell = repository.findOneByKey("NMI-A-1-001") as Cell
+        val aCell = createPendingDraftCell()
 
         // Attempt to update the local name of the locked location
         webTestClient.put().uri("/locations/${aCell.id}/change-local-name")
@@ -953,10 +960,10 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue(""" { "localName": "New Local Name"} """)
           .exchange()
           .expectStatus().isEqualTo(409)
-          .expectBody(ErrorResponse::class.java)
+          .expectBody<ErrorResponse>()
           .returnResult().responseBody!!.also {
-          assertThat(it.errorCode).isEqualTo(ErrorCode.LockedLocationCannotBeUpdated.errorCode)
-          assertThat(it.userMessage).contains("Location ${aCell.getKey()} cannot be updated as it is locked")
+          assertThat(it.errorCode).isEqualTo(ErrorCode.PendingApprovalLocationCannotBeUpdated.errorCode)
+          assertThat(it.userMessage).contains("Location with pending approval cannot be updated: Location ${aCell.getKey()} cannot be updated as it has a pending approval request")
         }
       }
     }
@@ -971,7 +978,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue(jsonString(localNameChange))
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(locationChanged.localName).isEqualTo("Landing Z1 - CHANGED")
@@ -999,7 +1006,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(beforeChange.localName).isEqualTo(newLocalName)
@@ -1010,7 +1017,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue("{}")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(locationChanged.localName).isNull()
@@ -1031,7 +1038,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue("""{  "localName": "${landingZ1.localName}" } """)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(locationChanged.localName).isEqualTo(landingZ1.localName)
@@ -1047,7 +1054,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
       @Test
       fun `can set a location to the same local name as another location provided in a different wing`() {
         landingZ1.localName = "TEMP"
-        repository.save(landingZ1)
+        resiRepository.save(landingZ1)
 
         webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1083,7 +1090,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           clock = clock,
           linkedTransaction = linkedTransaction,
         )
-        repository.save(landingZ1)
+        resiRepository.save(landingZ1)
 
         val locationChanged = webTestClient.put().uri("/locations/${landingZ2.id}/change-local-name")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1091,7 +1098,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue("""{  "localName": "${landingZ1.localName}" } """)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(locationChanged.localName).isEqualTo(landingZ1.localName)
@@ -1104,6 +1111,41 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         }
       }
     }
+  }
+
+  private fun createPendingDraftCell(): Cell {
+    locationService.createCells(
+      createCellsRequest = CellInitialisationRequest(
+        prisonId = wingZ.prisonId,
+        parentLocation = resiRepository.findOneByKey("${wingZ.getKey()}-1")!!.id!!,
+        cells = setOf(
+          CellInformation(
+            code = "NEW",
+            cellMark = "NEW",
+            certifiedNormalAccommodation = 2,
+            maxCapacity = 3,
+            workingCapacity = 2,
+          ),
+        ),
+      ),
+    )
+    val aCell = resiRepository.findOneByKey("${wingZ.getKey()}-1-NEW") as Cell
+
+    webTestClient.put().uri("/certification/location/request-approval")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          LocationApprovalRequest(
+            locationId = aCell.id!!,
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CertificationApprovalRequestDto>()
+      .returnResult().responseBody!!.id
+    return aCell
   }
 
   @DisplayName("GET /locations/{prisonId}/local-name/{localName}")
@@ -1185,7 +1227,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(foundLocation.getKey()).isEqualTo(wingB.getKey())
@@ -1198,7 +1240,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(foundLocation.getKey()).isEqualTo(landingZ1.getKey())
@@ -1267,7 +1309,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `cannot update a locked location`() {
-        val aCell = repository.findOneByKey("NMI-A-1-001") as Cell
+        val aCell = createPendingDraftCell()
 
         // Attempt to update the locked location
         webTestClient.patch().uri("/locations/residential/${aCell.id}")
@@ -1276,10 +1318,10 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue(jsonString(PatchResidentialLocationRequest(comments = "Change comment")))
           .exchange()
           .expectStatus().isEqualTo(409)
-          .expectBody(ErrorResponse::class.java)
+          .expectBody<ErrorResponse>()
           .returnResult().responseBody!!.also {
-          assertThat(it.errorCode).isEqualTo(ErrorCode.LockedLocationCannotBeUpdated.errorCode)
-          assertThat(it.userMessage).contains("Location ${aCell.getKey()} cannot be updated as it is locked")
+          assertThat(it.errorCode).isEqualTo(ErrorCode.PendingApprovalLocationCannotBeUpdated.errorCode)
+          assertThat(it.userMessage).contains("Location with pending approval cannot be updated: Location ${aCell.getKey()} cannot be updated as it has a pending approval request")
         }
       }
     }
@@ -1301,7 +1343,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             .header("Content-Type", "application/json")
             .exchange()
             .expectStatus().isOk
-            .expectBody(LegacyLocation::class.java)
+            .expectBody<LegacyLocation>()
             .returnResult().responseBody!!.comments,
         ).isEqualTo("Change comment")
 
@@ -2477,9 +2519,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `cannot convert a locked cell to non-residential cell`() {
-        val aCell = repository.findOneByKey("NMI-A-1-001") as Cell
-
-        prisonerSearchMockServer.stubSearchByLocations(aCell.prisonId, listOf(aCell.getPathHierarchy()), false)
+        val aCell = createPendingDraftCell()
 
         // Attempt to convert the locked cell to a non-residential cell
         webTestClient.put().uri("/locations/${aCell.id}/convert-cell-to-non-res-cell")
@@ -2488,10 +2528,10 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue(jsonString(convertCellToNonResidentialLocationRequest))
           .exchange()
           .expectStatus().isEqualTo(409)
-          .expectBody(ErrorResponse::class.java)
+          .expectBody<ErrorResponse>()
           .returnResult().responseBody!!.also {
-          assertThat(it.errorCode).isEqualTo(ErrorCode.LockedLocationCannotBeUpdated.errorCode)
-          assertThat(it.userMessage).contains("Location ${aCell.getKey()} cannot be updated as it is locked")
+          assertThat(it.errorCode).isEqualTo(ErrorCode.PendingApprovalLocationCannotBeUpdated.errorCode)
+          assertThat(it.userMessage).contains("Location with pending approval cannot be updated: Location ${aCell.getKey()} cannot be updated as it has a pending approval request")
         }
       }
     }
@@ -2508,7 +2548,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue(convertCellToNonResidentialLocationRequest)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.convertedCellType).isEqualTo(ConvertedCellType.OTHER)
@@ -2575,7 +2615,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             .header("Content-Type", "application/json")
             .exchange()
             .expectStatus().isOk
-            .expectBody(LocationTest::class.java)
+            .expectBody<LocationTest>()
             .returnResult().responseBody!!.localName,
         ).isEqualTo(store.localName)
 
@@ -2586,7 +2626,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue(nonResStoreRoomRequest)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.convertedCellType == ConvertedCellType.STORE)
@@ -2719,7 +2759,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           clock = clock,
           linkedTransaction = linkedTransaction,
         )
-        repository.save(cell1)
+        resiRepository.save(cell1)
 
         val result = webTestClient.put().uri("/locations/${cell1.id}/update-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -2727,7 +2767,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue(""" { "convertedCellType": "OFFICE" } """)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         assertThat(result.findByPathHierarchy("Z-1-001")!!.convertedCellType == ConvertedCellType.OFFICE)
@@ -2899,7 +2939,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           clock = clock,
           linkedTransaction = linkedTransaction,
         )
-        repository.save(cell1)
+        resiRepository.save(cell1)
         // request has not valid data
         webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -2917,7 +2957,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           clock = clock,
           linkedTransaction = linkedTransaction,
         )
-        repository.save(cell1)
+        resiRepository.save(cell1)
 
         val response = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -2935,7 +2975,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           )
           .exchange()
           .expectStatus().isEqualTo(400)
-          .expectBody(ErrorResponse::class.java)
+          .expectBody<ErrorResponse>()
           .returnResult().responseBody!!
 
         assertThat(response.userMessage).contains("not one of the values accepted for Enum class: [NORMAL_ACCOMMODATION, CARE_AND_SEPARATION, HEALTHCARE_INPATIENTS]")
@@ -2949,7 +2989,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           clock = clock,
           linkedTransaction = linkedTransaction,
         )
-        repository.save(cell1)
+        resiRepository.save(cell1)
 
         webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -2979,7 +3019,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             ),
           ),
         )
-        repository.save(cell1)
+        resiRepository.save(cell1)
 
         val result = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -2987,7 +3027,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .bodyValue(convertToCellRequest)
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
 
         val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
@@ -3020,7 +3060,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!.changeHistory?.firstOrNull()?.transactionId
         assertThat(tx).isNotNull()
 
@@ -3045,7 +3085,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
             .header("Content-Type", "application/json")
             .exchange()
             .expectStatus().isOk()
-            .expectBody(LegacyLocation::class.java)
+            .expectBody<LegacyLocation>()
             .returnResult().responseBody!!.residentialHousingType,
         ).isEqualTo(ResidentialHousingType.NORMAL_ACCOMMODATION)
       }
@@ -3059,7 +3099,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         clock = clock,
         linkedTransaction = linkedTransaction,
       )
-      repository.save(cell1)
+      resiRepository.save(cell1)
 
       val result = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -3067,7 +3107,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         .bodyValue(convertToCellRequestValidCareAndSeparation)
         .exchange()
         .expectStatus().isOk
-        .expectBody(LocationTest::class.java)
+        .expectBody<LocationTest>()
         .returnResult().responseBody!!
 
       val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
@@ -3094,7 +3134,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         clock = clock,
         linkedTransaction = linkedTransaction,
       )
-      repository.save(cell1)
+      resiRepository.save(cell1)
 
       val result = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -3102,7 +3142,7 @@ class LocationResidentialResourceTest : CommonDataTestBase() {
         .bodyValue(convertToCellRequestValidHealthCareInpatients)
         .exchange()
         .expectStatus().isOk
-        .expectBody(LocationTest::class.java)
+        .expectBody<LocationTest>()
         .returnResult().responseBody!!
 
       val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")

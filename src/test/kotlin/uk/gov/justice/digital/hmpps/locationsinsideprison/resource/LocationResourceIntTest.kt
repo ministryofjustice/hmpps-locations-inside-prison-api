@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Primary
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
@@ -427,7 +428,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(118)
       }
@@ -450,7 +451,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(118)
       }
@@ -466,7 +467,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
             .exchange()
             .expectStatus().isEqualTo(409)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.DeactivationErrorLocationsContainPrisoners.errorCode)
       }
@@ -482,7 +483,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
             .exchange()
             .expectStatus().isEqualTo(409)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.DeactivationErrorLocationsContainPrisoners.errorCode)
       }
@@ -1383,7 +1384,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .header("Content-Type", "application/json")
             .exchange()
             .expectStatus().isOk
-            .expectBody(LocationTest::class.java)
+            .expectBody<LocationTest>()
             .returnResult().responseBody!!.deactivatedReason,
         ).isEqualTo(DeactivatedReason.DAMAGED)
 
@@ -1420,7 +1421,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().isOk
-          .expectBody(LocationTest::class.java)
+          .expectBody<LocationTest>()
           .returnResult().responseBody!!
         assertThat(cellDetails.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
         assertThat(cellDetails.proposedReactivationDate).isEqualTo(proposedReactivationDate.plusMonths(1))
@@ -1754,7 +1755,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))))
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(118)
       }
@@ -1770,7 +1771,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = " ")))))
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(118)
       }
@@ -1786,7 +1787,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))))
             .exchange()
             .expectStatus().isEqualTo(409)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(109)
       }
@@ -1802,7 +1803,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(wingZ.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))))
             .exchange()
             .expectStatus().isEqualTo(409)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(109)
       }
@@ -2590,11 +2591,11 @@ class LocationResourceIntTest : CommonDataTestBase() {
               UpdateCapacityRequest(
                 locations = mapOf(
                   cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, certifiedNormalAccommodation = 3, inCellSanitation = true, cellMark = "X001"),
-                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0, inCellSanitation = null, cellMark = "X002"),
+                  cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0, inCellSanitation = null, cellMark = "X002"),
                   cell1N.getKey() to CellCapacityUpdateDetail(maxCapacity = 4, workingCapacity = 1, inCellSanitation = true, cellMark = "X001-N"),
                   "MDI-1-2-008" to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, cellMark = "X008"),
                   archivedCell.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, inCellSanitation = false, cellMark = "X001-ARCH"),
-                  inactiveCellB3001.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3),
+                  inactiveCellB3001.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, certifiedNormalAccommodation = 3),
                 ),
               ),
             ),
@@ -2637,7 +2638,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                 "NMI-A-1-001":[
                   {
                     "key":"NMI-A-1-001",
-                    "message":"Update failed: Location NMI-A-1-001 cannot be updated as it is locked"
+                    "message":"Update failed: Normal accommodation must not have a CNA or working capacity of 0"
                   }
                 ],
                 "MDI-1-2-008": [
@@ -2664,6 +2665,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "key": "MDI-B-A-001",
                     "message": "Working capacity from 2 ==> 3",
                     "type": "workingCapacity",
+                    "previousValue": 2,
+                    "newValue": 3
+                  },
+                   {
+                    "key": "MDI-B-A-001",
+                    "message": "Baseline CNA from 2 ==> 3",
+                    "type": "CNA",
                     "previousValue": 2,
                     "newValue": 3
                   }
@@ -2833,7 +2841,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(""" { "reason": "", "locations": [ "${cell1.getKey()}" ] } """)
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(102)
       }
@@ -2847,7 +2855,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(""" { "reason": "Demolished", "locations": [  ] } """)
             .exchange()
             .expectStatus().isBadRequest
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(102)
       }
@@ -2861,7 +2869,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .bodyValue(""" { "reason": "Demolished", "locations": [ "${cell1.getKey()}" ] } """)
             .exchange()
             .expectStatus().isEqualTo(409)
-            .expectBody(ErrorResponse::class.java)
+            .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(105)
       }
