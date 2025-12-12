@@ -1050,11 +1050,13 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "values": [
                     {
                       "key": "APPOINTMENT",
-                      "description": "Appointments"
+                      "description": "Appointments",
+                      "additionalInformation": "For example a counselling session"
                     },
                     {
                       "key": "PROGRAMMES_AND_ACTIVITIES",
-                      "description": "Programmes and activities"
+                      "description": "Programmes and activities",
+                      "additionalInformation": "For example a workshop or lesson"
                     }
                   ]
                 },
@@ -1064,11 +1066,13 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "values": [
                     {
                       "key": "HEARING_LOCATION",
-                      "description": "Hearing location"
+                      "description": "Hearing location",
+                      "additionalInformation": "For adjudication hearings"
                     },
                     {
                       "key": "LOCATION_OF_INCIDENT",
-                      "description": "Location of incident"
+                      "description": "Location of incident",
+                      "additionalInformation": "For example a location where an occurrence led to an adjudication hearing"
                     }
                   ]
                 },
@@ -1078,7 +1082,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "values": [
                     {
                       "key": "INTERNAL_MOVEMENTS",
-                      "description": "Internal movements"
+                      "description": "Internal movements",
+                      "additionalInformation": "To record the location of unlocked prisoners within this establishment"
                     }
                   ]
                 },
@@ -1088,7 +1093,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "values": [
                     {
                       "key": "OFFICIAL_VISITS",
-                      "description": "Official visits"
+                      "description": "Official visits",
+                      "additionalInformation": "For example, arranging a face to face visit with a solicitor"
                     }
                   ]
                 },
@@ -1098,7 +1104,8 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "values": [
                     {
                       "key": "USE_OF_FORCE",
-                      "description": "Use of force"
+                      "description": "Use of force",
+                      "additionalInformation": "To report where a use of force incident took place"
                     }
                   ]
                 }
