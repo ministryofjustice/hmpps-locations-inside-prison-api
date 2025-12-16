@@ -77,6 +77,8 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for NMI`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1N.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1N.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(2, 1), enRouteToday = 1))
+        prisonApiMockServer.stubMovementsIn(prisonId = cell1N.prisonId, offenderIds = listOf("A9876AA", "A9877AA"))
+        prisonApiMockServer.stubMovementsOut(prisonId = cell1N.prisonId, offenderIds = listOf("A1000AA"))
 
         webTestClient.get().uri("/prison/roll-count/NMI")
           .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
@@ -511,6 +513,180 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for MDI with cells`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubMovementsIn(prisonId = cell1.prisonId, offenderIds = listOf("A9876AA"))
+        prisonApiMockServer.stubMovementsOut(prisonId = cell1.prisonId, offenderIds = listOf("A1000AA", "A1002AA"))
+
+        webTestClient.get().uri("/prison/roll-count/MDI?include-cells=true")
+          .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """ 
+            {
+              "prisonId": "MDI",
+              "numUnlockRollToday": 8,
+              "numCurrentPopulation": 7,
+              "numArrivedToday": 1,
+              "numInReception": 4,
+              "numStillToArrive": 2,
+              "numOutToday": 2,
+              "numNoCellAllocated": 1,
+              "totals": {
+                "bedsInUse": 2,
+                "currentlyInCell": 1,
+                "currentlyOut": 1,
+                "workingCapacity": 4,
+                "netVacancies": 3,
+                "outOfOrder": 1
+              },
+              "locations": [
+                {
+                  "key": "MDI-B",
+                  "locationType": "WING",
+                  "locationCode": "B",
+                  "fullLocationPath": "B",
+                  "localName": "Wing B",
+                  "certified": true,
+                  "rollCount": {
+                    "bedsInUse": 0,
+                    "currentlyInCell": 0,
+                    "currentlyOut": 0,
+                    "workingCapacity": 0,
+                    "netVacancies": 0,
+                    "outOfOrder": 1
+                  },
+                  "subLocations": [
+                    {
+                      "key": "MDI-B-A",
+                      "locationType": "LANDING",
+                      "locationCode": "A",
+                      "fullLocationPath": "B-A",
+                      "localName": "Landing 1",
+                      "certified": true,
+                      "rollCount": {
+                        "bedsInUse": 0,
+                        "currentlyInCell": 0,
+                        "currentlyOut": 0,
+                        "workingCapacity": 0,
+                        "netVacancies": 0,
+                        "outOfOrder": 1
+                      }
+                    }
+                  ]
+                },
+                {
+                  "key": "MDI-Z",
+                  "locationType": "WING",
+                  "locationCode": "Z",
+                  "fullLocationPath": "Z",
+                  "localName": "Z",
+                  "certified": true,
+                  "rollCount": {
+                    "bedsInUse": 2,
+                    "currentlyInCell": 1,
+                    "currentlyOut": 1,
+                    "workingCapacity": 4,
+                    "netVacancies": 3,
+                    "outOfOrder": 0
+                  },
+                  "subLocations": [
+                    {
+                      "key": "MDI-Z-1",
+                      "locationType": "LANDING",
+                      "locationCode": "1",
+                      "fullLocationPath": "Z-1",
+                      "localName": "Landing 1",
+                      "certified": true,
+                      "rollCount": {
+                        "bedsInUse": 2,
+                        "currentlyInCell": 1,
+                        "currentlyOut": 1,
+                        "workingCapacity": 4,
+                        "netVacancies": 3,
+                        "outOfOrder": 0
+                      },
+                      "subLocations": [
+                        {
+                          "key": "MDI-Z-1-001",
+                          "locationType": "CELL",
+                          "locationCode": "001",
+                          "fullLocationPath": "Z-1-001",
+                          "localName": "001",
+                          "certified": true,
+                          "rollCount": {
+                            "bedsInUse": 1,
+                            "currentlyInCell": 1,
+                            "currentlyOut": 0,
+                            "workingCapacity": 2,
+                            "netVacancies": 1,
+                            "outOfOrder": 0
+                          }
+                        },
+                        {
+                          "key": "MDI-Z-1-002",
+                          "locationType": "CELL",
+                          "locationCode": "002",
+                          "fullLocationPath": "Z-1-002",
+                          "localName": "002",
+                          "certified": true,
+                          "rollCount": {
+                            "bedsInUse": 1,
+                            "currentlyInCell": 0,
+                            "currentlyOut": 1,
+                            "workingCapacity": 2,
+                            "netVacancies": 2,
+                            "outOfOrder": 0
+                          }
+                        },
+                        {
+                          "key": "MDI-Z-1-01S",
+                          "locationType": "STORE",
+                          "locationCode": "01S",
+                          "fullLocationPath": "Z-1-01S",
+                          "localName": "Store Room",
+                          "certified": false,
+                          "rollCount": {
+                            "bedsInUse": 0,
+                            "currentlyInCell": 0,
+                            "currentlyOut": 0,
+                            "workingCapacity": 0,
+                            "netVacancies": 0,
+                            "outOfOrder": 0
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "key": "MDI-Z-2",
+                      "locationType": "LANDING",
+                      "locationCode": "2",
+                      "fullLocationPath": "Z-2",
+                      "localName": "Landing 2",
+                      "certified": false,
+                      "rollCount": {
+                        "bedsInUse": 0,
+                        "currentlyInCell": 0,
+                        "currentlyOut": 0,
+                        "workingCapacity": 0,
+                        "netVacancies": 0,
+                        "outOfOrder": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            }        
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can obtain a role count for MDI where the same offender has moved twice in one day`() {
+        prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
+        prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 3), enRouteToday = 2))
+        prisonApiMockServer.stubMovementsIn(prisonId = cell1.prisonId, offenderIds = listOf("A9876AA"))
+        prisonApiMockServer.stubMovementsOut(prisonId = cell1.prisonId, offenderIds = listOf("A1000AA", "A1002AA", "A1002AA"))
 
         webTestClient.get().uri("/prison/roll-count/MDI?include-cells=true")
           .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))

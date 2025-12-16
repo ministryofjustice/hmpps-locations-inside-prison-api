@@ -19,6 +19,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getReceptionLocati
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import java.time.LocalDate
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 
@@ -38,6 +39,13 @@ class PrisonRollCountService(
   fun getPrisonRollCount(prisonId: String, includeCells: Boolean = false): PrisonRollCount {
     val movements = prisonApiService.getMovementTodayInAndOutOfPrison(prisonId)
 
+    val arrivedToday = prisonApiService.getMovementIntoPrison(
+      prisonId = prisonId,
+    ).map { it.offenderNo }.distinct().size
+
+    val outToday = prisonApiService.getMovementOutOfPrison(prisonId = prisonId, date = LocalDate.now())
+      .map { it.offenderNo }.distinct().size
+
     val listOfPrisoners = prisonerLocationService.prisonersInPrisonAllLocations(prisonId)
     val mapOfPrisoners = listOfPrisoners.filter { it.cellLocation != null }.groupBy { it.cellLocation!! }
 
@@ -46,6 +54,8 @@ class PrisonRollCountService(
       mapOfPrisoners,
       listOfPrisoners,
       movements,
+      arrivedToday = arrivedToday,
+      outToday = outToday,
       includeCells,
       residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId),
       segShouldBeFiltered(prisonId),
@@ -82,6 +92,8 @@ class PrisonRollCountService(
     mapOfPrisoners: Map<String, List<Prisoner>>,
     listOfPrisoners: List<Prisoner>,
     movements: PrisonRollMovementInfo,
+    arrivedToday: Int,
+    outToday: Int,
     includeCells: Boolean,
     residentialLocations: List<ResidentialLocation>,
     filterSeg: Boolean,
@@ -99,10 +111,10 @@ class PrisonRollCountService(
 
     val prisonRollCount = PrisonRollCount(
       prisonId = prisonId,
-      numUnlockRollToday = currentRoll - movements.inOutMovementsToday.`in` + movements.inOutMovementsToday.out,
+      numUnlockRollToday = currentRoll - arrivedToday + outToday,
       numCurrentPopulation = currentRoll,
-      numOutToday = movements.inOutMovementsToday.out,
-      numArrivedToday = movements.inOutMovementsToday.`in`,
+      numOutToday = outToday,
+      numArrivedToday = arrivedToday,
       numInReception = numInReception,
       numStillToArrive = movements.enRouteToday,
       numNoCellAllocated = numNoCellAllocated,
