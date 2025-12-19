@@ -363,6 +363,29 @@ class Cell(
     if (upsert is PatchResidentialLocationRequest) {
       setAccommodationTypeForCell(upsert.accommodationType ?: this.accommodationType, userOrSystemInContext, clock, linkedTransaction)
 
+      upsert.cellMark?.let { cellMark ->
+        addHistory(
+          LocationAttribute.CELL_MARK,
+          this.cellMark,
+          cellMark,
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+          linkedTransaction,
+        )
+        this.cellMark = cellMark
+      }
+
+      upsert.inCellSanitation?.let { inCellSanitation ->
+        addHistory(
+          LocationAttribute.IN_CELL_SANITATION,
+          this.inCellSanitation.toString(),
+          inCellSanitation.toString(),
+          userOrSystemInContext,
+          LocalDateTime.now(clock),
+          linkedTransaction,
+        )
+        this.inCellSanitation = inCellSanitation
+      }
       if (upsert.usedFor != null) {
         updateUsedFor(upsert.usedFor, userOrSystemInContext, clock, linkedTransaction)
       }

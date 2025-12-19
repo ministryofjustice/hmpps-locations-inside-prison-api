@@ -434,7 +434,7 @@ class LocationService(
     val deletedCells = cellsToRemove.size
     cellsToRemove.forEach { cell ->
       parentLocation.removeCell(cell)
-      cellLocationRepository.deleteById(cell.id) // TODO: fix this so don't have to explicitly delete by ID
+      cellLocationRepository.deleteById(cell.id!!) // TODO: fix this so don't have to explicitly delete by ID
     }
 
     var createdCells = 0

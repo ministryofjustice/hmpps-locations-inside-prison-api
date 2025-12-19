@@ -25,7 +25,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationPrefixDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialService
 import java.util.UUID
 
 @RestController
@@ -37,7 +36,6 @@ import java.util.UUID
 )
 class LocationPrisonIdResource(
   private val locationService: LocationService,
-  private val nonResidentialService: NonResidentialService,
 ) : EventBase() {
 
   @GetMapping("/prison/{prisonId}")
