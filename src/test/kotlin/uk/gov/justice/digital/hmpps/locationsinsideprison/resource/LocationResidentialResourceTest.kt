@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationAppro
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
@@ -1328,6 +1329,44 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
 
     @Nested
     inner class HappyPath {
+      @Test
+      fun `can update cell mark and in-cell sanitation`() {
+        val originalLocation = webTestClient.get().uri("/locations/${cell1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<Location>()
+          .returnResult().responseBody!!
+        assertThat(originalLocation.cellMark).isEqualTo("Z1-#001")
+        assertThat(originalLocation.inCellSanitation).isEqualTo(false)
+
+        webTestClient.patch().uri("/locations/residential/${cell1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(PatchResidentialLocationRequest(cellMark = "door #1", inCellSanitation = true)))
+          .exchange()
+          .expectStatus().isOk
+
+        val responseBody = webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<Location>()
+          .returnResult().responseBody!!
+
+        assertThat(responseBody.cellMark).isEqualTo("door #1")
+        assertThat(responseBody.inCellSanitation).isEqualTo(true)
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "MDI-Z-1-001",
+          )
+        }
+      }
+
       @Test
       fun `can update comment`() {
         webTestClient.patch().uri("/locations/residential/${cell1.id}")

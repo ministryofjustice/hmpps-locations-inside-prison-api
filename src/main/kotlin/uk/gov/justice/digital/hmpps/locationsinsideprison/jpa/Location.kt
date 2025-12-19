@@ -59,14 +59,22 @@ val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
       ],
       subclassSubgraphs = [
         NamedSubgraph(
-          name = "residential-subgraph",
+          name = "residential.subgraph",
           type = ResidentialLocation::class,
           attributeNodes = [
             NamedAttributeNode("capacity"),
           ],
         ),
         NamedSubgraph(
-          name = "cell-subgraph",
+          name = "non.residential.subgraph",
+          type = NonResidentialLocation::class,
+          attributeNodes = [
+            NamedAttributeNode("nonResidentialUsages"),
+            NamedAttributeNode("services"),
+          ],
+        ),
+        NamedSubgraph(
+          name = "cell.subgraph",
           type = Cell::class,
           attributeNodes = [
             NamedAttributeNode("usedFor"),

@@ -237,6 +237,8 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         pathHierarchy = "Z-1-001",
         capacity = Capacity(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
         certifiedCell = true,
+        inCellSanitation = false,
+        cellMark = "Z1-#001",
         linkedTransaction = linkedTransaction,
       ),
     )

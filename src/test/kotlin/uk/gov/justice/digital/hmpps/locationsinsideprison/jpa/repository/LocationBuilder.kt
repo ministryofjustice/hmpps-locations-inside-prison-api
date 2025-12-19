@@ -77,12 +77,15 @@ fun buildCell(
   accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
   linkedTransaction: LinkedTransaction,
   prisonConfiguration: PrisonConfiguration? = null,
+  inCellSanitation: Boolean? = null,
+  cellMark: String? = null,
 ): Cell {
   val cell = Cell(
     prisonId = prisonId,
     prisonConfiguration = prisonConfiguration,
     code = pathHierarchy.split("-").last(),
-    cellMark = pathHierarchy.split("-").last(),
+    cellMark = cellMark ?: pathHierarchy.split("-").last(),
+    inCellSanitation = inCellSanitation,
     status = if (status == LocationStatus.ARCHIVED) LocationStatus.INACTIVE else status,
     pathHierarchy = pathHierarchy,
     createdBy = EXPECTED_USERNAME,

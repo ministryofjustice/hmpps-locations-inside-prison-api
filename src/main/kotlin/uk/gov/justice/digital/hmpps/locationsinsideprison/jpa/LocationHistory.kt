@@ -118,6 +118,8 @@ enum class LocationAttribute(
   ATTRIBUTES(description = "Attributes"),
   PERMANENT_DEACTIVATION(description = "Permanent deactivation"),
   LOCATION_CREATED(description = "Location created"),
+  CELL_MARK(description = "Cell mark"),
+  IN_CELL_SANITATION(description = "In-cell sanitation"),
 
   // These are not recorded
   ACTIVE(description = "Active", notUsed = true),
