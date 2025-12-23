@@ -10,6 +10,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonData
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.MovementCount
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.OffenderMovement
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollMovementInfo
 import java.time.LocalDateTime
 import java.util.*
@@ -77,6 +78,13 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for NMI`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1N.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1N.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(2, 1), enRouteToday = 1))
+        prisonApiMockServer.stubOffenderMovementsToday(
+          prisonId = cell1N.prisonId,
+          offenderMovements = listOf(
+            OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
+            OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
+          ),
+        )
 
         webTestClient.get().uri("/prison/roll-count/NMI")
           .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
@@ -259,6 +267,14 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for MDI`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubOffenderMovementsToday(prisonId = cell1.prisonId, offenderMovements = emptyList())
+        prisonApiMockServer.stubOffenderMovementsToday(
+          prisonId = cell1.prisonId,
+          offenderMovements = listOf(
+            OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
+            OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
+          ),
+        )
 
         webTestClient.get().uri("/prison/roll-count/MDI")
           .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
@@ -391,6 +407,14 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
 
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubOffenderMovementsToday(prisonId = cell1.prisonId, offenderMovements = emptyList())
+        prisonApiMockServer.stubOffenderMovementsToday(
+          prisonId = cell1.prisonId,
+          offenderMovements = listOf(
+            OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
+            OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
+          ),
+        )
 
         webTestClient.get().uri("/prison/roll-count/MDI")
           .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
@@ -511,6 +535,13 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for MDI with cells`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubOffenderMovementsToday(
+          prisonId = cell1.prisonId,
+          offenderMovements = listOf(
+            OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
+            OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
+          ),
+        )
 
         webTestClient.get().uri("/prison/roll-count/MDI?include-cells=true")
           .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
@@ -671,6 +702,132 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                   ]
                 }
               ]
+            }        
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can obtain a role count for MDI with an offender moving to court and then released`() {
+        prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
+        prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 3), enRouteToday = 2))
+        prisonApiMockServer.stubOffenderMovementsToday(
+          prisonId = cell1.prisonId,
+          offenderMovements = listOf(
+            OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
+            OffenderMovement(offenderNo = "A1001AA", movementType = "REL", movementSequence = "2"),
+            OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
+          ),
+        )
+
+        webTestClient.get().uri("/prison/roll-count/MDI?include-cells=false")
+          .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """ 
+            {
+              "prisonId": "MDI",
+              "numUnlockRollToday": 8,
+              "numCurrentPopulation": 7,
+              "numArrivedToday": 1,
+              "numInReception": 4,
+              "numStillToArrive": 2,
+              "numOutToday": 3,
+              "numNoCellAllocated": 1,
+              "totals": {
+                "bedsInUse": 2,
+                "currentlyInCell": 1,
+                "currentlyOut": 1,
+                "workingCapacity": 4,
+                "netVacancies": 3,
+                "outOfOrder": 1
+              }
+            }        
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can obtain a role count for MDI with two offenders moving to court and then released`() {
+        prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
+        prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 4), enRouteToday = 2))
+        prisonApiMockServer.stubOffenderMovementsToday(
+          prisonId = cell1.prisonId,
+          offenderMovements = listOf(
+            OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
+            OffenderMovement(offenderNo = "A1001AA", movementType = "REL", movementSequence = "2"),
+            OffenderMovement(offenderNo = "A1006AA", movementType = "CRT", movementSequence = "1"),
+            OffenderMovement(offenderNo = "A1006AA", movementType = "REL", movementSequence = "2"),
+          ),
+        )
+
+        webTestClient.get().uri("/prison/roll-count/MDI?include-cells=false")
+          .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """ 
+            {
+              "prisonId": "MDI",
+              "numUnlockRollToday": 8,
+              "numCurrentPopulation": 7,
+              "numArrivedToday": 1,
+              "numInReception": 4,
+              "numStillToArrive": 2,
+              "numOutToday": 4,
+              "numNoCellAllocated": 1,
+              "totals": {
+                "bedsInUse": 2,
+                "currentlyInCell": 1,
+                "currentlyOut": 1,
+                "workingCapacity": 4,
+                "netVacancies": 3,
+                "outOfOrder": 1
+              }
+            }        
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can obtain a role count for MDI with an offender moving to court and then back and then released`() {
+        prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
+        prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubOffenderMovementsToday(
+          prisonId = cell1.prisonId,
+          offenderMovements = listOf(
+            OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
+            OffenderMovement(offenderNo = "A1001AA", movementType = "REL", movementSequence = "3"), // moved back into prison then released later, so a non-sequential sequence
+          ),
+        )
+
+        webTestClient.get().uri("/prison/roll-count/MDI?include-cells=false")
+          .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """ 
+            {
+              "prisonId": "MDI",
+              "numUnlockRollToday": 8,
+              "numCurrentPopulation": 7,
+              "numArrivedToday": 1,
+              "numInReception": 4,
+              "numStillToArrive": 2,
+              "numOutToday": 2,
+              "numNoCellAllocated": 1,
+              "totals": {
+                "bedsInUse": 2,
+                "currentlyInCell": 1,
+                "currentlyOut": 1,
+                "workingCapacity": 4,
+                "netVacancies": 3,
+                "outOfOrder": 1
+              }
             }        
             """.trimIndent(),
             JsonCompareMode.LENIENT,
