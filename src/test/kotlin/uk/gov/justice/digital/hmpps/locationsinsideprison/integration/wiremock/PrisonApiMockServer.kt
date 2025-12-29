@@ -6,8 +6,13 @@ import com.github.tomakehurst.wiremock.client.WireMock.aResponse
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.http.HttpHeader
 import com.github.tomakehurst.wiremock.http.HttpHeaders
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Movement
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.MovementCount
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollMovementInfo
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 
 class PrisonApiMockServer : WireMockServer(WIREMOCK_PORT) {
   companion object {
@@ -42,4 +47,56 @@ class PrisonApiMockServer : WireMockServer(WIREMOCK_PORT) {
         ),
     )
   }
+
+  fun stubMovementsIn(
+    prisonId: String,
+    offenderIds: List<String> = emptyList(),
+    fromDate: LocalDateTime = LocalDate.now().atTime(LocalTime.MIN),
+    toDate: LocalDateTime = LocalDate.now().atTime(LocalTime.MAX),
+  ) {
+    val movements = offenderIds.map { offenderId ->
+      createMovement(
+        offenderNo = offenderId,
+      )
+    }
+    stubFor(
+      get(
+        "/api/movements/$prisonId/in?fromDateTime=${fromDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)}" +
+          "&toDateTime=${toDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)}",
+      )
+        .willReturn(
+          aResponse()
+            .withHeader("Content-Type", "application/json")
+            .withBody(mapper.writeValueAsBytes(movements))
+            .withStatus(200),
+        ),
+    )
+  }
+
+  fun stubMovementsOut(
+    prisonId: String,
+    date: LocalDate = LocalDate.now(),
+    offenderIds: List<String> = emptyList(),
+  ) {
+    val movements = offenderIds.map { offenderId ->
+      createMovement(
+        offenderNo = offenderId,
+      )
+    }
+    stubFor(
+      get("/api/movements/$prisonId/out/$date")
+        .willReturn(
+          aResponse()
+            .withHeader("Content-Type", "application/json")
+            .withBody(mapper.writeValueAsBytes(movements))
+            .withStatus(200),
+        ),
+    )
+  }
+
+  private fun createMovement(
+    offenderNo: String,
+  ) = Movement(
+    offenderNo = offenderNo,
+  )
 }
