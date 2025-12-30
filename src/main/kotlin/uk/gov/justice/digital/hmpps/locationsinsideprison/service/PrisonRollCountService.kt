@@ -41,7 +41,7 @@ class PrisonRollCountService(
     val movements = prisonApiService.getMovementTodayInAndOutOfPrison(prisonId)
 
     val doubleMoveCount = if (movements.inOutMovementsToday.out > 1) {
-      getDoubleMoveCount(prisonApiService.getOffenderMovementOutOfPrison(prisonId, LocalDate.now()))
+      getConsecutiveOutMoveCount(prisonApiService.getOffenderMovementOutOfPrison(prisonId, LocalDate.now()))
     } else {
       0
     }
@@ -135,7 +135,7 @@ class PrisonRollCountService(
     outOfOrder = locations.sumOf { it.getOutOfOrder() },
   )
 
-  private fun getDoubleMoveCount(offenderMovements: List<OffenderMovement>): Int {
+  private fun getConsecutiveOutMoveCount(offenderMovements: List<OffenderMovement>): Int {
     if (offenderMovements.isEmpty()) return 0
 
     val duplicateOffenderIds = offenderMovements
@@ -145,11 +145,10 @@ class PrisonRollCountService(
 
     return duplicateOffenderIds.sumOf { offenderId ->
       offenderMovements
-        .filter { it.movementType == "REL" && it.offenderNo == offenderId }
+        .filter { it.offenderNo == offenderId }
         .count { movement ->
           offenderMovements.any {
-            it.movementSequence?.toIntOrNull() == movement.movementSequence?.toIntOrNull()?.minus(1) &&
-              it.movementType == "CRT"
+            it.movementSequence?.toIntOrNull() == movement.movementSequence?.toIntOrNull()?.minus(1)
           }
         }
     }
