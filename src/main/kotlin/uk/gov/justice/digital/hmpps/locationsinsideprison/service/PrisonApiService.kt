@@ -2,9 +2,13 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
+import java.time.LocalDate
+
+inline fun <reified T> typeReference() = object : ParameterizedTypeReference<T>() {}
 
 @Service
 class PrisonApiService(
@@ -22,6 +26,14 @@ class PrisonApiService(
     .retrieve()
     .bodyToMono<PrisonRollMovementInfo>()
     .block()!!
+
+  fun getOffenderMovementOutOfPrison(prisonId: String, date: LocalDate): List<OffenderMovement> = prisonApiWebClient
+    .get()
+    .uri("/api/movements/$prisonId/out/$date")
+    .header("Content-Type", "application/json")
+    .retrieve()
+    .bodyToMono(typeReference<List<OffenderMovement>>())
+    .block() ?: emptyList()
 }
 
 data class MovementCount(
@@ -32,4 +44,10 @@ data class MovementCount(
 data class PrisonRollMovementInfo(
   val inOutMovementsToday: MovementCount,
   val enRouteToday: Int,
+)
+
+data class OffenderMovement(
+  val offenderNo: String,
+  val movementSequence: String?,
+  val movementType: String,
 )

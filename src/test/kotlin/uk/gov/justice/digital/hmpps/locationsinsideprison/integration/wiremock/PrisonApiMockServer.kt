@@ -7,7 +7,10 @@ import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.http.HttpHeader
 import com.github.tomakehurst.wiremock.http.HttpHeaders
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.MovementCount
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.OffenderMovement
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollMovementInfo
+import java.time.LocalDate
+import kotlin.collections.emptyList
 
 class PrisonApiMockServer : WireMockServer(WIREMOCK_PORT) {
   companion object {
@@ -38,6 +41,22 @@ class PrisonApiMockServer : WireMockServer(WIREMOCK_PORT) {
           aResponse()
             .withHeader("Content-Type", "application/json")
             .withBody(mapper.writeValueAsBytes(movements))
+            .withStatus(200),
+        ),
+    )
+  }
+
+  fun stubOffenderMovementsToday(
+    prisonId: String,
+    date: LocalDate = LocalDate.now(),
+    offenderMovements: List<OffenderMovement> = emptyList(),
+  ) {
+    stubFor(
+      get("/api/movements/$prisonId/out/$date")
+        .willReturn(
+          aResponse()
+            .withHeader("Content-Type", "application/json")
+            .withBody(mapper.writeValueAsBytes(offenderMovements))
             .withStatus(200),
         ),
     )
