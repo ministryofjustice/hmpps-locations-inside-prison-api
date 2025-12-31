@@ -107,8 +107,6 @@ class PrisonRollCountService(
     val numInReception = listOfPrisoners.count { it.cellLocation in getReceptionLocationCodes() && it.inOutStatus == "IN" }
     val numNoCellAllocated = listOfPrisoners.count { it.cellLocation == getCSwapLocationCode() && it.inOutStatus == "IN" }
 
-    log.info("Prison $prisonId roll count: currentRoll=$currentRoll, in=${movements.inOutMovementsToday.`in`}, out=${movements.inOutMovementsToday.out}, doubleMoveCount=$doubleMoveCount")
-
     val prisonRollCount = PrisonRollCount(
       prisonId = prisonId,
       numUnlockRollToday = currentRoll - movements.inOutMovementsToday.`in` + movements.inOutMovementsToday.out - doubleMoveCount,
