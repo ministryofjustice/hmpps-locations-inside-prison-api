@@ -107,6 +107,8 @@ class PrisonRollCountService(
     val numInReception = listOfPrisoners.count { it.cellLocation in getReceptionLocationCodes() && it.inOutStatus == "IN" }
     val numNoCellAllocated = listOfPrisoners.count { it.cellLocation == getCSwapLocationCode() && it.inOutStatus == "IN" }
 
+    log.info("Prison $prisonId roll count: currentRoll=$currentRoll, in=${movements.inOutMovementsToday.`in`}, out=${movements.inOutMovementsToday.out}, doubleMoveCount=$doubleMoveCount")
+
     val prisonRollCount = PrisonRollCount(
       prisonId = prisonId,
       numUnlockRollToday = currentRoll - movements.inOutMovementsToday.`in` + movements.inOutMovementsToday.out - doubleMoveCount,
@@ -135,7 +137,7 @@ class PrisonRollCountService(
     outOfOrder = locations.sumOf { it.getOutOfOrder() },
   )
 
-  private fun getConsecutiveOutMoveCount(offenderMovements: List<OffenderMovement>): Int {
+  fun getConsecutiveOutMoveCount(offenderMovements: List<OffenderMovement>): Int {
     if (offenderMovements.isEmpty()) return 0
 
     val duplicateOffenderIds = offenderMovements
@@ -148,7 +150,7 @@ class PrisonRollCountService(
         .filter { it.offenderNo == offenderId }
         .count { movement ->
           offenderMovements.any {
-            it.movementSequence?.toIntOrNull() == movement.movementSequence?.toIntOrNull()?.minus(1)
+            it.movementSequence?.toIntOrNull() == movement.movementSequence?.toIntOrNull()?.minus(1) && it.offenderNo == movement.offenderNo
           }
         }
     }
