@@ -949,7 +949,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 },
                 {
                   "key": "HEARING_LOCATION",
-                  "description": "Hearing location",
+                  "description": "Adjudications - hearing location",
                   "attributes": {
                     "serviceFamilyType": "ADJUDICATIONS",
                     "serviceFamilyDescription": "Adjudications"
@@ -958,7 +958,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 },
                 {
                   "key": "LOCATION_OF_INCIDENT",
-                  "description": "Location of incident",
+                  "description": "Adjudications - location of incident",
                   "attributes": {
                     "serviceFamilyType": "ADJUDICATIONS",
                     "serviceFamilyDescription": "Adjudications"
@@ -1066,12 +1066,12 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "values": [
                     {
                       "key": "HEARING_LOCATION",
-                      "description": "Hearing location",
+                      "description": "Adjudications - hearing location",
                       "additionalInformation": "For adjudication hearings"
                     },
                     {
                       "key": "LOCATION_OF_INCIDENT",
-                      "description": "Location of incident",
+                      "description": "Adjudications - location of incident",
                       "additionalInformation": "For example a location where an occurrence led to an adjudication hearing"
                     }
                   ]
