@@ -3,16 +3,10 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 
 class PrisonRollCountServiceTest {
-  private val residentialLocationRepository: ResidentialLocationRepository = mock()
-  private val prisonerLocationService: PrisonerLocationService = mock()
-  private val prisonApiService: PrisonApiService = mock()
-  private val prisonConfigurationRepository: PrisonConfigurationRepository = mock()
 
-  private val service = PrisonRollCountService(residentialLocationRepository, prisonerLocationService, prisonApiService, prisonConfigurationRepository)
+  private val service = PrisonRollCountService(mock(), mock(), mock(), mock())
 
   @Test
   fun `Get duplicate count`() {
