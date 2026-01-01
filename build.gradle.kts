@@ -4,7 +4,7 @@ import uk.gov.justice.digital.hmpps.gradle.PortForwardRedisTask
 import uk.gov.justice.digital.hmpps.gradle.RevealSecretsTask
 
 plugins {
-  id("uk.gov.justice.hmpps.gradle-spring-boot") version "9.2.0"
+  id("uk.gov.justice.hmpps.gradle-spring-boot") version "9.3.0"
   kotlin("plugin.spring") version "2.3.0"
   kotlin("plugin.jpa") version "2.3.0"
   id("org.jetbrains.kotlinx.kover") version "0.9.4"
@@ -28,7 +28,7 @@ dependencies {
   implementation("com.zaxxer:HikariCP:7.0.2")
   runtimeOnly("org.postgresql:postgresql")
   implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
-  implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.14")
+  implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.15")
   implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.20.1")
 
   developmentOnly("org.springframework.boot:spring-boot-devtools")
