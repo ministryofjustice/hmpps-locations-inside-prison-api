@@ -50,4 +50,26 @@ class PrisonRollCountServiceTest {
     val doubleMoveCount = service.getConsecutiveOutMoveCount(offenderMovements)
     assertThat(doubleMoveCount).isEqualTo(3)
   }
+
+  @Test
+  fun `Get duplicate count where movement sequence is null`() {
+    val offenderMovements = listOf(
+      OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = null),
+      OffenderMovement(offenderNo = "A1001AA", movementType = "REL", movementSequence = null),
+    )
+
+    val doubleMoveCount = service.getConsecutiveOutMoveCount(offenderMovements)
+    assertThat(doubleMoveCount).isEqualTo(0)
+  }
+
+  @Test
+  fun `Get duplicate count where movement sequence is empty`() {
+    val offenderMovements = listOf(
+      OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = ""),
+      OffenderMovement(offenderNo = "A1001AA", movementType = "REL", movementSequence = ""),
+    )
+
+    val doubleMoveCount = service.getConsecutiveOutMoveCount(offenderMovements)
+    assertThat(doubleMoveCount).isEqualTo(0)
+  }
 }

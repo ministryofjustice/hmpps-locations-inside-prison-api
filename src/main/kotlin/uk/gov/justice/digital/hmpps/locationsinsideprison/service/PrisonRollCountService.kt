@@ -139,8 +139,9 @@ class PrisonRollCountService(
     if (offenderMovements.isEmpty()) return 0
 
     val duplicateOffenderIds = offenderMovements
+      .filter { !it.movementSequence.isNullOrBlank() }
       .groupBy { it.offenderNo }
-      .filter { it.value.size > 1 }
+      .filterValues { it.size > 1 }
       .keys
 
     return duplicateOffenderIds.sumOf { offenderId ->
