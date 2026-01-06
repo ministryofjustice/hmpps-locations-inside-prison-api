@@ -381,7 +381,7 @@ class LocationNonResidentialResource(
     @Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
     @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
     @PathVariable prisonId: String,
-    @Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
+    @Schema(description = "Alternative description to display for location", example = "Wing A", required = true)
     @Size(max = 30, message = "Description must be less than 31 characters")
     @PathVariable localName: String,
   ) = nonResidentialService.findByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
