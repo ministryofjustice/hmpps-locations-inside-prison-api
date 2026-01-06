@@ -72,6 +72,7 @@ class LocationServiceTest {
     locationGroupFromPropertiesService,
     activePrisonService,
     groupsProperties,
+    approvalRequestService,
   )
 
   @BeforeEach

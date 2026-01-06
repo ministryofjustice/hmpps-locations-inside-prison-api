@@ -33,7 +33,6 @@ class Cell(
   pathHierarchy: String,
   locationType: LocationType = LocationType.CELL,
   prisonId: String,
-  prisonConfiguration: PrisonConfiguration? = null,
   status: LocationStatus,
   parent: Location? = null,
   localName: String? = null,
@@ -84,7 +83,6 @@ class Cell(
   pathHierarchy = pathHierarchy,
   locationType = locationType,
   prisonId = prisonId,
-  prisonConfiguration = prisonConfiguration,
   status = status,
   parent = parent,
   localName = localName,
@@ -129,7 +127,7 @@ class Cell(
   private fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
-    if (isLocationLocked()) {
+    if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
 
@@ -186,7 +184,7 @@ class Cell(
   override fun getUsedForValues() = this.usedFor
 
   fun updateNonResidentialCellType(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
-    if (isLocationLocked()) {
+    if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     addHistory(
@@ -217,7 +215,7 @@ class Cell(
   }
 
   fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
-    if (isLocationLocked()) {
+    if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
 
@@ -265,7 +263,7 @@ class Cell(
       virtualLocation = isVirtualResidentialLocation(),
     )
 
-    if (isLocationLocked()) {
+    if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     super.setCapacity(
@@ -400,7 +398,7 @@ class Cell(
     clock: Clock,
     linkedTransaction: LinkedTransaction,
   ) {
-    if (isLocationLocked()) {
+    if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     recordRemovedSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction)

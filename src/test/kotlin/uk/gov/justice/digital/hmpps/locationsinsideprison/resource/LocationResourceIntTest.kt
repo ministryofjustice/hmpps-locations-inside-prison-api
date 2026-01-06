@@ -408,6 +408,19 @@ class LocationResourceIntTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `does not allow a deactivation for a prison which requires certification`() {
+        val cellInLeeds = leedsWing.findSubLocations().find { it.getKey() == "LEI-A-1-001" }!!
+        prisonerSearchMockServer.stubSearchByLocations(cellInLeeds.prisonId, listOf(cellInLeeds.getPathHierarchy()), false)
+
+        webTestClient.put().uri("/locations/${cellInLeeds.id}/deactivate/temporary")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
       fun `does not allow a reason more than 255 characters`() {
         webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))

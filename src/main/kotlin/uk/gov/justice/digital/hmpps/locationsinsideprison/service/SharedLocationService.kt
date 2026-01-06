@@ -51,7 +51,7 @@ class SharedLocationService(
     patchLocationRequest: PatchLocationRequest,
     linkedTransaction: LinkedTransaction,
   ): UpdateLocationResult {
-    if (location.isLocationLocked()) {
+    if (location.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(location.getKey())
     }
 

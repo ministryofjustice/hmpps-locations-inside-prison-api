@@ -770,6 +770,9 @@ class LocationService(
         throw AlreadyDeactivatedLocationException(locationToDeactivate.getKey())
       }
 
+      if (deactivationDetail.requiresCertification && activePrisonService.isCertificationApprovalRequired(request.prisonId)) {
+        approvalRequestService
+      }
       checkForPrisonersInLocation(locationToDeactivate)
 
       with(deactivationDetail) {

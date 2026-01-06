@@ -39,7 +39,6 @@ open class ResidentialLocation(
   pathHierarchy: String,
   locationType: LocationType,
   prisonId: String,
-  prisonConfiguration: PrisonConfiguration? = null,
   status: LocationStatus,
   parent: Location? = null,
   localName: String? = null,
@@ -70,7 +69,6 @@ open class ResidentialLocation(
   pathHierarchy = pathHierarchy,
   locationType = locationType,
   prisonId = prisonId,
-  prisonConfiguration = prisonConfiguration,
   status = status,
   parent = parent,
   localName = localName,
@@ -127,7 +125,7 @@ open class ResidentialLocation(
   private fun hasCertifiedCells(): Boolean = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .any { it.isCertified() }
 
-  override fun isLocationLocked() = getPendingApprovalRequest() != null
+  override fun hasPendingCertificationApproval() = getPendingApprovalRequest() != null
 
   private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingChanges() }
 
@@ -169,7 +167,7 @@ open class ResidentialLocation(
       throw ApprovalRequiredAboveThisLevelException(this.getKey(), topLevelPendingLocation.getKey())
     }
 
-    if (isLocationLocked()) {
+    if (hasPendingCertificationApproval()) {
       throw PendingApprovalAlreadyExistsException(getKey())
     }
 

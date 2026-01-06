@@ -53,7 +53,6 @@ val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     NamedEntityGraph(
       name = "resi.location.graph",
       attributeNodes = [
-        NamedAttributeNode("prisonConfiguration"),
         NamedAttributeNode("parent"),
         NamedAttributeNode(value = "childLocations"),
       ],
@@ -104,10 +103,6 @@ abstract class Location(
   open var locationType: LocationType,
 
   open val prisonId: String,
-
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(insertable = false, updatable = false, nullable = true, name = "prisonId")
-  private val prisonConfiguration: PrisonConfiguration? = null,
 
   @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST])
   @JoinColumn(name = "parent_id")
@@ -220,7 +215,7 @@ abstract class Location(
   open fun isActive() = status == LocationStatus.ACTIVE && !isPermanentlyDeactivated()
   open fun isArchived() = status == LocationStatus.ARCHIVED
   fun isDraft() = status == LocationStatus.DRAFT
-  open fun isLocationLocked() = false
+  open fun hasPendingCertificationApproval() = false
   open fun hasPendingChanges() = isDraft()
   open fun isNonResidential() = false
   open fun isResidentialRoomOrConvertedCell() = false
@@ -411,7 +406,7 @@ abstract class Location(
       id = id!!,
       code = getLocationCode(),
       status = getDerivedStatus(),
-      locked = isLocationLocked(),
+      locked = hasPendingCertificationApproval(),
       locationType = getDerivedLocationType(),
       pathHierarchy = pathHierarchy,
       prisonId = prisonId,
@@ -575,17 +570,17 @@ abstract class Location(
 
   fun getDerivedStatus(ignoreParentStatus: Boolean = false): DerivedLocationStatus = if ((ignoreParentStatus && isActive()) || isActiveAndAllParentsActive()) {
     if (isConvertedCell()) {
-      if (isLocationLocked()) DerivedLocationStatus.LOCKED_NON_RESIDENTIAL else DerivedLocationStatus.NON_RESIDENTIAL
+      if (hasPendingCertificationApproval()) DerivedLocationStatus.LOCKED_NON_RESIDENTIAL else DerivedLocationStatus.NON_RESIDENTIAL
     } else {
-      if (isLocationLocked()) DerivedLocationStatus.LOCKED_ACTIVE else DerivedLocationStatus.ACTIVE
+      if (hasPendingCertificationApproval()) DerivedLocationStatus.LOCKED_ACTIVE else DerivedLocationStatus.ACTIVE
     }
   } else {
     if (isPermanentlyDeactivated()) {
       DerivedLocationStatus.ARCHIVED
     } else if (isDraft()) {
-      if (isLocationLocked()) DerivedLocationStatus.LOCKED_DRAFT else DerivedLocationStatus.DRAFT
+      if (hasPendingCertificationApproval()) DerivedLocationStatus.LOCKED_DRAFT else DerivedLocationStatus.DRAFT
     } else {
-      if (isLocationLocked()) DerivedLocationStatus.LOCKED_INACTIVE else DerivedLocationStatus.INACTIVE
+      if (hasPendingCertificationApproval()) DerivedLocationStatus.LOCKED_INACTIVE else DerivedLocationStatus.INACTIVE
     }
   }
 
@@ -601,7 +596,7 @@ abstract class Location(
   override fun hashCode(): Int = getKey().hashCode()
 
   open fun updateLocalName(localName: String?, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
-    if (isLocationLocked()) {
+    if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     if (!isCell()) {
@@ -724,7 +719,7 @@ abstract class Location(
     var dataChanged = false
 
     if (!isPermanentlyDeactivated()) {
-      if (isLocationLocked()) {
+      if (hasPendingCertificationApproval()) {
         throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
       }
       val amendedDate = deactivatedDate
@@ -850,7 +845,7 @@ abstract class Location(
     if (!isTemporarilyDeactivated()) {
       log.warn("Location [${getKey()}] is not deactivated")
     } else {
-      if (isLocationLocked()) {
+      if (hasPendingCertificationApproval()) {
         throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
       }
       val amendedDate = LocalDateTime.now(clock)
@@ -919,7 +914,7 @@ abstract class Location(
       if (isActiveAndAllParentsActive() && !activeLocationCanBePermDeactivated) {
         throw ActiveLocationCannotBePermanentlyDeactivatedException(getKey())
       }
-      if (isLocationLocked()) {
+      if (hasPendingCertificationApproval()) {
         throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
       }
       val amendedDate = LocalDateTime.now(clock)
@@ -973,7 +968,7 @@ abstract class Location(
     reactivatedLocations: MutableSet<Location>? = null,
     amendedLocations: MutableSet<Location>? = null,
   ): Boolean {
-    if (isLocationLocked()) {
+    if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     this.getParent()?.reactivate(
