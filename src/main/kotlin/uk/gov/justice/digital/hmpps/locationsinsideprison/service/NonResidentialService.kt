@@ -91,6 +91,11 @@ class NonResidentialService(
     }
   }
 
+  fun findByPrisonIdAndLocalName(prisonId: String, localName: String) = nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId, localName)
+    .filter { !it.isPermanentlyDeactivated() }
+    .map { it.toDto() }
+    .firstOrNull() ?: throw LocationNotFoundException("No location found with prisonId $prisonId and localName $localName")
+
   fun getByPrisonAndUsageType(
     prisonId: String,
     usageType: NonResidentialUsageType? = null,

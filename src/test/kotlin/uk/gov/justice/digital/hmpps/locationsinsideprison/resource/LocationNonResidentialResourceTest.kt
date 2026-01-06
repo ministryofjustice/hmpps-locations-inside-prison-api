@@ -1766,4 +1766,77 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       }
     }
   }
+
+  @DisplayName("GET /locations/non-residential/prison/{prisonId}/local-name/{localName}")
+  @Nested
+  inner class ViewNonResidentialLocationsByLocalNameTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/local-name/Visit Room")
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/local-name/Visit Room")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/local-name/Visit Room")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `should return not found error for unknown local name`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/local-name/UNKNOWN")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isNotFound
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve a location by local name`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/local-name/Visit Room")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                {
+                  "prisonId": "MDI",
+                  "localName":"Visit Room",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "key": "MDI-Z-VISIT"
+                }
+               """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+    }
+  }
 }
