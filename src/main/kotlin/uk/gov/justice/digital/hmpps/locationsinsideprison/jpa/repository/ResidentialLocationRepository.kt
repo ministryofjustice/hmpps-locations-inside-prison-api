@@ -33,4 +33,10 @@ interface ResidentialLocationRepository : JpaRepository<ResidentialLocation, UUI
 
   @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
   override fun findById(id: UUID): Optional<ResidentialLocation>
+
+  @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
+  fun findAllByPrisonIdAndParentIdAndLocalName(prisonId: String, parentId: UUID, localName: String): List<ResidentialLocation>
+
+  @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
+  fun findAllByPrisonIdAndParentIsNullAndLocalName(prisonId: String, localName: String): List<ResidentialLocation>
 }
