@@ -342,6 +342,50 @@ class LocationNonResidentialResource(
     return results.location
   }
 
+  @GetMapping("/non-residential/prison/{prisonId}/local-name/{localName}")
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Finds a non-residential location matching the local name for a given prison - returning ONLY the first one found",
+    description = "Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns location matching local name",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Non residential location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun findLocationByLocalName(
+    @Schema(description = "Prison ID where the location is situated", required = true, example = "MDI", minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
+    @PathVariable prisonId: String,
+    @Schema(description = "Alternative description to display for location", example = "Wing A", required = true)
+    @Size(max = 30, message = "Description must be less than 31 characters")
+    @PathVariable localName: String,
+  ) = nonResidentialService.findByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
+
   @GetMapping("/non-residential/prison/{prisonId}/service/{serviceType}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
