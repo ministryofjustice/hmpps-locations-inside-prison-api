@@ -13,7 +13,7 @@ enum class SpecialistCellType(
 ) {
   ACCESSIBLE_CELL("Accessible cell", additionalInformation = "Also known as wheelchair accessible or Disability and Discrimination Act (DDA) compliant", sequence = 1),
   BIOHAZARD_DIRTY_PROTEST(
-    "Biohazard / dirty protest cell",
+    "Biohazard cell",
     additionalInformation = "Previously known as a dirty protest cell",
     sequence = 2,
     affectsCapacity = true,
