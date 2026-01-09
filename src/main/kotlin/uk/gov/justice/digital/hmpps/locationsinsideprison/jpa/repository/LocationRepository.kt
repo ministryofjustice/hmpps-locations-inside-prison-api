@@ -22,12 +22,6 @@ interface LocationRepository : JpaRepository<Location, UUID> {
   fun findAllByPrisonIdAndLocationTypeOrderByPathHierarchy(prisonId: String, locationType: LocationType): List<Location>
 
   @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
-  fun findAllByPrisonIdAndParentIdAndLocalName(prisonId: String, parentId: UUID, localName: String): List<Location>
-
-  @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
-  fun findAllByPrisonIdAndParentIsNullAndLocalName(prisonId: String, localName: String): List<Location>
-
-  @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
   @Query("select l from Location l where concat(l.prisonId,'-',l.pathHierarchy) = :key")
   fun findOneByKey(key: String): Location?
 

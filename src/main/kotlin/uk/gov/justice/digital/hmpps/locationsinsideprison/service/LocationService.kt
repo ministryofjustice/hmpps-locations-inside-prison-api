@@ -434,7 +434,7 @@ class LocationService(
     val deletedCells = cellsToRemove.size
     cellsToRemove.forEach { cell ->
       parentLocation.removeCell(cell)
-      cellLocationRepository.deleteById(cell.id) // TODO: fix this so don't have to explicitly delete by ID
+      cellLocationRepository.deleteById(cell.id!!) // TODO: fix this so don't have to explicitly delete by ID
     }
 
     var createdCells = 0
@@ -1383,8 +1383,8 @@ class LocationService(
   fun findAllByPrisonIdTopParentAndLocalName(prisonId: String, localName: String, parentLocationId: UUID? = null): List<LocationDTO> {
     val foundLocations =
       parentLocationId?.let {
-        locationRepository.findAllByPrisonIdAndParentIdAndLocalName(prisonId = prisonId, parentId = parentLocationId, localName = localName)
-      } ?: locationRepository.findAllByPrisonIdAndParentIsNullAndLocalName(prisonId = prisonId, localName = localName)
+        residentialLocationRepository.findAllByPrisonIdAndParentIdAndLocalName(prisonId = prisonId, parentId = parentLocationId, localName = localName)
+      } ?: residentialLocationRepository.findAllByPrisonIdAndParentIsNullAndLocalName(prisonId = prisonId, localName = localName)
 
     return foundLocations
       .filter { !it.isPermanentlyDeactivated() }

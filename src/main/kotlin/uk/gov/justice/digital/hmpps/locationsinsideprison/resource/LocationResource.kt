@@ -176,7 +176,7 @@ class LocationResource(
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @ResponseStatus(HttpStatus.OK)
   @Operation(
-    summary = "Finds a location matching the local name for a given prison",
+    summary = "Finds a location matching the local name for a given prison (residential only)",
     description = "Requires role VIEW_LOCATIONS",
     responses = [
       ApiResponse(

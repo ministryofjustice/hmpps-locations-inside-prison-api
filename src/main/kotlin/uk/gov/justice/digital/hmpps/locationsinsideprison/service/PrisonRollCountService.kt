@@ -19,7 +19,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getReceptionLocati
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import java.time.LocalDate
 import java.util.*
+import kotlin.collections.count
 import kotlin.jvm.optionals.getOrNull
 
 @Service
@@ -38,6 +40,12 @@ class PrisonRollCountService(
   fun getPrisonRollCount(prisonId: String, includeCells: Boolean = false): PrisonRollCount {
     val movements = prisonApiService.getMovementTodayInAndOutOfPrison(prisonId)
 
+    val doubleMoveCount = if (movements.inOutMovementsToday.out > 1) {
+      getConsecutiveOutMoveCount(prisonApiService.getOffenderMovementOutOfPrison(prisonId, LocalDate.now()))
+    } else {
+      0
+    }
+
     val listOfPrisoners = prisonerLocationService.prisonersInPrisonAllLocations(prisonId)
     val mapOfPrisoners = listOfPrisoners.filter { it.cellLocation != null }.groupBy { it.cellLocation!! }
 
@@ -46,6 +54,7 @@ class PrisonRollCountService(
       mapOfPrisoners,
       listOfPrisoners,
       movements,
+      doubleMoveCount,
       includeCells,
       residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId),
       segShouldBeFiltered(prisonId),
@@ -82,6 +91,7 @@ class PrisonRollCountService(
     mapOfPrisoners: Map<String, List<Prisoner>>,
     listOfPrisoners: List<Prisoner>,
     movements: PrisonRollMovementInfo,
+    doubleMoveCount: Int,
     includeCells: Boolean,
     residentialLocations: List<ResidentialLocation>,
     filterSeg: Boolean,
@@ -99,7 +109,7 @@ class PrisonRollCountService(
 
     val prisonRollCount = PrisonRollCount(
       prisonId = prisonId,
-      numUnlockRollToday = currentRoll - movements.inOutMovementsToday.`in` + movements.inOutMovementsToday.out,
+      numUnlockRollToday = currentRoll - movements.inOutMovementsToday.`in` + movements.inOutMovementsToday.out - doubleMoveCount,
       numCurrentPopulation = currentRoll,
       numOutToday = movements.inOutMovementsToday.out,
       numArrivedToday = movements.inOutMovementsToday.`in`,
@@ -124,6 +134,26 @@ class PrisonRollCountService(
     },
     outOfOrder = locations.sumOf { it.getOutOfOrder() },
   )
+
+  fun getConsecutiveOutMoveCount(offenderMovements: List<OffenderMovement>): Int {
+    if (offenderMovements.isEmpty()) return 0
+
+    val duplicateOffenderIds = offenderMovements
+      .filter { !it.movementSequence.isNullOrBlank() }
+      .groupBy { it.offenderNo }
+      .filterValues { it.size > 1 }
+      .keys
+
+    return duplicateOffenderIds.sumOf { offenderId ->
+      offenderMovements
+        .filter { it.offenderNo == offenderId }
+        .count { movement ->
+          offenderMovements.any {
+            it.movementSequence?.toIntOrNull() == movement.movementSequence?.toIntOrNull()?.minus(1) && it.offenderNo == movement.offenderNo
+          }
+        }
+    }
+  }
 }
 
 data class ResidentialPrisonerLocation(

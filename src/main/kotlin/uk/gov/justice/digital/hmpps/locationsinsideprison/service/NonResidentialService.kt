@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationSta
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
@@ -91,6 +92,11 @@ class NonResidentialService(
     }
   }
 
+  fun findByPrisonIdAndLocalName(prisonId: String, localName: String) = nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId, localName)
+    .filter { !it.isPermanentlyDeactivated() }
+    .map { it.toDto() }
+    .firstOrNull() ?: throw LocationNotFoundException("No location found with prisonId $prisonId and localName $localName")
+
   fun getByPrisonAndUsageType(
     prisonId: String,
     usageType: NonResidentialUsageType? = null,
@@ -166,7 +172,7 @@ class NonResidentialService(
   fun updateNonResidentialLocation(
     id: UUID,
     updateRequest: CreateOrUpdateNonResidentialLocationRequest,
-  ): NonResidentialLocationDTO {
+  ): Pair<NonResidentialLocationDTO, List<InternalLocationDomainEventType>> {
     val nonResLocation =
       nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -178,6 +184,7 @@ class NonResidentialService(
       "Update non-residential location ${nonResLocation.getKey()}",
     )
 
+    val events = mutableListOf<InternalLocationDomainEventType>()
     nonResLocation.update(
       PatchNonResidentialLocationRequest(
         localName = updateRequest.localName,
@@ -187,10 +194,48 @@ class NonResidentialService(
       clock,
       linkedTransaction,
     )
+    events.add(InternalLocationDomainEventType.LOCATION_AMENDED)
+
+    val username = commonLocationService.getUsername()
+    updateRequest.active?.let { activate ->
+      if (activate) {
+        if (activateLocation(nonResLocation, username, linkedTransaction)) {
+          events.add(InternalLocationDomainEventType.LOCATION_REACTIVATED)
+        }
+      } else {
+        if (deactivateLocation(nonResLocation, username, linkedTransaction)) {
+          events.add(InternalLocationDomainEventType.LOCATION_DEACTIVATED)
+        }
+      }
+    }
 
     commonLocationService.trackLocationUpdate(nonResLocation, "Updated non-residential location")
     linkedTransaction.txEndTime = LocalDateTime.now(clock)
-    return nonResLocation.toNonResidentialDto()
+    return Pair(nonResLocation.toNonResidentialDto(), events)
+  }
+
+  private fun activateLocation(location: Location, username: String, linkedTransaction: LinkedTransaction): Boolean {
+    if (location.isActive()) return false
+
+    location.reactivate(
+      userOrSystemInContext = username,
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
+    return true
+  }
+
+  private fun deactivateLocation(location: Location, username: String, linkedTransaction: LinkedTransaction): Boolean {
+    if (!location.isActive()) return false
+
+    location.temporarilyDeactivate(
+      deactivatedReason = DeactivatedReason.OTHER,
+      deactivatedDate = LocalDateTime.now(clock),
+      deactivationReasonDescription = "Non residential location - deactivated",
+      userOrSystemInContext = username,
+      linkedTransaction = linkedTransaction,
+    )
+    return true
   }
 
   private fun validateLocalNameNotDuplicated(prisonId: String, localName: String) {

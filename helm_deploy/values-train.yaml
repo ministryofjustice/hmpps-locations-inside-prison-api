@@ -51,7 +51,7 @@ generic-service:
             path: /__admin/mappings
             port: 8090
           initialDelaySeconds: 10
-          periodSeconds: 10
+          periodSeconds: 120
           timeoutSeconds: 5
           failureThreshold: 5
     - name: localstack
