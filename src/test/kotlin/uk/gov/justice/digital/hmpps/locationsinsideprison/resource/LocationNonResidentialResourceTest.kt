@@ -271,8 +271,8 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
 
         getDomainEvents(2).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.deactivated" to inactiveClassroom3.getKey(),
-            "location.inside.prison.amended" to inactiveClassroom3.getKey(),
+            "location.inside.prison.deactivated" to classroom2.getKey(),
+            "location.inside.prison.amended" to classroom2.getKey(),
           )
         }
       }
