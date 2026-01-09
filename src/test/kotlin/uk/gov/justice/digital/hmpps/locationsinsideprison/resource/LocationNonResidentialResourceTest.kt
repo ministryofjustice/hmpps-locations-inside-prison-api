@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
@@ -158,6 +159,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
   inner class UpdateNonResidentialLocationTest {
 
     lateinit var classroom2: NonResidentialLocation
+    lateinit var inactiveClassroom3: NonResidentialLocation
 
     @BeforeEach
     fun setUp() {
@@ -165,6 +167,13 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         buildNonResidentialLocation(
           localName = "Classroom Two",
           serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+        ),
+      )
+      inactiveClassroom3 = repository.save(
+        buildNonResidentialLocation(
+          localName = "Inactive Classroom Three",
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+          status = LocationStatus.INACTIVE,
         ),
       )
     }
@@ -239,6 +248,62 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
 
     @Nested
     inner class HappyPath {
+
+      @Test
+      fun `can deactivate a location`() {
+        // update classroom 2 to classroom 3
+        webTestClient.put().uri("/locations/non-residential/${classroom2.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(active = false, localName = "Classroom Two made inactive"))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+          {
+            "key": "${classroom2.getKey()}",
+            "status": "INACTIVE"
+          }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+
+        getDomainEvents(2).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to classroom2.getKey(),
+            "location.inside.prison.amended" to classroom2.getKey(),
+          )
+        }
+      }
+
+      @Test
+      fun `can reactivate a location`() {
+        // update classroom 2 to classroom 3
+        webTestClient.put().uri("/locations/non-residential/${inactiveClassroom3.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(active = true, localName = "Classroom Three made active"))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+          {
+            "key": "${inactiveClassroom3.getKey()}",
+            "status": "ACTIVE"
+          }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+
+        getDomainEvents(2).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.reactivated" to inactiveClassroom3.getKey(),
+            "location.inside.prison.amended" to inactiveClassroom3.getKey(),
+          )
+        }
+      }
 
       @Test
       fun `local name can be reused`() {
@@ -1763,6 +1828,79 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().is4xxClientError
+      }
+    }
+  }
+
+  @DisplayName("GET /locations/non-residential/prison/{prisonId}/local-name/{localName}")
+  @Nested
+  inner class ViewNonResidentialLocationsByLocalNameTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/local-name/Visit Room")
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/local-name/Visit Room")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/local-name/Visit Room")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `should return not found error for unknown local name`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/local-name/UNKNOWN")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isNotFound
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve a location by local name`() {
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/local-name/Visit Room")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                {
+                  "prisonId": "MDI",
+                  "localName":"Visit Room",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "key": "MDI-Z-VISIT"
+                }
+               """,
+            JsonCompareMode.LENIENT,
+          )
       }
     }
   }

@@ -135,12 +135,13 @@ class PrisonRollCountService(
     outOfOrder = locations.sumOf { it.getOutOfOrder() },
   )
 
-  private fun getConsecutiveOutMoveCount(offenderMovements: List<OffenderMovement>): Int {
+  fun getConsecutiveOutMoveCount(offenderMovements: List<OffenderMovement>): Int {
     if (offenderMovements.isEmpty()) return 0
 
     val duplicateOffenderIds = offenderMovements
+      .filter { !it.movementSequence.isNullOrBlank() }
       .groupBy { it.offenderNo }
-      .filter { it.value.size > 1 }
+      .filterValues { it.size > 1 }
       .keys
 
     return duplicateOffenderIds.sumOf { offenderId ->
@@ -148,7 +149,7 @@ class PrisonRollCountService(
         .filter { it.offenderNo == offenderId }
         .count { movement ->
           offenderMovements.any {
-            it.movementSequence?.toIntOrNull() == movement.movementSequence?.toIntOrNull()?.minus(1)
+            it.movementSequence?.toIntOrNull() == movement.movementSequence?.toIntOrNull()?.minus(1) && it.offenderNo == movement.offenderNo
           }
         }
     }

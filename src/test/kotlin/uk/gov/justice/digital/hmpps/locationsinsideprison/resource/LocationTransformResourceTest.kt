@@ -709,7 +709,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                   "attribute": "Cell type",
                   "oldValues": [
                     "Safe cell",
-                    "Biohazard / dirty protest cell",
+                    "Biohazard cell",
                     "Constant supervision cell"
                   ],
                   "newValues": [
@@ -723,7 +723,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                   "newValues": [
                     "Safe cell",
                     "Constant supervision cell",
-                    "Biohazard / dirty protest cell"
+                    "Biohazard cell"
                   ],
                   "transactionType": "CELL_TYPE_CHANGES"
                 },
