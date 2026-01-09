@@ -1239,7 +1239,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 },
                 {
                   "key": "BIOHAZARD_DIRTY_PROTEST",
-                  "description": "Biohazard / dirty protest cell",
+                  "description": "Biohazard cell",
                   "attributes": {
                     "affectsCapacity": true
                   },
