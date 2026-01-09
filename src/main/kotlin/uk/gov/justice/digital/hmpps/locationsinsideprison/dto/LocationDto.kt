@@ -26,6 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getVirtualLocationCodes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SortAttribute
+import java.lang.Boolean.FALSE
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -657,6 +658,9 @@ data class CreateOrUpdateNonResidentialLocationRequest(
 
   @param:Schema(description = "Services that use this location", required = true)
   val servicesUsingLocation: Set<ServiceType> = emptySet(),
+
+  @param:Schema(description = "Status, if false will be marked as inactive, true will make active or null untouched", required = false, example = "true")
+  val active: Boolean? = null,
 ) {
   fun toNewEntity(prisonId: String, code: String, createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction) = NonResidentialLocationJPA(
     id = null,
@@ -664,7 +668,7 @@ data class CreateOrUpdateNonResidentialLocationRequest(
     code = code,
     locationType = LocationType.LOCATION,
     pathHierarchy = code,
-    status = LocationStatus.ACTIVE,
+    status = if (FALSE == active) LocationStatus.INACTIVE else LocationStatus.ACTIVE,
     localName = localName,
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
@@ -716,6 +720,9 @@ data class CreateNonResidentialLocationRequest(
 
   @param:Schema(description = "Services that use this location", required = false)
   val servicesUsingLocation: Set<ServiceType>? = null,
+
+  @param:Schema(description = "Non residential location active, if false will be marked as inactive", required = false, defaultValue = "true", example = "true")
+  val active: Boolean = true,
 ) {
 
   fun toNewEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, parentLocation: LocationJPA? = null) = NonResidentialLocationJPA(
@@ -724,7 +731,7 @@ data class CreateNonResidentialLocationRequest(
     code = code,
     locationType = locationType.baseType,
     pathHierarchy = code,
-    status = LocationStatus.ACTIVE,
+    status = if (active) LocationStatus.ACTIVE else LocationStatus.INACTIVE,
     localName = localName,
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),

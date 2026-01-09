@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
@@ -158,6 +159,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
   inner class UpdateNonResidentialLocationTest {
 
     lateinit var classroom2: NonResidentialLocation
+    lateinit var inactiveClassroom3: NonResidentialLocation
 
     @BeforeEach
     fun setUp() {
@@ -165,6 +167,13 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         buildNonResidentialLocation(
           localName = "Classroom Two",
           serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+        ),
+      )
+      inactiveClassroom3 = repository.save(
+        buildNonResidentialLocation(
+          localName = "Inactive Classroom Three",
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+          status = LocationStatus.INACTIVE,
         ),
       )
     }
@@ -239,6 +248,62 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
 
     @Nested
     inner class HappyPath {
+
+      @Test
+      fun `can deactivate a location`() {
+        // update classroom 2 to classroom 3
+        webTestClient.put().uri("/locations/non-residential/${classroom2.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(active = false, localName = "Classroom Two made inactive"))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+          {
+            "key": "${classroom2.getKey()}",
+            "status": "INACTIVE"
+          }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+
+        getDomainEvents(2).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to inactiveClassroom3.getKey(),
+            "location.inside.prison.amended" to inactiveClassroom3.getKey(),
+          )
+        }
+      }
+
+      @Test
+      fun `can reactivate a location`() {
+        // update classroom 2 to classroom 3
+        webTestClient.put().uri("/locations/non-residential/${inactiveClassroom3.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(active = true, localName = "Classroom Three made active"))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+          {
+            "key": "${inactiveClassroom3.getKey()}",
+            "status": "ACTIVE"
+          }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+
+        getDomainEvents(2).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.reactivated" to inactiveClassroom3.getKey(),
+            "location.inside.prison.amended" to inactiveClassroom3.getKey(),
+          )
+        }
+      }
 
       @Test
       fun `local name can be reused`() {
