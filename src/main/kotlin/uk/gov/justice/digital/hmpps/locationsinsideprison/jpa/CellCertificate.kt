@@ -39,16 +39,6 @@ import java.util.UUID
           ],
         ),
       ],
-      subclassSubgraphs = [
-        NamedSubgraph(
-          name = "approval.subgraph",
-          type = LocationCertificationApprovalRequest::class,
-          attributeNodes = [
-            NamedAttributeNode("location"),
-            NamedAttributeNode("locations"),
-          ],
-        ),
-      ],
     ),
   ],
 )

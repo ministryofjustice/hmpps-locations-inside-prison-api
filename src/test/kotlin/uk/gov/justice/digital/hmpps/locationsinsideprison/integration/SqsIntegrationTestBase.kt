@@ -4,11 +4,13 @@ import org.awaitility.kotlin.await
 import org.awaitility.kotlin.matches
 import org.awaitility.kotlin.untilCallTo
 import org.junit.jupiter.api.BeforeEach
+import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.config.LocalStackContainer
@@ -17,10 +19,20 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.HMPPSDomainEve
 import uk.gov.justice.hmpps.sqs.HmppsQueue
 import uk.gov.justice.hmpps.sqs.HmppsQueueService
 import uk.gov.justice.hmpps.sqs.countMessagesOnQueue
+import java.time.Clock
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 class SqsIntegrationTestBase : IntegrationTestBase() {
+
+  @MockitoBean
+  private lateinit var clock: Clock
+
+  @BeforeEach
+  fun setupClock() {
+    whenever(clock.instant()).thenReturn(TestBase.clock.instant())
+    whenever(clock.zone).thenReturn(TestBase.clock.zone)
+  }
 
   @Autowired
   private lateinit var hmppsQueueService: HmppsQueueService

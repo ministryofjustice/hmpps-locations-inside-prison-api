@@ -29,7 +29,7 @@ import java.util.UUID
           type = LocationCertificationApprovalRequest::class,
           attributeNodes = [
             NamedAttributeNode("location"),
-            NamedAttributeNode("subLocations"),
+            NamedAttributeNode("locations"),
           ],
         ),
         NamedSubgraph(

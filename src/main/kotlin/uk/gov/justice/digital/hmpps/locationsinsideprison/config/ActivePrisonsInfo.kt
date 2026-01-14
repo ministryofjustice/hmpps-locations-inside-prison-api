@@ -9,8 +9,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ActivePrisonSe
 class ActivePrisonsInfo(
   private val activePrisonService: ActivePrisonService,
 ) : InfoContributor {
-  override fun contribute(builder: Info.Builder?) {
-    builder?.withDetail(
+  override fun contribute(builder: Info.Builder) {
+    builder.withDetail(
       "activeAgencies",
       if (activePrisonService.isAllPrisonsActive()) {
         listOf("***")

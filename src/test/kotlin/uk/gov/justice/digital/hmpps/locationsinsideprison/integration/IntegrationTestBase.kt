@@ -5,8 +5,10 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.DynamicTest
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.autoconfigure.json.AutoConfigureJson
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
+import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.http.HttpHeaders
 import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
@@ -18,6 +20,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.P
 import uk.gov.justice.hmpps.test.kotlin.auth.JwtAuthorisationHelper
 
 @SpringBootTest(webEnvironment = RANDOM_PORT)
+@AutoConfigureWebTestClient
+@AutoConfigureJson
 abstract class IntegrationTestBase : TestBase() {
 
   @Autowired
@@ -97,7 +101,7 @@ abstract class IntegrationTestBase : TestBase() {
     add(
       DynamicTest.dynamicTest("access forbidden with no authority") {
         request
-          .header(HttpHeaders.AUTHORIZATION, null)
+          .header(HttpHeaders.AUTHORIZATION)
           .exchange()
           .expectStatus().isUnauthorized
       },
@@ -154,7 +158,7 @@ abstract class IntegrationTestBase : TestBase() {
     add(
       DynamicTest.dynamicTest("access forbidden with no authority") {
         request
-          .header(HttpHeaders.AUTHORIZATION, null)
+          .header(HttpHeaders.AUTHORIZATION)
           .exchange()
           .expectStatus().isUnauthorized
       },
