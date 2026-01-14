@@ -1,7 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.Ignore
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -902,7 +902,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
       }
 
-      @Ignore
+      @Disabled
       fun `cannot change a locations capacity once it is locked`() {
         val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
         prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
@@ -1060,7 +1060,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
         }
       }
 
-      @Ignore("Will add once cap approval process is in place")
+      @Disabled("Will add once cap approval process is in place")
       fun `can change the max capacity of a cell for an certification approval required prison`() {
         val aCell = leedsWing.cellLocations().find { it.getKey() == "LEI-A-1-001" } ?: throw RuntimeException("Cell not found")
         prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)

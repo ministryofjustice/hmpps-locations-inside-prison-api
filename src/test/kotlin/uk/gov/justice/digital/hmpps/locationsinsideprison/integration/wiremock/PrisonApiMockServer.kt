@@ -48,7 +48,7 @@ class PrisonApiMockServer : WireMockServer(WIREMOCK_PORT) {
 
   fun stubOffenderMovementsToday(
     prisonId: String,
-    date: LocalDate = LocalDate.now(),
+    date: LocalDate,
     offenderMovements: List<OffenderMovement> = emptyList(),
   ) {
     stubFor(

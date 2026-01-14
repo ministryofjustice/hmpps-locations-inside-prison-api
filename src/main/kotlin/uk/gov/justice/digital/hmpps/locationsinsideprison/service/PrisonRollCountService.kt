@@ -19,6 +19,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getReceptionLocati
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import java.time.Clock
 import java.time.LocalDate
 import java.util.*
 import kotlin.collections.count
@@ -31,6 +32,7 @@ class PrisonRollCountService(
   private val prisonerLocationService: PrisonerLocationService,
   private val prisonApiService: PrisonApiService,
   private val prisonConfigurationRepository: PrisonConfigurationRepository,
+  private val clock: Clock,
 
 ) {
   companion object {
@@ -41,7 +43,7 @@ class PrisonRollCountService(
     val movements = prisonApiService.getMovementTodayInAndOutOfPrison(prisonId)
 
     val doubleMoveCount = if (movements.inOutMovementsToday.out > 1) {
-      getConsecutiveOutMoveCount(prisonApiService.getOffenderMovementOutOfPrison(prisonId, LocalDate.now()))
+      getConsecutiveOutMoveCount(prisonApiService.getOffenderMovementOutOfPrison(prisonId, LocalDate.now(clock)))
     } else {
       0
     }
