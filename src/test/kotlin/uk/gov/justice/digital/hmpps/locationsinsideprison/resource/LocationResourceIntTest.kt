@@ -4,9 +4,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Primary
 import org.springframework.test.json.JsonCompareMode
 import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
@@ -18,19 +15,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_U
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DATE_FORMAT
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
-import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationResourceIntTest : CommonDataTestBase() {
-
-  @TestConfiguration
-  class FixedClockConfig {
-    @Primary
-    @Bean
-    fun fixedClock(): Clock = clock
-  }
 
   @DisplayName("GET /locations")
   @Nested

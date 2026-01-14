@@ -234,10 +234,12 @@ class LocationNonResidentialResource(
     @PathVariable
     id: UUID,
     @RequestBody @Validated updateRequest: CreateOrUpdateNonResidentialLocationRequest,
-  ): NonResidentialLocationDTO = eventPublishNonResiAndAudit(
-    InternalLocationDomainEventType.LOCATION_AMENDED,
-  ) {
-    nonResidentialService.updateNonResidentialLocation(id, updateRequest)
+  ): NonResidentialLocationDTO {
+    val (location, events) = nonResidentialService.updateNonResidentialLocation(id, updateRequest)
+    events.forEach { event ->
+      eventPublishNonResiAndAudit(event) { location }
+    }
+    return location
   }
 
   @PatchMapping("/non-residential/{id}")

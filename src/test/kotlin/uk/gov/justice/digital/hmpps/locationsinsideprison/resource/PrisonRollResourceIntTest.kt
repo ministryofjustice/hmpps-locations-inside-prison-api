@@ -3,21 +3,19 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.mockito.kotlin.whenever
-import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.MovementCount
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.OffenderMovement
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollMovementInfo
-import java.time.LocalDateTime
+import java.time.LocalDate
 import java.util.*
 
 class PrisonRollResourceIntTest : CommonDataTestBase() {
 
-  @MockitoBean
+  @Autowired
   private lateinit var prisonConfigurationRepository: PrisonConfigurationRepository
 
   @DisplayName("GET /prison/roll-count/{prisonId}")
@@ -80,6 +78,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
         prisonApiMockServer.stubMovementsToday(cell1N.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(2, 1), enRouteToday = 1))
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1N.prisonId,
+          date = LocalDate.now(clock),
           offenderMovements = listOf(
             OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
             OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
@@ -267,9 +266,10 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for MDI`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
-        prisonApiMockServer.stubOffenderMovementsToday(prisonId = cell1.prisonId, offenderMovements = emptyList())
+        prisonApiMockServer.stubOffenderMovementsToday(prisonId = cell1.prisonId, date = LocalDate.now(clock), offenderMovements = emptyList())
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
+          date = LocalDate.now(clock),
           offenderMovements = listOf(
             OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
             OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
@@ -393,23 +393,17 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
 
       @Test
       fun `can obtain a role count for MDI showing seg`() {
-        whenever(prisonConfigurationRepository.findById("MDI")).thenReturn(
-          Optional.of(
-            PrisonConfiguration(
-              id = "MDI",
-              resiLocationServiceActive = true,
-              includeSegregationInRollCount = true,
-              whenUpdated = LocalDateTime.now(clock),
-              updatedBy = "TEST",
-            ),
-          ),
-        )
+        prisonConfigurationRepository.findById("MDI").ifPresent {
+          it.includeSegregationInRollCount = true
+          prisonConfigurationRepository.save(it)
+        }
 
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
-        prisonApiMockServer.stubOffenderMovementsToday(prisonId = cell1.prisonId, offenderMovements = emptyList())
+        prisonApiMockServer.stubOffenderMovementsToday(prisonId = cell1.prisonId, date = LocalDate.now(clock), offenderMovements = emptyList())
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
+          date = LocalDate.now(clock),
           offenderMovements = listOf(
             OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
             OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
@@ -537,6 +531,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
+          date = LocalDate.now(clock),
           offenderMovements = listOf(
             OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
             OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
@@ -714,6 +709,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 3), enRouteToday = 2))
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
+          date = LocalDate.now(clock),
           offenderMovements = listOf(
             OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
             OffenderMovement(offenderNo = "A1001AA", movementType = "REL", movementSequence = "2"),
@@ -756,6 +752,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 4), enRouteToday = 2))
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
+          date = LocalDate.now(clock),
           offenderMovements = listOf(
             OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
             OffenderMovement(offenderNo = "A1001AA", movementType = "REL", movementSequence = "2"),
@@ -799,6 +796,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
+          date = LocalDate.now(clock),
           offenderMovements = listOf(
             OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
             OffenderMovement(offenderNo = "A1001AA", movementType = "REL", movementSequence = "3"), // moved back into prison then released later, so a non-sequential sequence
