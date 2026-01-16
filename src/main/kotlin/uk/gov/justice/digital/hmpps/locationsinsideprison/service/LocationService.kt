@@ -69,6 +69,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDe
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateCapacityRequest
+import java.lang.Boolean.TRUE
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -346,8 +347,7 @@ class LocationService(
       throw ValidationException("Either a parent location or new level above cells must be provided")
     }
 
-    val hasPendingApproval = parentLocation?.getPendingApprovalRequest() != null
-    if (hasPendingApproval) {
+    if (TRUE == parentLocation?.hasPendingCertificationApproval()) {
       throw LocationCannotBeCreatedWithPendingApprovalException(parentLocation.getKey())
     }
 
@@ -416,8 +416,7 @@ class LocationService(
       throw ValidationException("Cannot update cells for a non-draft location")
     }
 
-    val hasPendingApproval = parentLocation.getPendingApprovalRequest() != null
-    if (hasPendingApproval) {
+    if (parentLocation.hasPendingCertificationApproval()) {
       throw LocationCannotBeCreatedWithPendingApprovalException(parentLocation.getKey())
     }
 
@@ -514,8 +513,7 @@ class LocationService(
     val residentialLocation =
       residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val hasPendingApproval = residentialLocation.getPendingApprovalRequest() != null
-    if (hasPendingApproval) {
+    if (residentialLocation.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
     }
 
@@ -538,8 +536,7 @@ class LocationService(
   ): UpdateLocationResult {
     val residentialLocation = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
 
-    val hasPendingApproval = residentialLocation.getPendingApprovalRequest() != null
-    if (hasPendingApproval) {
+    if (residentialLocation.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
     }
 
@@ -560,8 +557,7 @@ class LocationService(
     val residentialLocation = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val hasPendingApproval = residentialLocation.getPendingApprovalRequest() != null
-    if (hasPendingApproval) {
+    if (residentialLocation.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
     }
 
@@ -591,8 +587,7 @@ class LocationService(
     val locCapChange = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val hasPendingApproval = locCapChange.getPendingApprovalRequest() != null
-    if (hasPendingApproval) {
+    if (locCapChange.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(locCapChange.getKey())
     }
 
@@ -656,8 +651,7 @@ class LocationService(
     val cell = cellLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val hasPendingApproval = cell.getPendingApprovalRequest() != null
-    if (hasPendingApproval) {
+    if (cell.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(cell.getKey())
     }
     if (cell.isPermanentlyDeactivated()) {
@@ -762,6 +756,7 @@ class LocationService(
       transactionInvokedBy = transactionInvokedBy,
     )
 
+    val requestApproval = locationsToDeactivate.requiresApproval && activePrisonService.isCertificationApprovalRequired(prisonId)
     locationsToDeactivate.locations.forEach { (id, deactivationDetail) ->
       val locationToDeactivate = locationRepository.findById(id)
         .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -786,6 +781,7 @@ class LocationService(
             userOrSystemInContext = transactionInvokedBy,
             deactivatedLocations = deactivatedLocations,
             linkedTransaction = linkedTransaction,
+            requestApproval = requestApproval,
           )
         ) {
           deactivatedLocations.forEach {
@@ -795,6 +791,7 @@ class LocationService(
       }
     }
 
+    locationRepository.saveAllAndFlush(deactivatedLocations)
     val deactivatedLocationsDto = deactivatedLocations.map { it.toDto() }.toSet()
     return mapOf(
       InternalLocationDomainEventType.LOCATION_AMENDED to deactivatedLocations.flatMap { deactivatedLoc ->
@@ -1073,8 +1070,7 @@ class LocationService(
     val nonResCellToUpdate = cellLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val hasPendingApproval = nonResCellToUpdate.getPendingApprovalRequest() != null
-    if (hasPendingApproval) {
+    if (nonResCellToUpdate.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(nonResCellToUpdate.getKey())
     }
     if (!nonResCellToUpdate.isConvertedCell()) {
@@ -1110,8 +1106,7 @@ class LocationService(
     var locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val hasPendingApproval = locationToConvert.getPendingApprovalRequest() != null
-    if (hasPendingApproval) {
+    if (locationToConvert.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(locationToConvert.getKey())
     }
 
@@ -1166,8 +1161,7 @@ class LocationService(
     val locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    val hasPendingApproval = locationToConvert.getPendingApprovalRequest() != null
-    if (hasPendingApproval) {
+    if (locationToConvert.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(locationToConvert.getKey())
     }
 

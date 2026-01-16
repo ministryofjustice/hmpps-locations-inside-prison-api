@@ -24,7 +24,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Residen
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotInPendingStatusException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
@@ -49,13 +48,9 @@ class CertificationService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun requestApproval(requestToApprove: LocationApprovalRequest): CertificationApprovalRequestDto {
+  fun requestDraftApproval(requestToApprove: LocationApprovalRequest): CertificationApprovalRequestDto {
     val location = residentialLocationRepository.findById(requestToApprove.locationId)
       .orElseThrow { LocationNotFoundException(requestToApprove.locationId.toString()) }
-
-    if (!location.hasPendingChanges()) {
-      throw LocationDoesNotRequireApprovalException(location.getKey())
-    }
 
     val username = getUsername()
     val now = LocalDateTime.now(clock)
@@ -67,7 +62,7 @@ class CertificationService(
       now,
       username,
     )
-    val approvalRequest = certificationApprovalRequestRepository.save(location.requestApproval(requestedBy = username, requestedDate = now))
+    val approvalRequest = certificationApprovalRequestRepository.save(location.requestApprovalForDraftLocation(requestedBy = username, requestedDate = now))
 
     telemetryClient.trackEvent(
       "certification-approval-requested",
@@ -86,7 +81,7 @@ class CertificationService(
     }
   }
 
-  fun requestApproval(requestToApprove: SignedOpCapApprovalRequest): CertificationApprovalRequestDto {
+  fun requestDraftApproval(requestToApprove: SignedOpCapApprovalRequest): CertificationApprovalRequestDto {
     val signedOpCap = signedOperationCapacityRepository.findByPrisonId(requestToApprove.prisonId)
       ?: throw LocationNotFoundException(requestToApprove.prisonId)
 
@@ -157,7 +152,6 @@ class CertificationService(
       approvalRequest = approvalRequest,
       approvedBy = transactionInvokedBy,
       approvedDate = now,
-      approvedLocation = approvedLocation,
       signedOperationCapacity = signedOperationCapacityRepository.findByPrisonId(approvalRequest.prisonId)?.signedOperationCapacity
         ?: 0,
     )

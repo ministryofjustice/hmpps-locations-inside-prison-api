@@ -1146,7 +1146,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
       .expectStatus().isOk
       .expectBody<CertificationApprovalRequestDto>()
       .returnResult().responseBody!!.id
-    return aCell
+    return resiRepository.findOneByKey("${wingZ.getKey()}-1-NEW") as Cell
   }
 
   @DisplayName("GET /locations/{prisonId}/local-name/{localName}")

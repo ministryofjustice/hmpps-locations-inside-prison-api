@@ -255,10 +255,12 @@ class LocationResource(
     @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
     @PathVariable
     id: UUID,
+    @Schema(description = "The deactivation needs to be approved, if false (default) it will be classes a short term temporary deactivation", example = "false", required = false, defaultValue = "false")
+    @RequestParam(name = "requires-approval", required = false, defaultValue = "false") requiresApproval: Boolean = false,
     @RequestBody
     @Validated
     temporaryDeactivationLocationRequest: TemporaryDeactivationLocationRequest,
-  ): List<LocationDTO> = deactivate(locationService.deactivateLocations(DeactivateLocationsRequest(mapOf(id to temporaryDeactivationLocationRequest))))
+  ): List<LocationDTO> = deactivate(locationService.deactivateLocations(DeactivateLocationsRequest(requiresApproval = requiresApproval, locations = mapOf(id to temporaryDeactivationLocationRequest))))
 
   @PutMapping("/{id}/update/temporary-deactivation")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")

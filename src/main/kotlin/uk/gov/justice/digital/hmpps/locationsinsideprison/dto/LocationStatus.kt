@@ -19,8 +19,8 @@ enum class DerivedLocationStatus(
 
   NON_RESIDENTIAL("Non-residential"),
 
-  LOCKED_ACTIVE("Active (Locked)"),
-  LOCKED_INACTIVE("Inactive (Locked)"),
-  LOCKED_DRAFT("Draft (Locked)"),
-  LOCKED_NON_RESIDENTIAL("Non-residential (Locked)"),
+  LOCKED_ACTIVE("Active (Change requested)"),
+  LOCKED_INACTIVE("Inactive (Change requested)"),
+  LOCKED_DRAFT("Draft (Change requested)"),
+  LOCKED_NON_RESIDENTIAL("Non-residential (Change requested)"),
 }
