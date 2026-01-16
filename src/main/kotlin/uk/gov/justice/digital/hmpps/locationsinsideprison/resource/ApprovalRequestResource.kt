@@ -79,7 +79,7 @@ class ApprovalRequestResource(
     @RequestBody
     @Validated
     locationApprovalRequest: LocationApprovalRequest,
-  ): CertificationApprovalRequestDto = certificationService.requestApproval(
+  ): CertificationApprovalRequestDto = certificationService.requestDraftApproval(
     requestToApprove = locationApprovalRequest,
   )
 
@@ -118,7 +118,7 @@ class ApprovalRequestResource(
     @RequestBody
     @Validated
     signedOpCapApprovalRequest: SignedOpCapApprovalRequest,
-  ): CertificationApprovalRequestDto = certificationService.requestApproval(
+  ): CertificationApprovalRequestDto = certificationService.requestDraftApproval(
     signedOpCapApprovalRequest,
   )
 

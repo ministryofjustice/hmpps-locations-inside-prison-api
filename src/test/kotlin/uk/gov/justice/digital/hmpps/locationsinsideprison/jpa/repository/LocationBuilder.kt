@@ -82,7 +82,6 @@ fun buildCell(
 ): Cell {
   val cell = Cell(
     prisonId = prisonId,
-    prisonConfiguration = prisonConfiguration,
     code = pathHierarchy.split("-").last(),
     cellMark = cellMark ?: pathHierarchy.split("-").last(),
     inCellSanitation = inCellSanitation,

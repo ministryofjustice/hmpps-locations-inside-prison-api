@@ -532,8 +532,6 @@ class Cell(
 
   private fun getSpecialistCellTypesForCell(): Set<SpecialistCellType> = specialistCellTypes.map { it.specialistCellType }.toSet()
 
-  override fun hasPendingChanges() = super.hasPendingChanges() || pendingChange != null
-
   override fun linkPendingChangesToApprovalRequest(approvalRequest: LocationCertificationApprovalRequest) {
     pendingChange?.let { it.approvalRequest = approvalRequest }
   }

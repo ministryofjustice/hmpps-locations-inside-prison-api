@@ -127,14 +127,14 @@ open class ResidentialLocation(
 
   override fun hasPendingCertificationApproval() = getPendingApprovalRequest() != null
 
-  private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingChanges() }
+  private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingCertificationApproval() }
 
   protected fun findHighestLevelPending(): ResidentialLocation? {
     var current: ResidentialLocation? = this
     var highestPending: ResidentialLocation? = null
 
     while (current != null) {
-      if (current.hasPendingChanges()) {
+      if (current.approvalRequests.firstOrNull { it.isPending() } != null) {
         highestPending = current
       }
       current = current.getParent() as? ResidentialLocation
@@ -158,7 +158,7 @@ open class ResidentialLocation(
 
   fun getResidentialStructuralType() = ResidentialStructuralType.entries.firstOrNull { it.locationType == locationType }
 
-  fun requestApproval(
+  fun requestApprovalForDraftLocation(
     requestedDate: LocalDateTime,
     requestedBy: String,
   ): LocationCertificationApprovalRequest {
@@ -171,6 +171,10 @@ open class ResidentialLocation(
       throw PendingApprovalAlreadyExistsException(getKey())
     }
 
+    if (!isDraft()) {
+      throw RuntimeException("Cannot request approval for non-draft location: ${getKey()}")
+    }
+
     val approvalRequest = LocationCertificationApprovalRequest(
       approvalType = ApprovalType.DRAFT,
       location = this,
@@ -181,7 +185,40 @@ open class ResidentialLocation(
       maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
       workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
       certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
-      locations = sortedSetOf(toCertificationApprovalRequestLocation()),
+      locations = sortedSetOf(toCertificationApprovalRequestLocation(true)),
+    ).apply {
+      linkPendingChangesToApprovalRequest(approvalRequest = this)
+    }
+
+    approvalRequests.add(approvalRequest)
+    return approvalRequest
+  }
+
+  fun requestApprovalForDeactivation(
+    requestedDate: LocalDateTime,
+    requestedBy: String,
+    workingCapacityChange: Int,
+  ): LocationCertificationApprovalRequest {
+    val topLevelPendingLocation = findHighestLevelPending()
+    if (topLevelPendingLocation != null && this != topLevelPendingLocation) {
+      throw ApprovalRequiredAboveThisLevelException(this.getKey(), topLevelPendingLocation.getKey())
+    }
+
+    if (hasPendingCertificationApproval()) {
+      throw PendingApprovalAlreadyExistsException(getKey())
+    }
+
+    val approvalRequest = LocationCertificationApprovalRequest(
+      approvalType = ApprovalType.DEACTIVATION,
+      location = this,
+      prisonId = this.prisonId,
+      locationKey = this.getKey(),
+      requestedBy = requestedBy,
+      requestedDate = requestedDate,
+      maxCapacityChange = 0,
+      workingCapacityChange = workingCapacityChange,
+      certifiedNormalAccommodationChange = 0,
+      locations = sortedSetOf(toCertificationApprovalRequestLocation(false)),
     ).apply {
       linkPendingChangesToApprovalRequest(approvalRequest = this)
     }
@@ -421,12 +458,10 @@ open class ResidentialLocation(
     return this
   }
 
-  fun toCellCertificateLocation(approvedLocation: ResidentialLocation? = null): CellCertificateLocation {
+  fun toCellCertificateLocation(approvalRequest: CertificationApprovalRequest): CellCertificateLocation {
     val subLocations: List<CellCertificateLocation> = getResidentialLocationsBelowThisLevel()
       .filter { !it.isDraft() && (it.isStructural() || it.isCell() || it.isConvertedCell()) }
-      .map { it.toCellCertificateLocation(approvedLocation) }
-
-    val approvedLocationIsPartOfHierarchy = approvedLocation?.let { locToFind -> isInHierarchy(locToFind) || findLocation(locToFind.getKey()) != null } ?: false
+      .map { it.toCellCertificateLocation(approvalRequest) }
 
     return CellCertificateLocation(
       locationType = locationType,
@@ -445,7 +480,7 @@ open class ResidentialLocation(
         null
       },
       maxCapacity = calcMaxCapacity(),
-      workingCapacity = if (approvedLocationIsPartOfHierarchy) {
+      workingCapacity = if (draftApprovalLocationIsPartOfHierarchy(approvalRequest)) {
         getWorkingCapacityIgnoringInactiveStatus()
       } else {
         calcWorkingCapacity()
@@ -463,10 +498,19 @@ open class ResidentialLocation(
     )
   }
 
-  private fun toCertificationApprovalRequestLocation(): CertificationApprovalRequestLocation {
+  private fun draftApprovalLocationIsPartOfHierarchy(approvalRequest: CertificationApprovalRequest): Boolean = if (approvalRequest.approvalType == ApprovalType.DRAFT) {
+    val locationRequest = approvalRequest as? LocationCertificationApprovalRequest
+    locationRequest?.location?.let { location ->
+      isInHierarchy(location) || findLocation(location.getKey()) != null
+    } ?: false
+  } else {
+    false
+  }
+
+  private fun toCertificationApprovalRequestLocation(includeDraft: Boolean = true): CertificationApprovalRequestLocation {
     val subLocations: List<CertificationApprovalRequestLocation> = getResidentialLocationsBelowThisLevel()
       .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
-      .map { it.toCertificationApprovalRequestLocation() }
+      .map { it.toCertificationApprovalRequestLocation(includeDraft) }
 
     return CertificationApprovalRequestLocation(
       locationType = locationType,
@@ -484,9 +528,9 @@ open class ResidentialLocation(
       } else {
         null
       },
-      maxCapacity = calcMaxCapacity(true),
-      workingCapacity = calcWorkingCapacity(true),
-      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(true),
+      maxCapacity = calcMaxCapacity(includeDraft),
+      workingCapacity = calcWorkingCapacity(includeDraft),
+      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(includeDraft),
       usedForTypes = getUsedForValuesAsCSV(),
       accommodationTypes = getAccommodationTypesAsCSV(),
       specialistCellTypes = getSpecialistCellTypesAsCSV(),
@@ -537,7 +581,7 @@ open class ResidentialLocation(
     topLevelApprovalLocationId = findHighestLevelPending()?.id,
     pendingApprovalRequestId = getPendingApprovalRequest()?.id,
 
-    pendingChanges = if (hasPendingChanges() || hasPendingChangesBelowThisLevel()) {
+    pendingChanges = if (hasPendingCertificationApproval() || hasPendingChangesBelowThisLevel() || isDraft()) {
       PendingChangeDto(
         maxCapacity = calcMaxCapacity(true),
         workingCapacity = calcWorkingCapacity(true),

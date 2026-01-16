@@ -216,7 +216,6 @@ abstract class Location(
   open fun isArchived() = status == LocationStatus.ARCHIVED
   fun isDraft() = status == LocationStatus.DRAFT
   open fun hasPendingCertificationApproval() = false
-  open fun hasPendingChanges() = isDraft()
   open fun isNonResidential() = false
   open fun isResidentialRoomOrConvertedCell() = false
   open fun isActiveAndAllParentsActive() = isActive() && !hasDeactivatedParent()
@@ -715,6 +714,7 @@ abstract class Location(
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
     deactivatedLocations: MutableSet<Location>? = null,
+    requestApproval: Boolean = false,
   ): Boolean {
     var dataChanged = false
 
@@ -781,6 +781,11 @@ abstract class Location(
         dataChanged = true
       }
 
+      val workingCapacityChange = if (this is ResidentialLocation) {
+        calcWorkingCapacity()
+      } else {
+        0
+      }
       if (isActive() || isDraft()) {
         this.status = LocationStatus.INACTIVE
         this.deactivatedDate = deactivatedDate
@@ -815,6 +820,14 @@ abstract class Location(
               dataChanged = true
             }
           }
+        }
+
+        if (requestApproval) {
+          requestApprovalForDeactivation(
+            requestedDate = deactivatedDate,
+            requestedBy = userOrSystemInContext,
+            workingCapacityChange = -workingCapacityChange,
+          )
         }
       }
     }

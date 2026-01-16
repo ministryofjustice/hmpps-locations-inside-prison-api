@@ -7,7 +7,6 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CertificationApprovalRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificateNotFoundException
@@ -30,7 +29,6 @@ class CellCertificateService(
     approvedDate: LocalDateTime,
     approvalRequest: CertificationApprovalRequest,
     signedOperationCapacity: Int,
-    approvedLocation: ResidentialLocation? = null,
   ): CellCertificateDto {
     // Mark any existing current certificates as not current
     cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(approvalRequest.prisonId)?.markAsNotCurrent()
@@ -46,7 +44,7 @@ class CellCertificateService(
         locations = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(approvalRequest.prisonId)
           .filter { !it.isPermanentlyDeactivated() && !it.isDraft() && it.isStructural() }
           .map {
-            it.toCellCertificateLocation(approvedLocation)
+            it.toCellCertificateLocation(approvalRequest)
           }.toSortedSet(),
       ).apply {
         totalWorkingCapacity = locations.sumOf { it.workingCapacity ?: 0 }

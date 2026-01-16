@@ -6,12 +6,17 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import org.springframework.test.web.reactive.server.expectBody
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DATE_FORMAT
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
@@ -397,19 +402,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
       }
 
       @Test
-      fun `does not allow a deactivation for a prison which requires certification`() {
-        val cellInLeeds = leedsWing.findSubLocations().find { it.getKey() == "LEI-A-1-001" }!!
-        prisonerSearchMockServer.stubSearchByLocations(cellInLeeds.prisonId, listOf(cellInLeeds.getPathHierarchy()), false)
-
-        webTestClient.put().uri("/locations/${cellInLeeds.id}/deactivate/temporary")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-
-      @Test
       fun `does not allow a reason more than 255 characters`() {
         webTestClient.put().uri("/locations/${cell1.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -748,6 +740,109 @@ class LocationResourceIntTest : CommonDataTestBase() {
           """,
             JsonCompareMode.LENIENT,
           )
+      }
+
+      @Test
+      fun `can deactivate a location and request approval`() {
+        val now = LocalDateTime.now(clock)
+        val proposedReactivationDate = now.plusMonths(1).toLocalDate()
+        prisonerSearchMockServer.stubSearchByLocations(leedsWing.prisonId, leedsWing.findAllLeafLocations().map { it.getPathHierarchy() }, false)
+
+        webTestClient.put().uri("/locations/${leedsWing.id}/deactivate/temporary?requires-approval=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, proposedReactivationDate = proposedReactivationDate, planetFmReference = "222333")))
+          .exchange()
+          .expectStatus().isOk
+
+        val deactivatedLocation = webTestClient.get().uri("/locations/${leedsWing.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<Location>()
+          .returnResult().responseBody!!
+
+        assertThat(deactivatedLocation.status).isEqualTo(DerivedLocationStatus.LOCKED_INACTIVE)
+        assertThat(deactivatedLocation.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
+        assertThat(deactivatedLocation.proposedReactivationDate).isEqualTo(proposedReactivationDate)
+        assertThat(deactivatedLocation.pendingApprovalRequestId).isNotNull
+
+        val pendingApprovalRequestId = deactivatedLocation.pendingApprovalRequestId!!
+
+        getDomainEvents(9).let { messages ->
+          val results = leedsWing.findSubLocations().map { it.getKey() }.plus(leedsWing.getKey())
+          assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            *results.map { "location.inside.prison.deactivated" to it }.toTypedArray(),
+          )
+        }
+
+        val pendingApproval = webTestClient.get().uri("/certification/request-approvals/$pendingApprovalRequestId")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<CertificationApprovalRequestDto>()
+          .returnResult().responseBody!!
+
+        assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.DEACTIVATION)
+        assertThat(pendingApproval.locationId).isEqualTo(leedsWing.id)
+        assertThat(pendingApproval.prisonId).isEqualTo(leedsWing.prisonId)
+        assertThat(pendingApproval.locationKey).isEqualTo(leedsWing.getKey())
+        assertThat(pendingApproval.workingCapacityChange).isEqualTo(-6)
+        assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(0)
+        assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
+        assertThat(pendingApproval.locations).hasSize(1)
+
+        val approvedRequest = webTestClient.put().uri("/certification/location/approve")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ApproveCertificationRequestDto(
+                approvalRequestReference = pendingApprovalRequestId,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<CertificationApprovalRequestDto>()
+          .returnResult().responseBody!!
+
+        webTestClient.get().uri("/cell-certificates/${approvedRequest.certificateId}")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.id").isEqualTo(approvedRequest.certificateId)
+          .jsonPath("$.prisonId").isEqualTo("LEI")
+          .jsonPath("$.current").isEqualTo(true)
+          .jsonPath("$.locations").isArray()
+          .jsonPath("$.totalMaxCapacity").isEqualTo(12)
+          .jsonPath("$.totalWorkingCapacity").isEqualTo(0)
+          .jsonPath("$.totalCertifiedNormalAccommodation").isEqualTo(6)
+          // Verify that there are locations in the response
+          .jsonPath("$.locations.length()").isEqualTo(1)
+          .jsonPath("$.locations[0].workingCapacity").isEqualTo(0)
+          .jsonPath("$.locations[0].subLocations.length()").isEqualTo(2)
+          .jsonPath("$.locations[0].subLocations[0].subLocations.length()").isEqualTo(3)
+          .jsonPath("$.locations[0].subLocations[1].subLocations.length()").isEqualTo(3)
+          .jsonPath("$.locations[0].subLocations[0].subLocations[0].workingCapacity").isEqualTo(0)
+          .jsonPath("$.locations[0].subLocations[0].subLocations[0].maxCapacity").isEqualTo(2)
+          .jsonPath("$.locations[0].subLocations[1].subLocations[0].workingCapacity").isEqualTo(0)
+          .jsonPath("$.locations[0].subLocations[1].subLocations[0].maxCapacity").isEqualTo(2)
+
+        val approvedDeactivatedLocation = webTestClient.get().uri("/locations/${leedsWing.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<Location>()
+          .returnResult().responseBody!!
+
+        assertThat(approvedDeactivatedLocation.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+        assertThat(approvedDeactivatedLocation.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
+        assertThat(approvedDeactivatedLocation.proposedReactivationDate).isEqualTo(proposedReactivationDate)
+        assertThat(approvedDeactivatedLocation.pendingApprovalRequestId).isNull()
       }
 
       @Test

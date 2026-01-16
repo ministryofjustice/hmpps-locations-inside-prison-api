@@ -772,8 +772,6 @@ fun isInternalMovement(serviceTypes: Set<ServiceType>) = serviceTypes.find { it 
 data class TemporaryDeactivationLocationRequest(
   @param:Schema(description = "Reason for temporary deactivation", example = "MOTHBALLED", required = true)
   val deactivationReason: DeactivatedReason,
-  @param:Schema(description = "The deactivation needs to be approved, if false (default) it will be classes a short term temporary deactivation", example = "false", required = false)
-  val requiresCertification: Boolean = false,
   @param:Schema(
     description = "Additional information on deactivation, for OTHER DeactivatedReason must be provided",
     example = "Window broken",
