@@ -219,6 +219,77 @@
           }
         ]
       }
+    },
+    {
+      "id": "active-report",
+      "name": "List of prisons active status",
+      "datasource": "dataSource",
+      "query": "select prison_id, (case resi_location_service_active when true then 'Y' else 'N' end) as resi_active, (case non_resi_service_active when true then 'Y' else 'N' end) as non_resi_active, (case certification_approval_required when true then 'Y' else 'N' end) as  certification_approval_required from  prison_configuration",
+      "schema": {
+        "field": [
+          {
+            "name": "prison_id",
+            "type": "string"
+          },
+          {
+            "name": "resi_active",
+            "type": "string",
+            "filter": {
+              "type": "multiselect",
+              "mandatory": false,
+              "default": "Y,N",
+              "staticoptions": [
+                {
+                  "name": "Y",
+                  "display": "Active"
+                },
+                {
+                  "name": "N",
+                  "display": "Inactive"
+                }
+              ]
+            }
+          },
+          {
+            "name": "non_resi_active",
+            "type": "string",
+            "filter": {
+              "type": "multiselect",
+              "mandatory": false,
+              "default": "Y,N",
+              "staticoptions": [
+                {
+                  "name": "Y",
+                  "display": "Active"
+                },
+                {
+                  "name": "N",
+                  "display": "Inactive"
+                }
+              ]
+            }
+          },
+          {
+            "name": "certification_approval_required",
+            "type": "string",
+            "filter": {
+              "type": "multiselect",
+              "mandatory": false,
+              "default": "Y,N",
+              "staticoptions": [
+                {
+                  "name": "Y",
+                  "display": "Active"
+                },
+                {
+                  "name": "N",
+                  "display": "Inactive"
+                }
+              ]
+            }
+          }
+        ]
+      }
     }
   ],
   "report": [
@@ -432,6 +503,63 @@
         "id": "cellSummaryId",
         "template": "page-header",
         "dataset": "$ref:cell-details"
+      }]
+    },
+    {
+      "id": "active-report",
+      "name": "Prisons active status",
+      "description": "Details the active status of resi and non-resi location services",
+      "version": "1.0.0",
+      "dataset": "$ref:active-report",
+      "policy": [],
+      "render": "HTML",
+      "feature": [
+        {
+          "type": "print"
+        }
+      ],
+      "specification": {
+        "template": "list",
+        "field": [
+          {
+            "name": "$ref:prison_id",
+            "display": "Prison ID",
+            "sortable": true,
+            "visible": "true",
+            "defaultsort": false,
+            "filter": {
+              "type" : "caseloads",
+              "mandatory": false
+            }
+          },
+          {
+            "name": "$ref:resi_active",
+            "display": "Resi service active",
+            "sortable": true,
+            "visible": "true",
+            "defaultsort": false
+          },
+          {
+            "name": "$ref:non_resi_active",
+            "display": "Non-resi service active",
+            "sortable": true,
+            "visible": "true",
+            "defaultsort": false
+          },
+          {
+            "name": "$ref:certification_approval_required",
+            "display": "Certification approval required",
+            "sortable": true,
+            "visible": "true",
+            "defaultsort": false
+          }
+        ]
+      },
+      "destination": [],
+      "summary": [{
+        "id": "summaryId",
+        "template": "page-header",
+        "dataset": "$ref:active-report"
       }]
     }
   ]
