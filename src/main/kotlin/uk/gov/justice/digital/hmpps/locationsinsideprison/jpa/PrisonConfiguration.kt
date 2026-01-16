@@ -28,6 +28,8 @@ class PrisonConfiguration(
 
   override fun compareTo(other: PrisonConfiguration) = COMPARATOR.compare(this, other)
 
+  fun isCertificationActive() = certificationApprovalRequired
+
   fun toPrisonConfiguration() = PrisonConfigurationDto(
     prisonId = id,
     resiLocationServiceActive = convertToStatus(resiLocationServiceActive),
