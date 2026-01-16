@@ -5,9 +5,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Primary
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
@@ -22,19 +19,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
-import java.time.Clock
 import java.time.LocalDateTime
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation as ResidentialLocationJPA
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationCapacityResourceIntTest : SqsIntegrationTestBase() {
-
-  @TestConfiguration
-  class FixedClockConfig {
-    @Primary
-    @Bean
-    fun fixedClock(): Clock = clock
-  }
 
   @Autowired
   lateinit var repository: LocationRepository

@@ -8,7 +8,7 @@ import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 import java.time.LocalDate
 
-inline fun <reified T> typeReference() = object : ParameterizedTypeReference<T>() {}
+inline fun <reified T : Any> typeReference() = object : ParameterizedTypeReference<T>() {}
 
 @Service
 class PrisonApiService(

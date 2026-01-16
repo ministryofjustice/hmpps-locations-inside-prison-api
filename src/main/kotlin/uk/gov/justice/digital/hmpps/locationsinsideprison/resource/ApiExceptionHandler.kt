@@ -87,7 +87,7 @@ class ApiExceptionHandler {
   @ExceptionHandler(MethodArgumentTypeMismatchException::class)
   fun handleMethodArgumentTypeMismatchException(e: MethodArgumentTypeMismatchException): ResponseEntity<ErrorResponse> {
     val type = e.requiredType
-    val message = if (type.isEnum) {
+    val message = if (type!!.isEnum) {
       "Parameter ${e.name} must be one of the following ${StringUtils.join(type.enumConstants, ", ")}"
     } else {
       "Parameter ${e.name} must be of type ${type.typeName}"
@@ -120,7 +120,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(WebClientResponseException.NotFound::class)
-  fun handleSpringNotFound(e: WebClientResponseException.NotFound): ResponseEntity<ErrorResponse?>? {
+  fun handleSpringNotFound(e: WebClientResponseException.NotFound): ResponseEntity<ErrorResponse> {
     log.debug("Not found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
@@ -134,7 +134,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(NoResourceFoundException::class)
-  fun handleNoResourceFoundException(e: NoResourceFoundException): ResponseEntity<ErrorResponse?>? {
+  fun handleNoResourceFoundException(e: NoResourceFoundException): ResponseEntity<ErrorResponse> {
     log.debug("No resource found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
@@ -148,7 +148,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(ResponseStatusException::class)
-  fun handleResponseStatusException(e: ResponseStatusException): ResponseEntity<ErrorResponse?>? {
+  fun handleResponseStatusException(e: ResponseStatusException): ResponseEntity<ErrorResponse> {
     log.debug("Response status exception caught: {}", e.message)
     val reason = e.reason ?: "Unknown error"
     return ResponseEntity
@@ -163,7 +163,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(java.lang.Exception::class)
-  fun handleException(e: java.lang.Exception): ResponseEntity<ErrorResponse?>? {
+  fun handleException(e: java.lang.Exception): ResponseEntity<ErrorResponse> {
     log.error("Unexpected exception", e)
     return ResponseEntity
       .status(INTERNAL_SERVER_ERROR)
@@ -177,7 +177,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(MethodArgumentNotValidException::class)
-  fun handleInvalidMethodArgumentException(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse>? {
+  fun handleInvalidMethodArgumentException(e: MethodArgumentNotValidException): ResponseEntity<ErrorResponse> {
     log.debug("MethodArgumentNotValidException exception caught: {}", e.message)
 
     return ResponseEntity
@@ -193,7 +193,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(LocationNotFoundException::class)
-  fun handleLocationNotFound(e: LocationNotFoundException): ResponseEntity<ErrorResponse?>? {
+  fun handleLocationNotFound(e: LocationNotFoundException): ResponseEntity<ErrorResponse> {
     log.debug("Location not found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
@@ -208,7 +208,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(CellCertificateNotFoundException::class)
-  fun handleCellCertificateNotFoundException(e: CellCertificateNotFoundException): ResponseEntity<ErrorResponse?>? {
+  fun handleCellCertificateNotFoundException(e: CellCertificateNotFoundException): ResponseEntity<ErrorResponse> {
     log.debug("Certificate not found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
@@ -223,7 +223,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(CurrentCellCertificateNotFoundException::class)
-  fun handleCurrentCellCertificateNotFoundException(e: CurrentCellCertificateNotFoundException): ResponseEntity<ErrorResponse?>? {
+  fun handleCurrentCellCertificateNotFoundException(e: CurrentCellCertificateNotFoundException): ResponseEntity<ErrorResponse> {
     log.debug("Current certificate not found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
@@ -238,13 +238,13 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(SignedOpCapCannotChangedWithoutApprovalException::class)
-  fun handleSignedOpCapCannotBeUpdatedException(e: SignedOpCapCannotChangedWithoutApprovalException): ResponseEntity<ErrorResponse?>? {
+  fun handleSignedOpCapCannotBeUpdatedException(e: SignedOpCapCannotChangedWithoutApprovalException): ResponseEntity<ErrorResponse> {
     log.debug("Cannot update Signed Op Cap without approval: {}", e.message)
     return ResponseEntity
-      .status(HttpStatus.BAD_REQUEST)
+      .status(BAD_REQUEST)
       .body(
         ErrorResponse(
-          status = HttpStatus.BAD_REQUEST,
+          status = BAD_REQUEST,
           errorCode = ErrorCode.SignedOpCapCannotChangedWithoutApproval,
           userMessage = "Approval required or signed op cap change: ${e.message}",
           developerMessage = e.message,
@@ -253,7 +253,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(ApprovalRequestNotFoundException::class)
-  fun handleApprovalRequestNotFound(e: ApprovalRequestNotFoundException): ResponseEntity<ErrorResponse?>? {
+  fun handleApprovalRequestNotFound(e: ApprovalRequestNotFoundException): ResponseEntity<ErrorResponse> {
     log.debug("Approval request not found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
@@ -268,7 +268,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(PendingApprovalOnLocationCannotBeUpdatedException::class)
-  fun handlePendingApprovalOnLocationCannotBeUpdated(e: PendingApprovalOnLocationCannotBeUpdatedException): ResponseEntity<ErrorResponse?>? {
+  fun handlePendingApprovalOnLocationCannotBeUpdated(e: PendingApprovalOnLocationCannotBeUpdatedException): ResponseEntity<ErrorResponse> {
     log.debug("Location has pending approval: {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
@@ -283,7 +283,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(PendingApprovalAlreadyExistsException::class)
-  fun handlePendingApprovalAlreadyExistsException(e: PendingApprovalAlreadyExistsException): ResponseEntity<ErrorResponse?>? {
+  fun handlePendingApprovalAlreadyExistsException(e: PendingApprovalAlreadyExistsException): ResponseEntity<ErrorResponse> {
     log.debug("Location already pending an approval: {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
@@ -298,7 +298,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(TransactionNotFoundException::class)
-  fun handleTransactionNotFound(e: TransactionNotFoundException): ResponseEntity<ErrorResponse?>? {
+  fun handleTransactionNotFound(e: TransactionNotFoundException): ResponseEntity<ErrorResponse> {
     log.debug("Transaction not found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
@@ -313,7 +313,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(PrisonNotFoundException::class)
-  fun handlePrisonNotFound(e: PrisonNotFoundException): ResponseEntity<ErrorResponse?>? {
+  fun handlePrisonNotFound(e: PrisonNotFoundException): ResponseEntity<ErrorResponse> {
     log.debug("Prison not found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
@@ -328,7 +328,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(LocationPrefixNotFoundException::class)
-  fun handleLocationPrefixNotFound(e: LocationPrefixNotFoundException): ResponseEntity<ErrorResponse?>? {
+  fun handleLocationPrefixNotFound(e: LocationPrefixNotFoundException): ResponseEntity<ErrorResponse> {
     log.debug("Location prefix not found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
@@ -343,7 +343,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(SignedOperationCapacityNotFoundException::class)
-  fun handleOperationalCapacityNotFoundException(e: SignedOperationCapacityNotFoundException): ResponseEntity<ErrorResponse?>? {
+  fun handleOperationalCapacityNotFoundException(e: SignedOperationCapacityNotFoundException): ResponseEntity<ErrorResponse> {
     log.debug("Signed Operation Capacity not found exception caught: {}", e.message)
     return ResponseEntity
       .status(HttpStatus.NOT_FOUND)
@@ -358,7 +358,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(LocationAlreadyExistsException::class)
-  fun handleLocationAlreadyExists(e: LocationAlreadyExistsException): ResponseEntity<ErrorResponse?>? {
+  fun handleLocationAlreadyExists(e: LocationAlreadyExistsException): ResponseEntity<ErrorResponse> {
     log.debug("Location already exists exception caught: {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
@@ -373,7 +373,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(LocationCannotBeReactivatedException::class)
-  fun handleLocationCannotBeReactivated(e: LocationCannotBeReactivatedException): ResponseEntity<ErrorResponse?>? {
+  fun handleLocationCannotBeReactivated(e: LocationCannotBeReactivatedException): ResponseEntity<ErrorResponse> {
     log.debug("Location cannot be re-activated: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
@@ -388,7 +388,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(ReasonForDeactivationMustBeProvidedException::class)
-  fun handleReasonForDeactivationMustBeProvided(e: ReasonForDeactivationMustBeProvidedException): ResponseEntity<ErrorResponse?>? {
+  fun handleReasonForDeactivationMustBeProvided(e: ReasonForDeactivationMustBeProvidedException): ResponseEntity<ErrorResponse> {
     log.debug("De-activating location requires a reason when using OTHER reason type: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
@@ -403,7 +403,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(CapacityException::class)
-  fun handleCapacityException(e: CapacityException): ResponseEntity<ErrorResponse?>? {
+  fun handleCapacityException(e: CapacityException): ResponseEntity<ErrorResponse> {
     log.warn("Capacity Validation: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
@@ -418,7 +418,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(PermanentlyDeactivatedUpdateNotAllowedException::class)
-  fun handlePermanentlyDeactivatedUpdateNotAllowedException(e: PermanentlyDeactivatedUpdateNotAllowedException): ResponseEntity<ErrorResponse?>? {
+  fun handlePermanentlyDeactivatedUpdateNotAllowedException(e: PermanentlyDeactivatedUpdateNotAllowedException): ResponseEntity<ErrorResponse> {
     log.debug("Deactivated Location Exception: {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
@@ -433,7 +433,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(UpdateNotAllowedAsConvertedCellException::class)
-  fun handleUpdateNotAllowedAsConvertedCellException(e: UpdateNotAllowedAsConvertedCellException): ResponseEntity<ErrorResponse?>? {
+  fun handleUpdateNotAllowedAsConvertedCellException(e: UpdateNotAllowedAsConvertedCellException): ResponseEntity<ErrorResponse> {
     log.debug("Location cannot be updated: {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
@@ -448,7 +448,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(ActiveLocationCannotBePermanentlyDeactivatedException::class)
-  fun handleActiveLocationCannotBePermanentlyDeactivatedException(e: ActiveLocationCannotBePermanentlyDeactivatedException): ResponseEntity<ErrorResponse?>? {
+  fun handleActiveLocationCannotBePermanentlyDeactivatedException(e: ActiveLocationCannotBePermanentlyDeactivatedException): ResponseEntity<ErrorResponse> {
     log.debug("Attempt to perm deactivate an active location {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
@@ -463,7 +463,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(LocationContainsPrisonersException::class)
-  fun handleLocationContainsPrisonersException(e: LocationContainsPrisonersException): ResponseEntity<ErrorResponse?>? {
+  fun handleLocationContainsPrisonersException(e: LocationContainsPrisonersException): ResponseEntity<ErrorResponse> {
     log.debug("Cannot deactivate: {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
@@ -478,7 +478,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(DuplicateLocalNameForSameHierarchyException::class)
-  fun handleDuplicateLocalNameForSameHierarchyException(e: DuplicateLocalNameForSameHierarchyException): ResponseEntity<ErrorResponse?>? {
+  fun handleDuplicateLocalNameForSameHierarchyException(e: DuplicateLocalNameForSameHierarchyException): ResponseEntity<ErrorResponse> {
     log.debug("Duplicate Local name: {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
@@ -493,7 +493,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(DuplicateNonResidentialLocalNameInPrisonException::class)
-  fun handleDuplicateNonResidentialLocalNameInPrisonException(e: DuplicateNonResidentialLocalNameInPrisonException): ResponseEntity<ErrorResponse?>? {
+  fun handleDuplicateNonResidentialLocalNameInPrisonException(e: DuplicateNonResidentialLocalNameInPrisonException): ResponseEntity<ErrorResponse> {
     log.debug("Duplicate local name: {}", e.message)
     return ResponseEntity
       .status(CONFLICT)
@@ -508,7 +508,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(LocationCannotBeDeletedWhenNotDraftException::class)
-  fun handleLocationCannotBeDeletedWhenNotDraftException(e: LocationCannotBeDeletedWhenNotDraftException): ResponseEntity<ErrorResponse?>? {
+  fun handleLocationCannotBeDeletedWhenNotDraftException(e: LocationCannotBeDeletedWhenNotDraftException): ResponseEntity<ErrorResponse> {
     log.debug("Delete not allowed for non DRAFT locations: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
@@ -523,7 +523,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(ApprovalRequestNotInPendingStatusException::class)
-  fun handleApprovalRequestNotInPendingStatusException(e: ApprovalRequestNotInPendingStatusException): ResponseEntity<ErrorResponse?>? {
+  fun handleApprovalRequestNotInPendingStatusException(e: ApprovalRequestNotInPendingStatusException): ResponseEntity<ErrorResponse> {
     log.debug("Approval request is not in PENDING: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
@@ -538,7 +538,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(LocationCannotBeCreatedWithPendingApprovalException::class)
-  fun handleLocationCannotBeCreatedWithPendingChangesAboveException(e: LocationCannotBeCreatedWithPendingApprovalException): ResponseEntity<ErrorResponse?>? {
+  fun handleLocationCannotBeCreatedWithPendingChangesAboveException(e: LocationCannotBeCreatedWithPendingApprovalException): ResponseEntity<ErrorResponse> {
     log.debug("Cannot create location as changes pending approval above this level: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
@@ -553,7 +553,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(ApprovalRequiredAboveThisLevelException::class)
-  fun handleApprovalRequiredAboveThisLevelException(e: ApprovalRequiredAboveThisLevelException): ResponseEntity<ErrorResponse?>? {
+  fun handleApprovalRequiredAboveThisLevelException(e: ApprovalRequiredAboveThisLevelException): ResponseEntity<ErrorResponse> {
     log.debug("Approval request at wrong level: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
@@ -568,7 +568,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(LocationCannotBeUnlockedWhenNotLockedException::class)
-  fun handleLocationCannotBeUnlockedWhenNotLockedException(e: LocationCannotBeUnlockedWhenNotLockedException): ResponseEntity<ErrorResponse?>? {
+  fun handleLocationCannotBeUnlockedWhenNotLockedException(e: LocationCannotBeUnlockedWhenNotLockedException): ResponseEntity<ErrorResponse> {
     log.debug("Unable to unlock a location that is not locked: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
@@ -583,7 +583,7 @@ class ApiExceptionHandler {
   }
 
   @ExceptionHandler(LocationDoesNotRequireApprovalException::class)
-  fun handleLocationDoesNotRequireApprovalException(e: LocationDoesNotRequireApprovalException): ResponseEntity<ErrorResponse?>? {
+  fun handleLocationDoesNotRequireApprovalException(e: LocationDoesNotRequireApprovalException): ResponseEntity<ErrorResponse> {
     log.debug("Location does not require approval: {}", e.message)
     return ResponseEntity
       .status(BAD_REQUEST)
