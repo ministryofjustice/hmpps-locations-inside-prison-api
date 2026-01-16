@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequiredAboveThisLevelException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialPrisonerLocation
@@ -127,14 +128,16 @@ open class ResidentialLocation(
 
   override fun hasPendingCertificationApproval() = getPendingApprovalRequest() != null
 
-  private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingCertificationApproval() }
+  private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingCertificationApproval() || it.isDraft() }
 
-  protected fun findHighestLevelPending(): ResidentialLocation? {
+  fun getPendingApprovalRequest(): LocationCertificationApprovalRequest? = findHighestLevelPending()?.approvalRequests?.firstOrNull { it.isPending() }
+
+  protected fun findHighestLevelPending(includeDrafts: Boolean = false): ResidentialLocation? {
     var current: ResidentialLocation? = this
     var highestPending: ResidentialLocation? = null
 
     while (current != null) {
-      if (current.approvalRequests.firstOrNull { it.isPending() } != null) {
+      if ((includeDrafts && current.isDraft()) || current.approvalRequests.firstOrNull { it.isPending() } != null) {
         highestPending = current
       }
       current = current.getParent() as? ResidentialLocation
@@ -162,7 +165,7 @@ open class ResidentialLocation(
     requestedDate: LocalDateTime,
     requestedBy: String,
   ): LocationCertificationApprovalRequest {
-    val topLevelPendingLocation = findHighestLevelPending()
+    val topLevelPendingLocation = findHighestLevelPending(includeDrafts = true)
     if (topLevelPendingLocation != null && this != topLevelPendingLocation) {
       throw ApprovalRequiredAboveThisLevelException(this.getKey(), topLevelPendingLocation.getKey())
     }
@@ -172,7 +175,7 @@ open class ResidentialLocation(
     }
 
     if (!isDraft()) {
-      throw RuntimeException("Cannot request approval for non-draft location: ${getKey()}")
+      throw LocationDoesNotRequireApprovalException(getKey())
     }
 
     val approvalRequest = LocationCertificationApprovalRequest(
@@ -199,7 +202,7 @@ open class ResidentialLocation(
     requestedBy: String,
     workingCapacityChange: Int,
   ): LocationCertificationApprovalRequest {
-    val topLevelPendingLocation = findHighestLevelPending()
+    val topLevelPendingLocation = findHighestLevelPending(includeDrafts = true)
     if (topLevelPendingLocation != null && this != topLevelPendingLocation) {
       throw ApprovalRequiredAboveThisLevelException(this.getKey(), topLevelPendingLocation.getKey())
     }
@@ -578,7 +581,7 @@ open class ResidentialLocation(
       workingCapacity = calcWorkingCapacity(),
       certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
     ),
-    topLevelApprovalLocationId = findHighestLevelPending()?.id,
+    topLevelApprovalLocationId = findHighestLevelPending(includeDrafts = true)?.id,
     pendingApprovalRequestId = getPendingApprovalRequest()?.id,
 
     pendingChanges = if (hasPendingCertificationApproval() || hasPendingChangesBelowThisLevel() || isDraft()) {
@@ -613,8 +616,6 @@ open class ResidentialLocation(
       null
     },
   )
-
-  fun getPendingApprovalRequest(): LocationCertificationApprovalRequest? = findHighestLevelPending()?.approvalRequests?.firstOrNull { it.isPending() }
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
     residentialHousingType = residentialHousingType,
