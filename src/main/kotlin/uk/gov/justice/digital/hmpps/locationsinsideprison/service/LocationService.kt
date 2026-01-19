@@ -782,6 +782,7 @@ class LocationService(
             deactivatedLocations = deactivatedLocations,
             linkedTransaction = linkedTransaction,
             requestApproval = requestApproval,
+            reasonForChange = locationsToDeactivate.reasonForChange,
           )
         ) {
           deactivatedLocations.forEach {

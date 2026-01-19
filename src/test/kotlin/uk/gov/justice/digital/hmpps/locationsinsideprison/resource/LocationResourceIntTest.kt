@@ -802,6 +802,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
         assertThat(pendingApproval.workingCapacityChange).isEqualTo(-6)
         assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(0)
         assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
+        assertThat(pendingApproval.reasonForChange).isEqualTo("The cell as been flooded")
         assertThat(pendingApproval.locations).hasSize(1)
 
         val approvedRequest = webTestClient.put().uri("/certification/location/approve")
