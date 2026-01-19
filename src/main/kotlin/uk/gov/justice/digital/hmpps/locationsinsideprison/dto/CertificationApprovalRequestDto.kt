@@ -58,6 +58,10 @@ data class CertificationApprovalRequestDto(
   @param:Schema(description = "Change signed operational capacity", example = "1", required = true)
   val signedOperationCapacityChange: Int? = null,
 
+  @param:Schema(description = "The reason why the signed op cap was changed", example = "Change in number of cells", required = false)
+  @Deprecated("Use reasonForChange instead")
+  val reasonForSignedOpChange: String? = null,
+
   @param:Schema(description = "The reason why the approval was requested", example = "Change in number of cells", required = false)
   val reasonForChange: String? = null,
 

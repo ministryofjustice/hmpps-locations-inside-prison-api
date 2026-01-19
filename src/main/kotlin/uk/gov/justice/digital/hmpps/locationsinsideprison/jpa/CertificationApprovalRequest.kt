@@ -76,7 +76,7 @@ abstract class CertificationApprovalRequest(
   open var approvedOrRejectedDate: LocalDateTime? = null,
 
   @Column(nullable = true)
-  private val reasonForChange: String? = null,
+  open val reasonForChange: String? = null,
 
   @Column(nullable = true)
   open var comments: String? = null,

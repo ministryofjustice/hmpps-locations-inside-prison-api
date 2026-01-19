@@ -243,6 +243,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
               "status": "PENDING",
               "currentSignedOperationCapacity": 12,
               "signedOperationCapacityChange": 13,
+              "reasonForSignedOpChange": "New Wing",
               "reasonForChange": "New Wing"
               }
           """,

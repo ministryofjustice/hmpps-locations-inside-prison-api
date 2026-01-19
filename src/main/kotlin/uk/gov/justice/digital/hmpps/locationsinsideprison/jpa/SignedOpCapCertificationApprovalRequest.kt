@@ -45,6 +45,7 @@ open class SignedOpCapCertificationApprovalRequest(
   comments = comments,
 ) {
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
+    reasonForSignedOpChange = reasonForChange,
     currentSignedOperationCapacity = currentSignedOperationCapacity,
     signedOperationCapacityChange = signedOperationCapacityChange,
     certificateId = cellCertificateId,
