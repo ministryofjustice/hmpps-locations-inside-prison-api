@@ -24,6 +24,7 @@ open class LocationCertificationApprovalRequest(
   requestedDate: LocalDateTime,
   approvedOrRejectedBy: String? = null,
   approvedOrRejectedDate: LocalDateTime? = null,
+  reasonForChange: String? = null,
   comments: String? = null,
 
   @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
@@ -56,6 +57,7 @@ open class LocationCertificationApprovalRequest(
   requestedDate = requestedDate,
   approvedOrRejectedBy = approvedOrRejectedBy,
   approvedOrRejectedDate = approvedOrRejectedDate,
+  reasonForChange = reasonForChange,
   comments = comments,
 ) {
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(

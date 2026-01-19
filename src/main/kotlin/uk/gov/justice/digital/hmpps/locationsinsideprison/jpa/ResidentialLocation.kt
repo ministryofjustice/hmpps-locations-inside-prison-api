@@ -201,6 +201,7 @@ open class ResidentialLocation(
     requestedDate: LocalDateTime,
     requestedBy: String,
     workingCapacityChange: Int,
+    reasonForChange: String,
   ): LocationCertificationApprovalRequest {
     val topLevelPendingLocation = findHighestLevelPending(includeDrafts = true)
     if (topLevelPendingLocation != null && this != topLevelPendingLocation) {
@@ -218,6 +219,7 @@ open class ResidentialLocation(
       locationKey = this.getKey(),
       requestedBy = requestedBy,
       requestedDate = requestedDate,
+      reasonForChange = reasonForChange,
       maxCapacityChange = 0,
       workingCapacityChange = workingCapacityChange,
       certifiedNormalAccommodationChange = 0,
