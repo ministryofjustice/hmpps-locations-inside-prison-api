@@ -5,7 +5,7 @@ import io.awspring.cloud.sqs.annotation.SqsListener
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.BasicTemporaryDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternalSystemEvent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
@@ -35,7 +35,7 @@ class UpdateFromExternalSystemListenerService(
       "LocationTemporarilyDeactivated" -> {
         val event = sqsMessage.toUpdateFromExternalSystemDeactivateEvent()
         val temporaryDeactivationLocationRequest = event.let {
-          TemporaryDeactivationLocationRequest(
+          BasicTemporaryDeactivationRequest(
             deactivationReason = it.deactivationReason,
             deactivationReasonDescription = it.deactivationReasonDescription,
             proposedReactivationDate = it.proposedReactivationDate,
