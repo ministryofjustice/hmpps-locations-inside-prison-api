@@ -19,6 +19,7 @@ import jakarta.persistence.NamedEntityGraph
 import jakarta.persistence.NamedEntityGraphs
 import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToMany
+import jakarta.xml.bind.ValidationException
 import org.hibernate.Hibernate
 import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
@@ -715,6 +716,7 @@ abstract class Location(
     userOrSystemInContext: String,
     deactivatedLocations: MutableSet<Location>? = null,
     requestApproval: Boolean = false,
+    reasonForChange: String? = null,
   ): Boolean {
     var dataChanged = false
 
@@ -823,10 +825,14 @@ abstract class Location(
         }
 
         if (requestApproval) {
+          if (reasonForChange == null) {
+            throw ValidationException("Reason for change must be provided when requesting approval for deactivation")
+          }
           requestApprovalForDeactivation(
             requestedDate = deactivatedDate,
             requestedBy = userOrSystemInContext,
             workingCapacityChange = -workingCapacityChange,
+            reasonForChange = reasonForChange,
           )
         }
       }

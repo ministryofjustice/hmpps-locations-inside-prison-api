@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.BasicTemporaryDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
@@ -748,10 +749,20 @@ class LocationResourceIntTest : CommonDataTestBase() {
         val proposedReactivationDate = now.plusMonths(1).toLocalDate()
         prisonerSearchMockServer.stubSearchByLocations(leedsWing.prisonId, leedsWing.findAllLeafLocations().map { it.getPathHierarchy() }, false)
 
-        webTestClient.put().uri("/locations/${leedsWing.id}/deactivate/temporary?requires-approval=true")
+        webTestClient.put().uri("/locations/${leedsWing.id}/deactivate/temporary")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED, proposedReactivationDate = proposedReactivationDate, planetFmReference = "222333")))
+          .bodyValue(
+            jsonString(
+              TemporaryDeactivationLocationRequest(
+                requiresApproval = true,
+                reasonForChange = "The cell as been flooded",
+                deactivationReason = DeactivatedReason.MOTHBALLED,
+                proposedReactivationDate = proposedReactivationDate,
+                planetFmReference = "222333",
+              ),
+            ),
+          )
           .exchange()
           .expectStatus().isOk
 
@@ -1849,7 +1860,17 @@ class LocationResourceIntTest : CommonDataTestBase() {
           webTestClient.put().uri("/locations/bulk/deactivate/temporary")
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
-            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER)))))
+            .bodyValue(
+              jsonString(
+                DeactivateLocationsRequest(
+                  mapOf(
+                    cell1.id!! to BasicTemporaryDeactivationRequest(
+                      deactivationReason = DeactivatedReason.OTHER,
+                    ),
+                  ),
+                ),
+              ),
+            )
             .exchange()
             .expectStatus().isBadRequest
             .expectBody<ErrorResponse>()
@@ -1865,7 +1886,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           webTestClient.put().uri("/locations/bulk/deactivate/temporary")
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
-            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = " ")))))
+            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to BasicTemporaryDeactivationRequest(deactivationReason = DeactivatedReason.OTHER, deactivationReasonDescription = " ")))))
             .exchange()
             .expectStatus().isBadRequest
             .expectBody<ErrorResponse>()
@@ -1881,7 +1902,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           webTestClient.put().uri("/locations/bulk/deactivate/temporary")
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
-            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))))
+            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(cell1.id!! to BasicTemporaryDeactivationRequest(deactivationReason = DeactivatedReason.DAMAGED)))))
             .exchange()
             .expectStatus().isEqualTo(409)
             .expectBody<ErrorResponse>()
@@ -1897,7 +1918,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
           webTestClient.put().uri("/locations/bulk/deactivate/temporary")
             .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
             .header("Content-Type", "application/json")
-            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(wingZ.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED)))))
+            .bodyValue(jsonString(DeactivateLocationsRequest(mapOf(wingZ.id!! to BasicTemporaryDeactivationRequest(deactivationReason = DeactivatedReason.DAMAGED)))))
             .exchange()
             .expectStatus().isEqualTo(409)
             .expectBody<ErrorResponse>()
@@ -1923,8 +1944,8 @@ class LocationResourceIntTest : CommonDataTestBase() {
               DeactivateLocationsRequest(
                 updatedBy = "DEACTIVATING_USER",
                 locations = mapOf(
-                  cell1.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Window smashed", proposedReactivationDate = proposedReactivationDate),
-                  cell2.id!! to TemporaryDeactivationLocationRequest(deactivationReason = DeactivatedReason.REFURBISHMENT, deactivationReasonDescription = "Fire", planetFmReference = "XXX122"),
+                  cell1.id!! to BasicTemporaryDeactivationRequest(deactivationReason = DeactivatedReason.DAMAGED, deactivationReasonDescription = "Window smashed", proposedReactivationDate = proposedReactivationDate),
+                  cell2.id!! to BasicTemporaryDeactivationRequest(deactivationReason = DeactivatedReason.REFURBISHMENT, deactivationReasonDescription = "Fire", planetFmReference = "XXX122"),
                 ),
               ),
             ),
