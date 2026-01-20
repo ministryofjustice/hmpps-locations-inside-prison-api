@@ -574,6 +574,8 @@ class Cell(
     if (isDraft()) {
       certifyCell(approvedBy, approvedDate, linkedTransaction)
     }
+
+    pendingChange = null
   }
 
   fun requestApprovalForCellMarkChange(
@@ -585,6 +587,11 @@ class Cell(
     if (hasPendingCertificationApproval()) {
       throw PendingApprovalAlreadyExistsException(getKey())
     }
+
+    // store the pending change
+    pendingChange = PendingLocationChange(
+      cellMark = cellMarkChange,
+    )
 
     val approvalRequest = CellMarkChangeApprovalRequest(
       location = this,

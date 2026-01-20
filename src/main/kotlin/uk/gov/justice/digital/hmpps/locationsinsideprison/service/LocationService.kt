@@ -38,7 +38,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PendingLocationChange
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
@@ -531,6 +530,7 @@ class LocationService(
     }
   }
 
+  @Transactional
   fun updateCellMark(id: UUID, cellMarkChangeRequest: CellMarkChangeRequest): LocationDTO {
     val cell =
       cellLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
@@ -556,12 +556,6 @@ class LocationService(
         requestedDate = LocalDateTime.now(clock),
         requestedBy = sharedLocationService.getUsername(),
       )
-
-      // store the pending change
-      cell.pendingChange = PendingLocationChange(
-        approvalRequest = approvalRequest,
-        cellMark = cellMarkChangeRequest.cellMark,
-      )
     } else {
       cell.setCellDoorMark(
         cellMarkChangeRequest.cellMark,
@@ -571,6 +565,7 @@ class LocationService(
       )
     }
 
+    cellLocationRepository.saveAndFlush(cell)
     return cell.toDto().also {
       sharedLocationService.trackLocationUpdate(it)
       linkedTransaction.txEndTime = LocalDateTime.now(clock)

@@ -21,7 +21,7 @@ open class LocationCertificationApprovalRequest(
   requestedDate: LocalDateTime,
   reasonForChange: String? = null,
 
-  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
+  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = false)
   @JoinColumn(name = "location_id", nullable = false)
   open val location: ResidentialLocation,
 
