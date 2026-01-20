@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
 import jakarta.persistence.Column
+import jakarta.persistence.DiscriminatorColumn
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -13,7 +14,6 @@ import jakarta.persistence.NamedEntityGraphs
 import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.Table
 import org.hibernate.Hibernate
-import org.hibernate.annotations.DiscriminatorFormula
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
@@ -44,7 +44,7 @@ import java.util.UUID
   ],
 )
 @Entity
-@DiscriminatorFormula("CASE WHEN approval_type = 'SIGNED_OP_CAP' THEN 'SIGNED_OP_CAP_APPROVAL_REQUEST' ELSE 'LOCATION_APPROVAL_REQUEST' END")
+@DiscriminatorColumn(name = "approval_type")
 @Table(name = "certification_approval_request")
 @Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 abstract class CertificationApprovalRequest(
@@ -52,9 +52,6 @@ abstract class CertificationApprovalRequest(
   @GeneratedUuidV7
   @Column(name = "id", updatable = false, nullable = false)
   open val id: UUID? = null,
-
-  @Enumerated(EnumType.STRING)
-  open val approvalType: ApprovalType,
 
   @Column(nullable = false)
   open val prisonId: String,
@@ -88,10 +85,12 @@ abstract class CertificationApprovalRequest(
       { it.prisonId }
       .thenBy { it.requestedDate }
       .thenBy { it.status }
-      .thenBy { it.approvalType }
+      .thenBy { it.getApprovalType() }
   }
 
   override fun compareTo(other: CertificationApprovalRequest) = COMPARATOR.compare(this, other)
+
+  abstract fun getApprovalType(): ApprovalType
 
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
@@ -102,7 +101,7 @@ abstract class CertificationApprovalRequest(
     if (prisonId != other.prisonId) return false
     if (!requestedDate.isEqual(other.requestedDate)) return false
     if (status != other.status) return false
-    if (approvalType != other.approvalType) return false
+    if (getApprovalType() != other.getApprovalType()) return false
 
     return true
   }
@@ -111,7 +110,7 @@ abstract class CertificationApprovalRequest(
     var result = prisonId.hashCode()
     result = 31 * result + requestedDate.hashCode()
     result = 31 * result + status.hashCode()
-    result = 31 * result + approvalType.hashCode()
+    result = 31 * result + getApprovalType().hashCode()
     return result
   }
 
@@ -119,8 +118,8 @@ abstract class CertificationApprovalRequest(
 
   open fun toDto(showLocations: Boolean = false, cellCertificateId: UUID? = null): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
     id = id!!,
-    approvalType = approvalType,
     prisonId = prisonId,
+    approvalType = getApprovalType(),
     status = status,
     requestedBy = requestedBy,
     requestedDate = requestedDate,
@@ -163,6 +162,7 @@ enum class ApprovalType {
   SIGNED_OP_CAP,
   DRAFT,
   DEACTIVATION,
+  CELL_MARK,
   REACTIVATION,
   CAPACITY_CHANGE,
 }

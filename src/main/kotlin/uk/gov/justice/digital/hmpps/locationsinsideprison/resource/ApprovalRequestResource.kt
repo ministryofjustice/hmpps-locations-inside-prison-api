@@ -24,8 +24,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationAppro
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalDecisionService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalRequestService
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CertificationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
@@ -40,13 +40,13 @@ import java.util.*
   description = "Functionality to manage certification of residential locations",
 )
 class ApprovalRequestResource(
-  private val certificationService: CertificationService,
+  private val approvalDecisionService: ApprovalDecisionService,
   private val approvalRequestService: ApprovalRequestService,
 ) : EventBase() {
 
   @PutMapping("/location/request-approval")
   @Operation(
-    summary = "Requests approval for a location currently either LOCKED or in DRAFT status, locations below this will be included in the request",
+    summary = "Requests approval for a DRAFT location, locations below this will be included in the request",
     description = "Requires role LOCATION_CERTIFICATION",
     responses = [
       ApiResponse(
@@ -75,11 +75,11 @@ class ApprovalRequestResource(
       ),
     ],
   )
-  fun requestApproval(
+  fun draftRequestApproval(
     @RequestBody
     @Validated
     locationApprovalRequest: LocationApprovalRequest,
-  ): CertificationApprovalRequestDto = certificationService.requestDraftApproval(
+  ): CertificationApprovalRequestDto = approvalRequestService.requestDraftApproval(
     requestToApprove = locationApprovalRequest,
   )
 
@@ -118,7 +118,7 @@ class ApprovalRequestResource(
     @RequestBody
     @Validated
     signedOpCapApprovalRequest: SignedOpCapApprovalRequest,
-  ): CertificationApprovalRequestDto = certificationService.requestDraftApproval(
+  ): CertificationApprovalRequestDto = approvalRequestService.requestSignedOpCapApproval(
     signedOpCapApprovalRequest,
   )
 
@@ -158,7 +158,7 @@ class ApprovalRequestResource(
     @Validated
     approveCertificationRequest: ApproveCertificationRequestDto,
   ): CertificationApprovalRequestDto {
-    val approvalResponse = certificationService.approveCertificationRequest(
+    val approvalResponse = approvalDecisionService.approveCertificationRequest(
       approveCertificationRequest = approveCertificationRequest,
     )
     approvalResponse.location?.let { publishedLocation ->
@@ -211,7 +211,7 @@ class ApprovalRequestResource(
     @Validated
     rejectCertificationRequest: RejectCertificationRequestDto,
   ): CertificationApprovalRequestDto {
-    val response = certificationService.rejectCertificationRequest(
+    val response = approvalDecisionService.rejectCertificationRequest(
       rejectCertificationRequest = rejectCertificationRequest,
     )
     if (!response.newLocation && response.location != null) {
@@ -260,7 +260,7 @@ class ApprovalRequestResource(
     @Validated
     withdrawCertificationRequest: WithdrawCertificationRequestDto,
   ): CertificationApprovalRequestDto {
-    val response = certificationService.withdrawCertificationRequest(
+    val response = approvalDecisionService.withdrawCertificationRequest(
       withdrawCertificationRequest = withdrawCertificationRequest,
     )
     if (!response.newLocation && response.location != null) {

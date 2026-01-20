@@ -27,6 +27,7 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellDraftUpdateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellMarkChangeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
@@ -328,6 +329,52 @@ class LocationResidentialResource(
     audit(id.toString()) { results.location.copy(childLocations = null, parentLocation = null) }
     return results.location
   }
+
+  @PutMapping("/residential/{id}/cell-mark-change")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Update the cell mark and optionally provide a reason for change for certification approval",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns updated location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location already exists",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun updateCellMark(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    cellMarkChangeRequest: CellMarkChangeRequest,
+  ) = audit(id.toString(), { locationService.updateCellMark(id, cellMarkChangeRequest) })
 
   @PutMapping("/{id}/convert-cell-to-non-res-cell")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")

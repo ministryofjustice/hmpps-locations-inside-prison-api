@@ -62,7 +62,7 @@ open class ResidentialLocation(
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
-  private val approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
+  protected val approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
 
 ) : Location(
   id = id,
@@ -179,16 +179,14 @@ open class ResidentialLocation(
     }
 
     val approvalRequest = LocationCertificationApprovalRequest(
-      approvalType = ApprovalType.DRAFT,
       location = this,
-      prisonId = this.prisonId,
       locationKey = this.getKey(),
       requestedBy = requestedBy,
       requestedDate = requestedDate,
       maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
       workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
       certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
-      locations = sortedSetOf(toCertificationApprovalRequestLocation(true)),
+      locations = sortedSetOf(toCertificationApprovalRequestLocation(includeDraft = true)),
     ).apply {
       linkPendingChangesToApprovalRequest(approvalRequest = this)
     }
@@ -202,28 +200,25 @@ open class ResidentialLocation(
     requestedBy: String,
     workingCapacityChange: Int,
     reasonForChange: String,
+    deactivatedReason: DeactivatedReason,
+    deactivationReasonDescription: String? = null,
+    proposedReactivationDate: LocalDate? = null,
+    planetFmReference: String? = null,
   ): LocationCertificationApprovalRequest {
-    val topLevelPendingLocation = findHighestLevelPending(includeDrafts = true)
-    if (topLevelPendingLocation != null && this != topLevelPendingLocation) {
-      throw ApprovalRequiredAboveThisLevelException(this.getKey(), topLevelPendingLocation.getKey())
-    }
-
     if (hasPendingCertificationApproval()) {
       throw PendingApprovalAlreadyExistsException(getKey())
     }
 
-    val approvalRequest = LocationCertificationApprovalRequest(
-      approvalType = ApprovalType.DEACTIVATION,
+    val approvalRequest = DeactivationApprovalRequest(
       location = this,
-      prisonId = this.prisonId,
-      locationKey = this.getKey(),
       requestedBy = requestedBy,
       requestedDate = requestedDate,
       reasonForChange = reasonForChange,
-      maxCapacityChange = 0,
       workingCapacityChange = workingCapacityChange,
-      certifiedNormalAccommodationChange = 0,
-      locations = sortedSetOf(toCertificationApprovalRequestLocation(false)),
+      deactivatedReason = deactivatedReason,
+      deactivationReasonDescription = deactivationReasonDescription,
+      proposedReactivationDate = proposedReactivationDate,
+      planetFmReference = planetFmReference,
     ).apply {
       linkPendingChangesToApprovalRequest(approvalRequest = this)
     }
@@ -503,7 +498,7 @@ open class ResidentialLocation(
     )
   }
 
-  private fun draftApprovalLocationIsPartOfHierarchy(approvalRequest: CertificationApprovalRequest): Boolean = if (approvalRequest.approvalType == ApprovalType.DRAFT) {
+  private fun draftApprovalLocationIsPartOfHierarchy(approvalRequest: CertificationApprovalRequest): Boolean = if (approvalRequest.getApprovalType() == ApprovalType.DRAFT) {
     val locationRequest = approvalRequest as? LocationCertificationApprovalRequest
     locationRequest?.location?.let { location ->
       isInHierarchy(location) || findLocation(location.getKey()) != null
@@ -512,10 +507,10 @@ open class ResidentialLocation(
     false
   }
 
-  private fun toCertificationApprovalRequestLocation(includeDraft: Boolean = true): CertificationApprovalRequestLocation {
+  fun toCertificationApprovalRequestLocation(includeDraft: Boolean = false, includePending: Boolean = false): CertificationApprovalRequestLocation {
     val subLocations: List<CertificationApprovalRequestLocation> = getResidentialLocationsBelowThisLevel()
       .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
-      .map { it.toCertificationApprovalRequestLocation(includeDraft) }
+      .map { it.toCertificationApprovalRequestLocation(includeDraft = includeDraft, includePending = includePending) }
 
     return CertificationApprovalRequestLocation(
       locationType = locationType,
@@ -523,7 +518,7 @@ open class ResidentialLocation(
       pathHierarchy = getPathHierarchy(),
       localName = localName?.capitalizeWords(),
       cellMark = if (this is Cell) {
-        cellMark
+        getDoorCellMark(includePending = includePending)
       } else {
         null
       },

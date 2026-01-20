@@ -44,7 +44,6 @@ class SignedOperationCapacity(
 
   fun requestApproval(pendingSignedOperationCapacity: Int, reasonForChange: String, requestedDate: LocalDateTime, requestedBy: String): SignedOpCapCertificationApprovalRequest {
     val approvalRequest = SignedOpCapCertificationApprovalRequest(
-      approvalType = ApprovalType.SIGNED_OP_CAP,
       prisonId = this.prisonId,
       requestedBy = requestedBy,
       requestedDate = requestedDate,

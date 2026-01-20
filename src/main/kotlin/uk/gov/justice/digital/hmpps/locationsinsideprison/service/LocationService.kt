@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellDraftUpdateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellMarkChangeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
@@ -37,6 +38,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PendingLocationChange
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
@@ -472,13 +474,13 @@ class LocationService(
           code = cell.code,
           accommodationType = cellDraftUpdateRequest.accommodationType,
           usedFor = cellDraftUpdateRequest.cellsUsedFor ?: emptySet(),
+          cellMark = cell.cellMark,
+          inCellSanitation = cell.inCellSanitation,
         ),
         userOrSystemInContext = userOrSystemInContext,
         clock = clock,
         linkedTransaction = linkedTransaction,
       )
-      cellToUpdate.cellMark = cell.cellMark
-      cellToUpdate.inCellSanitation = cell.inCellSanitation
 
       cellToUpdate.updateCellSpecialistCellTypes(
         specialistCellTypes = cell.specialistCellTypes ?: emptySet(),
@@ -525,6 +527,52 @@ class LocationService(
 
     return sharedLocationService.patchLocation(residentialLocation, patchLocationRequest, linkedTransaction).also {
       sharedLocationService.trackLocationUpdate(it.location)
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  fun updateCellMark(id: UUID, cellMarkChangeRequest: CellMarkChangeRequest): LocationDTO {
+    val cell =
+      cellLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (cell.hasPendingCertificationApproval()) {
+      throw PendingApprovalOnLocationCannotBeUpdatedException(cell.getKey())
+    }
+
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      prisonId = cell.prisonId,
+      TransactionType.LOCATION_UPDATE,
+      "Update cell mark ${cell.getKey()}",
+    )
+
+    if (activePrisonService.isCertificationApprovalRequired(cell.prisonId)) {
+      if (cellMarkChangeRequest.reasonForChange.isNullOrBlank()) {
+        throw ValidationException("Reason for change cannot be blank")
+      }
+
+      val approvalRequest = cell.requestApprovalForCellMarkChange(
+        cellMarkChange = cellMarkChangeRequest.cellMark,
+        reasonForChange = cellMarkChangeRequest.reasonForChange,
+        requestedDate = LocalDateTime.now(clock),
+        requestedBy = sharedLocationService.getUsername(),
+      )
+
+      // store the pending change
+      cell.pendingChange = PendingLocationChange(
+        approvalRequest = approvalRequest,
+        cellMark = cellMarkChangeRequest.cellMark,
+      )
+    } else {
+      cell.setCellDoorMark(
+        cellMarkChangeRequest.cellMark,
+        amendedBy = sharedLocationService.getUsername(),
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+    }
+
+    return cell.toDto().also {
+      sharedLocationService.trackLocationUpdate(it)
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
     }
   }
