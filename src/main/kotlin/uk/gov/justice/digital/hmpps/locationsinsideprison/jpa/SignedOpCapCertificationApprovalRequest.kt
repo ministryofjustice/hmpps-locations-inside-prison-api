@@ -10,10 +10,9 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
-@DiscriminatorValue("SIGNED_OP_CAP_APPROVAL_REQUEST")
+@DiscriminatorValue("SIGNED_OP_CAP")
 open class SignedOpCapCertificationApprovalRequest(
   id: UUID? = null,
-  approvalType: ApprovalType,
   prisonId: String,
   status: ApprovalRequestStatus = ApprovalRequestStatus.PENDING,
   requestedBy: String,
@@ -34,7 +33,6 @@ open class SignedOpCapCertificationApprovalRequest(
 
 ) : CertificationApprovalRequest(
   id = id,
-  approvalType = approvalType,
   prisonId = prisonId,
   status = status,
   requestedBy = requestedBy,
@@ -44,6 +42,8 @@ open class SignedOpCapCertificationApprovalRequest(
   reasonForChange = reasonForChange,
   comments = comments,
 ) {
+  override fun getApprovalType() = ApprovalType.SIGNED_OP_CAP
+
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     reasonForSignedOpChange = reasonForChange,
     currentSignedOperationCapacity = currentSignedOperationCapacity,

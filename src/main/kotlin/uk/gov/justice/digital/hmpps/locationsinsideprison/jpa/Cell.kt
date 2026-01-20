@@ -18,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import java.time.Clock
 import java.time.LocalDate
@@ -125,6 +126,8 @@ class Cell(
   override fun isConvertedCell() = convertedCellType != null
 
   private fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
+
+  fun getDoorCellMark(includePending: Boolean = false): String? = if (includePending) pendingChange?.cellMark ?: cellMark else cellMark
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (hasPendingCertificationApproval()) {
@@ -319,6 +322,18 @@ class Cell(
     this.whenUpdated = LocalDateTime.now(clock)
   }
 
+  fun setCellDoorMark(newCellMark: String, amendedBy: String, amendedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
+    addHistory(
+      LocationAttribute.CELL_MARK,
+      cellMark,
+      newCellMark,
+      amendedBy,
+      amendedDate,
+      linkedTransaction,
+    )
+    cellMark = newCellMark
+  }
+
   fun addAttribute(attribute: ResidentialAttributeValue, linkedTransaction: LinkedTransaction? = null, userOrSystemInContext: String? = null, clock: Clock? = null): ResidentialAttribute {
     val residentialAttribute = ResidentialAttribute(location = this, attributeType = attribute.type, attributeValue = attribute)
     if (attributes.add(residentialAttribute)) {
@@ -362,15 +377,12 @@ class Cell(
       setAccommodationTypeForCell(upsert.accommodationType ?: this.accommodationType, userOrSystemInContext, clock, linkedTransaction)
 
       upsert.cellMark?.let { cellMark ->
-        addHistory(
-          LocationAttribute.CELL_MARK,
-          this.cellMark,
-          cellMark,
-          userOrSystemInContext,
-          LocalDateTime.now(clock),
-          linkedTransaction,
+        setCellDoorMark(
+          newCellMark = cellMark,
+          amendedBy = userOrSystemInContext,
+          amendedDate = LocalDateTime.now(clock),
+          linkedTransaction = linkedTransaction,
         )
-        this.cellMark = cellMark
       }
 
       upsert.inCellSanitation?.let { inCellSanitation ->
@@ -543,6 +555,10 @@ class Cell(
   ) {
     pendingChange?.let { pc ->
 
+      pc.cellMark?.let {
+        setCellDoorMark(it, approvedBy, approvedDate, linkedTransaction)
+      }
+
       if (pc.maxCapacity != null || pc.certifiedNormalAccommodation != null) {
         setCapacity(
           maxCapacity = pc.maxCapacity ?: getMaxCapacity() ?: 0,
@@ -558,6 +574,37 @@ class Cell(
     if (isDraft()) {
       certifyCell(approvedBy, approvedDate, linkedTransaction)
     }
+
+    pendingChange = null
+  }
+
+  fun requestApprovalForCellMarkChange(
+    requestedDate: LocalDateTime,
+    requestedBy: String,
+    cellMarkChange: String,
+    reasonForChange: String,
+  ): LocationCertificationApprovalRequest {
+    if (hasPendingCertificationApproval()) {
+      throw PendingApprovalAlreadyExistsException(getKey())
+    }
+
+    // store the pending change
+    pendingChange = PendingLocationChange(
+      cellMark = cellMarkChange,
+    )
+
+    val approvalRequest = CellMarkChangeApprovalRequest(
+      location = this,
+      requestedBy = requestedBy,
+      requestedDate = requestedDate,
+      reasonForChange = reasonForChange,
+      cellMark = cellMarkChange,
+    ).apply {
+      linkPendingChangesToApprovalRequest(approvalRequest = this)
+    }
+
+    approvalRequests.add(approvalRequest)
+    return approvalRequest
   }
 
   override fun toDto(
@@ -587,7 +634,7 @@ class Cell(
     convertedCellType = convertedCellType,
     otherConvertedCellType = otherConvertedCellType,
     inCellSanitation = inCellSanitation,
-    cellMark = cellMark,
+    cellMark = getDoorCellMark(false),
   )
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(

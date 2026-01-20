@@ -833,6 +833,10 @@ abstract class Location(
             requestedBy = userOrSystemInContext,
             workingCapacityChange = -workingCapacityChange,
             reasonForChange = reasonForChange,
+            deactivatedReason = deactivatedReason,
+            deactivationReasonDescription = deactivationReasonDescription,
+            proposedReactivationDate = proposedReactivationDate,
+            planetFmReference = planetFmReference,
           )
         }
       }

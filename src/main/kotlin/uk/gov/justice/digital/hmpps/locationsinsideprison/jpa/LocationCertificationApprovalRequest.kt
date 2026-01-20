@@ -14,20 +14,14 @@ import java.util.SortedSet
 import java.util.UUID
 
 @Entity
-@DiscriminatorValue("LOCATION_APPROVAL_REQUEST")
+@DiscriminatorValue("DRAFT")
 open class LocationCertificationApprovalRequest(
   id: UUID? = null,
-  approvalType: ApprovalType,
-  prisonId: String,
-  status: ApprovalRequestStatus = ApprovalRequestStatus.PENDING,
   requestedBy: String,
   requestedDate: LocalDateTime,
-  approvedOrRejectedBy: String? = null,
-  approvedOrRejectedDate: LocalDateTime? = null,
   reasonForChange: String? = null,
-  comments: String? = null,
 
-  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
+  @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], optional = false)
   @JoinColumn(name = "location_id", nullable = false)
   open val location: ResidentialLocation,
 
@@ -50,16 +44,15 @@ open class LocationCertificationApprovalRequest(
 
 ) : CertificationApprovalRequest(
   id = id,
-  approvalType = approvalType,
-  prisonId = prisonId,
-  status = status,
+  prisonId = location.prisonId,
+  status = ApprovalRequestStatus.PENDING,
   requestedBy = requestedBy,
   requestedDate = requestedDate,
-  approvedOrRejectedBy = approvedOrRejectedBy,
-  approvedOrRejectedDate = approvedOrRejectedDate,
   reasonForChange = reasonForChange,
-  comments = comments,
 ) {
+
+  override fun getApprovalType() = ApprovalType.DRAFT
+
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     locationKey = locationKey,
     locationId = location.id!!,
