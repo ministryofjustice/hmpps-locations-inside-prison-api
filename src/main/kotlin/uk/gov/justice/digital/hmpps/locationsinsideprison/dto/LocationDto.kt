@@ -267,6 +267,12 @@ data class PendingChangeDto(
   @param:Schema(description = "Pending CNA", example = "2", required = false)
   val certifiedNormalAccommodation: Int? = null,
 
+  @param:Schema(description = "Pending cell mark of the location", required = false, example = "A1", minLength = 1)
+  val cellMark: String? = null,
+
+  @param:Schema(description = "Pending in-cell sanitation", required = false, example = "true")
+  val inCellSanitation: Boolean? = null,
+
 )
 
 @Schema(description = "Service that uses a location")

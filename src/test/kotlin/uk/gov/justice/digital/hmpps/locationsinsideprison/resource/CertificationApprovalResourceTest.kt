@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellMarkChangeRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellSanitationChangeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
@@ -172,6 +173,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       assertThat(pendingCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
       assertThat(pendingCell.cellMark).isEqualTo(cellToUpdate.cellMark)
+      assertThat(pendingCell.pendingChanges?.cellMark).isEqualTo("CM-001")
       assertThat(pendingCell.pendingApprovalRequestId).isNotNull
 
       val pendingApprovalRequestId = pendingCell.pendingApprovalRequestId!!
@@ -237,6 +239,100 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       assertThat(approvedLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
       assertThat(approvedLocation.cellMark).isEqualTo("CM-001")
+      assertThat(approvedLocation.pendingChanges).isNull()
+      assertThat(approvedLocation.pendingApprovalRequestId).isNull()
+    }
+  }
+
+  @DisplayName("PUT /locations/residential/{id}/cell-sanitation-change")
+  @Nested
+  inner class CellSanitationChangeTest {
+
+    @Test
+    fun `can change a cell mark on a location and request approval`() {
+      val cellToUpdate = leedsWing.findAllLeafLocations().first() as Cell
+      val pendingCell = webTestClient.put().uri("/locations/residential/${cellToUpdate.id}/cell-sanitation-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CellSanitationChangeRequest(
+              reasonForChange = "The toilet is old",
+              inCellSanitation = false,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(pendingCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
+      assertThat(pendingCell.inCellSanitation).isEqualTo(cellToUpdate.inCellSanitation)
+      assertThat(pendingCell.pendingChanges?.inCellSanitation).isEqualTo(false)
+      assertThat(pendingCell.pendingApprovalRequestId).isNotNull
+
+      val pendingApprovalRequestId = pendingCell.pendingApprovalRequestId!!
+
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val pendingApproval = webTestClient.get().uri("/certification/request-approvals/$pendingApprovalRequestId")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.CELL_SANITATION)
+      assertThat(pendingApproval.locationId).isEqualTo(cellToUpdate.id)
+      assertThat(pendingApproval.prisonId).isEqualTo(cellToUpdate.prisonId)
+      assertThat(pendingApproval.locationKey).isEqualTo(cellToUpdate.getKey())
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(0)
+      assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(0)
+      assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
+      assertThat(pendingApproval.inCellSanitation).isEqualTo(false)
+      assertThat(pendingApproval.reasonForChange).isEqualTo("The toilet is old")
+      assertThat(pendingApproval.locations).isNotEmpty
+      assertThat(pendingApproval.locations).hasSize(1)
+      assertThat(pendingApproval.locations!![0].inCellSanitation).isEqualTo(false)
+
+      val approvedRequest = webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            ApproveCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      webTestClient.get().uri("/cell-certificates/${approvedRequest.certificateId}")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.id").isEqualTo(approvedRequest.certificateId)
+        .jsonPath("$.prisonId").isEqualTo("LEI")
+        .jsonPath("$.current").isEqualTo(true)
+        .jsonPath("$.locations").isArray()
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].inCellSanitation").isEqualTo(false)
+
+      val approvedLocation = webTestClient.get().uri("/locations/${cellToUpdate.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(approvedLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(approvedLocation.inCellSanitation).isEqualTo(false)
+      assertThat(approvedLocation.pendingChanges).isNull()
       assertThat(approvedLocation.pendingApprovalRequestId).isNull()
     }
   }

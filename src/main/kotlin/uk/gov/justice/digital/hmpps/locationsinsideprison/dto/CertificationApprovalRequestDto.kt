@@ -76,6 +76,9 @@ data class CertificationApprovalRequestDto(
   @param:Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1)
   val cellMark: String? = null,
 
+  @param:Schema(description = "Whether the cell has in-cell sanitation", example = "true")
+  val inCellSanitation: Boolean? = null,
+
   @param:Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
 
