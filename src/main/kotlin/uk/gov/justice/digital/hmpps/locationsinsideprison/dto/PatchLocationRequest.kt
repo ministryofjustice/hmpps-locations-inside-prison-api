@@ -57,12 +57,12 @@ data class PatchResidentialLocationRequest(
   @param:Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   override val comments: String? = null,
 
-  @param:Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1)
+  @param:Schema(description = "Cell mark of the location, this can only be used in Draft or a prison that does not require approval to change the certificate", required = false, example = "A1", minLength = 1)
   @field:Size(min = 1, message = "Mark cannot be blank")
   @field:Size(max = 12, message = "Mark can be up to 12 characters")
   val cellMark: String? = null,
 
-  @param:Schema(description = "In-cell sanitation", example = "true", required = false)
+  @param:Schema(description = "In-cell sanitation, this can only be used in Draft or a prison that does not require approval to change the certificate", example = "true", required = false)
   val inCellSanitation: Boolean? = null,
 
 ) : PatchLocationRequest

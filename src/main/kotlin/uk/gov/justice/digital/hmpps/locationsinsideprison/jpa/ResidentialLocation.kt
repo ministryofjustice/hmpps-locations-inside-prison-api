@@ -469,13 +469,13 @@ open class ResidentialLocation(
       pathHierarchy = getPathHierarchy(),
       localName = localName?.capitalizeWords(),
       cellMark = if (this is Cell) {
-        cellMark
+        getDoorCellMark()
       } else {
         null
       },
       level = getLevel(),
       inCellSanitation = if (this is Cell) {
-        inCellSanitation
+        getSanitationOfCell()
       } else {
         null
       },
@@ -524,7 +524,7 @@ open class ResidentialLocation(
       },
       level = getLevel(),
       inCellSanitation = if (this is Cell) {
-        inCellSanitation
+        getSanitationOfCell(includePending = includePending)
       } else {
         null
       },
@@ -639,8 +639,9 @@ open class ResidentialLocation(
     userOrSystemInContext: String,
     clock: Clock,
     linkedTransaction: LinkedTransaction,
+    approvalRequired: Boolean,
   ): ResidentialLocation {
-    super.update(upsert, userOrSystemInContext, clock, linkedTransaction)
+    super.update(upsert, userOrSystemInContext, clock, linkedTransaction, approvalRequired)
 
     if (upsert is PatchResidentialLocationRequest) {
       upsert.locationType?.let {

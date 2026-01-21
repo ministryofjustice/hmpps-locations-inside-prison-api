@@ -27,6 +27,7 @@ class SharedLocationService(
   private val locationRepository: LocationRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val authenticationHolder: HmppsAuthenticationHolder,
+  private val activePrisonService: ActivePrisonService,
   private val telemetryClient: TelemetryClient,
   private val clock: Clock,
 ) {
@@ -55,9 +56,17 @@ class SharedLocationService(
       throw PendingApprovalOnLocationCannotBeUpdatedException(location.getKey())
     }
 
+    val approvalRequired = activePrisonService.isCertificationApprovalRequired(location.prisonId) && !location.isDraft()
+
     val (codeChanged, oldParent, parentChanged) = updateCoreLocationDetails(location, patchLocationRequest, linkedTransaction)
 
-    location.update(patchLocationRequest, getUsername(), clock, linkedTransaction)
+    location.update(
+      upsert = patchLocationRequest,
+      userOrSystemInContext = getUsername(),
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+      approvalRequired = approvalRequired,
+    )
 
     return UpdateLocationResult(
       location.toDto(

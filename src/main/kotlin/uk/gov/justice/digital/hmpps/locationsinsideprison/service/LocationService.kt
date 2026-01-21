@@ -19,6 +19,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellDraftUpdateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellMarkChangeRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellSanitationChangeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
@@ -514,6 +515,23 @@ class LocationService(
     val residentialLocation =
       residentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
 
+    return applyPatch(residentialLocation, patchLocationRequest)
+  }
+
+  @Transactional
+  fun updateResidentialLocation(
+    key: String,
+    patchLocationRequest: PatchResidentialLocationRequest,
+  ): UpdateLocationResult {
+    val residentialLocation = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
+
+    return applyPatch(residentialLocation, patchLocationRequest)
+  }
+
+  private fun applyPatch(
+    residentialLocation: ResidentialLocation,
+    patchLocationRequest: PatchResidentialLocationRequest,
+  ): UpdateLocationResult {
     if (residentialLocation.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
     }
@@ -539,24 +557,25 @@ class LocationService(
       throw PendingApprovalOnLocationCannotBeUpdatedException(cell.getKey())
     }
 
-    val linkedTransaction = sharedLocationService.createLinkedTransaction(
-      prisonId = cell.prisonId,
-      TransactionType.LOCATION_UPDATE,
-      "Update cell mark ${cell.getKey()}",
-    )
+    var linkedTransaction: LinkedTransaction? = null
 
-    if (activePrisonService.isCertificationApprovalRequired(cell.prisonId)) {
+    if (activePrisonService.isCertificationApprovalRequired(cell.prisonId) && !cell.isDraft()) {
       if (cellMarkChangeRequest.reasonForChange.isNullOrBlank()) {
         throw ValidationException("Reason for change cannot be blank")
       }
 
-      val approvalRequest = cell.requestApprovalForCellMarkChange(
+      cell.requestApprovalForCellMarkChange(
         cellMarkChange = cellMarkChangeRequest.cellMark,
         reasonForChange = cellMarkChangeRequest.reasonForChange,
         requestedDate = LocalDateTime.now(clock),
         requestedBy = sharedLocationService.getUsername(),
       )
     } else {
+      linkedTransaction = sharedLocationService.createLinkedTransaction(
+        prisonId = cell.prisonId,
+        TransactionType.LOCATION_UPDATE,
+        "Update cell mark ${cell.getKey()}",
+      )
       cell.setCellDoorMark(
         cellMarkChangeRequest.cellMark,
         amendedBy = sharedLocationService.getUsername(),
@@ -568,30 +587,50 @@ class LocationService(
     cellLocationRepository.saveAndFlush(cell)
     return cell.toDto().also {
       sharedLocationService.trackLocationUpdate(it)
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction?.txEndTime = LocalDateTime.now(clock)
     }
   }
 
   @Transactional
-  fun updateResidentialLocation(
-    key: String,
-    patchLocationRequest: PatchResidentialLocationRequest,
-  ): UpdateLocationResult {
-    val residentialLocation = residentialLocationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
+  fun updateCellSanitation(id: UUID, cellSanitationChangeRequest: CellSanitationChangeRequest): LocationDTO {
+    val cell =
+      cellLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
 
-    if (residentialLocation.hasPendingCertificationApproval()) {
-      throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
+    if (cell.hasPendingCertificationApproval()) {
+      throw PendingApprovalOnLocationCannotBeUpdatedException(cell.getKey())
     }
 
-    val linkedTransaction = sharedLocationService.createLinkedTransaction(
-      prisonId = residentialLocation.prisonId,
-      TransactionType.LOCATION_UPDATE,
-      "Update residential location ${residentialLocation.getKey()}",
-    )
+    var linkedTransaction: LinkedTransaction? = null
 
-    return sharedLocationService.patchLocation(residentialLocation, patchLocationRequest, linkedTransaction).also {
-      sharedLocationService.trackLocationUpdate(it.location)
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    if (activePrisonService.isCertificationApprovalRequired(cell.prisonId) && !cell.isDraft()) {
+      if (cellSanitationChangeRequest.reasonForChange.isNullOrBlank()) {
+        throw ValidationException("Reason for change cannot be blank")
+      }
+
+      cell.requestApprovalForCellSanitationChange(
+        inCellSanitationChange = cellSanitationChangeRequest.inCellSanitation,
+        reasonForChange = cellSanitationChangeRequest.reasonForChange,
+        requestedDate = LocalDateTime.now(clock),
+        requestedBy = sharedLocationService.getUsername(),
+      )
+    } else {
+      linkedTransaction = sharedLocationService.createLinkedTransaction(
+        prisonId = cell.prisonId,
+        TransactionType.LOCATION_UPDATE,
+        "Update cell sanitation ${cell.getKey()}",
+      )
+      cell.setSanitationOfCell(
+        cellSanitationChangeRequest.inCellSanitation,
+        amendedBy = sharedLocationService.getUsername(),
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+    }
+
+    cellLocationRepository.saveAndFlush(cell)
+    return cell.toDto().also {
+      sharedLocationService.trackLocationUpdate(it)
+      linkedTransaction?.txEndTime = LocalDateTime.now(clock)
     }
   }
 
@@ -799,7 +838,7 @@ class LocationService(
       transactionInvokedBy = transactionInvokedBy,
     )
 
-    val requestApproval = locationsToDeactivate.requiresApproval && activePrisonService.isCertificationApprovalRequired(prisonId)
+    val approvalRequired = locationsToDeactivate.requiresApproval && activePrisonService.isCertificationApprovalRequired(prisonId)
     locationsToDeactivate.locations.forEach { (id, deactivationDetail) ->
       val locationToDeactivate = locationRepository.findById(id)
         .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -824,7 +863,7 @@ class LocationService(
             userOrSystemInContext = transactionInvokedBy,
             deactivatedLocations = deactivatedLocations,
             linkedTransaction = linkedTransaction,
-            requestApproval = requestApproval,
+            requestApproval = approvalRequired,
             reasonForChange = locationsToDeactivate.reasonForChange,
           )
         ) {
