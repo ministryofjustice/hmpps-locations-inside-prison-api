@@ -1620,6 +1620,43 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `can retrieve non-residential locations matching wildcard names`() {
+        webTestClient.get().uri("/locations/non-residential/summary/${wingZ.prisonId}?localName=CAT")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "prisonId": "${wingZ.prisonId}",
+                "locations": {
+                  "content": [
+                    {
+                      "localName": "Adjudication Room",
+                      "code": "ADJUDICATION",
+                      "pathHierarchy": "Z-ADJUDICATION",
+                      "locationType": "ADJUDICATION_ROOM",
+                      "permanentlyInactive": false,
+                      "usedByGroupedServices": [
+                        "ADJUDICATIONS"
+                      ],
+                      "usedByServices": [
+                        "HEARING_LOCATION"
+                      ],
+                      "status": "ACTIVE",
+                      "level": 2
+                    }
+                  ]
+                }
+              }
+                 """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
       fun `can retrieve all inactive non-residential locations`() {
         webTestClient.get().uri("/locations/non-residential/summary/${wingZ.prisonId}?status=INACTIVE")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
