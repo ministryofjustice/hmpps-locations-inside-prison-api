@@ -183,6 +183,7 @@ class NonResidentialService(
     if (nonResLocation.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(nonResLocation.getKey())
     }
+    validateLocalNameNotDuplicated(nonResLocation.prisonId, updateRequest.localName, nonResLocation.id!!)
 
     val linkedTransaction = commonLocationService.createLinkedTransaction(
       prisonId = nonResLocation.prisonId,
