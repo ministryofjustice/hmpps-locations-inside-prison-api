@@ -34,6 +34,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filt
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByTypes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateNonResidentialLocalNameInPrisonException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService.Companion.log
 import java.time.Clock
 import java.time.LocalDateTime
@@ -67,6 +68,7 @@ class NonResidentialService(
     } ?: nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId)
 
     val filteredResults = filteredByUsage
+      .filter { !it.isPermanentlyDeactivated() }
       .filter { !filterParents || it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
       .map { it.toDto(formatLocalName = formatLocalName) }
 
@@ -111,6 +113,7 @@ class NonResidentialService(
 
     val filteredResults = filteredByUsage
       .filter { it.getLocationCode() != "RTU" }
+      .filter { !it.isPermanentlyDeactivated() }
       .filter { !filterParents || it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
       .map { it.toDto(formatLocalName = formatLocalName) }
 
@@ -177,7 +180,9 @@ class NonResidentialService(
     val nonResLocation =
       nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
 
-    validateLocalNameNotDuplicated(nonResLocation.prisonId, updateRequest.localName, nonResLocation.id!!)
+    if (nonResLocation.isPermanentlyDeactivated()) {
+      throw PermanentlyDeactivatedUpdateNotAllowedException(nonResLocation.getKey())
+    }
 
     val linkedTransaction = commonLocationService.createLinkedTransaction(
       prisonId = nonResLocation.prisonId,
