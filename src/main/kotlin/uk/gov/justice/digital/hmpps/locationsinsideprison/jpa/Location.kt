@@ -845,7 +845,13 @@ abstract class Location(
     return dataChanged
   }
 
-  open fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): Location {
+  open fun update(
+    upsert: PatchLocationRequest,
+    userOrSystemInContext: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+    approvalRequired: Boolean = false,
+  ): Location {
     updateCode(upsert.code, userOrSystemInContext, clock, linkedTransaction)
     if (upsert.localName != null && this.localName != upsert.localName) {
       updateLocalName(upsert.localName, userOrSystemInContext, clock, linkedTransaction)
