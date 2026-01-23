@@ -27,6 +27,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludeByCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludeByLocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByPrisonId
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByStatuses
@@ -327,6 +328,7 @@ class NonResidentialService(
     prisonId: String,
     statuses: List<LocationStatus> = emptyList(),
     serviceType: ServiceType? = null,
+    searchByLocalName: String? = null,
     locationTypes: List<NonResidentialLocationType> = emptyList(),
     pageable: Pageable = PageRequest.of(0, 100, Sort.by("localName").ascending()),
   ): NonResidentialSummary {
@@ -336,6 +338,9 @@ class NonResidentialService(
         add(excludeByCode("RTU"))
         add(excludeByLocationType(LocationType.BOX))
 
+        searchByLocalName?.let {
+          add(filterByLocalName(it))
+        }
         serviceType?.let {
           add(filterByServiceType(it))
         }
