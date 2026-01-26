@@ -192,6 +192,42 @@ class LocationNonResidentialResource(
     nonResidentialService.createBasicNonResidentialLocation(prisonId = prisonId, createRequest)
   }
 
+  @PostMapping("/non-residential/prison/{prisonId}/generate-missing-children", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @ResponseStatus(HttpStatus.CREATED)
+  @Operation(
+    summary = "Generates missing child locations for services with parent",
+    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "201",
+        description = "Returns created locations",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun generateMissingChildren(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
+    @NotBlank(message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
+    @PathVariable
+    prisonId: String,
+  ): List<Location> = eventPublish {
+    val createdLocations = nonResidentialService.createChildLocationsForServicesWithParent(prisonId)
+    mapOf(InternalLocationDomainEventType.LOCATION_CREATED to createdLocations)
+  }[InternalLocationDomainEventType.LOCATION_CREATED] ?: emptyList()
+
   @PutMapping("/non-residential/{id}")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(

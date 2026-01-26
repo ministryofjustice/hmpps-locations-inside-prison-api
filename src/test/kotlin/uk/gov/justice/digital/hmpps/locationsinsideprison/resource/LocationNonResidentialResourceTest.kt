@@ -6,13 +6,16 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBodyList
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
@@ -629,7 +632,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "locationType": "${createNonResidentialLocationRequest.locationType}",
               "active": true,
               "key": "MDI-Z-ADJ",
-              "internalMovementAllowed": false,
+              "internalMovementAllowed": true,
               "localName": "${createNonResidentialLocationRequest.localName}",
               "usage": [
                 {
@@ -652,8 +655,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                   "serviceType": "INTERNAL_MOVEMENTS",
                   "serviceFamilyType": "INTERNAL_MOVEMENTS"
                 }
-              ],
-              "internalMovementAllowed": true
+              ]
             }
           """,
             JsonCompareMode.LENIENT,
@@ -1938,6 +1940,86 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                """,
             JsonCompareMode.LENIENT,
           )
+      }
+    }
+  }
+
+  @DisplayName("POST /locations/non-residential/prison/{prisonId}/generate-missing-children")
+  @Nested
+  inner class GenerateMissingChildrenTest {
+
+    lateinit var gym: NonResidentialLocation
+
+    @BeforeEach
+    fun setUp() {
+      gym = repository.save(
+        buildNonResidentialLocation(
+          prisonId = "MDI",
+          localName = "Gym",
+          serviceType = ServiceType.APPOINTMENT,
+        ),
+      )
+
+      // Add a child but without the parent's service
+      gym.addChildLocation(
+        buildNonResidentialLocation(
+          prisonId = "MDI",
+          localName = "Gym Area 1",
+          locationType = LocationType.TRAINING_ROOM,
+          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+        ),
+      )
+
+      repository.saveAndFlush(gym)
+    }
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.post().uri("/locations/non-residential/prison/MDI/generate-missing-children")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.post().uri("/locations/non-residential/prison/MDI/generate-missing-children")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.post().uri("/locations/non-residential/prison/MDI/generate-missing-children")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can generate missing child locations`() {
+        val response = webTestClient.post().uri("/locations/non-residential/prison/MDI/generate-missing-children")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBodyList<Location>()
+          .returnResult().responseBody!!
+
+        assertThat(response).hasSize(1)
+        assertThat(response[0].localName).isEqualTo("Gym")
+        assertThat(response[0].parentId).isEqualTo(gym.id)
+        assertThat(response[0].servicesUsingLocation?.map { it.serviceType }).containsExactly(ServiceType.APPOINTMENT)
+
+        getDomainEvents(1).let {
+          assertThat(it[0].eventType).isEqualTo("location.inside.prison.created")
+          assertThat(it[0].additionalInformation?.id).isEqualTo(response[0].id)
+        }
       }
     }
   }
