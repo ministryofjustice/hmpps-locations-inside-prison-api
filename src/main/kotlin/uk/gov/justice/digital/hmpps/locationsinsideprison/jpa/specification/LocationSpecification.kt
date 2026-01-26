@@ -8,8 +8,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceUsage
 
 fun filterByPrisonId(prisonId: String) = NonResidentialLocation::prisonId.buildSpecForEqualTo(prisonId)
 
+fun filterByLocalName(localName: String) = NonResidentialLocation::localName.buildSpecForLike(localName)
+
 fun excludeByCode(code: String) = NonResidentialLocation::code.buildSpecForNotEqualTo(code)
 fun excludeByLocationType(locationType: LocationType) = NonResidentialLocation::locationType.buildSpecForNotEqualTo(locationType)
+fun excludeByStatus(status: LocationStatus) = NonResidentialLocation::status.buildSpecForNotEqualTo(status)
 
 fun filterByStatuses(statuses: Collection<LocationStatus>) = NonResidentialLocation::status.buildSpecForIn(statuses)
 fun filterByStatuses(vararg statuses: LocationStatus) = filterByStatuses(statuses.toList())

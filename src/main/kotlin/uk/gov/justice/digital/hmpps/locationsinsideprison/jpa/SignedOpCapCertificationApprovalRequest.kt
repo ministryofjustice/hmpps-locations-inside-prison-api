@@ -10,20 +10,17 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
-@DiscriminatorValue("SIGNED_OP_CAP_APPROVAL_REQUEST")
+@DiscriminatorValue("SIGNED_OP_CAP")
 open class SignedOpCapCertificationApprovalRequest(
   id: UUID? = null,
-  approvalType: ApprovalType,
   prisonId: String,
   status: ApprovalRequestStatus = ApprovalRequestStatus.PENDING,
   requestedBy: String,
   requestedDate: LocalDateTime,
   approvedOrRejectedBy: String? = null,
   approvedOrRejectedDate: LocalDateTime? = null,
+  reasonForChange: String? = null,
   comments: String? = null,
-
-  @Column
-  private val reasonForChange: String,
 
   @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
   private val signedOperationCapacity: SignedOperationCapacity,
@@ -36,15 +33,17 @@ open class SignedOpCapCertificationApprovalRequest(
 
 ) : CertificationApprovalRequest(
   id = id,
-  approvalType = approvalType,
   prisonId = prisonId,
   status = status,
   requestedBy = requestedBy,
   requestedDate = requestedDate,
   approvedOrRejectedBy = approvedOrRejectedBy,
   approvedOrRejectedDate = approvedOrRejectedDate,
+  reasonForChange = reasonForChange,
   comments = comments,
 ) {
+  override fun getApprovalType() = ApprovalType.SIGNED_OP_CAP
+
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     reasonForSignedOpChange = reasonForChange,
     currentSignedOperationCapacity = currentSignedOperationCapacity,

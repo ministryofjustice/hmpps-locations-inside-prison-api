@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -59,13 +61,39 @@ data class CertificationApprovalRequestDto(
   val signedOperationCapacityChange: Int? = null,
 
   @param:Schema(description = "The reason why the signed op cap was changed", example = "Change in number of cells", required = false)
+  @Deprecated("Use reasonForChange instead")
   val reasonForSignedOpChange: String? = null,
+
+  @param:Schema(description = "The reason why the approval was requested", example = "Change in number of cells", required = false)
+  val reasonForChange: String? = null,
 
   @param:Schema(description = "Locations affected by the approval", required = false)
   val locations: List<CertificationApprovalRequestLocationDto>? = null,
 
   @param:Schema(description = "The ID of the certificate once approved", required = false)
   val certificateId: UUID? = null,
+
+  @param:Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1)
+  val cellMark: String? = null,
+
+  @param:Schema(description = "Whether the cell has in-cell sanitation", example = "true")
+  val inCellSanitation: Boolean? = null,
+
+  @param:Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
+  val deactivatedReason: DeactivatedReason? = null,
+
+  @param:Schema(
+    description = "For OTHER deactivation reason, a free text comment is provided",
+    example = "Window damage",
+    required = false,
+  )
+  val deactivationReasonDescription: String? = null,
+
+  @param:Schema(description = "Estimated reactivation date for location reactivation", example = "2026-01-24", required = false)
+  val proposedReactivationDate: LocalDate? = null,
+
+  @param:Schema(description = "Planet FM reference number", example = "2323/45M", required = false)
+  val planetFmReference: String? = null,
 )
 
 @Schema(description = "Request to approve a certification request")

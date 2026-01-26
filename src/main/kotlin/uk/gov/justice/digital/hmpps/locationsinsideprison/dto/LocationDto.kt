@@ -267,6 +267,12 @@ data class PendingChangeDto(
   @param:Schema(description = "Pending CNA", example = "2", required = false)
   val certifiedNormalAccommodation: Int? = null,
 
+  @param:Schema(description = "Pending cell mark of the location", required = false, example = "A1", minLength = 1)
+  val cellMark: String? = null,
+
+  @param:Schema(description = "Pending in-cell sanitation", required = false, example = "true")
+  val inCellSanitation: Boolean? = null,
+
 )
 
 @Schema(description = "Service that uses a location")
@@ -764,10 +770,29 @@ private fun setServices(
 
 fun isInternalMovement(serviceTypes: Set<ServiceType>) = serviceTypes.find { it == ServiceType.INTERNAL_MOVEMENTS } != null
 
+@Schema(description = "Request to temporarily deactivate a location - used in bulk updates")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class BasicTemporaryDeactivationRequest(
+  @param:Schema(description = "Reason for temporary deactivation", example = "MOTHBALLED", required = true)
+  val deactivationReason: DeactivatedReason,
+  @param:Schema(
+    description = "Additional information on deactivation, for OTHER DeactivatedReason must be provided",
+    example = "Window broken",
+    required = false,
+  )
+  @field:Size(max = 255, message = "Other deactivation reason cannot be more than 255 characters")
+  val deactivationReasonDescription: String? = null,
+  @param:Schema(description = "Estimated reactivation date", example = "2025-01-05", required = false)
+  val proposedReactivationDate: LocalDate? = null,
+  @param:Schema(description = "Planet FM reference number", example = "23423TH/5", required = false)
+  @field:Size(max = 60, message = "Planet FM reference number cannot be more than 60 characters")
+  val planetFmReference: String? = null,
+)
+
 /**
  * Request format temporarily deactivating a location
  */
-@Schema(description = "Request to temporarily deactivate a location")
+@Schema(description = "Request to temporarily deactivate a location, optionally indicating certification approval required")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class TemporaryDeactivationLocationRequest(
   @param:Schema(description = "Reason for temporary deactivation", example = "MOTHBALLED", required = true)
@@ -784,7 +809,18 @@ data class TemporaryDeactivationLocationRequest(
   @param:Schema(description = "Planet FM reference number", example = "23423TH/5", required = false)
   @field:Size(max = 60, message = "Planet FM reference number cannot be more than 60 characters")
   val planetFmReference: String? = null,
-)
+  @param:Schema(description = "The deactivation needs to be approved, if false (default) it will be classed as a short term temporary deactivation", example = "false", required = false)
+  val requiresApproval: Boolean = false,
+  @param:Schema(description = "Explanation of why the capacity need to be decreased", example = "The cell is damaged and will be take 6 months to repair", required = false)
+  val reasonForChange: String? = null,
+) {
+  fun toBasicDeactivation() = BasicTemporaryDeactivationRequest(
+    deactivationReason = deactivationReason,
+    deactivationReasonDescription = deactivationReasonDescription,
+    proposedReactivationDate = proposedReactivationDate,
+    planetFmReference = planetFmReference,
+  )
+}
 
 /**
  * Request format permanently deactivating a location

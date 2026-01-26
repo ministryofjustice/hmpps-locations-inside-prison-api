@@ -636,7 +636,14 @@ class LocationNonResidentialResource(
       ),
     )
     @RequestParam(required = false)
-    status: List<LocationStatus>? = null,
+    status: List<LocationStatus> = listOf(LocationStatus.ACTIVE, LocationStatus.INACTIVE),
+    @Schema(description = "Filter by the local name, wildcarded and case insensitive", example = "Work", required = false)
+    @Parameter(
+      description = "Filter by the local name",
+      example = "Work",
+    )
+    @RequestParam(required = false)
+    localName: String? = null,
     @Schema(description = "Filter by given types", example = "[ADJUDICATION_ROOM,VIDEO_LINK]", required = false)
     @Parameter(
       description = "Filter by given types",
@@ -662,7 +669,8 @@ class LocationNonResidentialResource(
     prisonId = prisonId,
     serviceType = serviceType,
     pageable = pageable,
-    statuses = status ?: emptyList(),
+    statuses = status,
     locationTypes = locationType ?: emptyList(),
+    searchByLocalName = localName,
   )
 }

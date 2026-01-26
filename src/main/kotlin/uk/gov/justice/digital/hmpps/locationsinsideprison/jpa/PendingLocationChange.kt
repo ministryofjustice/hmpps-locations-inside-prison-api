@@ -24,6 +24,13 @@ class PendingLocationChange(
 
   @Column(nullable = true)
   var certifiedNormalAccommodation: Int? = null,
+
+  @Column(nullable = true)
+  var cellMark: String? = null,
+
+  @Column(nullable = true)
+  var inCellSanitation: Boolean? = null,
+
 ) : Comparable<PendingLocationChange> {
 
   companion object {

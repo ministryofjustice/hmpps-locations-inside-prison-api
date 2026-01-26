@@ -18,9 +18,9 @@ import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.BasicTemporaryDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CapacityChanges
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
@@ -217,9 +217,11 @@ data class BulkPermanentDeactivationRequest(
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class DeactivateLocationsRequest(
   @param:Schema(description = "List of locations to deactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"deactivationReason\": \"DAMAGED\" } }")
-  val locations: Map<UUID, TemporaryDeactivationLocationRequest>,
-  @param:Schema(description = "The deactivation needs to be approved, if false (default) it will be classes a short term temporary deactivation", example = "false", required = false)
+  val locations: Map<UUID, BasicTemporaryDeactivationRequest>,
+  @param:Schema(description = "The deactivation needs to be approved, if false (default) it will be classed as a short term temporary deactivation", example = "false", required = false)
   val requiresApproval: Boolean = false,
+  @param:Schema(description = "Explanation of why the capacity need to be decreased", example = "The cell is damaged and will be take 6 months to repair", required = false)
+  val reasonForChange: String? = null,
   @param:Schema(description = "Username of the user requesting to deactivate the locations, if not provided the token username or client id will be used", example = "TESTUSER", required = false)
   @field:Size(max = 80, message = "The updatedBy field cannot be more than 80 characters")
   val updatedBy: String? = null,

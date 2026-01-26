@@ -158,8 +158,14 @@ class NonResidentialLocation(
     internalMovementAllowed = internalMovementAllowed,
   )
 
-  override fun update(upsert: PatchLocationRequest, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction): NonResidentialLocation {
-    super.update(upsert, userOrSystemInContext, clock, linkedTransaction)
+  override fun update(
+    upsert: PatchLocationRequest,
+    userOrSystemInContext: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+    approvalRequired: Boolean,
+  ): NonResidentialLocation {
+    super.update(upsert, userOrSystemInContext, clock, linkedTransaction, approvalRequired)
 
     if (upsert is PatchNonResidentialLocationRequest) {
       upsert.servicesUsingLocation?.let {

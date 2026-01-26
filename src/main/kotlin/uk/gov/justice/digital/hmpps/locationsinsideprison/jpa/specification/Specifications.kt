@@ -9,6 +9,29 @@ fun <T : Any, V : Any> KProperty1<T, V?>.buildSpecForEqualTo(value: V): Specific
   criteriaBuilder.equal(root.get<V>(name), value)
 }
 
+/** Build the «like» specification from an entity’s property (contains + case-insensitive) */
+fun <T : Any> KProperty1<T, String?>.buildSpecForLike(value: String): Specification<T> = Specification { root, _, criteriaBuilder ->
+  val escapeChar = '\\'
+  val pattern = "%${value.trim().escapeLike(escapeChar)}%".lowercase()
+
+  criteriaBuilder.like(
+    criteriaBuilder.lower(root.get(this.name)),
+    pattern,
+    escapeChar,
+  )
+}
+
+/**
+ * Escape LIKE wildcards so user input is treated literally.
+ * Escapes: %, _, and the escape char itself.
+ */
+private fun String.escapeLike(escapeChar: Char): String = buildString(length) {
+  for (ch in this@escapeLike) {
+    if (ch == escapeChar || ch == '%' || ch == '_') append(escapeChar)
+    append(ch)
+  }
+}
+
 /** Build «not equal to» specification from an entity’s property */
 fun <T : Any, V : Any> KProperty1<T, V>.buildSpecForNotEqualTo(value: V): Specification<T> = Specification { root, _, criteriaBuilder ->
   criteriaBuilder.notEqual(root.get<V>(name), value)
