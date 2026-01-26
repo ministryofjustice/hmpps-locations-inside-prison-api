@@ -29,6 +29,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludeByCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludeByLocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByIsLeaf
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByPrisonId
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByServiceType
@@ -70,7 +71,7 @@ class NonResidentialService(
     } ?: nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId)
 
     val filteredResults = filteredByUsage
-      .filter { !it.isPermanentlyDeactivated() }
+      .filter { it.isActiveAndAllParentsActive() }
       .filter { !filterParents || it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
       .map { it.toDto(formatLocalName = formatLocalName) }
 
@@ -115,7 +116,7 @@ class NonResidentialService(
 
     val filteredResults = filteredByUsage
       .filter { it.getLocationCode() != "RTU" }
-      .filter { !it.isPermanentlyDeactivated() }
+      .filter { it.isActiveAndAllParentsActive() }
       .filter { !filterParents || it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
       .map { it.toDto(formatLocalName = formatLocalName) }
 
@@ -409,6 +410,7 @@ class NonResidentialService(
     val specification = Specification.allOf(
       buildList {
         add(filterByPrisonId(prisonId))
+        add(filterByIsLeaf())
         add(excludeByCode("RTU"))
         add(excludeByLocationType(LocationType.BOX))
 

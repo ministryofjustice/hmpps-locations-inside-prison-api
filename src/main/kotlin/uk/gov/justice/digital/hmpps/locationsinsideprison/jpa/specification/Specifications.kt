@@ -42,6 +42,16 @@ fun <T : Any, V : Any> KProperty1<T, V>.buildSpecForIn(values: Collection<V>): S
   criteriaBuilder.and(root.get<V>(name).`in`(values))
 }
 
+/** Build «is empty» specification from an entity’s collection property */
+fun <T : Any, R> KProperty1<T, Collection<R>>.buildSpecForIsEmpty(): Specification<T> = Specification { root, _, criteriaBuilder ->
+  criteriaBuilder.isEmpty(root.get(name))
+}
+
+/** Build «is empty» specification from an entity’s collection property name */
+fun <T : Any> buildSpecForIsEmpty(propertyName: String): Specification<T> = Specification { root, _, criteriaBuilder ->
+  criteriaBuilder.isEmpty(root.get(propertyName))
+}
+
 /** Build «equal to» specification joining to a related entity (via a collection property) */
 fun <T : Any, R, V : Any> KProperty1<T, Collection<R>>.buildSpecForRelatedEntityPropertyEqualTo(
   property: KProperty1<R, V>,
