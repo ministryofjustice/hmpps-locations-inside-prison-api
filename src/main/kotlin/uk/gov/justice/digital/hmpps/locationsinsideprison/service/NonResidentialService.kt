@@ -17,7 +17,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentia
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
@@ -122,6 +124,71 @@ class NonResidentialService(
     } else {
       filteredResults
     }
+  }
+
+  @Transactional
+  fun createChildLocationsForServicesWithParent(prisonId: String): List<LocationDTO> {
+    val allNonResLocations = nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId)
+    val locationsWithChildren = allNonResLocations.filter { it.findSubLocations().isNotEmpty() }
+    val createdLocations = mutableListOf<LocationDTO>()
+
+    locationsWithChildren.forEach { parent ->
+      val parentServices = parent.services.map { it.serviceType }.toSet()
+      if (parentServices.isNotEmpty()) {
+        val descendants = parent.findSubLocations()
+        val missingServices = parentServices.filter { serviceType ->
+          descendants.none { child ->
+            (child as? NonResidentialLocation)?.services?.any { it.serviceType == serviceType } == true
+          }
+        }
+
+        if (missingServices.isNotEmpty()) {
+          val localName = parent.localName ?: parent.getLocationCode()
+          val code = generateUniqueNonResidentialCode(prisonId, localName)
+
+          val linkedTransaction = commonLocationService.createLinkedTransaction(
+            prisonId = prisonId,
+            TransactionType.LOCATION_CREATE_NON_RESI,
+            "Create non-residential location $code as child of ${parent.getKey()} for services ${missingServices.joinToString(", ")}",
+          )
+
+          val username = commonLocationService.getUsername()
+          val newLocation = NonResidentialLocation(
+            id = null,
+            code = code,
+            pathHierarchy = code, // will be updated by setParent
+            locationType = parent.locationType,
+            prisonId = prisonId,
+            status = LocationStatus.ACTIVE,
+            parent = parent,
+            localName = parent.localName,
+            childLocations = sortedSetOf(),
+            whenCreated = LocalDateTime.now(clock),
+            createdBy = username,
+            internalMovementAllowed = missingServices.contains(ServiceType.INTERNAL_MOVEMENTS),
+          ).apply {
+            parent.addChildLocation(this)
+            missingServices.forEach { serviceType ->
+              addService(serviceType)
+              addUsage(serviceType.nonResidentialUsageType, 99)
+            }
+            addHistory(
+              attributeName = LocationAttribute.LOCATION_CREATED,
+              oldValue = null,
+              newValue = getKey(),
+              amendedBy = username,
+              amendedDate = LocalDateTime.now(clock),
+              linkedTransaction = linkedTransaction,
+            )
+          }
+          val savedLocation = nonResidentialLocationRepository.save(newLocation)
+          commonLocationService.trackLocationUpdate(savedLocation, "Created Non-Residential Location for services ${missingServices.joinToString(", ")}")
+          linkedTransaction.txEndTime = LocalDateTime.now(clock)
+          createdLocations.add(savedLocation.toDto())
+        }
+      }
+    }
+    return createdLocations
   }
 
   @Transactional

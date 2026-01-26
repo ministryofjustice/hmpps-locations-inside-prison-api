@@ -5,12 +5,18 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.times
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.springframework.test.util.ReflectionTestUtils
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
@@ -36,6 +42,13 @@ class NonResidentialServiceTest {
   fun setUp() {
     whenever(authenticationHolder.username).thenReturn("User 1")
     whenever(linkedTransactionRepository.save(any())).thenReturn(mock())
+    whenever(nonResidentialLocationRepository.save(any())).thenAnswer {
+      val loc = it.arguments[0] as NonResidentialLocation
+      if (loc.id == null) {
+        ReflectionTestUtils.setField(loc, "id", UUID.randomUUID())
+      }
+      loc
+    }
   }
 
   // findAllByPrisonIdAndNonResidentialUsages
@@ -113,6 +126,32 @@ class NonResidentialServiceTest {
     Assertions.assertThat(nonResLoc[0].localName).isEqualTo("A")
     Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
     Assertions.assertThat(nonResLoc[2].localName).isEqualTo("Cc")
+  }
+
+  @Test
+  fun `createChildLocationsForServicesWithParent should create single leaf location for multiple missing services`() {
+    val prisonId = "MDI"
+    val parent = buildLocation("Gym").apply {
+      addService(ServiceType.APPOINTMENT)
+      addService(ServiceType.PROGRAMMES_AND_ACTIVITIES)
+    }
+    val child = buildLocation("Gym - Area 1")
+    parent.addChildLocation(child)
+
+    whenever(nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId))
+      .thenReturn(listOf(parent))
+    whenever(sharedLocationService.getUsername()).thenReturn("test-user")
+    whenever(sharedLocationService.createLinkedTransaction(any(), any(), any(), anyOrNull())).thenReturn(mock())
+
+    val results = service.createChildLocationsForServicesWithParent(prisonId)
+
+    Assertions.assertThat(results).hasSize(1)
+    Assertions.assertThat(results[0].localName).isEqualTo("Gym")
+
+    val captor = argumentCaptor<NonResidentialLocation>()
+    verify(nonResidentialLocationRepository, times(1)).save(captor.capture())
+    val savedLocation = captor.firstValue
+    Assertions.assertThat(savedLocation.services.map { it.serviceType }).containsExactlyInAnyOrder(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
   }
 
   private fun buildLocation(localName: String): NonResidentialLocation = NonResidentialLocation(
