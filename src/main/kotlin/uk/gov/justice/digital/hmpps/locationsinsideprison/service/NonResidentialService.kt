@@ -188,6 +188,7 @@ class NonResidentialService(
         }
       }
     }
+    log.info("Created ${createdLocations.size} child locations for services with parent")
     return createdLocations
   }
 
