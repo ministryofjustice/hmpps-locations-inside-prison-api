@@ -71,7 +71,7 @@ class NonResidentialService(
     } ?: nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId)
 
     val filteredResults = filteredByUsage
-      .filter { !it.isPermanentlyDeactivated() }
+      .filter { it.isActiveAndAllParentsActive() }
       .filter { !filterParents || it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
       .map { it.toDto(formatLocalName = formatLocalName) }
 
@@ -116,7 +116,7 @@ class NonResidentialService(
 
     val filteredResults = filteredByUsage
       .filter { it.getLocationCode() != "RTU" }
-      .filter { !it.isPermanentlyDeactivated() }
+      .filter { it.isActiveAndAllParentsActive() }
       .filter { !filterParents || it.findSubLocations().intersect(filteredByUsage.toSet()).isEmpty() }
       .map { it.toDto(formatLocalName = formatLocalName) }
 
