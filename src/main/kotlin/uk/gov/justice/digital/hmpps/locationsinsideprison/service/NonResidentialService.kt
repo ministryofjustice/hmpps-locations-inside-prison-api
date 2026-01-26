@@ -160,7 +160,7 @@ class NonResidentialService(
             pathHierarchy = code, // will be updated by setParent
             locationType = parent.locationType,
             prisonId = prisonId,
-            status = LocationStatus.ACTIVE,
+            status = parent.status,
             parent = parent,
             localName = parent.localName,
             childLocations = sortedSetOf(),
