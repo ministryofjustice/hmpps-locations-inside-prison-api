@@ -10,6 +10,8 @@ fun filterByPrisonId(prisonId: String) = NonResidentialLocation::prisonId.buildS
 
 fun filterByLocalName(localName: String) = NonResidentialLocation::localName.buildSpecForLike(localName)
 
+fun filterByIsLeaf() = buildSpecForIsEmpty<NonResidentialLocation>("childLocations")
+
 fun excludeByCode(code: String) = NonResidentialLocation::code.buildSpecForNotEqualTo(code)
 fun excludeByLocationType(locationType: LocationType) = NonResidentialLocation::locationType.buildSpecForNotEqualTo(locationType)
 fun excludeByStatus(status: LocationStatus) = NonResidentialLocation::status.buildSpecForNotEqualTo(status)
