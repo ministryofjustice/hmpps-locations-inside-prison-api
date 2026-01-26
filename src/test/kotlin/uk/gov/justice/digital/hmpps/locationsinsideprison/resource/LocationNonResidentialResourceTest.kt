@@ -632,7 +632,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "locationType": "${createNonResidentialLocationRequest.locationType}",
               "active": true,
               "key": "MDI-Z-ADJ",
-              "internalMovementAllowed": false,
+              "internalMovementAllowed": true,
               "localName": "${createNonResidentialLocationRequest.localName}",
               "usage": [
                 {
