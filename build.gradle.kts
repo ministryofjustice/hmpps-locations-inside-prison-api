@@ -25,7 +25,7 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-webclient")
   implementation("org.springframework.security:spring-security-access")
   implementation("org.springframework.boot:spring-boot-starter-validation")
-  implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.11.11")
+  implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.11.12")
   implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.24.0")
   implementation("io.opentelemetry:opentelemetry-extension-kotlin:1.58.0")
 
