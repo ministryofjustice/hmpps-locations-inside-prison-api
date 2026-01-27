@@ -9,6 +9,7 @@ import org.springframework.test.json.JsonCompareMode
 import org.springframework.test.web.reactive.server.expectBodyList
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
@@ -1949,6 +1950,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
   inner class GenerateMissingChildrenTest {
 
     lateinit var gym: NonResidentialLocation
+    lateinit var oldGym: NonResidentialLocation
 
     @BeforeEach
     fun setUp() {
@@ -1957,20 +1959,34 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           prisonId = "MDI",
           localName = "Gym",
           serviceType = ServiceType.APPOINTMENT,
-        ),
+        ).also {
+          it.addChildLocation(
+            buildNonResidentialLocation(
+              prisonId = "MDI",
+              localName = "Gym Area 1",
+              locationType = LocationType.TRAINING_ROOM,
+              serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+            ),
+          )
+        },
       )
 
-      // Add a child but without the parent's service
-      gym.addChildLocation(
+      oldGym = repository.save(
         buildNonResidentialLocation(
           prisonId = "MDI",
-          localName = "Gym Area 1",
-          locationType = LocationType.TRAINING_ROOM,
-          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
-        ),
+          localName = "Gym Old",
+          serviceType = ServiceType.USE_OF_FORCE,
+          status = LocationStatus.INACTIVE,
+        ).also {
+          it.addChildLocation(
+            buildNonResidentialLocation(
+              prisonId = "MDI",
+              localName = "Gym Old Old",
+              serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+            ),
+          )
+        },
       )
-
-      repository.saveAndFlush(gym)
     }
 
     @Nested
@@ -2011,14 +2027,20 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           .expectBodyList<Location>()
           .returnResult().responseBody!!
 
-        assertThat(response).hasSize(1)
+        assertThat(response).hasSize(2)
         assertThat(response[0].localName).isEqualTo("Gym")
         assertThat(response[0].parentId).isEqualTo(gym.id)
         assertThat(response[0].servicesUsingLocation?.map { it.serviceType }).containsExactly(ServiceType.APPOINTMENT)
+        assertThat(response[1].localName).isEqualTo("Gym Old")
+        assertThat(response[1].parentId).isEqualTo(oldGym.id)
+        assertThat(response[1].status).isEqualTo(DerivedLocationStatus.INACTIVE)
+        assertThat(response[1].servicesUsingLocation?.map { it.serviceType }).containsExactly(ServiceType.USE_OF_FORCE)
 
-        getDomainEvents(1).let {
+        getDomainEvents(2).let {
           assertThat(it[0].eventType).isEqualTo("location.inside.prison.created")
           assertThat(it[0].additionalInformation?.id).isEqualTo(response[0].id)
+          assertThat(it[1].eventType).isEqualTo("location.inside.prison.created")
+          assertThat(it[1].additionalInformation?.id).isEqualTo(response[1].id)
         }
       }
     }
