@@ -38,4 +38,5 @@ enum class ErrorCode(val errorCode: Int) {
   ApprovalRequestAtWrongLevel(errorCode = 129),
   DuplicateNonResidentialLocalNameInSamePrison(130),
   CreationForbiddenWhenApprovalPending(errorCode = 131),
+  DuplicateCellMarkAtSameLevel(132),
 }

@@ -16,4 +16,10 @@ interface CellLocationRepository : JpaRepository<Cell, UUID> {
   @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
   @Query("select l from Cell l where concat(l.prisonId,'-',l.pathHierarchy) = :key")
   fun findOneByKey(key: String): Cell?
+
+  @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
+  fun findAllByPrisonIdAndParentIdAndCellMark(prisonId: String, parentId: UUID, cellMark: String): List<Cell>
+
+  @EntityGraph(value = "resi.location.graph", type = EntityGraph.EntityGraphType.LOAD)
+  fun findAllByPrisonIdAndCellMark(prisonId: String, cellMark: String): List<Cell>
 }
