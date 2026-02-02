@@ -507,6 +507,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(DuplicateCellMarkForSameHierarchyException::class)
+  fun handleDuplicateCellMarkForSameHierarchyException(e: DuplicateCellMarkForSameHierarchyException): ResponseEntity<ErrorResponse> {
+    log.debug("Duplicate cell mark name: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.DuplicateCellMarkAtSameLevel,
+          userMessage = "Cell mark already exists in this prison at this level: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(LocationCannotBeDeletedWhenNotDraftException::class)
   fun handleLocationCannotBeDeletedWhenNotDraftException(e: LocationCannotBeDeletedWhenNotDraftException): ResponseEntity<ErrorResponse> {
     log.debug("Delete not allowed for non DRAFT locations: {}", e.message)
@@ -616,6 +631,7 @@ class UpdateNotAllowedAsConvertedCellException(key: String) : ValidationExceptio
 class LocationContainsPrisonersException(locationsWithPrisoners: Map<String, List<Prisoner>>) : Exception("${locationsWithPrisoners.keys.size} locations contain ${locationsWithPrisoners.values.size} prisoners")
 class DuplicateLocalNameForSameHierarchyException(localName: String, topLocationKey: String) : ValidationException("Same local name $localName in this hierarchy $topLocationKey")
 class DuplicateNonResidentialLocalNameInPrisonException(prisonId: String, localName: String) : ValidationException("Same local name $localName in this prison $prisonId")
+class DuplicateCellMarkForSameHierarchyException(cellMark: String, topLocationKey: String) : ValidationException("Same cell mark $cellMark in this hierarchy $topLocationKey")
 class ActiveLocationCannotBePermanentlyDeactivatedException(key: String) : Exception("$key: Location cannot be permanently deactivated as it is active")
 class LocationIsNotACellException(key: String) : Exception("$key: Location must be a cell in order to perform this operation")
 class ApprovalRequestNotFoundException(approvalRequestId: UUID) : Exception("Approval request $approvalRequestId not found")
