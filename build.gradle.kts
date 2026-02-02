@@ -4,10 +4,10 @@ import uk.gov.justice.digital.hmpps.gradle.PortForwardRedisTask
 import uk.gov.justice.digital.hmpps.gradle.RevealSecretsTask
 
 plugins {
-  id("uk.gov.justice.hmpps.gradle-spring-boot") version "10.0.1"
+  id("uk.gov.justice.hmpps.gradle-spring-boot") version "10.0.3"
   kotlin("plugin.spring") version "2.3.0"
   kotlin("plugin.jpa") version "2.3.0"
-  id("org.jetbrains.kotlinx.kover") version "0.9.4"
+  id("org.jetbrains.kotlinx.kover") version "0.9.5"
   idea
 }
 
@@ -17,7 +17,7 @@ configurations {
 
 dependencies {
   implementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter:2.0.0")
-  implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:6.0.0")
+  implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:6.0.1")
   implementation("org.springframework.boot:spring-boot-starter-webflux")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springframework.boot:spring-boot-starter-flyway")
@@ -25,7 +25,7 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-webclient")
   implementation("org.springframework.security:spring-security-access")
   implementation("org.springframework.boot:spring-boot-starter-validation")
-  implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.11.12")
+  implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.11.19")
   implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.24.0")
   implementation("io.opentelemetry:opentelemetry-extension-kotlin:1.58.0")
 
