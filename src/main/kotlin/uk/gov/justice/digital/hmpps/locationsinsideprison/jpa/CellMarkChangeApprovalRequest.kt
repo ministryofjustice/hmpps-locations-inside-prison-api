@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import java.time.LocalDateTime
@@ -15,6 +16,10 @@ open class CellMarkChangeApprovalRequest(
   reasonForChange: String? = null,
 
   var cellMark: String,
+
+  @Column(nullable = true)
+  private var currentCellMark: String? = null,
+
 ) : LocationCertificationApprovalRequest(
   id = id,
   location = location,
@@ -26,6 +31,7 @@ open class CellMarkChangeApprovalRequest(
 ) {
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     cellMark = cellMark,
+    currentCellMark = currentCellMark,
   )
 
   override fun getApprovalType() = ApprovalType.CELL_MARK
