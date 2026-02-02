@@ -628,6 +628,7 @@ class Cell(
       requestedDate = requestedDate,
       reasonForChange = reasonForChange,
       cellMark = cellMarkChange,
+      currentCellMark = cellMark,
     ).apply {
       linkPendingChangesToApprovalRequest(approvalRequest = this)
     }
