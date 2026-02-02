@@ -95,15 +95,6 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       ),
     )
 
-    val nmiConfig = configurationRepository.saveAndFlush(
-      PrisonConfiguration(
-        id = "NMI",
-        resiLocationServiceActive = true,
-        certificationApprovalRequired = true,
-        whenUpdated = LocalDateTime.now(clock),
-        updatedBy = SYSTEM_USERNAME,
-      ),
-    )
     configurationRepository.saveAllAndFlush(
       listOf(
         PrisonConfiguration(
@@ -182,7 +173,6 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         prisonId = "NMI",
         residentialHousingType = ResidentialHousingType.OTHER_USE,
         linkedTransaction = linkedTransaction,
-        prisonConfiguration = nmiConfig,
       ),
     )
 

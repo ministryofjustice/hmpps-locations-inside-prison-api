@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.springframework.http.HttpStatus
 import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellMarkChangeRequest
@@ -11,9 +12,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellSanitationChan
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
@@ -153,6 +156,30 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
   inner class CellMarkChangeTest {
 
     @Test
+    fun `cannot change a cell mark to an existing cell mark at same level`() {
+      val cellToUpdate = leedsWing.findAllLeafLocations().first() as Cell
+      val existingCell = leedsWing.findAllLeafLocations().last() as Cell
+
+      assertThat(
+        webTestClient.put().uri("/locations/residential/${cellToUpdate.id}/cell-mark-change")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              CellMarkChangeRequest(
+                reasonForChange = "This door number already exists",
+                cellMark = existingCell.cellMark!!,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isEqualTo(HttpStatus.CONFLICT)
+          .expectBody<ErrorResponse>()
+          .returnResult().responseBody!!.errorCode,
+      ).isEqualTo(ErrorCode.DuplicateCellMarkAtSameLevel.errorCode)
+    }
+
+    @Test
     fun `can change a cell mark on a location and request approval`() {
       val cellToUpdate = leedsWing.findAllLeafLocations().first() as Cell
       val pendingCell = webTestClient.put().uri("/locations/residential/${cellToUpdate.id}/cell-mark-change")
@@ -242,6 +269,67 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approvedLocation.cellMark).isEqualTo("CM-001")
       assertThat(approvedLocation.pendingChanges).isNull()
       assertThat(approvedLocation.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `can change a cell mark on a location and reject approval`() {
+      val cellToUpdate = leedsWing.findAllLeafLocations().first() as Cell
+      val pendingCell = webTestClient.put().uri("/locations/residential/${cellToUpdate.id}/cell-mark-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CellMarkChangeRequest(
+              reasonForChange = "The door number is wrong",
+              cellMark = "CM-001",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(pendingCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
+      assertThat(pendingCell.cellMark).isEqualTo(cellToUpdate.cellMark)
+      assertThat(pendingCell.pendingChanges?.cellMark).isEqualTo("CM-001")
+      assertThat(pendingCell.pendingApprovalRequestId).isNotNull
+
+      val pendingApprovalRequestId = pendingCell.pendingApprovalRequestId!!
+
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val rejectedRequest = webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            RejectCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+              comments = "The door number is wrong",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedRequest.certificateId).isNull()
+      assertThat(rejectedRequest.status).isEqualTo(ApprovalRequestStatus.REJECTED)
+
+      val rejectedLocation = webTestClient.get().uri("/locations/${cellToUpdate.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(rejectedLocation.cellMark).isEqualTo(cellToUpdate.cellMark)
+      assertThat(rejectedLocation.pendingChanges).isNull()
+      assertThat(rejectedLocation.pendingApprovalRequestId).isNull()
     }
   }
 
@@ -335,6 +423,62 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approvedLocation.inCellSanitation).isEqualTo(false)
       assertThat(approvedLocation.pendingChanges).isNull()
       assertThat(approvedLocation.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `can change a cell sanitation on a location and reject approval`() {
+      val cellToUpdate = leedsWing.findAllLeafLocations().first() as Cell
+      val pendingCell = webTestClient.put().uri("/locations/residential/${cellToUpdate.id}/cell-sanitation-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CellSanitationChangeRequest(
+              reasonForChange = "The toilet is old",
+              inCellSanitation = false,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(pendingCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
+      val pendingApprovalRequestId = pendingCell.pendingApprovalRequestId!!
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val rejectedRequest = webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            RejectCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+              comments = "It does have a toilet!",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedRequest.certificateId).isNull()
+      assertThat(rejectedRequest.status).isEqualTo(ApprovalRequestStatus.REJECTED)
+
+      val rejectedLocation = webTestClient.get().uri("/locations/${cellToUpdate.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(rejectedLocation.inCellSanitation).isEqualTo(true)
+      assertThat(rejectedLocation.pendingChanges).isNull()
+      assertThat(rejectedLocation.pendingApprovalRequestId).isNull()
     }
   }
 }

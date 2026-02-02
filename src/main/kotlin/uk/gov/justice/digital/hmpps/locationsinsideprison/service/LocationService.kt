@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellDraftUpdateRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellMarkChangeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellSanitationChangeRequest
@@ -56,6 +57,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateCellMarkForSameHierarchyException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateLocalNameForSameHierarchyException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlreadyExistsException
@@ -164,9 +166,16 @@ class LocationService(
     }
   }
 
-  fun getPrisonResidentialHierarchy(prisonId: String, includeVirtualLocations: Boolean = false, maxLevel: Int? = null, includeInactive: Boolean = false, parentPathHierarchy: String? = null): List<PrisonHierarchyDto> = (
+  fun getPrisonResidentialHierarchy(
+    prisonId: String,
+    includeVirtualLocations: Boolean = false,
+    maxLevel: Int? = null,
+    includeInactive: Boolean = false,
+    parentPathHierarchy: String? = null,
+  ): List<PrisonHierarchyDto> = (
     parentPathHierarchy?.let {
-      residentialLocationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, parentPathHierarchy)?.getResidentialLocationsBelowThisLevel()
+      residentialLocationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, parentPathHierarchy)
+        ?.getResidentialLocationsBelowThisLevel()
         ?: throw LocationNotFoundException("$prisonId-$parentPathHierarchy")
     }
       ?: residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
@@ -197,7 +206,11 @@ class LocationService(
     return LocationPrefixDto(locationPrefix)
   }
 
-  fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> = cellsInGroup(prisonId, groupName, cellLocationRepository.findAllByPrisonIdAndStatus(prisonId, LocationStatus.ACTIVE))
+  fun getCellLocationsForGroup(prisonId: String, groupName: String): List<LocationDTO> = cellsInGroup(
+    prisonId,
+    groupName,
+    cellLocationRepository.findAllByPrisonIdAndStatus(prisonId, LocationStatus.ACTIVE),
+  )
     .toMutableList()
     .map { it.toDto() }
     .sortedWith(NaturalOrderComparator())
@@ -273,7 +286,13 @@ class LocationService(
 
     val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(request.prisonId)
 
-    val locationToCreate = request.toNewEntity(sharedLocationService.getUsername(), clock, linkedTransaction = linkedTransaction, createInDraft = certificationApprovalRequired, parentLocation = parentLocation)
+    val locationToCreate = request.toNewEntity(
+      sharedLocationService.getUsername(),
+      clock,
+      linkedTransaction = linkedTransaction,
+      createInDraft = certificationApprovalRequired,
+      parentLocation = parentLocation,
+    )
 
     val capacityChanged = request.isCell() && request.capacity != null
 
@@ -368,7 +387,7 @@ class LocationService(
     } ?: throw ValidationException("Either a new level above cells must be provided or the cells")
 
     val newLocation = createCellsRequest.newLevelAboveCells?.let {
-      residentialLocationRepository.save(
+      residentialLocationRepository.saveAndFlush(
         it.createLocation(
           prisonId = createCellsRequest.prisonId,
           createdBy = sharedLocationService.getUsername(),
@@ -391,6 +410,8 @@ class LocationService(
         )
       }
 
+      checkForDuplicateCellMarks(cells, parentAboveCells)
+
       val createdCells = createCellsRequest.createCells(
         createdBy = sharedLocationService.getUsername(),
         clock = clock,
@@ -405,6 +426,26 @@ class LocationService(
       includeNonResidential = false,
     ).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+  }
+
+  private fun checkForDuplicateCellMarks(
+    cells: Set<CellInformation>,
+    parent: ResidentialLocation,
+  ) {
+    val firstSeenByCellMark = HashMap<String, CellInformation>()
+    val duplicate = cells.firstNotNullOfOrNull { cell ->
+      val mark = cell.cellMark ?: return@firstNotNullOfOrNull null
+      val firstSeen = firstSeenByCellMark.putIfAbsent(mark, cell)
+      if (firstSeen != null) firstSeen to cell else null
+    }
+
+    if (duplicate != null) {
+      val cellMark = duplicate.first.cellMark!! // same as secondCell.cellMark
+      throw DuplicateCellMarkForSameHierarchyException(
+        cellMark = cellMark,
+        topLocationKey = parent.getKey(),
+      )
     }
   }
 
@@ -504,7 +545,8 @@ class LocationService(
       includeNonResidential = false,
     ).also {
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
-      val txMessage = "Created $createdCells, updated $updatedCells and deleted $deletedCells cells under location ${parentLocation.getKey()}"
+      val txMessage =
+        "Created $createdCells, updated $updatedCells and deleted $deletedCells cells under location ${parentLocation.getKey()}"
       linkedTransaction.transactionDetail = txMessage
       log.info(txMessage)
     }
@@ -555,6 +597,18 @@ class LocationService(
 
     if (cell.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(cell.getKey())
+    }
+
+    if (findAllByPrisonIdTopParentAndCellMark(
+        prisonId = cell.prisonId,
+        cellMark = cellMarkChangeRequest.cellMark,
+        parentLocationId = cell.getParent()?.id,
+      ).any { it.id != id }
+    ) {
+      throw DuplicateCellMarkForSameHierarchyException(
+        cellMark = cellMarkChangeRequest.cellMark,
+        topLocationKey = cell.getParent()?.getKey() ?: cell.prisonId,
+      )
     }
 
     var linkedTransaction: LinkedTransaction? = null
@@ -665,7 +719,13 @@ class LocationService(
   }
 
   @Transactional
-  fun updateCellCapacity(id: UUID, maxCapacity: Int, workingCapacity: Int, certifiedNormalAccommodation: Int? = null, linkedTransaction: LinkedTransaction? = null): LocationDTO {
+  fun updateCellCapacity(
+    id: UUID,
+    maxCapacity: Int,
+    workingCapacity: Int,
+    certifiedNormalAccommodation: Int? = null,
+    linkedTransaction: LinkedTransaction? = null,
+  ): LocationDTO {
     val locCapChange = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -801,7 +861,10 @@ class LocationService(
             parentLocationId = location.getParent()?.id,
           ).any { it.id != id }
         ) {
-          throw DuplicateLocalNameForSameHierarchyException(localName = localName, topLocationKey = topLevelLocation.getKey())
+          throw DuplicateLocalNameForSameHierarchyException(
+            localName = localName,
+            topLocationKey = topLevelLocation.getKey(),
+          )
         }
       }
 
@@ -838,7 +901,8 @@ class LocationService(
       transactionInvokedBy = transactionInvokedBy,
     )
 
-    val approvalRequired = locationsToDeactivate.requiresApproval && activePrisonService.isCertificationApprovalRequired(prisonId)
+    val approvalRequired =
+      locationsToDeactivate.requiresApproval && activePrisonService.isCertificationApprovalRequired(prisonId)
     locationsToDeactivate.locations.forEach { (id, deactivationDetail) ->
       val locationToDeactivate = locationRepository.findById(id)
         .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -889,7 +953,10 @@ class LocationService(
   }
 
   @Transactional
-  fun permanentlyDeactivateLocations(permanentDeactivationRequest: BulkPermanentDeactivationRequest, activeLocationCanBePermDeactivated: Boolean = false): List<LocationDTO> {
+  fun permanentlyDeactivateLocations(
+    permanentDeactivationRequest: BulkPermanentDeactivationRequest,
+    activeLocationCanBePermDeactivated: Boolean = false,
+  ): List<LocationDTO> {
     val deactivatedLocations = mutableSetOf<Location>()
 
     val prisonId = permanentDeactivationRequest.locations.firstOrNull()?.let { key ->
@@ -1030,13 +1097,37 @@ class LocationService(
                     linkedTransaction = linkedTransaction,
                   )
                   if (oldMaxCapacity != maxCapacity) {
-                    changes.add(CapacityChanges(key, message = "Max capacity from $oldMaxCapacity ==> $maxCapacity", type = "maxCapacity", previousValue = oldMaxCapacity, newValue = maxCapacity))
+                    changes.add(
+                      CapacityChanges(
+                        key,
+                        message = "Max capacity from $oldMaxCapacity ==> $maxCapacity",
+                        type = "maxCapacity",
+                        previousValue = oldMaxCapacity,
+                        newValue = maxCapacity,
+                      ),
+                    )
                   }
                   if (oldWorkingCapacity != workingCapacity) {
-                    changes.add(CapacityChanges(key, message = "Working capacity from $oldWorkingCapacity ==> $workingCapacity", type = "workingCapacity", previousValue = oldWorkingCapacity, newValue = workingCapacity))
+                    changes.add(
+                      CapacityChanges(
+                        key,
+                        message = "Working capacity from $oldWorkingCapacity ==> $workingCapacity",
+                        type = "workingCapacity",
+                        previousValue = oldWorkingCapacity,
+                        newValue = workingCapacity,
+                      ),
+                    )
                   }
                   if (oldCertifiedNormalAccommodation != certifiedNormalAccommodation) {
-                    changes.add(CapacityChanges(key, message = "Baseline CNA from $oldCertifiedNormalAccommodation ==> $certifiedNormalAccommodation", type = "CNA", previousValue = oldCertifiedNormalAccommodation, newValue = certifiedNormalAccommodation))
+                    changes.add(
+                      CapacityChanges(
+                        key,
+                        message = "Baseline CNA from $oldCertifiedNormalAccommodation ==> $certifiedNormalAccommodation",
+                        type = "CNA",
+                        previousValue = oldCertifiedNormalAccommodation,
+                        newValue = certifiedNormalAccommodation,
+                      ),
+                    )
                   }
                   updatedCapacities.add(location)
                 } catch (e: Exception) {
@@ -1060,13 +1151,15 @@ class LocationService(
       }
       audit[key] = changes
       log.info(
-        "$key: ${changes.joinToString {
-          if (it.type == null) {
-            "$it.message"
-          } else {
-            "${it.type}: ${it.previousValue} ==> ${it.newValue}"
+        "$key: ${
+          changes.joinToString {
+            if (it.type == null) {
+              "$it.message"
+            } else {
+              "${it.type}: ${it.previousValue} ==> ${it.newValue}"
+            }
           }
-        }}",
+        }",
       )
     }
     val updatedLocationsDto = updatedCapacities.map { it.toDto() }.toSet()
@@ -1312,7 +1405,9 @@ class LocationService(
       .map { it.toDto(countInactiveCells = true, countCells = true) }
       .sortedWith(NaturalOrderComparator())
 
-    val subLocationTypes = calculateSubLocationDescription(locations) ?: currentLocation?.getNextLevelTypeWithinStructure()?.getPlural() ?: currentLocation?.getDefaultNextLevel()?.getPlural() ?: "Wings"
+    val subLocationTypes =
+      calculateSubLocationDescription(locations) ?: currentLocation?.getNextLevelTypeWithinStructure()?.getPlural()
+        ?: currentLocation?.getDefaultNextLevel()?.getPlural() ?: "Wings"
     return ResidentialSummary(
       topLevelLocationType = currentLocation?.let { it.getHierarchy()[0].type.getPlural() } ?: "Wings",
       prisonSummary = if (id == null) {
@@ -1356,7 +1451,10 @@ class LocationService(
     }
 
     return (
-      startLocation?.cellLocations() ?: cellLocationRepository.findAllByPrisonIdAndStatus(prisonId, LocationStatus.INACTIVE)
+      startLocation?.cellLocations() ?: cellLocationRepository.findAllByPrisonIdAndStatus(
+        prisonId,
+        LocationStatus.INACTIVE,
+      )
       )
       .filter { it.isTemporarilyDeactivated() }
       .map { it.toDto() }
@@ -1457,18 +1555,48 @@ class LocationService(
     return UsedForType.entries.filter { it.isStandard() || (true == prisonDetails?.female && it.femaleOnly) || (true == prisonDetails?.lthse && it.secureEstateOnly) }
   }
 
-  fun findAllByPrisonIdTopParentAndLocalName(prisonId: String, localName: String, parentLocationId: UUID? = null): List<LocationDTO> {
+  fun findAllByPrisonIdTopParentAndCellMark(
+    prisonId: String,
+    cellMark: String,
+    parentLocationId: UUID? = null,
+  ): List<LocationDTO> {
+    val foundLocations = parentLocationId?.let {
+      cellLocationRepository.findAllByPrisonIdAndParentIdAndCellMark(
+        prisonId = prisonId,
+        parentId = parentLocationId,
+        cellMark = cellMark,
+      )
+    } ?: cellLocationRepository.findAllByPrisonIdAndCellMark(prisonId = prisonId, cellMark = cellMark)
+    return foundLocations.filter { !it.isPermanentlyDeactivated() }.map { it.toDto() }
+  }
+
+  fun findAllByPrisonIdTopParentAndLocalName(
+    prisonId: String,
+    localName: String,
+    parentLocationId: UUID? = null,
+  ): List<LocationDTO> {
     val foundLocations =
       parentLocationId?.let {
-        residentialLocationRepository.findAllByPrisonIdAndParentIdAndLocalName(prisonId = prisonId, parentId = parentLocationId, localName = localName)
-      } ?: residentialLocationRepository.findAllByPrisonIdAndParentIsNullAndLocalName(prisonId = prisonId, localName = localName)
+        residentialLocationRepository.findAllByPrisonIdAndParentIdAndLocalName(
+          prisonId = prisonId,
+          parentId = parentLocationId,
+          localName = localName,
+        )
+      } ?: residentialLocationRepository.findAllByPrisonIdAndParentIsNullAndLocalName(
+        prisonId = prisonId,
+        localName = localName,
+      )
 
     return foundLocations
       .filter { !it.isPermanentlyDeactivated() }
       .map { it.toDto() }
   }
 
-  fun findByPrisonIdTopParentAndLocalName(prisonId: String, localName: String, parentLocationId: UUID? = null): LocationDTO = findAllByPrisonIdTopParentAndLocalName(
+  fun findByPrisonIdTopParentAndLocalName(
+    prisonId: String,
+    localName: String,
+    parentLocationId: UUID? = null,
+  ): LocationDTO = findAllByPrisonIdTopParentAndLocalName(
     prisonId = prisonId,
     localName = localName,
     parentLocationId = parentLocationId,

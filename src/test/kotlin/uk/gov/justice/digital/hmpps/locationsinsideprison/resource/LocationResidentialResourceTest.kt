@@ -1249,6 +1249,112 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
     }
   }
 
+  @DisplayName("GET /locations/{prisonId}/local-name/{localName}")
+  @Nested
+  inner class FindLocationByCellMarkTest {
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/locations/${cell1.prisonId}/cell-mark/${cell1.cellMark}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/locations/${cell1.prisonId}/cell-mark/${cell1.cellMark}")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/locations/${cell1.prisonId}/cell-mark/${cell1.cellMark}")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class Validation {
+      @Test
+      fun `access client error bad local name data`() {
+        webTestClient.get().uri("/locations/${cell1.prisonId}/cell-mark/1234567890123")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `access client error bad prisonID data`() {
+        webTestClient.get().uri("/locations/XXXXXXXXXX/cell-mark/${cell1.cellMark}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `Does not return a location when not found`() {
+        webTestClient.get().uri("/locations/${landingZ1.prisonId}/local-name/WIBBLE")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
+
+      @Test
+      fun `Does not return a location when local name in different wing`() {
+        webTestClient.get().uri("\"/locations/${cell1.prisonId}/local-name/${cell1.localName}?parentLocationId=${wingB.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isEqualTo(404)
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can find a location by cell mark`() {
+        val cellToLookFor = leedsWing.findAllLeafLocations().first() as Cell
+
+        val foundLocations = webTestClient.get().uri("/locations/${cellToLookFor.prisonId}/cell-mark/${cellToLookFor.cellMark}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<List<Location>>()
+          .returnResult().responseBody!!
+
+        assertThat(foundLocations).hasSize(2)
+        assertThat(foundLocations.map { it.getKey() }).contains("LEI-A-1-001", "LEI-A-2-001")
+      }
+
+      @Test
+      fun `can find a location by local name and wing location specified`() {
+        val cellToLookFor = leedsWing.findAllLeafLocations().first() as Cell
+
+        val foundLocations = webTestClient.get().uri("/locations/${cellToLookFor.prisonId}/cell-mark/${cellToLookFor.cellMark}?parentLocationId=${cellToLookFor.getParent()!!.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<List<Location>>()
+          .returnResult().responseBody!!
+
+        assertThat(foundLocations).hasSize(1)
+        assertThat(foundLocations.first().getKey()).isEqualTo(cellToLookFor.getKey())
+      }
+    }
+  }
+
   @DisplayName("PATCH /locations/residential/{id}")
   @Nested
   inner class PatchLocationTest {
