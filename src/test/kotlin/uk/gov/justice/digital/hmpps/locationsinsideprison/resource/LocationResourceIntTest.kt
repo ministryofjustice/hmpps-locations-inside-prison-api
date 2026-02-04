@@ -95,7 +95,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "active": true,
                   "permanentlyDeactivated": false,
                   "lastModifiedBy": "DIFFERENT_USER",
-                  "lastModifiedDate": "2023-12-04T12:34:56"
+                  "lastModifiedDate": "2023-12-04T12:34:56.123456"
                 }
               ],
               "pageable": {

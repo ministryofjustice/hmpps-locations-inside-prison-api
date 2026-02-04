@@ -133,7 +133,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "accommodationTypes":["NORMAL_ACCOMMODATION"],
                   "active": false,
                   "deactivatedByParent": false,
-                  "deactivatedDate": "2023-12-05T12:34:56",
+                  "deactivatedDate": "2023-12-05T12:34:56.123456",
                   "deactivatedReason": "DAMAGED",
                   "isResidential": true,
                   "key": "MDI-B-A-001"
@@ -831,7 +831,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                 "status":"ARCHIVED",
                 "active":false,
                 "deactivatedByParent":false,
-                "deactivatedDate":"2023-12-05T12:34:56",
+                "deactivatedDate":"2023-12-05T12:34:56.123456",
                 "key":"MDI-Z-1-003",
                 "permanentlyInactiveReason": "Demolished"
                 }]
@@ -904,14 +904,14 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "status": "INACTIVE",
                   "active": false,
                   "deactivatedByParent": false,
-                  "deactivatedDate": "2023-12-05T12:34:56",
+                  "deactivatedDate": "2023-12-05T12:34:56.123456",
                   "deactivatedReason": "DAMAGED",
                   "topLevelId": "${wingB.id}",
                   "level": 3,
                   "leafLevel": true,
                   "parentId": "${landingB3.id}",
                   "lastModifiedBy": "A_TEST_USER",
-                  "lastModifiedDate": "2023-12-05T12:34:56",
+                  "lastModifiedDate": "2023-12-05T12:34:56.123456",
                   "key": "MDI-B-A-001",
                   "isResidential": true
                 }
@@ -965,14 +965,14 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "status": "INACTIVE",
                   "active": false,
                   "deactivatedByParent": false,
-                  "deactivatedDate": "2023-12-05T12:34:56",
+                  "deactivatedDate": "2023-12-05T12:34:56.123456",
                   "deactivatedReason": "DAMAGED",
                   "topLevelId": "${wingB.id}",
                   "level": 3,
                   "leafLevel": true,
                   "parentId": "${landingB3.id}",
                   "lastModifiedBy": "A_TEST_USER",
-                  "lastModifiedDate": "2023-12-05T12:34:56",
+                  "lastModifiedDate": "2023-12-05T12:34:56.123456",
                   "key": "MDI-B-A-001",
                   "isResidential": true
                 }
@@ -1073,14 +1073,14 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "status": "INACTIVE",
                   "active": false,
                   "deactivatedByParent": false,
-                  "deactivatedDate": "2023-12-05T12:34:56",
+                  "deactivatedDate": "2023-12-05T12:34:56.123456",
                   "deactivatedReason": "DAMAGED",
                   "topLevelId": "${wingB.id}",
                   "level": 3,
                   "leafLevel": true,
                   "parentId": "${landingB3.id}",
                   "lastModifiedBy": "A_TEST_USER",
-                  "lastModifiedDate": "2023-12-05T12:34:56",
+                  "lastModifiedDate": "2023-12-05T12:34:56.123456",
                   "key": "MDI-B-A-001",
                   "isResidential": true
                 }

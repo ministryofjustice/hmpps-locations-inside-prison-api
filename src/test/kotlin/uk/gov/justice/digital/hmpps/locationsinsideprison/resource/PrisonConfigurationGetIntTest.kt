@@ -92,7 +92,7 @@ class PrisonConfigurationGetIntTest : SqsIntegrationTestBase() {
                 "signedOperationCapacity": 200,
                 "updatedBy": "LOCATIONS_INSIDE_PRISON_API",
                 "prisonId": "MDI",
-                "whenUpdated": "2023-12-05T12:34:56"
+                "whenUpdated": "2023-12-05T12:34:56.123456"
               }
             """.trimIndent(),
             JsonCompareMode.LENIENT,
