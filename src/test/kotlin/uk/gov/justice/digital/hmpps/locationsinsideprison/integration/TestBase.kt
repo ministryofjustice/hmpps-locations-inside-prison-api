@@ -13,7 +13,7 @@ abstract class TestBase {
 
   companion object {
     val clock: Clock = Clock.fixed(
-      Instant.parse("2023-12-05T12:34:56+00:00"),
+      Instant.parse("2023-12-05T12:34:56.123456+00:00"),
       ZoneId.of("Europe/London"),
     )
 
