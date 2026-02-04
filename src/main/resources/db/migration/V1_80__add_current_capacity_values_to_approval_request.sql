@@ -1,0 +1,3 @@
+ALTER TABLE certification_approval_request_location ADD COLUMN current_working_capacity int NULL;
+ALTER TABLE certification_approval_request_location ADD COLUMN current_max_capacity int NULL;
+ALTER TABLE certification_approval_request_location ADD COLUMN current_certified_normal_accommodation int NULL;
