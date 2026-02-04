@@ -39,10 +39,19 @@ open class CertificationApprovalRequestLocation(
   private val level: Int,
 
   @Column(nullable = true)
+  private val currentCertifiedNormalAccommodation: Int? = null,
+
+  @Column(nullable = true)
   private val certifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
+  private val currentWorkingCapacity: Int? = null,
+
+  @Column(nullable = true)
   private val workingCapacity: Int? = null,
+
+  @Column(nullable = true)
+  private val currentMaxCapacity: Int? = null,
 
   @Column(nullable = true)
   private val maxCapacity: Int? = null,
@@ -99,6 +108,9 @@ open class CertificationApprovalRequestLocation(
     certifiedNormalAccommodation = certifiedNormalAccommodation,
     workingCapacity = workingCapacity,
     maxCapacity = maxCapacity,
+    currentCertifiedNormalAccommodation = currentCertifiedNormalAccommodation,
+    currentWorkingCapacity = currentWorkingCapacity,
+    currentMaxCapacity = currentMaxCapacity,
     inCellSanitation = inCellSanitation,
     locationType = locationType,
     specialistCellTypes = getSpecialistCellTypesFromList(),

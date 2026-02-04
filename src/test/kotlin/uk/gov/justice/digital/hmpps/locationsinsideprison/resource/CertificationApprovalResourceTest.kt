@@ -97,6 +97,19 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
       assertThat(pendingApproval.proposedReactivationDate).isEqualTo(proposedReactivationDate)
       assertThat(pendingApproval.locations).hasSize(1)
+      assertThat(pendingApproval.locations!![0].subLocations).hasSize(2)
+      assertThat(pendingApproval.locations[0].subLocations!![0].currentWorkingCapacity).isEqualTo(3)
+      assertThat(pendingApproval.locations[0].subLocations!![0].workingCapacity).isEqualTo(0)
+      assertThat(pendingApproval.locations[0].subLocations!![1].currentWorkingCapacity).isEqualTo(3)
+      assertThat(pendingApproval.locations[0].subLocations!![0].workingCapacity).isEqualTo(0)
+      assertThat(pendingApproval.locations[0].subLocations!![0].subLocations).hasSize(3)
+      assertThat(pendingApproval.locations[0].subLocations!![1].subLocations).hasSize(3)
+      assertThat(pendingApproval.locations[0].subLocations!![0].subLocations!![0].currentWorkingCapacity).isEqualTo(1)
+      assertThat(pendingApproval.locations[0].subLocations!![0].subLocations!![0].workingCapacity).isEqualTo(0)
+      assertThat(pendingApproval.locations[0].subLocations!![0].subLocations!![0].maxCapacity).isEqualTo(2)
+      assertThat(pendingApproval.locations[0].subLocations!![1].subLocations!![0].currentWorkingCapacity).isEqualTo(1)
+      assertThat(pendingApproval.locations[0].subLocations!![1].subLocations!![0].workingCapacity).isEqualTo(0)
+      assertThat(pendingApproval.locations[0].subLocations!![1].subLocations!![0].maxCapacity).isEqualTo(2)
 
       val approvedRequest = webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -148,6 +161,84 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approvedDeactivatedLocation.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
       assertThat(approvedDeactivatedLocation.proposedReactivationDate).isEqualTo(proposedReactivationDate)
       assertThat(approvedDeactivatedLocation.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `can deactivate a location and reject approval`() {
+      val now = LocalDateTime.now(clock)
+      val proposedReactivationDate = now.plusMonths(1).toLocalDate()
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        leedsWing.findAllLeafLocations().map { it.getPathHierarchy() },
+        false,
+      )
+
+      webTestClient.put().uri("/locations/${leedsWing.id}/deactivate/temporary")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            TemporaryDeactivationLocationRequest(
+              requiresApproval = true,
+              reasonForChange = "The cell as been flooded",
+              deactivationReason = DeactivatedReason.MOTHBALLED,
+              proposedReactivationDate = proposedReactivationDate,
+              planetFmReference = "222333",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      val deactivatedLocation = webTestClient.get().uri("/locations/${leedsWing.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(deactivatedLocation.status).isEqualTo(DerivedLocationStatus.LOCKED_INACTIVE)
+      val pendingApprovalRequestId = deactivatedLocation.pendingApprovalRequestId!!
+
+      getDomainEvents(9).let { messages ->
+        val results = leedsWing.findSubLocations().map { it.getKey() }.plus(leedsWing.getKey())
+        assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+          *results.map { "location.inside.prison.deactivated" to it }.toTypedArray(),
+        )
+      }
+
+      val rejectedRequest = webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            RejectCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+              comments = "Deactivation refused",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedRequest.certificateId).isNull()
+      assertThat(rejectedRequest.status).isEqualTo(ApprovalRequestStatus.REJECTED)
+
+      val rejectedDeactivatedLocation = webTestClient.get().uri("/locations/${leedsWing.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedDeactivatedLocation.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(rejectedDeactivatedLocation.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
+      assertThat(rejectedDeactivatedLocation.proposedReactivationDate).isEqualTo(proposedReactivationDate)
+      assertThat(rejectedDeactivatedLocation.pendingApprovalRequestId).isNull()
     }
   }
 

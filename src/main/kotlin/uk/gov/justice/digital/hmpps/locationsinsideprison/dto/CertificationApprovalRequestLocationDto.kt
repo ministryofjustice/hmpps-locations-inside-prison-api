@@ -39,6 +39,15 @@ data class CertificationApprovalRequestLocationDto(
   @param:Schema(description = "Maximum capacity", example = "2", required = false)
   val maxCapacity: Int? = null,
 
+  @param:Schema(description = "Current capacity of certified cell", example = "2", required = false)
+  val currentCertifiedNormalAccommodation: Int? = null,
+
+  @param:Schema(description = "Current working capacity", example = "2", required = false)
+  val currentWorkingCapacity: Int? = null,
+
+  @param:Schema(description = "Current maximum capacity", example = "2", required = false)
+  val currentMaxCapacity: Int? = null,
+
   @param:Schema(description = "In-cell sanitation", example = "true", required = false)
   val inCellSanitation: Boolean? = null,
 

@@ -528,8 +528,11 @@ open class ResidentialLocation(
       } else {
         null
       },
+      currentMaxCapacity = calcMaxCapacity(false),
       maxCapacity = calcMaxCapacity(includeDraft),
+      currentWorkingCapacity = getWorkingCapacityIgnoringInactiveStatus(),
       workingCapacity = calcWorkingCapacity(includeDraft),
+      currentCertifiedNormalAccommodation = calcCertifiedNormalAccommodation(false),
       certifiedNormalAccommodation = calcCertifiedNormalAccommodation(includeDraft),
       usedForTypes = getUsedForValuesAsCSV(),
       accommodationTypes = getAccommodationTypesAsCSV(),
