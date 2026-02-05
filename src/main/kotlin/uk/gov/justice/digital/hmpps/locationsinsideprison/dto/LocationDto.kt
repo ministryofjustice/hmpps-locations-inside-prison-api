@@ -668,11 +668,17 @@ data class CreateOrUpdateNonResidentialLocationRequest(
   @param:Schema(description = "Status, if false will be marked as inactive, true will make active or null untouched", required = false, example = "true")
   val active: Boolean? = null,
 ) {
-  fun toNewEntity(prisonId: String, code: String, createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction) = NonResidentialLocationJPA(
+  fun toNewEntity(
+    prisonId: String,
+    code: String,
+    createdBy: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+  ) = NonResidentialLocationJPA(
     id = null,
     prisonId = prisonId,
     code = code,
-    locationType = LocationType.LOCATION,
+    locationType = identifyLocationType().baseType,
     pathHierarchy = code,
     status = if (FALSE == active) LocationStatus.INACTIVE else LocationStatus.ACTIVE,
     localName = localName,
@@ -691,6 +697,8 @@ data class CreateOrUpdateNonResidentialLocationRequest(
       linkedTransaction = linkedTransaction,
     )
   }
+
+  private fun identifyLocationType(): NonResidentialLocationType = servicesUsingLocation.firstOrNull { it.nonResidentialLocationType != NonResidentialLocationType.LOCATION }?.nonResidentialLocationType ?: NonResidentialLocationType.LOCATION
 }
 
 @Schema(description = "Request to create a non-residential location")

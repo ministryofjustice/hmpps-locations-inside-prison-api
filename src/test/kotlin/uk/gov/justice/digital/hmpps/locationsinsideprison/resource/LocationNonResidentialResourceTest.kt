@@ -129,7 +129,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "localName": "Visit Room 2",
               "code": "VSTRM50",
               "pathHierarchy": "VSTRM50",
-              "locationType": "LOCATION",
+              "locationType": "ADJUDICATION_ROOM",
               "permanentlyInactive": false,
               "usedByGroupedServices": [
                 "ADJUDICATIONS",
