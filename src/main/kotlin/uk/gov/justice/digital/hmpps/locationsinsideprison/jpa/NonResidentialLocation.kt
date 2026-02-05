@@ -259,6 +259,7 @@ class NonResidentialLocation(
   ) {
     recordHistoryOfServices(serviceTypes, userOrSystemInContext, clock, linkedTransaction)
     services.retainAll(serviceTypes.map { service -> addService(service) }.toSet())
+    locationType = identifyNonResidentialLocationType(serviceTypes).baseType
   }
 
   private fun recordHistoryOfUsages(
@@ -317,3 +318,5 @@ class NonResidentialLocation(
     this.services
   }
 }
+
+fun identifyNonResidentialLocationType(serviceTypes: Set<ServiceType>): NonResidentialLocationType = serviceTypes.firstOrNull { it.nonResidentialLocationType != NonResidentialLocationType.LOCATION }?.nonResidentialLocationType ?: NonResidentialLocationType.LOCATION
