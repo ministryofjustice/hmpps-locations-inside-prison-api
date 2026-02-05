@@ -171,6 +171,7 @@ class NonResidentialLocation(
       upsert.servicesUsingLocation?.let {
         updateServices(it, userOrSystemInContext, clock, linkedTransaction)
         updateUsage(buildNonResidentialUsageFromService(upsert.toUsages()), userOrSystemInContext, clock, linkedTransaction)
+        locationType = identifyNonResidentialLocationType(it).baseType
       }
       val internalMovementAllowedUpdate = services.find { it.serviceType == ServiceType.INTERNAL_MOVEMENTS } != null
       if (internalMovementAllowed != internalMovementAllowedUpdate) {
@@ -317,3 +318,5 @@ class NonResidentialLocation(
     this.services
   }
 }
+
+fun identifyNonResidentialLocationType(serviceTypes: Set<ServiceType>): NonResidentialLocationType = serviceTypes.firstOrNull { it.nonResidentialLocationType != NonResidentialLocationType.LOCATION }?.nonResidentialLocationType ?: NonResidentialLocationType.LOCATION

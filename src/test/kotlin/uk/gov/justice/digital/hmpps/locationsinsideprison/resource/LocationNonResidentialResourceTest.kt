@@ -356,7 +356,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           "localName": "Visit Room 2",
           "code": "VISIT",
           "pathHierarchy": "Z-VISIT",
-          "locationType": "VISITS",
+          "locationType": "LOCATION",
           "permanentlyInactive": false,
           "usedByGroupedServices": [
             "OFFICIAL_VISITS"
@@ -390,7 +390,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "localName": "Visit Room 2",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "VISITS",
+              "locationType": "LOCATION",
               "permanentlyInactive": false,
               "usedByGroupedServices": [
                 "OFFICIAL_VISITS"
@@ -423,7 +423,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "localName": "Visit Room",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "VISITS",
+              "locationType": "LOCATION",
               "permanentlyInactive": false,
               "usedByGroupedServices": [],
               "usedByServices": [],
@@ -455,7 +455,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "localName": "Visit Room",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "VISITS",
+              "locationType": "LOCATION",
               "permanentlyInactive": false,
               "usedByGroupedServices": [],
               "usedByServices": [],
@@ -484,7 +484,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
             "localName": "Visit Room",
             "code": "VISIT",
             "pathHierarchy": "Z-VISIT",
-            "locationType": "VISITS",
+            "locationType": "LOCATION",
             "permanentlyInactive": false,
             "usedByGroupedServices": [
               "INTERNAL_MOVEMENTS"
@@ -520,7 +520,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                 "localName": "Visit Room",
                 "code": "VISIT",
                 "pathHierarchy": "Z-VISIT",
-                "locationType": "VISITS",
+                "locationType": "LOCATION",
                 "permanentlyInactive": false,
                 "usedByGroupedServices": [
                   "INTERNAL_MOVEMENTS"
@@ -927,7 +927,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "VISITS",
+              "locationType": "LOCATION",
               "active": true,
               "key": "MDI-Z-VISIT",
               "servicesUsingLocation": [],
@@ -949,7 +949,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "VISITS",
+              "locationType": "LOCATION",
               "active": true,
               "key": "MDI-Z-VISIT",
               "usage": [
@@ -999,7 +999,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "VISITS",
+              "locationType": "LOCATION",
               "active": true,
               "key": "MDI-Z-VISIT",
               "servicesUsingLocation": [
@@ -1026,7 +1026,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "VISITS",
+              "locationType": "LOCATION",
               "active": true,
               "key": "MDI-Z-VISIT",
               "usage": [
@@ -1297,7 +1297,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "VISITS",
+              "locationType": "LOCATION",
               "active": true,
               "key": "MDI-Z-VISIT",
               "usage": [
@@ -1330,7 +1330,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "VISITS",
+              "locationType": "LOCATION",
               "active": true,
               "key": "MDI-Z-VISIT",
               "usage": [

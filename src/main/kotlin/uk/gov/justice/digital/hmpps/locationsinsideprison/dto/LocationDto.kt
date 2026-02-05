@@ -25,6 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getVirtualLocationCodes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.identifyNonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SortAttribute
 import java.lang.Boolean.FALSE
 import java.time.Clock
@@ -678,7 +679,7 @@ data class CreateOrUpdateNonResidentialLocationRequest(
     id = null,
     prisonId = prisonId,
     code = code,
-    locationType = identifyLocationType().baseType,
+    locationType = identifyNonResidentialLocationType(servicesUsingLocation).baseType,
     pathHierarchy = code,
     status = if (FALSE == active) LocationStatus.INACTIVE else LocationStatus.ACTIVE,
     localName = localName,
@@ -697,8 +698,6 @@ data class CreateOrUpdateNonResidentialLocationRequest(
       linkedTransaction = linkedTransaction,
     )
   }
-
-  private fun identifyLocationType(): NonResidentialLocationType = servicesUsingLocation.firstOrNull { it.nonResidentialLocationType != NonResidentialLocationType.LOCATION }?.nonResidentialLocationType ?: NonResidentialLocationType.LOCATION
 }
 
 @Schema(description = "Request to create a non-residential location")
