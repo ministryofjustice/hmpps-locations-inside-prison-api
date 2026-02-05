@@ -658,6 +658,7 @@ class Cell(
       requestedDate = requestedDate,
       reasonForChange = reasonForChange,
       inCellSanitation = inCellSanitationChange,
+      currentInCellSanitation = inCellSanitation,
     ).apply {
       linkPendingChangesToApprovalRequest(approvalRequest = this)
     }

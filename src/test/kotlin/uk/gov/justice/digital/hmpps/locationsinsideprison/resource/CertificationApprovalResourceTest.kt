@@ -471,6 +471,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(0)
       assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
       assertThat(pendingApproval.inCellSanitation).isEqualTo(false)
+      assertThat(pendingApproval.currentInCellSanitation).isEqualTo(true)
       assertThat(pendingApproval.reasonForChange).isEqualTo("The toilet is old")
       assertThat(pendingApproval.locations).isNotEmpty
       assertThat(pendingApproval.locations).hasSize(1)

@@ -1,0 +1,1 @@
+ALTER TABLE certification_approval_request ADD COLUMN current_in_cell_sanitation boolean NULL;

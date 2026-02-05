@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import java.time.LocalDateTime
@@ -15,6 +16,9 @@ open class SanitationChangeApprovalRequest(
   reasonForChange: String? = null,
 
   var inCellSanitation: Boolean,
+
+  @Column(nullable = true)
+  private var currentInCellSanitation: Boolean? = null,
 ) : LocationCertificationApprovalRequest(
   id = id,
   location = location,
@@ -26,6 +30,7 @@ open class SanitationChangeApprovalRequest(
 ) {
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     inCellSanitation = inCellSanitation,
+    currentInCellSanitation = currentInCellSanitation,
   )
 
   override fun getApprovalType() = ApprovalType.CELL_SANITATION
