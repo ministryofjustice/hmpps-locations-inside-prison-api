@@ -948,6 +948,15 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "additionalInformation": "For example a workshop or lesson"
                 },
                 {
+                  "key": "VIDEO_LINK",
+                  "description": "Video link appointment/hearing",
+                  "attributes": {
+                    "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS",
+                    "serviceFamilyDescription": "Video link hearings and appointments"
+                  },
+                  "additionalInformation": "For example, a video link to a court hearing"
+                },
+                {
                   "key": "HEARING_LOCATION",
                   "description": "Adjudications - hearing location",
                   "attributes": {
@@ -993,7 +1002,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   "additionalInformation": "To report where a use of force incident took place"
                 }
               ]
-            }              
+            }                 
             """.trimIndent(),
             JsonCompareMode.LENIENT,
           )
@@ -1057,6 +1066,17 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                       "key": "PROGRAMMES_AND_ACTIVITIES",
                       "description": "Programmes and activities",
                       "additionalInformation": "For example a workshop or lesson"
+                    }
+                  ]
+                },
+                {
+                  "key": "VIDEO_LINK_APPOINTMENTS",
+                  "description": "Video link hearings and appointments",
+                  "values": [
+                    {
+                      "key": "VIDEO_LINK",
+                      "description": "Video link appointment/hearing",
+                      "additionalInformation": "For example, a video link to a court hearing"
                     }
                   ]
                 },
