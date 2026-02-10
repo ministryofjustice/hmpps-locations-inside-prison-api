@@ -184,8 +184,8 @@ data class Location(
   @param:Schema(description = "Indicates that this location this one has a pending approval, the approval will be for the location held in topLevelApprovalLocationId`", example = "57818979-573c-433a-9e51-2d83f087c11c", required = false)
   val pendingApprovalRequestId: UUID? = null,
 
-  @param:Schema(description = "Reason for the last approval change", example = "Cell damaged", required = false)
-  val lastReasonForChange: String? = null,
+  @param:Schema(description = "Reason for the last deactivation change", example = "Cell damaged", required = false)
+  val lastDeactivationReasonForChange: String? = null,
 
   @param:Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
   val parentId: UUID?,
