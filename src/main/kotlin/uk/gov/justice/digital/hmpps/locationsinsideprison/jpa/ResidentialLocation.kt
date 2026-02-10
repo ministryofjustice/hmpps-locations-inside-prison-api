@@ -132,6 +132,8 @@ open class ResidentialLocation(
 
   fun getPendingApprovalRequest(): LocationCertificationApprovalRequest? = findHighestLevelPending()?.approvalRequests?.firstOrNull { it.isPending() }
 
+  fun getLatestApprovedRequest(): LocationCertificationApprovalRequest? = approvalRequests.firstOrNull { it.isApproved() }
+
   protected fun findHighestLevelPending(includeDrafts: Boolean = false): ResidentialLocation? {
     var current: ResidentialLocation? = this
     var highestPending: ResidentialLocation? = null
@@ -583,7 +585,7 @@ open class ResidentialLocation(
     ),
     topLevelApprovalLocationId = findHighestLevelPending(includeDrafts = true)?.id,
     pendingApprovalRequestId = getPendingApprovalRequest()?.id,
-
+    lastReasonForChange = getPendingApprovalRequest()?.reasonForChange ?: getLatestApprovedRequest()?.reasonForChange,
     pendingChanges = if (hasPendingCertificationApproval() || hasPendingChangesBelowThisLevel() || isDraft()) {
       PendingChangeDto(
         maxCapacity = calcMaxCapacity(true),

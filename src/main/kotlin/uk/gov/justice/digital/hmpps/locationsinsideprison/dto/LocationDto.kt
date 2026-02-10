@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import jakarta.validation.constraints.Max
-import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
@@ -184,6 +183,9 @@ data class Location(
 
   @param:Schema(description = "Indicates that this location this one has a pending approval, the approval will be for the location held in topLevelApprovalLocationId`", example = "57818979-573c-433a-9e51-2d83f087c11c", required = false)
   val pendingApprovalRequestId: UUID? = null,
+
+  @param:Schema(description = "Reason for the last approval change", example = "Cell damaged", required = false)
+  val lastReasonForChange: String? = null,
 
   @param:Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
   val parentId: UUID?,
@@ -658,10 +660,9 @@ data class CreateResidentialLocationRequest(
 @Schema(description = "Request to create or update non-residential location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CreateOrUpdateNonResidentialLocationRequest(
-  @param:Schema(description = "Description of the non-residential locations", example = "Adj Room", required = true)
+  @param:Schema(description = "Description of the non-residential locations, mandatory for create", example = "Adj Room", required = false)
   @field:Size(min = 1, max = 80, message = "Local name must be between 1 and 80 characters")
-  @field:NotEmpty(message = "Local name cannot be empty")
-  val localName: String,
+  val localName: String? = null,
 
   @param:Schema(description = "Services that use this location", required = true)
   val servicesUsingLocation: Set<ServiceType> = emptySet(),

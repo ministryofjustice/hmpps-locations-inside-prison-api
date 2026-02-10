@@ -69,6 +69,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(deactivatedLocation.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
       assertThat(deactivatedLocation.proposedReactivationDate).isEqualTo(proposedReactivationDate)
       assertThat(deactivatedLocation.pendingApprovalRequestId).isNotNull
+      assertThat(deactivatedLocation.lastReasonForChange).isEqualTo("The cell as been flooded")
 
       val pendingApprovalRequestId = deactivatedLocation.pendingApprovalRequestId!!
 
@@ -161,6 +162,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approvedDeactivatedLocation.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
       assertThat(approvedDeactivatedLocation.proposedReactivationDate).isEqualTo(proposedReactivationDate)
       assertThat(approvedDeactivatedLocation.pendingApprovalRequestId).isNull()
+      assertThat(deactivatedLocation.lastReasonForChange).isEqualTo("The cell as been flooded")
     }
 
     @Test
