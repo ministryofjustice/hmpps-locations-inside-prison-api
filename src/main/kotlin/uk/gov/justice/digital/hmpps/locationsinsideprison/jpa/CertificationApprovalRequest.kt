@@ -83,7 +83,7 @@ abstract class CertificationApprovalRequest(
   companion object {
     private val COMPARATOR = compareBy<CertificationApprovalRequest>
       { it.prisonId }
-      .thenBy { it.requestedDate }
+      .thenByDescending { it.requestedDate }
       .thenBy { it.status }
       .thenBy { it.getApprovalType() }
   }
@@ -115,6 +115,8 @@ abstract class CertificationApprovalRequest(
   }
 
   fun isPending() = status == ApprovalRequestStatus.PENDING
+
+  fun isApproved() = status == ApprovalRequestStatus.APPROVED
 
   open fun toDto(showLocations: Boolean = false, cellCertificateId: UUID? = null): CertificationApprovalRequestDto = CertificationApprovalRequestDto(
     id = id!!,

@@ -94,7 +94,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         webTestClient.post().uri("/locations/non-residential/MDIl")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue("""{"localName": ""}""")
+          .bodyValue("""{"localName": null }""")
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -287,7 +287,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/non-residential/${inactiveClassroom3.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(updateReq.copy(active = true, localName = "Classroom Three made active"))
+          .bodyValue(updateReq.copy(localName = null, active = true))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(
@@ -412,7 +412,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(updateReq.copy(servicesUsingLocation = emptySet())))
+          .bodyValue(jsonString(updateReq.copy(localName = null, servicesUsingLocation = emptySet())))
           .exchange()
           .expectStatus().isOk
           .expectBody().json(

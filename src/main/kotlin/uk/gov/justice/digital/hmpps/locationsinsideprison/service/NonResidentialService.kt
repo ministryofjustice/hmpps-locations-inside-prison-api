@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
+import jakarta.validation.ValidationException
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.PageRequest
 import org.springframework.data.domain.Pageable
@@ -195,6 +196,10 @@ class NonResidentialService(
 
   @Transactional
   fun createBasicNonResidentialLocation(prisonId: String, request: CreateOrUpdateNonResidentialLocationRequest): NonResidentialLocationDTO {
+    if (request.localName == null) {
+      throw ValidationException("localName must be provided when creating a non-residential location")
+    }
+
     validateLocalNameNotDuplicated(prisonId, request.localName)
 
     val code = generateUniqueNonResidentialCode(prisonId, request.localName)
@@ -252,7 +257,9 @@ class NonResidentialService(
     if (nonResLocation.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(nonResLocation.getKey())
     }
-    validateLocalNameNotDuplicated(nonResLocation.prisonId, updateRequest.localName, nonResLocation.id!!)
+    if (updateRequest.localName != null && nonResLocation.localName != updateRequest.localName) {
+      validateLocalNameNotDuplicated(nonResLocation.prisonId, updateRequest.localName, nonResLocation.id!!)
+    }
 
     val linkedTransaction = commonLocationService.createLinkedTransaction(
       prisonId = nonResLocation.prisonId,
@@ -321,7 +328,9 @@ class NonResidentialService(
   }
 
   private fun validateLocalNameNotDuplicated(prisonId: String, localName: String, locationId: UUID) {
-    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName).any { it.id != locationId }) {
+    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
+        .any { it.id != locationId }
+    ) {
       throw DuplicateNonResidentialLocalNameInPrisonException(prisonId = prisonId, localName = localName)
     }
   }
