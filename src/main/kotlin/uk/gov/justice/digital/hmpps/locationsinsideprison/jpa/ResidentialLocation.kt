@@ -132,7 +132,7 @@ open class ResidentialLocation(
 
   fun getPendingApprovalRequest(): LocationCertificationApprovalRequest? = findHighestLevelPending()?.approvalRequests?.firstOrNull { it.isPending() }
 
-  fun getLatestApprovedRequest(): LocationCertificationApprovalRequest? = approvalRequests.firstOrNull { it.isApproved() }
+  fun getLatestApprovedRequest(approvalType: ApprovalType): LocationCertificationApprovalRequest? = approvalRequests.firstOrNull { it.isApproved() && it.getApprovalType() == approvalType }
 
   protected fun findHighestLevelPending(includeDrafts: Boolean = false): ResidentialLocation? {
     var current: ResidentialLocation? = this
@@ -585,7 +585,7 @@ open class ResidentialLocation(
     ),
     topLevelApprovalLocationId = findHighestLevelPending(includeDrafts = true)?.id,
     pendingApprovalRequestId = getPendingApprovalRequest()?.id,
-    lastReasonForChange = getPendingApprovalRequest()?.reasonForChange ?: getLatestApprovedRequest()?.reasonForChange,
+    lastDeactivationReasonForChange = getLastReasonForChangeByApprovalType(ApprovalType.DEACTIVATION),
     pendingChanges = if (hasPendingCertificationApproval() || hasPendingChangesBelowThisLevel() || isDraft()) {
       PendingChangeDto(
         maxCapacity = calcMaxCapacity(true),
@@ -618,6 +618,15 @@ open class ResidentialLocation(
       null
     },
   )
+
+  private fun getLastReasonForChangeByApprovalType(approvalType: ApprovalType): String? {
+    val pendingApprovalRequest = getPendingApprovalRequest()
+    return if (approvalType == pendingApprovalRequest?.getApprovalType()) {
+      pendingApprovalRequest.reasonForChange
+    } else {
+      getLatestApprovedRequest(approvalType)?.reasonForChange
+    }
+  }
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
     residentialHousingType = residentialHousingType,
