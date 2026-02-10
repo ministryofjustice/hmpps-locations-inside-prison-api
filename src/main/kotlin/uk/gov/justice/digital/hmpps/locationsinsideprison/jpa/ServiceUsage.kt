@@ -67,10 +67,11 @@ enum class ServiceFamilyType(
   val sequence: Int = 99,
 ) {
   ACTIVITIES_APPOINTMENTS("Activities and appointments", 1),
-  ADJUDICATIONS("Adjudications", 2),
-  INTERNAL_MOVEMENTS("Internal movements", 3),
-  OFFICIAL_VISITS("Official visits", 4),
-  USE_OF_FORCE("Use of force", 5),
+  VIDEO_LINK_APPOINTMENTS("Video link hearings and appointments", 2),
+  ADJUDICATIONS("Adjudications", 3),
+  INTERNAL_MOVEMENTS("Internal movements", 4),
+  OFFICIAL_VISITS("Official visits", 5),
+  USE_OF_FORCE("Use of force", 6),
   ;
 
   fun toDto() = CompoundConstant(
@@ -92,9 +93,10 @@ enum class ServiceType(
 ) {
   APPOINTMENT(description = "Appointments", NonResidentialUsageType.APPOINTMENT, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, additionalInformation = "For example a counselling session", sequence = 1),
   PROGRAMMES_AND_ACTIVITIES(description = "Programmes and activities", NonResidentialUsageType.PROGRAMMES_ACTIVITIES, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, additionalInformation = "For example a workshop or lesson", sequence = 2),
-  HEARING_LOCATION(description = "Adjudications - hearing location", NonResidentialUsageType.ADJUDICATION_HEARING, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For adjudication hearings", sequence = 3, nonResidentialLocationType = NonResidentialLocationType.ADJUDICATION_ROOM),
-  LOCATION_OF_INCIDENT(description = "Adjudications - location of incident", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For example a location where an occurrence led to an adjudication hearing", sequence = 4),
-  INTERNAL_MOVEMENTS(description = "Internal movements", NonResidentialUsageType.MOVEMENT, ServiceFamilyType.INTERNAL_MOVEMENTS, additionalInformation = "To record the location of unlocked prisoners within this establishment", sequence = 5),
-  OFFICIAL_VISITS(description = "Official visits", NonResidentialUsageType.VISIT, ServiceFamilyType.OFFICIAL_VISITS, additionalInformation = "For example, arranging a face to face visit with a solicitor", sequence = 6),
-  USE_OF_FORCE(description = "Use of force", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.USE_OF_FORCE, additionalInformation = "To report where a use of force incident took place", sequence = 7),
+  VIDEO_LINK(description = "Video link appointment/hearing", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.VIDEO_LINK_APPOINTMENTS, additionalInformation = "For example, a video link to a court hearing", sequence = 3, nonResidentialLocationType = NonResidentialLocationType.VIDEO_LINK),
+  HEARING_LOCATION(description = "Adjudications - hearing location", NonResidentialUsageType.ADJUDICATION_HEARING, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For adjudication hearings", sequence = 4, nonResidentialLocationType = NonResidentialLocationType.ADJUDICATION_ROOM),
+  LOCATION_OF_INCIDENT(description = "Adjudications - location of incident", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For example a location where an occurrence led to an adjudication hearing", sequence = 5),
+  INTERNAL_MOVEMENTS(description = "Internal movements", NonResidentialUsageType.MOVEMENT, ServiceFamilyType.INTERNAL_MOVEMENTS, additionalInformation = "To record the location of unlocked prisoners within this establishment", sequence = 6),
+  OFFICIAL_VISITS(description = "Official visits", NonResidentialUsageType.VISIT, ServiceFamilyType.OFFICIAL_VISITS, additionalInformation = "For example, arranging a face to face visit with a solicitor", sequence = 7),
+  USE_OF_FORCE(description = "Use of force", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.USE_OF_FORCE, additionalInformation = "To report where a use of force incident took place", sequence = 8),
 }
