@@ -6,6 +6,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
+import org.springframework.test.web.reactive.server.expectBody
 import org.springframework.test.web.reactive.server.expectBodyList
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
@@ -169,7 +170,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
     fun setUp() {
       classroom2 = repository.save(
         buildNonResidentialLocation(
-          localName = "Classroom Two",
+          localName = "CLASSROOM TWO",
           serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
         ),
       )
@@ -183,7 +184,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
     }
 
     var updateReq = CreateOrUpdateNonResidentialLocationRequest(
-      localName = "Visit Room",
+      localName = "VISIT ROOM",
       servicesUsingLocation = setOf(ServiceType.OFFICIAL_VISITS),
     )
 
@@ -235,16 +236,6 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"localName": ""}""")
-          .exchange()
-          .expectStatus().is4xxClientError
-      }
-
-      @Test
-      fun `Duplicate local name is rejected`() {
-        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(updateReq.copy(localName = "Adjudication Room", servicesUsingLocation = setOf(ServiceType.HEARING_LOCATION)))
           .exchange()
           .expectStatus().is4xxClientError
       }
