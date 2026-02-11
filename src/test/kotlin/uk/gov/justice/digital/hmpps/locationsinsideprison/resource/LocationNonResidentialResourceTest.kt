@@ -42,6 +42,13 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
         ),
       )
+      repository.save(
+        buildNonResidentialLocation(
+          localName = "Old Visit Room",
+          serviceType = ServiceType.VIDEO_LINK,
+          status = LocationStatus.ARCHIVED,
+        ),
+      )
     }
     var createReq = CreateOrUpdateNonResidentialLocationRequest(
       localName = "Adjudication Room",
@@ -156,6 +163,16 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           )
         }
       }
+
+      @Test
+      fun `can create details of a location with old archived name`() {
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createReq.copy(localName = "Old Visit Room")))
+          .exchange()
+          .expectStatus().isCreated
+      }
     }
   }
 
@@ -179,6 +196,13 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           localName = "Inactive Classroom Three",
           serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
           status = LocationStatus.INACTIVE,
+        ),
+      )
+      repository.save(
+        buildNonResidentialLocation(
+          localName = "Old Visit Room",
+          serviceType = ServiceType.VIDEO_LINK,
+          status = LocationStatus.ARCHIVED,
         ),
       )
     }
@@ -236,6 +260,16 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
           .bodyValue("""{"localName": ""}""")
+          .exchange()
+          .expectStatus().is4xxClientError
+      }
+
+      @Test
+      fun `Duplicate local name is rejected`() {
+        webTestClient.put().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(localName = "Adjudication Room", servicesUsingLocation = setOf(ServiceType.HEARING_LOCATION)))
           .exchange()
           .expectStatus().is4xxClientError
       }
@@ -325,6 +359,17 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
             "location.inside.prison.created" to newKey,
           )
         }
+      }
+
+      @Test
+      fun `local name can be reused when a location is archived`() {
+        // update classroom 2 to classroom 3
+        webTestClient.put().uri("/locations/non-residential/${classroom2.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(localName = "Old Visit Room"))
+          .exchange()
+          .expectStatus().isOk
       }
 
       @Test

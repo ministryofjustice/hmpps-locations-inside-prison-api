@@ -257,7 +257,9 @@ class NonResidentialService(
     if (nonResLocation.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(nonResLocation.getKey())
     }
-
+    if (updateRequest.localName != null && nonResLocation.localName != updateRequest.localName) {
+      validateLocalNameNotDuplicated(nonResLocation.prisonId, updateRequest.localName, nonResLocation.id!!)
+    }
     val linkedTransaction = commonLocationService.createLinkedTransaction(
       prisonId = nonResLocation.prisonId,
       TransactionType.LOCATION_UPDATE_NON_RESI,
@@ -319,14 +321,16 @@ class NonResidentialService(
   }
 
   private fun validateLocalNameNotDuplicated(prisonId: String, localName: String) {
-    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName).any()) {
+    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
+        .any { !it.isPermanentlyDeactivated() }
+    ) {
       throw DuplicateNonResidentialLocalNameInPrisonException(prisonId = prisonId, localName = localName)
     }
   }
 
   private fun validateLocalNameNotDuplicated(prisonId: String, localName: String, locationId: UUID) {
     if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
-        .any { it.id != locationId }
+        .any { !it.isPermanentlyDeactivated() && it.id != locationId }
     ) {
       throw DuplicateNonResidentialLocalNameInPrisonException(prisonId = prisonId, localName = localName)
     }
