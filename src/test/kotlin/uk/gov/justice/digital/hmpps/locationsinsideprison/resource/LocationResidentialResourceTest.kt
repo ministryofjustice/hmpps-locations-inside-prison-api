@@ -979,11 +979,11 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
       }
 
       @Test
-      fun `cannot add a local name more that 30 characters`() {
+      fun `cannot add a local name more that 40 characters`() {
         webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(""" { "localName": "1234567890123456789012345678901"} """)
+          .bodyValue(""" { "localName": "12345678901234567890123456789012345678901"} """)
           .exchange()
           .expectStatus().is4xxClientError
       }
