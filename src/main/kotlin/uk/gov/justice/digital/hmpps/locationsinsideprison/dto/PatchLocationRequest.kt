@@ -48,7 +48,7 @@ data class PatchResidentialLocationRequest(
   val usedFor: Set<UsedForType>? = null,
 
   @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
-  @field:Size(max = 30, message = "Description must be less than 31 characters")
+  @field:Size(max = 40, message = "Description must be less than 41 characters")
   override val localName: String? = null,
 
   @param:Schema(description = "Location Type", example = "CELL", required = false)
@@ -92,7 +92,7 @@ data class PatchNonResidentialLocationRequest(
   val servicesUsingLocation: Set<ServiceType>? = null,
 
   @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
-  @field:Size(max = 30, message = "Description must be less than 31 characters")
+  @field:Size(max = 40, message = "Description must be less than 41 characters")
   override val localName: String? = null,
 
   @param:Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
@@ -106,7 +106,7 @@ data class PatchNonResidentialLocationRequest(
 data class UpdateLocationLocalNameRequest(
 
   @param:Schema(description = "Alternative description to display for location", example = "Wing A", required = false)
-  @field:Size(max = 30, message = "Description must be less than 31 characters")
+  @field:Size(max = 40, message = "Description must be less than 41 characters")
   val localName: String? = null,
 
   @param:Schema(description = "Username of the staff updating the location", required = false)
