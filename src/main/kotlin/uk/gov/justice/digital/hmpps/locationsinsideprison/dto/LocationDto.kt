@@ -187,6 +187,9 @@ data class Location(
   @param:Schema(description = "Reason for the last deactivation change", example = "Cell damaged", required = false)
   val lastDeactivationReasonForChange: String? = null,
 
+  @param:Schema(description = "Cells only, the current certificate data", required = false)
+  val currentCellCertificate: CellCertificateLocationDto? = null,
+
   @param:Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
   val parentId: UUID?,
 

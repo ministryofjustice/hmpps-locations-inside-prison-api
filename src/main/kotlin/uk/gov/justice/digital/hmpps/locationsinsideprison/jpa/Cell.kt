@@ -676,6 +676,7 @@ class Cell(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
+    cellCertificateLocation: CellCertificateLocation?,
   ): LocationDto = super.toDto(
     includeChildren = includeChildren,
     includeParent = includeParent,
@@ -685,6 +686,7 @@ class Cell(
     useHistoryForUpdate = useHistoryForUpdate,
     countCells = countCells,
     formatLocalName = formatLocalName,
+    cellCertificateLocation = cellCertificateLocation,
   ).copy(
     oldWorkingCapacity = if (isTemporarilyDeactivated()) {
       getWorkingCapacity()

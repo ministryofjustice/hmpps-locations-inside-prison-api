@@ -138,6 +138,7 @@ class NonResidentialLocation(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
+    cellCertificateLocation: CellCertificateLocation?,
   ): LocationDto = super.toDto(
     includeChildren = includeChildren,
     includeParent = includeParent,
@@ -147,6 +148,7 @@ class NonResidentialLocation(
     useHistoryForUpdate = useHistoryForUpdate,
     countCells = countCells,
     formatLocalName = formatLocalName,
+    cellCertificateLocation = cellCertificateLocation,
   ).copy(
     usage = nonResidentialUsages.map { it.toDto() }.sortedBy { it.usageType.sequence },
     servicesUsingLocation = services.map { it.toDto() }.sortedBy { it.serviceType.sequence },

@@ -389,6 +389,70 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
       }
 
       @Test
+      fun `can retrieve details of a cell`() {
+        webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${cell1.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              {
+                "topLevelLocationType": "Wings",
+                "subLocationName": "Wings",
+                "locationHierarchy": [
+                  {
+                    "prisonId": "MDI",
+                    "code": "Z",
+                    "type": "WING",
+                    "pathHierarchy": "Z",
+                    "level": 1
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "1",
+                    "type": "LANDING",
+                    "localName": "Landing 1",
+                    "pathHierarchy": "Z-1",
+                    "level": 2
+                  },
+                  {
+                    "prisonId": "MDI",
+                    "code": "001",
+                    "type": "CELL",
+                    "pathHierarchy": "Z-1-001",
+                    "level": 3
+                  }
+                ],
+                "parentLocation": {
+                  "prisonId": "MDI",
+                  "code": "001",
+                  "cellMark": "Z1-#001",
+                  "pathHierarchy": "Z-1-001",
+                  "locationType": "CELL",
+                  "permanentlyInactive": false,
+                  "capacity": {
+                    "maxCapacity": 2,
+                    "workingCapacity": 2,
+                    "certifiedNormalAccommodation": 2
+                  },
+                  "certifiedCell": true,
+                  "status": "ACTIVE",
+                  "inCellSanitation": false,
+                  "level": 3,
+                  "leafLevel": true,
+                  "inactiveCells": 0,
+                  "numberOfCellLocations": 1,
+                  "isResidential": true,
+                  "key": "MDI-Z-1-001"
+                }
+              }           
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
       fun `can retrieve details of a locations on a landing without any cells`() {
         webTestClient.get().uri("/locations/residential-summary/MDI?parentLocationId=${landingZ2.id}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
