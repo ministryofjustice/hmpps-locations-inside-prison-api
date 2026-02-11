@@ -132,14 +132,18 @@ open class ResidentialLocation(
 
   fun getPendingApprovalRequest(): LocationCertificationApprovalRequest? = findHighestLevelPending()?.approvalRequests?.firstOrNull { it.isPending() }
 
-  fun getLatestApprovedRequest(approvalType: ApprovalType): LocationCertificationApprovalRequest? = approvalRequests.firstOrNull { it.isApproved() && it.getApprovalType() == approvalType }
+  fun getLatestApprovedDeactivationRequest(): LocationCertificationApprovalRequest? = findHighestLevelForStatus(
+    ApprovalRequestStatus.APPROVED,
+  )?.approvalRequests?.firstOrNull { it.isApproved() && it.getApprovalType() == ApprovalType.DEACTIVATION }
 
-  protected fun findHighestLevelPending(includeDrafts: Boolean = false): ResidentialLocation? {
+  protected fun findHighestLevelPending(includeDrafts: Boolean = false) = findHighestLevelForStatus(includeDrafts = includeDrafts)
+
+  protected fun findHighestLevelForStatus(approvalStatus: ApprovalRequestStatus = ApprovalRequestStatus.PENDING, includeDrafts: Boolean = false): ResidentialLocation? {
     var current: ResidentialLocation? = this
     var highestPending: ResidentialLocation? = null
 
     while (current != null) {
-      if ((includeDrafts && current.isDraft()) || current.approvalRequests.firstOrNull { it.isPending() } != null) {
+      if ((includeDrafts && current.isDraft()) || current.approvalRequests.firstOrNull { it.status == approvalStatus } != null) {
         highestPending = current
       }
       current = current.getParent() as? ResidentialLocation
@@ -565,6 +569,7 @@ open class ResidentialLocation(
     useHistoryForUpdate: Boolean,
     countCells: Boolean,
     formatLocalName: Boolean,
+    cellCertificateLocation: CellCertificateLocation?,
   ): LocationDto = super.toDto(
     includeChildren = includeChildren,
     includeParent = includeParent,
@@ -574,6 +579,7 @@ open class ResidentialLocation(
     useHistoryForUpdate = useHistoryForUpdate,
     countCells = countCells,
     formatLocalName = formatLocalName,
+    cellCertificateLocation = cellCertificateLocation,
   ).copy(
 
     wingStructure = getStructure(),
@@ -585,7 +591,8 @@ open class ResidentialLocation(
     ),
     topLevelApprovalLocationId = findHighestLevelPending(includeDrafts = true)?.id,
     pendingApprovalRequestId = getPendingApprovalRequest()?.id,
-    lastDeactivationReasonForChange = getLastReasonForChangeByApprovalType(ApprovalType.DEACTIVATION),
+    lastDeactivationReasonForChange = getLastReasonForDeactivation(),
+    currentCellCertificate = cellCertificateLocation?.toDto(),
     pendingChanges = if (hasPendingCertificationApproval() || hasPendingChangesBelowThisLevel() || isDraft()) {
       PendingChangeDto(
         maxCapacity = calcMaxCapacity(true),
@@ -619,12 +626,12 @@ open class ResidentialLocation(
     },
   )
 
-  private fun getLastReasonForChangeByApprovalType(approvalType: ApprovalType): String? {
+  private fun getLastReasonForDeactivation(): String? {
     val pendingApprovalRequest = getPendingApprovalRequest()
-    return if (approvalType == pendingApprovalRequest?.getApprovalType()) {
+    return if (ApprovalType.DEACTIVATION == pendingApprovalRequest?.getApprovalType()) {
       pendingApprovalRequest.reasonForChange
     } else {
-      getLatestApprovedRequest(approvalType)?.reasonForChange
+      getLatestApprovedDeactivationRequest()?.reasonForChange
     }
   }
 
