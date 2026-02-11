@@ -28,6 +28,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -46,6 +47,7 @@ class LocationServiceTest {
   private val residentialLocationRepository: ResidentialLocationRepository = mock()
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository = mock()
   private val cellLocationRepository: CellLocationRepository = mock()
+  private val cellCertificateRepository: CellCertificateRepository = mock()
   private val linkedTransactionRepository: LinkedTransactionRepository = mock()
   private val prisonerLocationService: PrisonerLocationService = mock()
   private val prisonService: PrisonService = mock()
@@ -63,6 +65,7 @@ class LocationServiceTest {
     residentialLocationRepository,
     signedOperationCapacityRepository,
     cellLocationRepository,
+    cellCertificateRepository,
     linkedTransactionRepository,
     entityManager,
     prisonerLocationService,

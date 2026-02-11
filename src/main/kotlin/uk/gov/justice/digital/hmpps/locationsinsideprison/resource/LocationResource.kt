@@ -81,7 +81,8 @@ class LocationResource(
     @RequestParam(name = "includeChildren", required = false, defaultValue = "false") includeChildren: Boolean = false,
     @RequestParam(name = "includeHistory", required = false, defaultValue = "false") includeHistory: Boolean = false,
     @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
-  ) = locationService.getLocationById(id = id, includeChildren = includeChildren, includeHistory = includeHistory, formatLocalName = formatLocalName)
+    @RequestParam(name = "includeCurrentCertificate", required = false, defaultValue = "false") includeCurrentCertificate: Boolean = false,
+  ) = locationService.getLocationById(id = id, includeChildren = includeChildren, includeHistory = includeHistory, formatLocalName = formatLocalName, includeCurrentCertificate = includeCurrentCertificate)
     ?: throw LocationNotFoundException(id.toString())
 
   @GetMapping("")

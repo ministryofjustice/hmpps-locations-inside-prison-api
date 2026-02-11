@@ -71,10 +71,22 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(deactivatedLocation.pendingApprovalRequestId).isNotNull
       assertThat(deactivatedLocation.lastDeactivationReasonForChange).isEqualTo("The cell as been flooded")
 
+      val firstCell = leedsWing.findAllLeafLocations().first()
+      val firstApprovedDeactivatedCell = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(firstApprovedDeactivatedCell.status).isEqualTo(DerivedLocationStatus.LOCKED_INACTIVE)
+      assertThat(firstApprovedDeactivatedCell.currentCellCertificate).isNull()
+
       val pendingApprovalRequestId = deactivatedLocation.pendingApprovalRequestId!!
 
-      getDomainEvents(9).let { messages ->
-        val results = leedsWing.findSubLocations().map { it.getKey() }.plus(leedsWing.getKey())
+      val results = leedsWing.findSubLocations().map { it.getKey() }.plus(leedsWing.getKey())
+      getDomainEvents(results.size).let { messages ->
         assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
           *results.map { "location.inside.prison.deactivated" to it }.toTypedArray(),
         )
@@ -163,6 +175,22 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approvedDeactivatedLocation.proposedReactivationDate).isEqualTo(proposedReactivationDate)
       assertThat(approvedDeactivatedLocation.pendingApprovalRequestId).isNull()
       assertThat(deactivatedLocation.lastDeactivationReasonForChange).isEqualTo("The cell as been flooded")
+
+      val approvedDeactivatedCell = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(approvedDeactivatedCell.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(approvedDeactivatedCell.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
+      assertThat(approvedDeactivatedCell.proposedReactivationDate).isEqualTo(proposedReactivationDate)
+      assertThat(approvedDeactivatedCell.pendingApprovalRequestId).isNull()
+      assertThat(approvedDeactivatedCell.currentCellCertificate).isNotNull
+      assertThat(approvedDeactivatedCell.currentCellCertificate!!.workingCapacity).isEqualTo(0)
+      assertThat(approvedDeactivatedCell.lastDeactivationReasonForChange).isEqualTo("The cell as been flooded")
     }
 
     @Test

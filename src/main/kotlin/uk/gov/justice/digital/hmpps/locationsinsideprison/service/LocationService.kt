@@ -34,6 +34,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLoca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.addCellToParent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificateLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
@@ -47,6 +48,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.isCapacityRequired
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
@@ -90,6 +92,7 @@ class LocationService(
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val cellLocationRepository: CellLocationRepository,
+  private val cellCertificateRepository: CellCertificateRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val entityManager: EntityManager,
   private val prisonerLocationService: PrisonerLocationService,
@@ -109,11 +112,26 @@ class LocationService(
     includeChildren: Boolean = false,
     includeHistory: Boolean = false,
     formatLocalName: Boolean = false,
-  ): LocationDTO? = locationRepository.findById(id).getOrNull()?.toDto(
-    includeChildren = includeChildren,
-    includeHistory = includeHistory,
-    formatLocalName = formatLocalName,
-  )
+    includeCurrentCertificate: Boolean = false,
+  ): LocationDTO? {
+    val locationFound = locationRepository.findById(id).getOrNull()
+    return locationFound?.toDto(
+      includeChildren = includeChildren,
+      includeHistory = includeHistory,
+      formatLocalName = formatLocalName,
+      cellCertificateLocation = getCurrentCertificateForLocation(includeCurrentCertificate, locationFound),
+    )
+  }
+
+  private fun getCurrentCertificateForLocation(
+    includeCurrentCertificate: Boolean,
+    locationFound: Location,
+  ): CellCertificateLocation? = if (includeCurrentCertificate) {
+    (locationFound as? ResidentialLocation)
+      ?.let { residentialLocation -> getCurrentCellCertificateForLocation(residentialLocation) }
+  } else {
+    null
+  }
 
   fun getTransaction(txId: UUID) = linkedTransactionRepository.findById(txId).getOrNull()?.toDto()
 
@@ -236,10 +254,14 @@ class LocationService(
     return Predicate { it.getPathHierarchy().startsWith(prefixToMatch) }
   }
 
-  fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false): LocationDTO? = locationRepository.findOneByKey(key)?.toDto(
-    includeChildren = includeChildren,
-    includeHistory = includeHistory,
-  )
+  fun getLocationByKey(key: String, includeChildren: Boolean = false, includeHistory: Boolean = false, includeCurrentCertificate: Boolean = false): LocationDTO? {
+    val locationFound = locationRepository.findOneByKey(key)
+    return locationFound?.toDto(
+      includeChildren = includeChildren,
+      includeHistory = includeHistory,
+      cellCertificateLocation = getCurrentCertificateForLocation(includeCurrentCertificate, locationFound),
+    )
+  }
 
   fun getLocationsByKeys(keys: List<String>): List<LocationDTO> = locationRepository.findAllByKeys(keys)
     .map { it.toDto() }
@@ -1402,7 +1424,13 @@ class LocationService(
       )
       .filter { !it.isPermanentlyDeactivated() }
       .filter { it.isLocationShownOnResidentialSummary() }
-      .map { it.toDto(countInactiveCells = true, countCells = true) }
+      .map {
+        it.toDto(
+          countInactiveCells = true,
+          countCells = true,
+          cellCertificateLocation = currentLocation?.let { cellLocation -> getCurrentCellCertificateForLocation(cellLocation) },
+        )
+      }
       .sortedWith(NaturalOrderComparator())
 
     val subLocationTypes =
@@ -1431,6 +1459,11 @@ class LocationService(
       wingStructure = currentLocation?.findTopLevelResidentialLocation()?.getStructure(),
     )
   }
+
+  private fun getCurrentCellCertificateForLocation(currentLocation: ResidentialLocation): CellCertificateLocation? = cellCertificateRepository.findByPrisonIdAndPathHierarchy(
+    currentLocation.prisonId,
+    currentLocation.getPathHierarchy(),
+  )
 
   private fun calculateSubLocationDescription(locations: List<LocationDTO>): String? {
     if (locations.isEmpty()) return null

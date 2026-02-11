@@ -395,6 +395,7 @@ abstract class Location(
     useHistoryForUpdate: Boolean = false,
     countCells: Boolean = false,
     formatLocalName: Boolean = false,
+    cellCertificateLocation: CellCertificateLocation? = null,
   ): LocationDto {
     val topHistoryEntry = if (useHistoryForUpdate) {
       history.maxByOrNull { it.amendedDate }
