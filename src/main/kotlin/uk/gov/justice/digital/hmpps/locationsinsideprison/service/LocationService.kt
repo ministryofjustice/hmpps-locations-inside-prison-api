@@ -1428,7 +1428,6 @@ class LocationService(
         it.toDto(
           countInactiveCells = true,
           countCells = true,
-          cellCertificateLocation = currentLocation?.let { cellLocation -> getCurrentCellCertificateForLocation(cellLocation) },
         )
       }
       .sortedWith(NaturalOrderComparator())
@@ -1453,7 +1452,12 @@ class LocationService(
         null
       },
       locationHierarchy = currentLocation?.getHierarchy(),
-      parentLocation = currentLocation?.toDto(countInactiveCells = true, useHistoryForUpdate = true, countCells = true),
+      parentLocation = currentLocation?.toDto(
+        countInactiveCells = true,
+        useHistoryForUpdate = true,
+        countCells = true,
+        cellCertificateLocation = getCurrentCellCertificateForLocation(currentLocation),
+      ),
       subLocations = locations,
       subLocationName = subLocationTypes,
       wingStructure = currentLocation?.findTopLevelResidentialLocation()?.getStructure(),
