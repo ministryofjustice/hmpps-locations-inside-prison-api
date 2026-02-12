@@ -16,6 +16,7 @@ import org.springframework.data.domain.Sort
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellAttributes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellDraftUpdateRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
@@ -1447,6 +1448,7 @@ class LocationService(
           numberOfCellLocations = locations.sumOf { it.numberOfCellLocations ?: 0 },
           signedOperationalCapacity = signedOperationCapacityRepository.findByPrisonId(prisonId)?.signedOperationCapacity
             ?: 0,
+          currentCertificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(prisonId)?.toDto(showLocations = false),
         )
       } else {
         null
@@ -1690,6 +1692,8 @@ data class PrisonSummary(
   val maxCapacity: Int,
   @param:Schema(description = "Total number of non-structural locations  e.g. cells and rooms")
   val numberOfCellLocations: Int,
+  @param:Schema(description = "Current approved certificate")
+  val currentCertificate: CellCertificateDto? = null,
 )
 
 data class UpdatedSummary(
