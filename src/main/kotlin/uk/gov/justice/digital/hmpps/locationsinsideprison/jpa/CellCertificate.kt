@@ -182,7 +182,7 @@ open class CellCertificateLocation(
     return pathHierarchy == other.pathHierarchy
   }
 
-  fun toDto(): CellCertificateLocationDto = CellCertificateLocationDto(
+  fun toDto(traverseDown: Boolean = true): CellCertificateLocationDto = CellCertificateLocationDto(
     locationCode = locationCode,
     pathHierarchy = pathHierarchy,
     certifiedNormalAccommodation = certifiedNormalAccommodation,
@@ -197,7 +197,7 @@ open class CellCertificateLocation(
     cellMark = cellMark,
     level = level,
     convertedCellType = convertedCellType,
-    subLocations = subLocations.map { it.toDto() },
+    subLocations = if (traverseDown)subLocations.map { it.toDto() } else null,
   )
 
   private fun getSpecialistCellTypesFromList(): List<SpecialistCellType>? = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) }

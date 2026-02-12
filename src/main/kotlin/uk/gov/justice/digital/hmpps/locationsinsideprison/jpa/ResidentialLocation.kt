@@ -592,7 +592,7 @@ open class ResidentialLocation(
     topLevelApprovalLocationId = findHighestLevelPending(includeDrafts = true)?.id,
     pendingApprovalRequestId = getPendingApprovalRequest()?.id,
     lastDeactivationReasonForChange = getLastReasonForDeactivation(),
-    currentCellCertificate = cellCertificateLocation?.toDto(),
+    currentCellCertificate = cellCertificateLocation?.toDto(traverseDown = false),
     pendingChanges = if (hasPendingCertificationApproval() || hasPendingChangesBelowThisLevel() || isDraft()) {
       PendingChangeDto(
         maxCapacity = calcMaxCapacity(true),
