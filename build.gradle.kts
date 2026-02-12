@@ -5,9 +5,9 @@ import uk.gov.justice.digital.hmpps.gradle.RevealSecretsTask
 
 plugins {
   id("uk.gov.justice.hmpps.gradle-spring-boot") version "10.0.3"
-  kotlin("plugin.spring") version "2.3.0"
-  kotlin("plugin.jpa") version "2.3.0"
-  id("org.jetbrains.kotlinx.kover") version "0.9.5"
+  kotlin("plugin.spring") version "2.3.10"
+  kotlin("plugin.jpa") version "2.3.10"
+  id("org.jetbrains.kotlinx.kover") version "0.9.7"
   idea
 }
 
@@ -25,9 +25,9 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-webclient")
   implementation("org.springframework.security:spring-security-access")
   implementation("org.springframework.boot:spring-boot-starter-validation")
-  implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.11.19")
+  implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.12.2")
   implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.24.0")
-  implementation("io.opentelemetry:opentelemetry-extension-kotlin:1.58.0")
+  implementation("io.opentelemetry:opentelemetry-extension-kotlin:1.59.0")
 
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
   implementation("com.zaxxer:HikariCP:7.0.2")
