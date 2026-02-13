@@ -17,14 +17,17 @@ class ActivePrisonService(
 ) {
   fun isAllPrisonsActive() = !resiServiceActivatedPerPrison
 
-  fun isActivePrison(prisonId: String) = isAllPrisonsActive() || (getPrisonConfiguration(prisonId)?.resiLocationServiceActive ?: false)
+  fun isActivePrison(prisonId: String): Boolean {
+    val config = getPrisonConfiguration(prisonId)
+    return isAllPrisonsActive() || (config?.resiLocationServiceActive ?: false) || (config?.nonResiServiceActive ?: false)
+  }
 
   fun isCertificationApprovalRequired(prisonId: String) = getPrisonConfiguration(prisonId)?.certificationApprovalRequired == true
 
   fun getPrisonConfiguration(prisonId: String): PrisonConfiguration? = prisonConfigurationRepository.findById(prisonId).getOrNull()
 
   @Cacheable(CacheConfiguration.ACTIVE_PRISONS_CACHE_NAME)
-  fun getActivePrisons(): List<String> = prisonConfigurationRepository.findAll().filter { it.resiLocationServiceActive }.map { it.id }
+  fun getActivePrisons(): List<String> = prisonConfigurationRepository.findAll().filter { it.resiLocationServiceActive || it.nonResiServiceActive }.map { it.id }
 
   @CacheEvict(CacheConfiguration.ACTIVE_PRISONS_CACHE_NAME)
   fun setResiLocationServiceActive(prisonId: String, resiLocationServiceActive: Boolean) {
