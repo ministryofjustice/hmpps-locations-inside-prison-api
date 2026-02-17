@@ -25,8 +25,8 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-webclient")
   implementation("org.springframework.security:spring-security-access")
   implementation("org.springframework.boot:spring-boot-starter-validation")
-  implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.12.2")
-  implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.24.0")
+  implementation("uk.gov.justice.service.hmpps:hmpps-digital-prison-reporting-lib:9.12.3")
+  implementation("io.opentelemetry.instrumentation:opentelemetry-instrumentation-annotations:2.25.0")
   implementation("io.opentelemetry:opentelemetry-extension-kotlin:1.59.0")
 
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
@@ -44,7 +44,7 @@ dependencies {
   testImplementation("com.pauldijou:jwt-core_2.11:5.0.0")
   testImplementation("org.awaitility:awaitility-kotlin:4.3.0")
   testImplementation("org.mockito:mockito-inline:5.2.0")
-  testImplementation("io.swagger.parser.v3:swagger-parser:2.1.37") {
+  testImplementation("io.swagger.parser.v3:swagger-parser:2.1.38") {
     exclude(group = "io.swagger.core.v3")
   }
   testImplementation("org.springframework.security:spring-security-test")
