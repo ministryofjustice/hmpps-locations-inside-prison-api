@@ -19,7 +19,6 @@ import jakarta.persistence.NamedEntityGraph
 import jakarta.persistence.NamedEntityGraphs
 import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToMany
-import jakarta.xml.bind.ValidationException
 import org.hibernate.Hibernate
 import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
@@ -35,6 +34,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ActiveLocationCannotBePermanentlyDeactivatedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestRequiresReasonForChangeException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NaturalOrderComparator
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
@@ -827,7 +827,7 @@ abstract class Location(
 
         if (requestApproval) {
           if (reasonForChange == null) {
-            throw ValidationException("Reason for change must be provided when requesting approval for deactivation")
+            throw ApprovalRequestRequiresReasonForChangeException(getKey())
           }
           requestApprovalForDeactivation(
             requestedDate = deactivatedDate,

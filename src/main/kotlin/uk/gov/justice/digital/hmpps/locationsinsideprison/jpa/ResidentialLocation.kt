@@ -111,7 +111,7 @@ open class ResidentialLocation(
   fun getWorkingCapacityIgnoreParent(): Int = cellLocations().filter { it.isActive() }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
-  private fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+  fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
   fun calcWorkingCapacity(includeDraft: Boolean = false): Int = cellLocations().filter { it.isActiveAndAllParentsActive() || (includeDraft && it.isDraft()) }
@@ -135,6 +135,10 @@ open class ResidentialLocation(
   fun getLatestApprovedDeactivationRequest(): LocationCertificationApprovalRequest? = findHighestLevelForStatus(
     ApprovalRequestStatus.APPROVED,
   )?.approvalRequests?.firstOrNull { it.isApproved() && it.getApprovalType() == ApprovalType.DEACTIVATION }
+
+  fun getLatestApprovedRequest(): LocationCertificationApprovalRequest? = findHighestLevelForStatus(
+    ApprovalRequestStatus.APPROVED,
+  )?.approvalRequests?.firstOrNull()
 
   protected fun findHighestLevelPending(includeDrafts: Boolean = false) = findHighestLevelForStatus(includeDrafts = includeDrafts)
 
@@ -225,6 +229,30 @@ open class ResidentialLocation(
       deactivationReasonDescription = deactivationReasonDescription,
       proposedReactivationDate = proposedReactivationDate,
       planetFmReference = planetFmReference,
+    ).apply {
+      linkPendingChangesToApprovalRequest(approvalRequest = this)
+    }
+
+    approvalRequests.add(approvalRequest)
+    return approvalRequest
+  }
+
+  fun requestApprovalForReactivation(
+    requestedDate: LocalDateTime,
+    requestedBy: String,
+    workingCapacityChange: Int,
+    reasonForChange: String,
+  ): LocationCertificationApprovalRequest {
+    if (hasPendingCertificationApproval()) {
+      throw PendingApprovalAlreadyExistsException(getKey())
+    }
+
+    val approvalRequest = ReactivationApprovalRequest(
+      location = this,
+      requestedBy = requestedBy,
+      requestedDate = requestedDate,
+      reasonForChange = reasonForChange,
+      workingCapacityChange = workingCapacityChange,
     ).apply {
       linkPendingChangesToApprovalRequest(approvalRequest = this)
     }

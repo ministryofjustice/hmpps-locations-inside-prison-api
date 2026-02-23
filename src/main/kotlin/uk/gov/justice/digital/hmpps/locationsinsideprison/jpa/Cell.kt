@@ -9,7 +9,6 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
-import jakarta.validation.ValidationException
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
@@ -19,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PendingChangeDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ChangesCannotBeMadeWithoutCertificationApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
@@ -400,7 +400,7 @@ class Cell(
 
       upsert.cellMark?.let { cellMark ->
         if (approvalRequired) {
-          throw ValidationException("Cannot update cell mark when certification approval is required")
+          throw ChangesCannotBeMadeWithoutCertificationApprovalException(getKey())
         }
         setCellDoorMark(
           newCellMark = cellMark,
@@ -412,7 +412,7 @@ class Cell(
 
       upsert.inCellSanitation?.let { inCellSanitation ->
         if (approvalRequired) {
-          throw ValidationException("Cannot update sanitation when certification approval is required")
+          throw ChangesCannotBeMadeWithoutCertificationApprovalException(getKey())
         }
         setSanitationOfCell(
           newInCellSanitation = inCellSanitation,

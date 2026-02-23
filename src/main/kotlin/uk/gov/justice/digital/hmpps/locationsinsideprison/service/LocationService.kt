@@ -33,6 +33,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.addCellToParent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificateLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
@@ -55,9 +56,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestRequiresReasonForChangeException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanentDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ChangesCannotBeMadeWithoutCertificationApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateCellMarkForSameHierarchyException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateLocalNameForSameHierarchyException
@@ -637,7 +640,7 @@ class LocationService(
 
     if (activePrisonService.isCertificationApprovalRequired(cell.prisonId) && !cell.isDraft()) {
       if (cellMarkChangeRequest.reasonForChange.isNullOrBlank()) {
-        throw ValidationException("Reason for change cannot be blank")
+        throw ApprovalRequestRequiresReasonForChangeException(cell.getKey())
       }
 
       cell.requestApprovalForCellMarkChange(
@@ -680,7 +683,7 @@ class LocationService(
 
     if (activePrisonService.isCertificationApprovalRequired(cell.prisonId) && !cell.isDraft()) {
       if (cellSanitationChangeRequest.reasonForChange.isNullOrBlank()) {
-        throw ValidationException("Reason for change cannot be blank")
+        throw ApprovalRequestRequiresReasonForChangeException(cell.getKey())
       }
 
       cell.requestApprovalForCellSanitationChange(
@@ -717,6 +720,10 @@ class LocationService(
 
     if (residentialLocation.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
+    }
+
+    if (activePrisonService.isCertificationApprovalRequired(residentialLocation.prisonId) && !residentialLocation.isDraft()) {
+      throw ApprovalRequestRequiresReasonForChangeException(residentialLocation.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -757,6 +764,10 @@ class LocationService(
 
     if (locCapChange.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(locCapChange.getKey())
+    }
+
+    if (activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId) && !locCapChange.isDraft()) {
+      throw ApprovalRequestRequiresReasonForChangeException(locCapChange.getKey())
     }
 
     if (!locCapChange.isDraft()) {
@@ -820,6 +831,11 @@ class LocationService(
     }
     if (cell.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(cell.getKey())
+    }
+
+    val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(cell.prisonId)
+    if (certificationApprovalRequired) {
+      throw ChangesCannotBeMadeWithoutCertificationApprovalException(cell.getKey())
     }
 
     // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialist cell types
@@ -982,7 +998,13 @@ class LocationService(
     val deactivatedLocations = mutableSetOf<Location>()
 
     val prisonId = permanentDeactivationRequest.locations.firstOrNull()?.let { key ->
-      locationRepository.findOneByKey(key)?.prisonId ?: throw LocationNotFoundException(key)
+      val prisonId = locationRepository.findOneByKey(key)?.prisonId ?: throw LocationNotFoundException(key)
+      val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
+
+      if (certificationApprovalRequired && permanentDeactivationRequest.reasonForChange.isNullOrEmpty()) {
+        throw ApprovalRequestRequiresReasonForChangeException(key)
+      }
+      prisonId
     } ?: throw LocationNotFoundException("No location found in request")
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -1090,7 +1112,12 @@ class LocationService(
     val audit = mutableMapOf<String, List<CapacityChanges>>()
 
     val prisonId = capacitiesToUpdate.locations.entries.firstOrNull()?.key?.let { key ->
-      locationRepository.findOneByKey(key)?.prisonId ?: throw LocationNotFoundException(key)
+      val prisonId = locationRepository.findOneByKey(key)?.prisonId ?: throw LocationNotFoundException(key)
+      val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
+      if (certificationApprovalRequired && capacitiesToUpdate.reasonForChange.isNullOrEmpty()) {
+        throw ApprovalRequestRequiresReasonForChangeException(key)
+      }
+      prisonId
     } ?: throw LocationNotFoundException("No location found in request")
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -1219,6 +1246,8 @@ class LocationService(
       "Reactivating locations",
     )
 
+    val approvalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
+
     locationsToReactivate.locations.forEach { (id, reactivationDetail) ->
       val locationToUpdate = locationRepository.findById(id)
         .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -1227,25 +1256,46 @@ class LocationService(
         throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
       }
 
-      locationToUpdate.reactivate(
-        userOrSystemInContext = sharedLocationService.getUsername(),
-        clock = clock,
-        reactivatedLocations = locationsReactivated,
-        amendedLocations = amendedLocations,
-        maxCapacity = reactivationDetail.capacity?.maxCapacity,
-        workingCapacity = reactivationDetail.capacity?.workingCapacity,
-        linkedTransaction = linkedTransaction,
-      )
+      var skipReactivate = false
+      if (locationToUpdate is ResidentialLocation) {
+        val approvedRequest = locationToUpdate.getLatestApprovedRequest()
+        if (approvalRequired && approvedRequest != null && approvedRequest.getApprovalType() == ApprovalType.DEACTIVATION) {
+          if (locationsToReactivate.reasonForChange.isNullOrEmpty()) {
+            throw ApprovalRequestRequiresReasonForChangeException("Reason for reactivation must be provided when approval is required")
+          }
 
-      if (reactivationDetail.cascadeReactivation) {
-        locationToUpdate.findSubLocations().forEach { location ->
-          location.reactivate(
-            userOrSystemInContext = sharedLocationService.getUsername(),
-            clock = clock,
-            reactivatedLocations = locationsReactivated,
-            amendedLocations = amendedLocations,
-            linkedTransaction = linkedTransaction,
+          locationToUpdate.requestApprovalForReactivation(
+            reasonForChange = locationsToReactivate.reasonForChange,
+            workingCapacityChange = locationToUpdate.getWorkingCapacityIgnoringInactiveStatus(),
+            requestedDate = LocalDateTime.now(clock),
+            requestedBy = sharedLocationService.getUsername(),
           )
+          residentialLocationRepository.saveAndFlush(locationToUpdate)
+          skipReactivate = true
+        }
+      }
+
+      if (!skipReactivate) {
+        locationToUpdate.reactivate(
+          userOrSystemInContext = sharedLocationService.getUsername(),
+          clock = clock,
+          reactivatedLocations = locationsReactivated,
+          amendedLocations = amendedLocations,
+          maxCapacity = reactivationDetail.capacity?.maxCapacity,
+          workingCapacity = reactivationDetail.capacity?.workingCapacity,
+          linkedTransaction = linkedTransaction,
+        )
+
+        if (reactivationDetail.cascadeReactivation) {
+          locationToUpdate.findSubLocations().forEach { location ->
+            location.reactivate(
+              userOrSystemInContext = sharedLocationService.getUsername(),
+              clock = clock,
+              reactivatedLocations = locationsReactivated,
+              amendedLocations = amendedLocations,
+              linkedTransaction = linkedTransaction,
+            )
+          }
         }
       }
     }
@@ -1308,6 +1358,11 @@ class LocationService(
       throw PendingApprovalOnLocationCannotBeUpdatedException(locationToConvert.getKey())
     }
 
+    val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(locationToConvert.prisonId)
+    if (certificationApprovalRequired) {
+      throw ChangesCannotBeMadeWithoutCertificationApprovalException(locationToConvert.getKey())
+    }
+
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = locationToConvert.prisonId,
       TransactionType.CELL_CONVERTION_TO_ROOM,
@@ -1361,6 +1416,11 @@ class LocationService(
 
     if (locationToConvert.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(locationToConvert.getKey())
+    }
+
+    val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(locationToConvert.prisonId)
+    if (certificationApprovalRequired) {
+      throw ChangesCannotBeMadeWithoutCertificationApprovalException(locationToConvert.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
