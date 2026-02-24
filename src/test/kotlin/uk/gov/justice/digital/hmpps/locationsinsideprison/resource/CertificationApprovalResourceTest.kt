@@ -31,6 +31,81 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
   inner class DeactivateLocationTest {
 
     @Test
+    fun `workingCapacityChange is correctly calculated when some cells are already inactive`() {
+      val now = LocalDateTime.now(clock)
+      val proposedReactivationDate = now.plusMonths(1).toLocalDate()
+
+      // Get one cell and deactivate it first (without approval)
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(firstCell.getPathHierarchy()),
+        false,
+      )
+
+      webTestClient.put().uri("/locations/${firstCell.id}/deactivate/temporary")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            TemporaryDeactivationLocationRequest(
+              deactivationReason = DeactivatedReason.DAMAGED,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      getDomainEvents(1)
+
+      // Now deactivate the wing (which should still show full working capacity change for ALL cells, including already-inactive ones)
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        leedsWing.findAllLeafLocations().map { it.getPathHierarchy() },
+        false,
+      )
+
+      webTestClient.put().uri("/locations/${leedsWing.id}/deactivate/temporary")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            TemporaryDeactivationLocationRequest(
+              requiresApproval = true,
+              reasonForChange = "Wing is being refurbished",
+              deactivationReason = DeactivatedReason.MOTHBALLED,
+              proposedReactivationDate = proposedReactivationDate,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      val deactivatedLocation = webTestClient.get().uri("/locations/${leedsWing.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      val pendingApprovalRequestId = deactivatedLocation.pendingApprovalRequestId!!
+
+      getDomainEvents(8) // 8 locations because 1 was already deactivated
+
+      val pendingApproval = webTestClient.get().uri("/certification/request-approvals/$pendingApprovalRequestId")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      // Even though one cell was already inactive, the workingCapacityChange should still be -6
+      // because we're reporting the total change from the current working capacity
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(-6)
+    }
+
+    @Test
     fun `can deactivate a location and request approval`() {
       val now = LocalDateTime.now(clock)
       val proposedReactivationDate = now.plusMonths(1).toLocalDate()

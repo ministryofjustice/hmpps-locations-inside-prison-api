@@ -111,7 +111,7 @@ open class ResidentialLocation(
   fun getWorkingCapacityIgnoreParent(): Int = cellLocations().filter { it.isActive() }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
-  private fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+  fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
   fun calcWorkingCapacity(includeDraft: Boolean = false): Int = cellLocations().filter { it.isActiveAndAllParentsActive() || (includeDraft && it.isDraft()) }
@@ -829,7 +829,9 @@ enum class ResidentialHousingType(
 
   fun mapToAccommodationType(): AccommodationType = when (this) {
     NORMAL_ACCOMMODATION -> AccommodationType.NORMAL_ACCOMMODATION
+
     HEALTHCARE -> AccommodationType.HEALTHCARE_INPATIENTS
+
     SEGREGATION -> AccommodationType.CARE_AND_SEPARATION
 
     SPECIALIST_CELL,
