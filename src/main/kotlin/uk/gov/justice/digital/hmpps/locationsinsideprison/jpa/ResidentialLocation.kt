@@ -829,9 +829,7 @@ enum class ResidentialHousingType(
 
   fun mapToAccommodationType(): AccommodationType = when (this) {
     NORMAL_ACCOMMODATION -> AccommodationType.NORMAL_ACCOMMODATION
-
     HEALTHCARE -> AccommodationType.HEALTHCARE_INPATIENTS
-
     SEGREGATION -> AccommodationType.CARE_AND_SEPARATION
 
     SPECIALIST_CELL,
