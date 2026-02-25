@@ -495,7 +495,7 @@ abstract class Location(
     return withTx.plus(withoutTx)
   }
 
-  private fun isLeafLevel() = findSubLocations().isEmpty() && !isStructural() && !isArea()
+  protected fun isLeafLevel() = findSubLocations().isEmpty() && !isStructural() && !isArea()
 
   protected fun isInHierarchy(locationToFind: Location): Boolean {
     // Walk up the hierarchy of the location to find

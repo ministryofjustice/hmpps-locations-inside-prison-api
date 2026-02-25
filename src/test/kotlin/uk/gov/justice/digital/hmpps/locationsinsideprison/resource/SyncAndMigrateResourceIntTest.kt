@@ -109,7 +109,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         prisonId = "ZZGHI",
         pathHierarchy = "B-1-VISIT",
         locationType = LocationType.VISITS,
-        serviceType = ServiceType.OFFICIAL_VISITS,
+        serviceTypes = setOf(ServiceType.OFFICIAL_VISITS),
       ),
     )
     room = repository.save(

@@ -81,6 +81,8 @@ enum class ServiceFamilyType(
       .filter { it.serviceFamily == this }
       .map { Constant(key = it.name, description = it.description, additionalInformation = it.additionalInformation) },
   )
+
+  fun getServiceTypes() = ServiceType.entries.filter { it.serviceFamily == this }
 }
 
 enum class ServiceType(
@@ -90,10 +92,11 @@ enum class ServiceType(
   val additionalInformation: String,
   val sequence: Int = 99,
   val nonResidentialLocationType: NonResidentialLocationType = NonResidentialLocationType.LOCATION,
+  val editableInParent: Boolean = false,
 ) {
-  APPOINTMENT(description = "Appointments", NonResidentialUsageType.APPOINTMENT, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, additionalInformation = "For example a counselling session", sequence = 1),
-  PROGRAMMES_AND_ACTIVITIES(description = "Programmes and activities", NonResidentialUsageType.PROGRAMMES_ACTIVITIES, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, additionalInformation = "For example a workshop or lesson", sequence = 2),
-  VIDEO_LINK(description = "Video link appointment/hearing", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.VIDEO_LINK_APPOINTMENTS, additionalInformation = "For example, a video link to a court hearing", sequence = 3, nonResidentialLocationType = NonResidentialLocationType.VIDEO_LINK),
+  APPOINTMENT(description = "Appointments", NonResidentialUsageType.APPOINTMENT, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, additionalInformation = "For example a counselling session", sequence = 1, editableInParent = true),
+  PROGRAMMES_AND_ACTIVITIES(description = "Programmes and activities", NonResidentialUsageType.PROGRAMMES_ACTIVITIES, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, additionalInformation = "For example a workshop or lesson", sequence = 2, editableInParent = true),
+  VIDEO_LINK(description = "Video link appointment/hearing", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.VIDEO_LINK_APPOINTMENTS, additionalInformation = "For example, a video link to a court hearing", sequence = 3, nonResidentialLocationType = NonResidentialLocationType.VIDEO_LINK, editableInParent = true),
   HEARING_LOCATION(description = "Adjudications - hearing location", NonResidentialUsageType.ADJUDICATION_HEARING, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For adjudication hearings", sequence = 4, nonResidentialLocationType = NonResidentialLocationType.ADJUDICATION_ROOM),
   LOCATION_OF_INCIDENT(description = "Adjudications - location of incident", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For example a location where an occurrence led to an adjudication hearing", sequence = 5),
   INTERNAL_MOVEMENTS(description = "Internal movements", NonResidentialUsageType.MOVEMENT, ServiceFamilyType.INTERNAL_MOVEMENTS, additionalInformation = "To record the location of unlocked prisoners within this establishment", sequence = 6),

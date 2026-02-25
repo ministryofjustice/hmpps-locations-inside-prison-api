@@ -281,7 +281,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         pathHierarchy = "VISIT",
         localName = "Visit Room",
         locationType = LocationType.VISITS,
-        serviceType = ServiceType.OFFICIAL_VISITS,
+        serviceTypes = setOf(ServiceType.OFFICIAL_VISITS),
         usageTypes = setOf(NonResidentialUsageType.PROPERTY, NonResidentialUsageType.OTHER),
       ),
     )
@@ -290,7 +290,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
         localName = "ADJUDICATION ROOM",
         pathHierarchy = "ADJUDICATION",
         locationType = LocationType.ADJUDICATION_ROOM,
-        serviceType = ServiceType.HEARING_LOCATION,
+        serviceTypes = setOf(ServiceType.HEARING_LOCATION),
       ),
     )
     wingZ.addChildLocation(visitRoom)
