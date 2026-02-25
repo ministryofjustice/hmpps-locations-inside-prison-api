@@ -38,13 +38,13 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       classroom1 = repository.save(
         buildNonResidentialLocation(
           localName = "Classroom One",
-          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+          serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
         ),
       )
       repository.save(
         buildNonResidentialLocation(
           localName = "Old Visit Room",
-          serviceType = ServiceType.VIDEO_LINK,
+          serviceTypes = setOf(ServiceType.VIDEO_LINK),
           status = LocationStatus.ARCHIVED,
         ),
       )
@@ -187,20 +187,20 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       classroom2 = repository.save(
         buildNonResidentialLocation(
           localName = "CLASSROOM TWO",
-          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+          serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
         ),
       )
       inactiveClassroom3 = repository.save(
         buildNonResidentialLocation(
           localName = "Inactive Classroom Three",
-          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+          serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
           status = LocationStatus.INACTIVE,
         ),
       )
       repository.save(
         buildNonResidentialLocation(
           localName = "Old Visit Room",
-          serviceType = ServiceType.VIDEO_LINK,
+          serviceTypes = setOf(ServiceType.VIDEO_LINK),
           status = LocationStatus.ARCHIVED,
         ),
       )
@@ -501,6 +501,119 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         """,
             JsonCompareMode.LENIENT,
           )
+      }
+
+      @Test
+      fun `can remove details of a locations of used by service in parent but not update usages`() {
+        val parentNonRes = repository.save(
+          buildNonResidentialLocation(
+            prisonId = "MDI",
+            pathHierarchy = "PARENT",
+            localName = "Parent Location",
+            locationType = LocationType.LOCATION,
+            serviceTypes = setOf(ServiceType.APPOINTMENT),
+          ),
+        )
+        val childNonRes = repository.save(
+          buildNonResidentialLocation(
+            prisonId = "MDI",
+            pathHierarchy = "PARENT-CHILD",
+            localName = "Child Location",
+            locationType = LocationType.LOCATION,
+            serviceTypes = setOf(ServiceType.APPOINTMENT),
+          ),
+        )
+        parentNonRes.addChildLocation(childNonRes)
+        repository.saveAndFlush(parentNonRes)
+
+        webTestClient.get().uri("/locations/${parentNonRes.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            {
+              "key": "${parentNonRes.getKey()}",
+              "localName": "${parentNonRes.localName}",
+              "code": "${parentNonRes.code}",
+              "pathHierarchy": "${parentNonRes.getPathHierarchy()}",
+              "usage": [
+                {
+                  "usageType": "APPOINTMENT"
+                }
+              ],
+              "servicesUsingLocation": [
+                {
+                  "serviceType": "APPOINTMENT",
+                  "serviceFamilyType": "ACTIVITIES_APPOINTMENTS"
+                }
+              ],
+              "status": "ACTIVE",
+              "level": 1
+            }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+
+        webTestClient.put().uri("/locations/non-residential/${parentNonRes.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(updateReq.copy(localName = null, servicesUsingLocation = emptySet())))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            {
+              "key": "${parentNonRes.getKey()}",
+              "localName": "${parentNonRes.localName}",
+              "code": "${parentNonRes.code}",
+              "pathHierarchy": "${parentNonRes.getPathHierarchy()}",
+              "usedByGroupedServices": [],
+              "usedByServices": [],
+              "status": "ACTIVE",
+              "level": 1,
+              "isLeafLevel": false
+            }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+
+        webTestClient.get().uri("/locations/${parentNonRes.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+            {
+              "key": "${parentNonRes.getKey()}",
+              "localName": "${parentNonRes.localName}",
+              "code": "${parentNonRes.code}",
+              "pathHierarchy": "${parentNonRes.getPathHierarchy()}",
+              "usage": [
+                {
+                  "usageType": "APPOINTMENT"
+                }
+              ],
+              "servicesUsingLocation": [
+              ],
+              "status": "ACTIVE",
+              "level": 1
+            }
+        """,
+            JsonCompareMode.LENIENT,
+          )
+
+        getDomainEvents(1).let {
+          assertThat(it).hasSize(1)
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to parentNonRes.getKey(),
+          )
+        }
       }
 
       @Test
@@ -1755,7 +1868,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
 
       @Test
       fun `can retrieve all non-residential locations of a service type`() {
-        webTestClient.get().uri("/locations/non-residential/summary/${wingZ.prisonId}?serviceType=OFFICIAL_VISITS")
+        webTestClient.get().uri("/locations/non-residential/summary/${wingZ.prisonId}?serviceFamilyType=OFFICIAL_VISITS")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()
@@ -1993,14 +2106,14 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         buildNonResidentialLocation(
           prisonId = "MDI",
           localName = "Gym",
-          serviceType = ServiceType.APPOINTMENT,
+          serviceTypes = setOf(ServiceType.APPOINTMENT),
         ).also {
           it.addChildLocation(
             buildNonResidentialLocation(
               prisonId = "MDI",
               localName = "Gym Area 1",
               locationType = LocationType.TRAINING_ROOM,
-              serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+              serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
             ),
           )
         },
@@ -2010,14 +2123,14 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         buildNonResidentialLocation(
           prisonId = "MDI",
           localName = "Gym Old",
-          serviceType = ServiceType.USE_OF_FORCE,
+          serviceTypes = setOf(ServiceType.USE_OF_FORCE),
           status = LocationStatus.INACTIVE,
         ).also {
           it.addChildLocation(
             buildNonResidentialLocation(
               prisonId = "MDI",
               localName = "Gym Old Old",
-              serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+              serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
             ),
           )
         },

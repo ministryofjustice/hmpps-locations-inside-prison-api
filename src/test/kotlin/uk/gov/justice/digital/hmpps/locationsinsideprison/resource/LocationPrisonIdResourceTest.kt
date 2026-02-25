@@ -1159,7 +1159,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
           localName = "Classroom 1",
           pathHierarchy = "RES",
           locationType = LocationType.CLASSROOM,
-          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+          serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
         )
 
         repository.save(
@@ -1167,7 +1167,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
             localName = "Return to unit",
             pathHierarchy = "RTU",
             locationType = LocationType.RESIDENTIAL_UNIT,
-            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+            serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
           ),
         )
 
@@ -1176,7 +1176,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
             localName = "Video room 1",
             pathHierarchy = "VIDEOR1",
             locationType = LocationType.VIDEO_LINK,
-            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+            serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
           ),
         )
         repository.save(videoLinkParent)
@@ -1311,7 +1311,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
           localName = "Classroom 1",
           pathHierarchy = "RES",
           locationType = LocationType.CLASSROOM,
-          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+          serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
         )
 
         videoLinkParent.addChildLocation(
@@ -1319,7 +1319,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
             localName = "Video room 1",
             pathHierarchy = "VIDEOR1",
             locationType = LocationType.VIDEO_LINK,
-            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+            serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
           ),
         )
         repository.save(videoLinkParent)
@@ -1403,7 +1403,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
           localName = "Residential 1",
           pathHierarchy = "RES",
           locationType = LocationType.CLASSROOM,
-          serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+          serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
         )
 
         repository.save(
@@ -1411,7 +1411,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
             localName = "Return to unit",
             pathHierarchy = "RTU",
             locationType = LocationType.RESIDENTIAL_UNIT,
-            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+            serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
           ),
         )
 
@@ -1420,7 +1420,7 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
             localName = "Video room 1",
             pathHierarchy = "VIDEOR1",
             locationType = LocationType.VIDEO_LINK,
-            serviceType = ServiceType.PROGRAMMES_AND_ACTIVITIES,
+            serviceTypes = setOf(ServiceType.PROGRAMMES_AND_ACTIVITIES),
           ),
         )
         repository.save(videoLinkParent)

@@ -33,7 +33,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excl
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByIsLeaf
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByPrisonId
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByServiceType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByServiceTypes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByStatuses
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByTypes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateNonResidentialLocalNameInPrisonException
@@ -412,23 +412,26 @@ class NonResidentialService(
   fun getNonResidentialLocationSummaryForPrison(
     prisonId: String,
     statuses: List<LocationStatus> = emptyList(),
-    serviceType: ServiceType? = null,
+    serviceFamilyType: ServiceFamilyType? = null,
     searchByLocalName: String? = null,
+    filterParents: Boolean = false,
     locationTypes: List<NonResidentialLocationType> = emptyList(),
     pageable: Pageable = PageRequest.of(0, 100, Sort.by("localName").ascending()),
   ): NonResidentialSummary {
     val specification = Specification.allOf(
       buildList {
         add(filterByPrisonId(prisonId))
-        add(filterByIsLeaf())
+        if (filterParents) {
+          add(filterByIsLeaf())
+        }
         add(excludeByCode("RTU"))
         add(excludeByLocationType(LocationType.BOX))
 
         searchByLocalName?.let {
           add(filterByLocalName(it))
         }
-        serviceType?.let {
-          add(filterByServiceType(it))
+        serviceFamilyType?.let {
+          add(filterByServiceTypes(it.getServiceTypes()))
         }
         if (statuses.isNotEmpty()) {
           add(filterByStatuses(statuses))
@@ -474,6 +477,9 @@ data class NonResidentialLocationDTO(
 
   @param:Schema(description = "Full path of the location within the prison", example = "A-1-001", required = true)
   val pathHierarchy: String,
+
+  @param:Schema(description = "Indicates this is the lowest level, and not a parent", example = "true", required = true)
+  val isLeafLevel: Boolean = false,
 
   @param:Schema(description = "Location Type", example = "ADJUDICATION_ROOM", required = true)
   val locationType: LocationType,

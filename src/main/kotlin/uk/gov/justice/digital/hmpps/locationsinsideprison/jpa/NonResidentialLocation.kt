@@ -109,6 +109,12 @@ class NonResidentialLocation(
   fun toNonResidentialDto(): NonResidentialLocationDTO {
     val deactivatedLocation = findDeactivatedLocationInHierarchy()
 
+    val serviceTypes = services.map { it.serviceType }.filter { serviceType ->
+      fun isEditableHere(): Boolean = isLeafLevel() || serviceType.editableInParent
+
+      isEditableHere()
+    }
+
     return NonResidentialLocationDTO(
       id = id!!,
       localName = localName?.let { formatLocation(it) } ?: getPathHierarchy(),
@@ -116,6 +122,7 @@ class NonResidentialLocation(
       status = getDerivedStatus(),
       locationType = locationType,
       pathHierarchy = getPathHierarchy(),
+      isLeafLevel = isLeafLevel(),
       prisonId = prisonId,
       parentId = getParent()?.id,
       level = getLevel(),
@@ -124,8 +131,8 @@ class NonResidentialLocation(
       deactivatedReason = deactivatedLocation?.deactivatedReason,
       deactivationReasonDescription = deactivatedLocation?.deactivationReasonDescription,
       deactivatedBy = deactivatedBy,
-      usedByGroupedServices = services.map { it.serviceType.serviceFamily }.distinct().sortedBy { it.sequence },
-      usedByServices = services.map { it.serviceType }.sortedBy { it.sequence },
+      usedByGroupedServices = serviceTypes.map { it.serviceFamily }.distinct().sortedBy { it.sequence },
+      usedByServices = serviceTypes.sortedBy { it.sequence },
     )
   }
 
@@ -172,7 +179,14 @@ class NonResidentialLocation(
     if (upsert is PatchNonResidentialLocationRequest) {
       upsert.servicesUsingLocation?.let {
         updateServices(it, userOrSystemInContext, clock, linkedTransaction)
-        updateUsage(buildNonResidentialUsageFromService(upsert.toUsages()), userOrSystemInContext, clock, linkedTransaction)
+        if (isLeafLevel()) {
+          updateUsage(
+            buildNonResidentialUsageFromService(upsert.toUsages()),
+            userOrSystemInContext,
+            clock,
+            linkedTransaction,
+          )
+        }
         locationType = identifyNonResidentialLocationType(it).baseType
       }
       val internalMovementAllowedUpdate = services.find { it.serviceType == ServiceType.INTERNAL_MOVEMENTS } != null

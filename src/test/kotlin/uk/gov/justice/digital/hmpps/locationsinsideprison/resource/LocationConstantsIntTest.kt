@@ -1004,7 +1004,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
               ]
             }                 
             """.trimIndent(),
-            JsonCompareMode.LENIENT,
+            JsonCompareMode.STRICT,
           )
       }
     }
