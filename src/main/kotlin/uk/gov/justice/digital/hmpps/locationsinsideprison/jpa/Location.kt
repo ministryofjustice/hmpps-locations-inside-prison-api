@@ -785,7 +785,7 @@ abstract class Location(
       }
 
       val workingCapacityChange = if (this is ResidentialLocation) {
-        calcWorkingCapacity()
+        getWorkingCapacityIgnoringInactiveStatus()
       } else {
         0
       }
