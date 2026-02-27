@@ -951,13 +951,13 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "VIDEO_LINK",
-                    "description": "Video link appointment/hearing",
+                    "description": "Book a video link",
                     "attributes": {
                       "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS",
-                      "serviceFamilyDescription": "Video link hearings and appointments",
+                      "serviceFamilyDescription": "Book a video link",
                       "editableInParent": true
                     },
-                    "additionalInformation": "For example, a video link to a court hearing"
+                    "additionalInformation": "For example, managing a court hearing or probation meeting via video link."
                   },
                   {
                     "key": "HEARING_LOCATION",
@@ -1079,12 +1079,12 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                 },
                 {
                   "key": "VIDEO_LINK_APPOINTMENTS",
-                  "description": "Video link hearings and appointments",
+                  "description": "Book a video link",
                   "values": [
                     {
                       "key": "VIDEO_LINK",
-                      "description": "Video link appointment/hearing",
-                      "additionalInformation": "For example, a video link to a court hearing"
+                      "description": "Book a video link",
+                      "additionalInformation": "For example, managing a court hearing or probation meeting via video link."
                     }
                   ]
                 },
