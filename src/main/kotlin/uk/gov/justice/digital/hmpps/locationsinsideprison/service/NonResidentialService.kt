@@ -415,6 +415,7 @@ class NonResidentialService(
     serviceFamilyType: ServiceFamilyType? = null,
     searchByLocalName: String? = null,
     filterParents: Boolean = false,
+    includeBoxes: Boolean = false,
     locationTypes: List<NonResidentialLocationType> = emptyList(),
     pageable: Pageable = PageRequest.of(0, 100, Sort.by("localName").ascending()),
   ): NonResidentialSummary {
@@ -425,7 +426,9 @@ class NonResidentialService(
           add(filterByIsLeaf())
         }
         add(excludeByCode("RTU"))
-        add(excludeByLocationType(LocationType.BOX))
+        if (!includeBoxes) {
+          add(excludeByLocationType(LocationType.BOX))
+        }
 
         searchByLocalName?.let {
           add(filterByLocalName(it))

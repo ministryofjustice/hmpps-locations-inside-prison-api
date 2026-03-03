@@ -688,6 +688,13 @@ class LocationNonResidentialResource(
     )
     @RequestParam(required = false)
     filterParents: Boolean = false,
+    @Schema(description = "Include BOX types of locations", example = "false", required = false, defaultValue = "false")
+    @Parameter(
+      description = "Include box locations",
+      example = "false",
+    )
+    @RequestParam(required = false)
+    includeBoxes: Boolean = false,
     @Schema(description = "Filter by given types", example = "[ADJUDICATION_ROOM,VIDEO_LINK]", required = false)
     @Parameter(
       description = "Filter by given types",
@@ -717,5 +724,6 @@ class LocationNonResidentialResource(
     locationTypes = locationType ?: emptyList(),
     searchByLocalName = localName,
     filterParents = filterParents,
+    includeBoxes = includeBoxes,
   )
 }

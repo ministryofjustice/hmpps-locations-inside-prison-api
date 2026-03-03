@@ -43,6 +43,35 @@ class NonResidentialLeafFilteringIntTest : CommonDataTestBase() {
   }
 
   @Test
+  fun `can retrieve box locations locations`() {
+    val box = repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "BOX",
+        localName = "Box 1",
+        locationType = LocationType.BOX,
+      ),
+    )
+    repository.save(box)
+
+    // The Box should be returned
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?includeBoxes=true")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Box 1')]").exists()
+
+    // The Box should NOT be returned
+    webTestClient.get().uri("/locations/non-residential/summary/MDI")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Box 1')]").doesNotExist()
+  }
+
+  @Test
   fun `can retrieve all non-residential locations`() {
     val parentNonRes = repository.save(
       buildNonResidentialLocation(

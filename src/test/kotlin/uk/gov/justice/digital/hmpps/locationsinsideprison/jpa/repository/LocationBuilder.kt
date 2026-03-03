@@ -120,7 +120,7 @@ fun buildNonResidentialLocation(
   pathHierarchy: String? = null,
   locationType: LocationType = LocationType.LOCATION,
   status: LocationStatus = LocationStatus.ACTIVE,
-  serviceTypes: Set<ServiceType>,
+  serviceTypes: Set<ServiceType> = emptySet(),
   usageTypes: Set<NonResidentialUsageType> = emptySet(),
 ): NonResidentialLocation {
   val code = pathHierarchy?.split("-")?.last() ?: generateNonResidentialCode(prisonId, localName)
