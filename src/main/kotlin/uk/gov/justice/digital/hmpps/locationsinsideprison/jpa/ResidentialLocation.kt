@@ -646,6 +646,7 @@ open class ResidentialLocation(
       certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
     ),
 
+    certifiedCell = hasCertifiedCells(),
     certification = CertificationDto(
       certified = hasCertifiedCells(),
       capacityOfCertifiedCell = calcCertifiedNormalAccommodation(),
