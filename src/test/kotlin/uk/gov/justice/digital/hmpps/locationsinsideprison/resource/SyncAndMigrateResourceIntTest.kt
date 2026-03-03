@@ -1062,6 +1062,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         .returnResult().responseBody!!
 
       Assertions.assertEquals(wingB.prisonId, legacyLocation.prisonId)
+      Assertions.assertEquals(true, legacyLocation.certifiedCell)
       Assertions.assertEquals(wingB.id, legacyLocation.id)
       Assertions.assertEquals(wingB.getPathHierarchy(), legacyLocation.pathHierarchy)
       Assertions.assertTrue(legacyLocation.ignoreWorkingCapacity)
