@@ -12,7 +12,7 @@ Accepted
 
 ## Context
 
-This document illustrate where the **locations inside prison service** fits into the wider architecture.
+This document illustrates where the **locations inside prison service** fits into the wider architecture.
 
 ### Components
 High level set of components that would make up the internal location management service.
@@ -28,7 +28,7 @@ The proposed architecture for location management follows a similar pattern to e
 
 - Domain events to indicate new and changes to location information
 
-Below illustrate these components and how they interact with each other.
+Below illustrates these components and how they interact with each other.
 
 ```mermaid
 flowchart TB
