@@ -1,5 +1,5 @@
 # Locations Inside Prison API
-[![repo standards badge](https://img.shields.io/badge/endpoint.svg?&style=flat&logo=github&url=https%3A%2F%2Foperations-engineering-reports.cloud-platform.service.justice.gov.uk%2Fapi%2Fv1%2Fcompliant_public_repositories%2Fhmpps-locations-inside-prison-api)](https://operations-engineering-reports.cloud-platform.service.justice.gov.uk/public-report/hmpps-locations-inside-prison-api "Link to report")
+[![Ministry of Justice Repository Compliance Badge](https://github-community.service.justice.gov.uk/repository-standards/api/hmpps-locations-inside-prison-api/badge?style=flat)](https://github-community.service.justice.gov.uk/repository-standards/hmpps-locations-inside-prison-api)
 [![Docker Repository on ghcr](https://img.shields.io/badge/ghcr.io-repository-2496ED.svg?logo=docker)](https://ghcr.io/ministryofjustice/hmpps-locations-inside-prison-api)
 [![API docs](https://img.shields.io/badge/API_docs_-view-85EA2D.svg?logo=swagger)](https://locations-inside-prison-api-dev.hmpps.service.justice.gov.uk/swagger-ui/index.html)
 [![Event docs](https://img.shields.io/badge/Event_docs-view-85EA2D.svg)](https://studio.asyncapi.com/?url=https://raw.githubusercontent.com/ministryofjustice/hmpps-locations-inside-prison-api/main/async-api.yml)
@@ -7,6 +7,10 @@
 
 ## Purpose
 Provides and API to manage the locations inside a prison.
+
+- [Guidelines](./guidelines.md)
+- [Architecture Overview](./architecture-overview.md)
+
 
 ## Getting Started
 
