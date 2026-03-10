@@ -435,6 +435,9 @@ class NonResidentialService(
         }
         serviceFamilyType?.let {
           add(filterByServiceTypes(it.getServiceTypes()))
+          if (!filterParents && !it.editableInParent) {
+            add(filterByIsLeaf())
+          }
         }
         if (statuses.isNotEmpty()) {
           add(filterByStatuses(statuses))

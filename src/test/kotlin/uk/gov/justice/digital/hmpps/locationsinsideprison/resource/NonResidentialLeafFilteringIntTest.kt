@@ -174,4 +174,70 @@ class NonResidentialLeafFilteringIntTest : CommonDataTestBase() {
         JsonCompareMode.LENIENT,
       )
   }
+
+  @Test
+  fun `parent location not returned when filtering by a service type that does not show parents`() {
+    val parentNonRes = repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PARENT",
+        localName = "Parent Location",
+        locationType = LocationType.LOCATION,
+        serviceTypes = setOf(ServiceType.USE_OF_FORCE),
+      ),
+    )
+    val childNonRes = repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PARENT-CHILD",
+        localName = "Child Location",
+        locationType = LocationType.LOCATION,
+        serviceTypes = setOf(ServiceType.USE_OF_FORCE),
+      ),
+    )
+    parentNonRes.addChildLocation(childNonRes)
+    repository.save(parentNonRes)
+
+    // Only the child should be returned
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?serviceFamilyType=USE_OF_FORCE")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Parent Location')]").doesNotExist()
+      .jsonPath("$.locations.content[?(@.localName == 'Child Location')]").exists()
+  }
+
+  @Test
+  fun `parent location is returned when filtering by a service type that does show parents`() {
+    val parentNonRes = repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PARENT",
+        localName = "Parent Location",
+        locationType = LocationType.LOCATION,
+        serviceTypes = setOf(ServiceType.VIDEO_LINK),
+      ),
+    )
+    val childNonRes = repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PARENT-CHILD",
+        localName = "Child Location",
+        locationType = LocationType.LOCATION,
+        serviceTypes = setOf(ServiceType.VIDEO_LINK),
+      ),
+    )
+    parentNonRes.addChildLocation(childNonRes)
+    repository.save(parentNonRes)
+
+    // Only the child should be returned
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?serviceFamilyType=VIDEO_LINK_APPOINTMENTS")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Parent Location')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Child Location')]").exists()
+  }
 }
