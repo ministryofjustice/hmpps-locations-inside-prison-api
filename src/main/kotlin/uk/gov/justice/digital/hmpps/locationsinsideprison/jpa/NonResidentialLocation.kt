@@ -110,7 +110,7 @@ class NonResidentialLocation(
     val deactivatedLocation = findDeactivatedLocationInHierarchy()
 
     val serviceTypes = services.map { it.serviceType }.filter { serviceType ->
-      fun isEditableHere(): Boolean = isLeafLevel() || serviceType.editableInParent
+      fun isEditableHere(): Boolean = isLeafLevel() || serviceType.serviceFamily.editableInParent
 
       isEditableHere()
     }
