@@ -182,7 +182,7 @@ class NonResidentialLeafFilteringIntTest : CommonDataTestBase() {
         prisonId = "MDI",
         pathHierarchy = "PARENT",
         localName = "Parent Location",
-        locationType = LocationType.LOCATION,
+        locationType = LocationType.AREA,
         serviceTypes = setOf(ServiceType.USE_OF_FORCE),
       ),
     )
@@ -215,7 +215,7 @@ class NonResidentialLeafFilteringIntTest : CommonDataTestBase() {
         prisonId = "MDI",
         pathHierarchy = "PARENT",
         localName = "Parent Location",
-        locationType = LocationType.LOCATION,
+        locationType = LocationType.AREA,
         serviceTypes = setOf(ServiceType.VIDEO_LINK),
       ),
     )
