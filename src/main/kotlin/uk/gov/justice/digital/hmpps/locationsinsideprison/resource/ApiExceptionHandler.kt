@@ -646,3 +646,5 @@ class CurrentCellCertificateNotFoundException(prisonId: String) : Exception("No 
 class SignedOpCapCannotChangedWithoutApprovalException(prisonId: String) : Exception("Signed op cap cannot be updated in $prisonId without approval")
 class ApprovalRequiredAboveThisLevelException(key: String, parentKey: String) : Exception("Location $key cannot be approved, approval should be from location $parentKey")
 class LocationCannotBeCreatedWithPendingApprovalException(key: String) : Exception("Location $key cannot be created")
+class ApprovalRequestRequiresReasonForChangeException(key: String) : Exception("Approval request for $key requires a reason for change")
+class ChangesCannotBeMadeWithoutCertificationApprovalException(key: String) : Exception("Changes cannot be made to $key without certification approval")

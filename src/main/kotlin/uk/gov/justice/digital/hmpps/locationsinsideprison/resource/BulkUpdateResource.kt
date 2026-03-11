@@ -195,6 +195,9 @@ data class UpdateCapacityRequest(
     example = "{\"TCI-A-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"certifiedNormalAccommodation\": 2 }, \"TCI-A-1-002\": { \"maxCapacity\": 3, \"workingCapacity\": 1, \"certifiedNormalAccommodation\": 1 } }",
   )
   val locations: Map<String, CellCapacityUpdateDetail>,
+
+  @param:Schema(description = "The reason why the approval was requested, mandatory if it must be approved", example = "The cell capacity has changed", required = false)
+  val reasonForChange: String? = null,
 )
 
 @Schema(description = "Bulk permanent deactivation request")
@@ -211,6 +214,9 @@ data class BulkPermanentDeactivationRequest(
   )
   @field:NotEmpty(message = "At least one location must be provided")
   val locations: List<String>,
+
+  @param:Schema(description = "The reason why the approval was requested, mandatory if it must be approved", example = "The cell is no longer needed", required = false)
+  val reasonForChange: String? = null,
 )
 
 @Schema(description = "Deactivate Locations Request")
@@ -232,12 +238,15 @@ data class DeactivateLocationsRequest(
 data class ReactivateLocationsRequest(
   @param:Schema(description = "List of locations to reactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
   val locations: Map<UUID, ReactivationDetail>,
+
+  @param:Schema(description = "Explanation of why the location need to be reactivated", example = "The cell has now been repaired and is available again", required = false)
+  val reasonForChange: String? = null,
 )
 
 @Schema(description = "Reactivation Details")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivationDetail(
-  @param:Schema(description = "List of locations to reactivate", defaultValue = "false", required = true, example = "true")
+  @param:Schema(description = "Cascade the reactivation", defaultValue = "false", required = true, example = "true")
   val cascadeReactivation: Boolean = false,
   @param:Schema(description = "New capacity of the location, if null the old values are used", required = false, example = " { \"workingCapacity\": 1, \"maxCapacity\": 2 }")
   val capacity: Capacity? = null,
