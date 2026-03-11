@@ -13,6 +13,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.test.util.ReflectionTestUtils
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
@@ -41,8 +42,8 @@ class NonResidentialServiceTest {
   @BeforeEach
   fun setUp() {
     whenever(authenticationHolder.username).thenReturn("User 1")
-    whenever(linkedTransactionRepository.save(any())).thenReturn(mock())
-    whenever(nonResidentialLocationRepository.save(any())).thenAnswer {
+    whenever(linkedTransactionRepository.save(any<LinkedTransaction>())).thenReturn(mock())
+    whenever(nonResidentialLocationRepository.save(any<NonResidentialLocation>())).thenAnswer {
       val loc = it.arguments[0] as NonResidentialLocation
       if (loc.id == null) {
         ReflectionTestUtils.setField(loc, "id", UUID.randomUUID())
