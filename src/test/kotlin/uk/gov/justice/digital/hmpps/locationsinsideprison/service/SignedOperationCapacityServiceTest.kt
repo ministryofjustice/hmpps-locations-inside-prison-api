@@ -14,6 +14,7 @@ import org.mockito.kotlin.whenever
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.Companion.clock
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
@@ -37,7 +38,7 @@ class SignedOperationCapacityServiceTest {
 
   @BeforeEach
   fun setUp() {
-    whenever(linkedTransactionRepository.save(any())).thenReturn(Mockito.mock())
+    whenever(linkedTransactionRepository.save(any<LinkedTransaction>())).thenReturn(Mockito.mock())
     whenever(prisonConfigurationService.getPrisonConfiguration(any())).thenReturn(
       PrisonConfigurationDto(
         prisonId = "MDI",
@@ -101,7 +102,7 @@ class SignedOperationCapacityServiceTest {
     whenever(request.updatedBy).thenReturn(updatedBy)
     whenever(signedOpCapResponse.toSignedOperationCapacityDto()).thenReturn(prisonSignedOperationCap)
     whenever(signedOperationCapacityRepository.findById(any())).thenReturn(Optional.empty())
-    whenever(signedOperationCapacityRepository.save(any())).thenReturn(signedOpCapResponse)
+    whenever(signedOperationCapacityRepository.save(any<SignedOperationCapacity>())).thenReturn(signedOpCapResponse)
     whenever(locationService.calculateMaxCapOfPrison(prisonId = prisonId)).thenReturn(130)
     val result = service.saveSignedOperationalCapacity(request)
     assertThat(result.newRecord).isTrue()
@@ -136,7 +137,7 @@ class SignedOperationCapacityServiceTest {
     whenever(request.prisonId).thenReturn(prisonId)
     whenever(request.updatedBy).thenReturn(updatedBy)
     whenever(signedOperationCapacityRepository.findByPrisonId(any())).thenReturn(existingRecord)
-    whenever(signedOperationCapacityRepository.save(any())).thenReturn(signedOperationCapacityResponse)
+    whenever(signedOperationCapacityRepository.save(any<SignedOperationCapacity>())).thenReturn(signedOperationCapacityResponse)
     whenever(locationService.calculateMaxCapOfPrison(prisonId = prisonId)).thenReturn(130)
 
     service.saveSignedOperationalCapacity(request)

@@ -80,7 +80,7 @@ class LocationServiceTest {
   @BeforeEach
   fun setUp() {
     whenever(authenticationHolder.username).thenReturn("User 1")
-    whenever(linkedTransactionRepository.save(any())).thenReturn(mock())
+    whenever(linkedTransactionRepository.save(any<LinkedTransaction>())).thenReturn(mock())
     whenever(sharedLocationService.createLinkedTransaction(eq("MDI"), any(), any(), anyOrNull())).thenReturn(
       LinkedTransaction(
         UUID.randomUUID(),
