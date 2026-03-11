@@ -95,6 +95,8 @@ open class ResidentialLocation(
     }
   }
 
+  override fun isLeafLevel() = super.isLeafLevel() && !isStructural() && !isArea()
+
   fun findTopLevelResidentialLocation(): ResidentialLocation = (getParent() as? ResidentialLocation)?.findTopLevelResidentialLocation() ?: this
 
   override fun isResidentialRoomOrConvertedCell() = isNonResType() || isConvertedCell()
