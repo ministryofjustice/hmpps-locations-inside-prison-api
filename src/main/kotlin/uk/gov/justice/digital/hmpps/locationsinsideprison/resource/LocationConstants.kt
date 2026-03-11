@@ -190,6 +190,7 @@ class LocationConstants(
           attributes = mapOf(
             "serviceFamilyType" to it.serviceFamily,
             "serviceFamilyDescription" to it.serviceFamily.description,
+            "editableInParent" to it.serviceFamily.editableInParent,
           ),
           additionalInformation = it.additionalInformation,
         )

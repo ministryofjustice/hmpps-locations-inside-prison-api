@@ -35,6 +35,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialLocationDTO
@@ -680,6 +681,20 @@ class LocationNonResidentialResource(
     )
     @RequestParam(required = false)
     localName: String? = null,
+    @Schema(description = "Filter out parent locations", example = "false", required = false, defaultValue = "false")
+    @Parameter(
+      description = "Filter parent locations",
+      example = "false",
+    )
+    @RequestParam(required = false)
+    filterParents: Boolean = false,
+    @Schema(description = "Include BOX types of locations", example = "false", required = false, defaultValue = "false")
+    @Parameter(
+      description = "Include box locations",
+      example = "false",
+    )
+    @RequestParam(required = false)
+    includeBoxes: Boolean = false,
     @Schema(description = "Filter by given types", example = "[ADJUDICATION_ROOM,VIDEO_LINK]", required = false)
     @Parameter(
       description = "Filter by given types",
@@ -695,18 +710,20 @@ class LocationNonResidentialResource(
     )
     @RequestParam(required = false)
     locationType: List<NonResidentialLocationType>? = null,
-    @Schema(description = "Service Type", example = "APPOINTMENT", required = false)
-    @Parameter(description = "Filter by service type", example = "APPOINTMENT", required = false)
-    serviceType: ServiceType? = null,
+    @Schema(description = "Service Type", example = "ACTIVITIES_APPOINTMENTS", required = false)
+    @Parameter(description = "Filter by service family", example = "ACTIVITIES_APPOINTMENTS", required = false)
+    serviceFamilyType: ServiceFamilyType? = null,
     @ParameterObject
     @PageableDefault(page = 0, size = 100, sort = ["localName"], direction = Sort.Direction.ASC)
     pageable: Pageable,
   ): NonResidentialSummary = nonResidentialService.getNonResidentialLocationSummaryForPrison(
     prisonId = prisonId,
-    serviceType = serviceType,
+    serviceFamilyType = serviceFamilyType,
     pageable = pageable,
     statuses = status,
     locationTypes = locationType ?: emptyList(),
     searchByLocalName = localName,
+    filterParents = filterParents,
+    includeBoxes = includeBoxes,
   )
 }

@@ -927,84 +927,92 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
           .expectStatus().isOk
           .expectBody().json(
             """
-            {
-              "nonResidentialServiceTypes": [
-                {
-                  "key": "APPOINTMENT",
-                  "description": "Appointments",
-                  "attributes": {
-                    "serviceFamilyType": "ACTIVITIES_APPOINTMENTS",
-                    "serviceFamilyDescription": "Activities and appointments"
+              {
+                "nonResidentialServiceTypes": [
+                  {
+                    "key": "APPOINTMENT",
+                    "description": "Appointments",
+                    "attributes": {
+                      "serviceFamilyType": "ACTIVITIES_APPOINTMENTS",
+                      "serviceFamilyDescription": "Activities and appointments",
+                      "editableInParent": true
+                    },
+                    "additionalInformation": "For example, a counselling session."
                   },
-                  "additionalInformation": "For example a counselling session"
-                },
-                {
-                  "key": "PROGRAMMES_AND_ACTIVITIES",
-                  "description": "Programmes and activities",
-                  "attributes": {
-                    "serviceFamilyType": "ACTIVITIES_APPOINTMENTS",
-                    "serviceFamilyDescription": "Activities and appointments"
+                  {
+                    "key": "PROGRAMMES_AND_ACTIVITIES",
+                    "description": "Programmes and activities",
+                    "attributes": {
+                      "serviceFamilyType": "ACTIVITIES_APPOINTMENTS",
+                      "serviceFamilyDescription": "Activities and appointments",
+                      "editableInParent": true
+                    },
+                    "additionalInformation": "For example, a workshop or lesson."
                   },
-                  "additionalInformation": "For example a workshop or lesson"
-                },
-                {
-                  "key": "VIDEO_LINK",
-                  "description": "Video link appointment/hearing",
-                  "attributes": {
-                    "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS",
-                    "serviceFamilyDescription": "Video link hearings and appointments"
+                  {
+                    "key": "VIDEO_LINK",
+                    "description": "Book a video link",
+                    "attributes": {
+                      "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS",
+                      "serviceFamilyDescription": "Book a video link",
+                      "editableInParent": true
+                    },
+                    "additionalInformation": "For example, managing a court hearing or probation meeting via video link."
                   },
-                  "additionalInformation": "For example, a video link to a court hearing"
-                },
-                {
-                  "key": "HEARING_LOCATION",
-                  "description": "Adjudications - hearing location",
-                  "attributes": {
-                    "serviceFamilyType": "ADJUDICATIONS",
-                    "serviceFamilyDescription": "Adjudications"
+                  {
+                    "key": "HEARING_LOCATION",
+                    "description": "Adjudications - hearing location",
+                    "attributes": {
+                      "serviceFamilyType": "ADJUDICATIONS",
+                      "serviceFamilyDescription": "Adjudications",
+                      "editableInParent": false
+                    },
+                    "additionalInformation": "For adjudication hearings."
                   },
-                  "additionalInformation": "For adjudication hearings"
-                },
-                {
-                  "key": "LOCATION_OF_INCIDENT",
-                  "description": "Adjudications - location of incident",
-                  "attributes": {
-                    "serviceFamilyType": "ADJUDICATIONS",
-                    "serviceFamilyDescription": "Adjudications"
+                  {
+                    "key": "LOCATION_OF_INCIDENT",
+                    "description": "Adjudications - location of incident",
+                    "attributes": {
+                      "serviceFamilyType": "ADJUDICATIONS",
+                      "serviceFamilyDescription": "Adjudications",
+                      "editableInParent": false
+                    },
+                    "additionalInformation": "For example, a location where an occurrence led to an adjudication hearing."
                   },
-                  "additionalInformation": "For example a location where an occurrence led to an adjudication hearing"
-                },
-                {
-                  "key": "INTERNAL_MOVEMENTS",
-                  "description": "Internal movements",
-                  "attributes": {
-                    "serviceFamilyType": "INTERNAL_MOVEMENTS",
-                    "serviceFamilyDescription": "Internal movements"
+                  {
+                    "key": "INTERNAL_MOVEMENTS",
+                    "description": "Internal movements",
+                    "attributes": {
+                      "serviceFamilyType": "INTERNAL_MOVEMENTS",
+                      "serviceFamilyDescription": "Internal movements",
+                      "editableInParent": false
+                    },
+                    "additionalInformation": "To record the location of unlocked prisoners within this establishment."
                   },
-                  "additionalInformation": "To record the location of unlocked prisoners within this establishment"
-                },
-                {
-                  "key": "OFFICIAL_VISITS",
-                  "description": "Official visits",
-                  "attributes": {
-                    "serviceFamilyType": "OFFICIAL_VISITS",
-                    "serviceFamilyDescription": "Official visits"
+                  {
+                    "key": "OFFICIAL_VISITS",
+                    "description": "Official visits",
+                    "attributes": {
+                      "serviceFamilyType": "OFFICIAL_VISITS",
+                      "serviceFamilyDescription": "Official visits",
+                      "editableInParent": false
+                    },
+                    "additionalInformation": "For example, arranging a face to face visit with a solicitor."
                   },
-                  "additionalInformation": "For example, arranging a face to face visit with a solicitor"
-                },
-                {
-                  "key": "USE_OF_FORCE",
-                  "description": "Use of force",
-                  "attributes": {
-                    "serviceFamilyType": "USE_OF_FORCE",
-                    "serviceFamilyDescription": "Use of force"
-                  },
-                  "additionalInformation": "To report where a use of force incident took place"
-                }
-              ]
-            }                 
+                  {
+                    "key": "USE_OF_FORCE",
+                    "description": "Use of force",
+                    "attributes": {
+                      "serviceFamilyType": "USE_OF_FORCE",
+                      "serviceFamilyDescription": "Use of force",
+                      "editableInParent": false
+                    },
+                    "additionalInformation": "To report where a use of force incident took place."
+                  }
+                ]
+              }
             """.trimIndent(),
-            JsonCompareMode.LENIENT,
+            JsonCompareMode.STRICT,
           )
       }
     }
@@ -1060,23 +1068,23 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     {
                       "key": "APPOINTMENT",
                       "description": "Appointments",
-                      "additionalInformation": "For example a counselling session"
+                      "additionalInformation": "For example, a counselling session."
                     },
                     {
                       "key": "PROGRAMMES_AND_ACTIVITIES",
                       "description": "Programmes and activities",
-                      "additionalInformation": "For example a workshop or lesson"
+                      "additionalInformation": "For example, a workshop or lesson."
                     }
                   ]
                 },
                 {
                   "key": "VIDEO_LINK_APPOINTMENTS",
-                  "description": "Video link hearings and appointments",
+                  "description": "Book a video link",
                   "values": [
                     {
                       "key": "VIDEO_LINK",
-                      "description": "Video link appointment/hearing",
-                      "additionalInformation": "For example, a video link to a court hearing"
+                      "description": "Book a video link",
+                      "additionalInformation": "For example, managing a court hearing or probation meeting via video link."
                     }
                   ]
                 },
@@ -1087,12 +1095,12 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     {
                       "key": "HEARING_LOCATION",
                       "description": "Adjudications - hearing location",
-                      "additionalInformation": "For adjudication hearings"
+                      "additionalInformation": "For adjudication hearings."
                     },
                     {
                       "key": "LOCATION_OF_INCIDENT",
                       "description": "Adjudications - location of incident",
-                      "additionalInformation": "For example a location where an occurrence led to an adjudication hearing"
+                      "additionalInformation": "For example, a location where an occurrence led to an adjudication hearing."
                     }
                   ]
                 },
@@ -1103,7 +1111,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     {
                       "key": "INTERNAL_MOVEMENTS",
                       "description": "Internal movements",
-                      "additionalInformation": "To record the location of unlocked prisoners within this establishment"
+                      "additionalInformation": "To record the location of unlocked prisoners within this establishment."
                     }
                   ]
                 },
@@ -1114,7 +1122,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     {
                       "key": "OFFICIAL_VISITS",
                       "description": "Official visits",
-                      "additionalInformation": "For example, arranging a face to face visit with a solicitor"
+                      "additionalInformation": "For example, arranging a face to face visit with a solicitor."
                     }
                   ]
                 },
@@ -1125,7 +1133,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     {
                       "key": "USE_OF_FORCE",
                       "description": "Use of force",
-                      "additionalInformation": "To report where a use of force incident took place"
+                      "additionalInformation": "To report where a use of force incident took place."
                     }
                   ]
                 }

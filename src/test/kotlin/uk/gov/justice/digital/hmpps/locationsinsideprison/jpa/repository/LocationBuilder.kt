@@ -120,7 +120,7 @@ fun buildNonResidentialLocation(
   pathHierarchy: String? = null,
   locationType: LocationType = LocationType.LOCATION,
   status: LocationStatus = LocationStatus.ACTIVE,
-  serviceType: ServiceType,
+  serviceTypes: Set<ServiceType> = emptySet(),
   usageTypes: Set<NonResidentialUsageType> = emptySet(),
 ): NonResidentialLocation {
   val code = pathHierarchy?.split("-")?.last() ?: generateNonResidentialCode(prisonId, localName)
@@ -137,8 +137,10 @@ fun buildNonResidentialLocation(
     childLocations = sortedSetOf(),
     orderWithinParentLocation = 99,
   )
-  nonResidentialLocationJPA.addService(serviceType)
-  nonResidentialLocationJPA.addUsage(serviceType.nonResidentialUsageType, 15, 1)
+  serviceTypes.forEach {
+    nonResidentialLocationJPA.addService(it)
+    nonResidentialLocationJPA.addUsage(it.nonResidentialUsageType, 15, 1)
+  }
   usageTypes.forEach { nonResidentialLocationJPA.addUsage(it, 10) }
   return nonResidentialLocationJPA
 }

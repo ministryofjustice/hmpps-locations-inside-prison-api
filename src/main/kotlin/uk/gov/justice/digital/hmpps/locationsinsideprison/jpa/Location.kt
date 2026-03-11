@@ -126,7 +126,7 @@ abstract class Location(
   open var proposedReactivationDate: LocalDate? = null,
   open var planetFmReference: String? = null,
 
-  @OneToMany(mappedBy = "parent", fetch = FetchType.EAGER, cascade = [CascadeType.ALL])
+  @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   @SortNatural
   protected open val childLocations: SortedSet<Location> = sortedSetOf(),
 
@@ -495,7 +495,7 @@ abstract class Location(
     return withTx.plus(withoutTx)
   }
 
-  private fun isLeafLevel() = findSubLocations().isEmpty() && !isStructural() && !isArea()
+  open fun isLeafLevel() = findSubLocations().isEmpty()
 
   protected fun isInHierarchy(locationToFind: Location): Boolean {
     // Walk up the hierarchy of the location to find
@@ -785,7 +785,7 @@ abstract class Location(
       }
 
       val workingCapacityChange = if (this is ResidentialLocation) {
-        calcWorkingCapacity()
+        getWorkingCapacityIgnoringInactiveStatus()
       } else {
         0
       }

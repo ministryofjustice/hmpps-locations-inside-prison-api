@@ -95,6 +95,8 @@ open class ResidentialLocation(
     }
   }
 
+  override fun isLeafLevel() = super.isLeafLevel() && !isStructural() && !isArea()
+
   fun findTopLevelResidentialLocation(): ResidentialLocation = (getParent() as? ResidentialLocation)?.findTopLevelResidentialLocation() ?: this
 
   override fun isResidentialRoomOrConvertedCell() = isNonResType() || isConvertedCell()
@@ -620,7 +622,7 @@ open class ResidentialLocation(
     topLevelApprovalLocationId = findHighestLevelPending(includeDrafts = true)?.id,
     pendingApprovalRequestId = getPendingApprovalRequest()?.id,
     lastDeactivationReasonForChange = getLastReasonForDeactivation(),
-    currentCellCertificate = cellCertificateLocation?.toDto(),
+    currentCellCertificate = cellCertificateLocation?.toDto(traverseDown = false),
     pendingChanges = if (hasPendingCertificationApproval() || hasPendingChangesBelowThisLevel() || isDraft()) {
       PendingChangeDto(
         maxCapacity = calcMaxCapacity(true),
@@ -674,6 +676,7 @@ open class ResidentialLocation(
       certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
     ),
 
+    certifiedCell = hasCertifiedCells(),
     certification = CertificationDto(
       certified = hasCertifiedCells(),
       capacityOfCertifiedCell = calcCertifiedNormalAccommodation(),
