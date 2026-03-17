@@ -23,7 +23,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificati
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalDecisionService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalRequestService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType

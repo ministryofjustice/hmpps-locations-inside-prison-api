@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
+package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
@@ -12,6 +12,11 @@ import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestLocationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.util.SortedSet
 import java.util.UUID

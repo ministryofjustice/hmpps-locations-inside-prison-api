@@ -567,6 +567,36 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(ApprovalRequestRequiresReasonForChangeException::class)
+  fun handleApprovalRequestRequiresReasonForChangeException(e: ApprovalRequestRequiresReasonForChangeException): ResponseEntity<ErrorResponse> {
+    log.debug("Approval request must give a reason: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.ApprovalRequestRequiresReasonForChange,
+          userMessage = "Approval request requires a reason: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(ChangesCannotBeMadeWithoutCertificationApprovalException::class)
+  fun handleChangesCannotBeMadeWithoutCertificationApprovalException(e: ChangesCannotBeMadeWithoutCertificationApprovalException): ResponseEntity<ErrorResponse> {
+    log.debug("Changes cannot be made without a certification approval: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.ChangesCannotBeMadeWithoutCertificationApproval,
+          userMessage = "Cannot makes changes without certificate approval: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(ApprovalRequiredAboveThisLevelException::class)
   fun handleApprovalRequiredAboveThisLevelException(e: ApprovalRequiredAboveThisLevelException): ResponseEntity<ErrorResponse> {
     log.debug("Approval request at wrong level: {}", e.message)

@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
+package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 
 import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorColumn
@@ -15,6 +15,7 @@ import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.Table
 import org.hibernate.Hibernate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
 import java.util.UUID

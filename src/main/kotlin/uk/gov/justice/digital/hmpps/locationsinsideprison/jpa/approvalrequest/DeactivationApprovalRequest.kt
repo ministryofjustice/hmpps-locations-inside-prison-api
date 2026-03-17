@@ -1,7 +1,9 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
+package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -16,10 +18,10 @@ open class DeactivationApprovalRequest(
   workingCapacityChange: Int,
   reasonForChange: String? = null,
 
-  val deactivatedReason: DeactivatedReason,
-  val deactivationReasonDescription: String? = null,
-  val proposedReactivationDate: LocalDate? = null,
-  val planetFmReference: String? = null,
+  open val deactivatedReason: DeactivatedReason,
+  open val deactivationReasonDescription: String? = null,
+  open val proposedReactivationDate: LocalDate? = null,
+  open val planetFmReference: String? = null,
 
 ) : LocationCertificationApprovalRequest(
   id = id,

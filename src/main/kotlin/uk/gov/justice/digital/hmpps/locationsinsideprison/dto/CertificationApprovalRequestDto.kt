@@ -2,9 +2,9 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -87,6 +87,15 @@ data class CertificationApprovalRequestDto(
 
   @param:Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
+
+  @param:Schema(description = "Pending max capacity", example = "2", required = false)
+  val maxCapacity: Int? = null,
+
+  @param:Schema(description = "Pending working capacity", example = "1", required = false)
+  val workingCapacity: Int? = null,
+
+  @param:Schema(description = "Pending CNA", example = "2", required = false)
+  val certifiedNormalAccommodation: Int? = null,
 
   @param:Schema(
     description = "For OTHER deactivation reason, a free text comment is provided",

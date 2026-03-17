@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
+package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
@@ -9,13 +9,15 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import org.hibernate.annotations.SortNatural
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import java.time.LocalDateTime
 import java.util.SortedSet
 import java.util.UUID
 
 @Entity
-@DiscriminatorValue("DRAFT")
-open class LocationCertificationApprovalRequest(
+@DiscriminatorValue("LOCATION")
+abstract class LocationCertificationApprovalRequest(
   id: UUID? = null,
   requestedBy: String,
   requestedDate: LocalDateTime,
@@ -51,8 +53,6 @@ open class LocationCertificationApprovalRequest(
   reasonForChange = reasonForChange,
 ) {
 
-  override fun getApprovalType() = ApprovalType.DRAFT
-
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     locationKey = locationKey,
     locationId = location.id!!,
@@ -70,6 +70,7 @@ open class LocationCertificationApprovalRequest(
   override fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
     super.approve(approvedBy, approvedDate, linkedTransaction)
     location.approve(
+      pendingApprovalRequest = this,
       approvedDate = approvedDate,
       approvedBy = approvedBy,
       linkedTransaction = linkedTransaction,

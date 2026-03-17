@@ -17,6 +17,14 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PendingChangeDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DeactivationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequiredAboveThisLevelException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
@@ -62,7 +70,7 @@ open class ResidentialLocation(
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
-  protected val approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
+  open val approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
 
 ) : Location(
   id = id,
@@ -176,7 +184,7 @@ open class ResidentialLocation(
   fun requestApprovalForDraftLocation(
     requestedDate: LocalDateTime,
     requestedBy: String,
-  ): LocationCertificationApprovalRequest {
+  ): DraftChangeApprovalRequest {
     val topLevelPendingLocation = findHighestLevelPending(includeDrafts = true)
     if (topLevelPendingLocation != null && this != topLevelPendingLocation) {
       throw ApprovalRequiredAboveThisLevelException(this.getKey(), topLevelPendingLocation.getKey())
@@ -190,18 +198,14 @@ open class ResidentialLocation(
       throw LocationDoesNotRequireApprovalException(getKey())
     }
 
-    val approvalRequest = LocationCertificationApprovalRequest(
+    val approvalRequest = DraftChangeApprovalRequest(
       location = this,
-      locationKey = this.getKey(),
       requestedBy = requestedBy,
       requestedDate = requestedDate,
       maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
       workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
       certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
-      locations = sortedSetOf(toCertificationApprovalRequestLocation(includeDraft = true)),
-    ).apply {
-      linkPendingChangesToApprovalRequest(approvalRequest = this)
-    }
+    )
 
     approvalRequests.add(approvalRequest)
     return approvalRequest
@@ -231,9 +235,7 @@ open class ResidentialLocation(
       deactivationReasonDescription = deactivationReasonDescription,
       proposedReactivationDate = proposedReactivationDate,
       planetFmReference = planetFmReference,
-    ).apply {
-      linkPendingChangesToApprovalRequest(approvalRequest = this)
-    }
+    )
 
     approvalRequests.add(approvalRequest)
     return approvalRequest
@@ -255,48 +257,30 @@ open class ResidentialLocation(
       requestedDate = requestedDate,
       reasonForChange = reasonForChange,
       workingCapacityChange = workingCapacityChange,
-    ).apply {
-      linkPendingChangesToApprovalRequest(approvalRequest = this)
-    }
+    )
 
     approvalRequests.add(approvalRequest)
     return approvalRequest
   }
 
-  open fun linkPendingChangesToApprovalRequest(approvalRequest: LocationCertificationApprovalRequest) {
-    getResidentialLocationsBelowThisLevel()
-      .forEach { it.linkPendingChangesToApprovalRequest(approvalRequest = approvalRequest) }
-  }
-
-  open fun applyPendingChanges(
+  open fun approve(
+    pendingApprovalRequest: CertificationApprovalRequest,
     approvedBy: String,
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
-    getResidentialLocationsBelowThisLevel().forEach {
-      it.applyPendingChanges(
-        approvedDate = approvedDate,
-        approvedBy = approvedBy,
-        linkedTransaction = linkedTransaction,
-      )
-    }
-  }
-
-  fun approve(
-    approvedDate: LocalDateTime,
-    approvedBy: String,
-    linkedTransaction: LinkedTransaction,
-  ) {
-    applyPendingChanges(approvedDate = approvedDate, approvedBy = approvedBy, linkedTransaction = linkedTransaction)
-
-    if (isDraft()) {
-      temporarilyDeactivate(
-        deactivationReasonDescription = "New location",
-        deactivatedReason = DeactivatedReason.OTHER,
-        deactivatedDate = approvedDate,
-        linkedTransaction = linkedTransaction,
-        userOrSystemInContext = approvedBy,
-      )
+    when (pendingApprovalRequest) {
+      is DraftChangeApprovalRequest -> {
+        temporarilyDeactivate(
+          deactivationReasonDescription = "New location",
+          deactivatedReason = DeactivatedReason.OTHER,
+          deactivatedDate = approvedDate,
+          linkedTransaction = linkedTransaction,
+          userOrSystemInContext = approvedBy,
+        )
+      }
+      is ReactivationApprovalRequest -> {
+      }
     }
   }
 
@@ -535,7 +519,7 @@ open class ResidentialLocation(
   }
 
   private fun draftApprovalLocationIsPartOfHierarchy(approvalRequest: CertificationApprovalRequest): Boolean = if (approvalRequest.getApprovalType() == ApprovalType.DRAFT) {
-    val locationRequest = approvalRequest as? LocationCertificationApprovalRequest
+    val locationRequest = approvalRequest as? DraftChangeApprovalRequest
     locationRequest?.location?.let { location ->
       isInHierarchy(location) || findLocation(location.getKey()) != null
     } ?: false

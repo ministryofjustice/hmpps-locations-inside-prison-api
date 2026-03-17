@@ -80,7 +80,6 @@ val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
             NamedAttributeNode("usedFor"),
             NamedAttributeNode("specialistCellTypes"),
             NamedAttributeNode("attributes"),
-            NamedAttributeNode("pendingChange"),
           ],
         ),
       ],
@@ -1018,7 +1017,7 @@ abstract class Location(
     val capacityAdjusted = maxCapacity != null || workingCapacity != null
     if (this is Cell && capacityAdjusted) {
       setCapacity(
-        maxCapacity = maxCapacity ?: getMaxCapacity(includePendingChange = true) ?: 0,
+        maxCapacity = maxCapacity ?: getMaxCapacity(includePending = true) ?: 0,
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
         certifiedNormalAccommodation = certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
         userOrSystemInContext = userOrSystemInContext,

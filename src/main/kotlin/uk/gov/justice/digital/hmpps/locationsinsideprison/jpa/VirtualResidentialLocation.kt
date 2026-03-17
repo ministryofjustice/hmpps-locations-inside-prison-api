@@ -40,7 +40,6 @@ open class VirtualResidentialLocation(
   localName: String? = null,
   comments: String? = null,
   orderWithinParentLocation: Int? = 1,
-  pendingChange: PendingLocationChange? = null,
   deactivatedDate: LocalDateTime? = null,
   deactivatedReason: DeactivatedReason? = null,
   proposedReactivationDate: LocalDate? = null,

@@ -1,0 +1,3 @@
+ALTER table certification_approval_request ADD COLUMN max_capacity integer;
+ALTER table certification_approval_request ADD COLUMN working_capacity integer;
+ALTER table certification_approval_request ADD COLUMN certified_normal_accommodation integer;

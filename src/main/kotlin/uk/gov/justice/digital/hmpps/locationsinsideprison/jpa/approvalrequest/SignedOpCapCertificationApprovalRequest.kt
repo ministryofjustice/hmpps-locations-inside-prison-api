@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
+package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
@@ -6,6 +6,8 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.ManyToOne
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCapacity
 import java.time.LocalDateTime
 import java.util.UUID
 

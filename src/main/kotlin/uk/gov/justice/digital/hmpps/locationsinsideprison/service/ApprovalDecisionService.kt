@@ -10,10 +10,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApprovalResponse
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
@@ -22,7 +23,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalReque
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
 import java.time.LocalDateTime
-import java.util.*
 
 @Service
 @Transactional
@@ -60,11 +60,20 @@ class ApprovalDecisionService(
       now = now,
       transactionInvokedBy = transactionInvokedBy,
     )
-    approvalRequest.approve(
-      approvedBy = username,
-      approvedDate = now,
-      linkedTransaction = linkedTransaction,
-    )
+    if (approvalRequest is ReactivationApprovalRequest) {
+      approvalRequest.approve(
+        approvedBy = username,
+        approvedDate = now,
+        clock = clock,
+        linkedTransaction = linkedTransaction,
+      )
+    } else {
+      approvalRequest.approve(
+        approvedBy = username,
+        approvedDate = now,
+        linkedTransaction = linkedTransaction,
+      )
+    }
 
     // Create the cell certificate
     val cellCertificate = cellCertificateService.createCellCertificate(

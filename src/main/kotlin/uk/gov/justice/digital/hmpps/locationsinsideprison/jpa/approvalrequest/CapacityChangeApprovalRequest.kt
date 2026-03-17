@@ -1,24 +1,29 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
+package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 
 import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
-@DiscriminatorValue("CELL_MARK")
-open class CellMarkChangeApprovalRequest(
+@DiscriminatorValue("CAPACITY_CHANGE")
+open class CapacityChangeApprovalRequest(
   id: UUID? = null,
   location: Cell,
   requestedBy: String,
   requestedDate: LocalDateTime,
   reasonForChange: String? = null,
 
-  var cellMark: String,
+  @Column(nullable = true)
+  var workingCapacity: Int? = null,
 
   @Column(nullable = true)
-  private var currentCellMark: String? = null,
+  var maxCapacity: Int? = null,
+
+  @Column(nullable = true)
+  var certifiedNormalAccommodation: Int? = null,
 
 ) : LocationCertificationApprovalRequest(
   id = id,
@@ -30,9 +35,10 @@ open class CellMarkChangeApprovalRequest(
   locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includePending = true)),
 ) {
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
-    cellMark = cellMark,
-    currentCellMark = currentCellMark,
+    workingCapacity = workingCapacity,
+    maxCapacity = maxCapacity,
+    certifiedNormalAccommodation = certifiedNormalAccommodation,
   )
 
-  override fun getApprovalType() = ApprovalType.CELL_MARK
+  override fun getApprovalType() = ApprovalType.CAPACITY_CHANGE
 }

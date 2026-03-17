@@ -8,7 +8,6 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
-import jakarta.persistence.OneToOne
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
@@ -18,6 +17,12 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PendingChangeDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CapacityChangeApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CellMarkChangeApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.SanitationChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ChangesCannotBeMadeWithoutCertificationApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
@@ -75,9 +80,6 @@ class Cell(
 
   private var otherConvertedCellType: String? = null,
 
-  @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], optional = true, orphanRemoval = true)
-  var pendingChange: PendingLocationChange? = null,
-
   var inCellSanitation: Boolean? = null,
 
 ) : ResidentialLocation(
@@ -103,16 +105,38 @@ class Cell(
 
   fun getWorkingCapacity() = capacity?.workingCapacity
 
-  fun getMaxCapacity(includePendingChange: Boolean = false) = if (includePendingChange) {
-    pendingChange?.maxCapacity ?: capacity?.maxCapacity
-  } else {
-    capacity?.maxCapacity
+  fun getMaxCapacity(includePending: Boolean = false): Int? {
+    val pendingChange = getPendingCapacityChange(includePending)
+    return pendingChange?.maxCapacity ?: capacity?.maxCapacity
   }
 
-  fun getCertifiedNormalAccommodation(includePendingChange: Boolean = false) = if (includePendingChange) {
-    pendingChange?.certifiedNormalAccommodation ?: capacity?.certifiedNormalAccommodation
+  fun getCertifiedNormalAccommodation(includePending: Boolean = false): Int? {
+    val pendingChange = getPendingCapacityChange(includePending)
+    return pendingChange?.certifiedNormalAccommodation ?: capacity?.certifiedNormalAccommodation
+  }
+
+  fun getDoorCellMark(includePending: Boolean = false): String? {
+    val pendingChange = if (includePending) {
+      getPendingApprovalRequest() as? CellMarkChangeApprovalRequest
+    } else {
+      null
+    }
+    return pendingChange?.cellMark ?: cellMark
+  }
+
+  fun getSanitationOfCell(includePending: Boolean = false): Boolean? {
+    val pendingChange = if (includePending) {
+      getPendingApprovalRequest() as? SanitationChangeApprovalRequest
+    } else {
+      null
+    }
+    return pendingChange?.inCellSanitation ?: inCellSanitation
+  }
+
+  private fun getPendingCapacityChange(shouldIncludePending: Boolean) = if (shouldIncludePending) {
+    getPendingApprovalRequest() as? CapacityChangeApprovalRequest
   } else {
-    capacity?.certifiedNormalAccommodation
+    null
   }
 
   fun isCertified() = certifiedCell
@@ -128,10 +152,6 @@ class Cell(
   override fun isConvertedCell() = convertedCellType != null
 
   private fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
-
-  fun getDoorCellMark(includePending: Boolean = false): String? = if (includePending) pendingChange?.cellMark ?: cellMark else cellMark
-
-  fun getSanitationOfCell(includePending: Boolean = false): Boolean? = if (includePending) pendingChange?.inCellSanitation ?: inCellSanitation else inCellSanitation
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (hasPendingCertificationApproval()) {
@@ -569,42 +589,35 @@ class Cell(
 
   private fun getSpecialistCellTypesForCell(): Set<SpecialistCellType> = specialistCellTypes.map { it.specialistCellType }.toSet()
 
-  override fun linkPendingChangesToApprovalRequest(approvalRequest: LocationCertificationApprovalRequest) {
-    pendingChange?.let { it.approvalRequest = approvalRequest }
-  }
-
-  override fun applyPendingChanges(
+  override fun approve(
+    pendingApprovalRequest: CertificationApprovalRequest,
     approvedBy: String,
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
-    pendingChange?.let { pc ->
-
-      pc.cellMark?.let {
-        setCellDoorMark(it, approvedBy, approvedDate, linkedTransaction)
+    super.approve(pendingApprovalRequest, approvedBy, approvedDate, linkedTransaction)
+    when (pendingApprovalRequest) {
+      is DraftChangeApprovalRequest -> {
+        certifyCell(approvedBy, approvedDate, linkedTransaction)
       }
-
-      pc.inCellSanitation?.let {
-        setSanitationOfCell(it, approvedBy, approvedDate, linkedTransaction)
+      is CellMarkChangeApprovalRequest -> {
+        setCellDoorMark(pendingApprovalRequest.cellMark, approvedBy, approvedDate, linkedTransaction)
       }
-
-      if (pc.maxCapacity != null || pc.certifiedNormalAccommodation != null) {
+      is SanitationChangeApprovalRequest -> {
+        setSanitationOfCell(pendingApprovalRequest.inCellSanitation, approvedBy, approvedDate, linkedTransaction)
+      }
+      is ReactivationApprovalRequest -> {}
+      is CapacityChangeApprovalRequest -> {
         setCapacity(
-          maxCapacity = pc.maxCapacity ?: getMaxCapacity() ?: 0,
+          maxCapacity = pendingApprovalRequest.maxCapacity ?: getMaxCapacity() ?: 0,
           workingCapacity = getWorkingCapacity() ?: 0,
-          certifiedNormalAccommodation = pc.certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
+          certifiedNormalAccommodation = pendingApprovalRequest.certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
           userOrSystemInContext = approvedBy,
           amendedDate = approvedDate,
           linkedTransaction = linkedTransaction,
         )
       }
     }
-
-    if (isDraft()) {
-      certifyCell(approvedBy, approvedDate, linkedTransaction)
-    }
-
-    pendingChange = null
   }
 
   fun requestApprovalForCellMarkChange(
@@ -617,11 +630,6 @@ class Cell(
       throw PendingApprovalAlreadyExistsException(getKey())
     }
 
-    // store the pending change
-    pendingChange = PendingLocationChange(
-      cellMark = cellMarkChange,
-    )
-
     val approvalRequest = CellMarkChangeApprovalRequest(
       location = this,
       requestedBy = requestedBy,
@@ -629,9 +637,7 @@ class Cell(
       reasonForChange = reasonForChange,
       cellMark = cellMarkChange,
       currentCellMark = cellMark,
-    ).apply {
-      linkPendingChangesToApprovalRequest(approvalRequest = this)
-    }
+    )
 
     approvalRequests.add(approvalRequest)
     return approvalRequest
@@ -647,11 +653,6 @@ class Cell(
       throw PendingApprovalAlreadyExistsException(getKey())
     }
 
-    // store the pending change
-    pendingChange = PendingLocationChange(
-      inCellSanitation = inCellSanitationChange,
-    )
-
     val approvalRequest = SanitationChangeApprovalRequest(
       location = this,
       requestedBy = requestedBy,
@@ -659,9 +660,7 @@ class Cell(
       reasonForChange = reasonForChange,
       inCellSanitation = inCellSanitationChange,
       currentInCellSanitation = inCellSanitation,
-    ).apply {
-      linkPendingChangesToApprovalRequest(approvalRequest = this)
-    }
+    )
 
     approvalRequests.add(approvalRequest)
     return approvalRequest

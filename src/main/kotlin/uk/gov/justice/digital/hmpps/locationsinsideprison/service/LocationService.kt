@@ -34,7 +34,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.addCellToParent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificateLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
@@ -1134,10 +1133,10 @@ class LocationService(
         if (!location.isPermanentlyDeactivated()) {
           if (location is Cell) {
             with(capacityChange) {
-              if (location.getMaxCapacity(includePendingChange = true) != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
+              if (location.getMaxCapacity(includePending = true) != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
                 try {
                   val oldWorkingCapacity = location.getWorkingCapacity()
-                  val oldMaxCapacity = location.getMaxCapacity(includePendingChange = true)
+                  val oldMaxCapacity = location.getMaxCapacity(includePending = true)
                   val oldCertifiedNormalAccommodation = location.getCertifiedNormalAccommodation()
                   updateCellCapacity(
                     location.id!!,
@@ -1259,8 +1258,7 @@ class LocationService(
 
       var skipReactivate = false
       if (locationToUpdate is ResidentialLocation) {
-        val approvedRequest = locationToUpdate.getLatestApprovedRequest()
-        if (approvalRequired && approvedRequest != null && approvedRequest.getApprovalType() == ApprovalType.DEACTIVATION) {
+        if (approvalRequired) {
           if (locationsToReactivate.reasonForChange.isNullOrEmpty()) {
             throw ApprovalRequestRequiresReasonForChangeException("Reason for reactivation must be provided when approval is required")
           }
