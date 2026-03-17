@@ -88,16 +88,16 @@ enum class ServiceFamilyType(
 
 enum class ServiceType(
   val description: String,
-  val nonResidentialUsageType: NonResidentialUsageType,
+  val nonResidentialUsageType: NonResidentialUsageType? = null,
   val serviceFamily: ServiceFamilyType,
   val additionalInformation: String,
   val sequence: Int = 99,
-  val nonResidentialLocationType: NonResidentialLocationType = NonResidentialLocationType.LOCATION,
+  val nonResidentialLocationType: NonResidentialLocationType? = null,
 ) {
   APPOINTMENT(description = "Appointments", NonResidentialUsageType.APPOINTMENT, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, additionalInformation = "For example, a counselling session.", sequence = 1),
   PROGRAMMES_AND_ACTIVITIES(description = "Programmes and activities", NonResidentialUsageType.PROGRAMMES_ACTIVITIES, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, additionalInformation = "For example, a workshop or lesson.", sequence = 2),
-  VIDEO_LINK(description = "Book a video link", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.VIDEO_LINK_APPOINTMENTS, additionalInformation = "For example, managing a court hearing or probation meeting via video link.", sequence = 3, nonResidentialLocationType = NonResidentialLocationType.VIDEO_LINK),
-  HEARING_LOCATION(description = "Adjudications - hearing location", NonResidentialUsageType.ADJUDICATION_HEARING, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For adjudication hearings.", sequence = 4, nonResidentialLocationType = NonResidentialLocationType.ADJUDICATION_ROOM),
+  VIDEO_LINK(description = "Book a video link", nonResidentialUsageType = null, ServiceFamilyType.VIDEO_LINK_APPOINTMENTS, additionalInformation = "For example, managing a court hearing or probation meeting via video link.", sequence = 3, nonResidentialLocationType = NonResidentialLocationType.VIDEO_LINK),
+  HEARING_LOCATION(description = "Adjudications - hearing location", NonResidentialUsageType.ADJUDICATION_HEARING, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For adjudication hearings.", sequence = 4),
   LOCATION_OF_INCIDENT(description = "Adjudications - location of incident", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For example, a location where an occurrence led to an adjudication hearing.", sequence = 5),
   INTERNAL_MOVEMENTS(description = "Internal movements", NonResidentialUsageType.MOVEMENT, ServiceFamilyType.INTERNAL_MOVEMENTS, additionalInformation = "To record the location of unlocked prisoners within this establishment.", sequence = 6),
   OFFICIAL_VISITS(description = "Official visits", NonResidentialUsageType.VISIT, ServiceFamilyType.OFFICIAL_VISITS, additionalInformation = "For example, arranging a face to face visit with a solicitor.", sequence = 7),

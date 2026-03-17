@@ -119,4 +119,6 @@ enum class LocationType(
   ;
 
   fun getPlural() = "${description}s"
+
+  fun toMappedServiceTypes(): List<ServiceType> = ServiceType.entries.filter { it.nonResidentialLocationType?.baseType == this }
 }

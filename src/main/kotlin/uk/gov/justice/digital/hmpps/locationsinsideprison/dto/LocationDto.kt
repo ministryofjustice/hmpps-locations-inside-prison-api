@@ -773,8 +773,9 @@ private fun setServices(
   location: NonResidentialLocationJPA,
 ) {
   serviceTypes.forEach { serviceType ->
-    val usageType = serviceType.nonResidentialUsageType
-    location.addUsage(usageType, 99)
+    serviceType.nonResidentialUsageType?.let { usageType ->
+      location.addUsage(usageType, 99)
+    }
     location.addService(serviceType)
   }
 }

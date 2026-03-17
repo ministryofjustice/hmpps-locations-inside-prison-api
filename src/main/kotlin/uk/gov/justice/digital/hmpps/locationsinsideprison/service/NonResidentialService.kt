@@ -171,8 +171,8 @@ class NonResidentialService(
           ).apply {
             parent.addChildLocation(this)
             missingServices.forEach { serviceType ->
+              serviceType.nonResidentialUsageType?.let { addUsage(it, 99) }
               addService(serviceType)
-              addUsage(serviceType.nonResidentialUsageType, 99)
             }
             addHistory(
               attributeName = LocationAttribute.LOCATION_CREATED,
