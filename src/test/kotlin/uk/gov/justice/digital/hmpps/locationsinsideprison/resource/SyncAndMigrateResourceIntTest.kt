@@ -60,6 +60,7 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var permDeactivated: Cell
   lateinit var room: ResidentialLocation
   lateinit var nonRes: NonResidentialLocation
+  lateinit var videoLinkRoom: NonResidentialLocation
   lateinit var locationHistory: LocationHistory
   lateinit var linkedTransaction: LinkedTransaction
 
@@ -110,6 +111,15 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
         pathHierarchy = "B-1-VISIT",
         locationType = LocationType.VISITS,
         serviceTypes = setOf(ServiceType.OFFICIAL_VISITS),
+      ),
+    )
+    videoLinkRoom = repository.save(
+      buildNonResidentialLocation(
+        localName = "Video Link Room",
+        prisonId = "ZZGHI",
+        pathHierarchy = "B-1-VIDEO",
+        locationType = LocationType.VIDEO_LINK,
+        serviceTypes = setOf(ServiceType.VIDEO_LINK),
       ),
     )
     room = repository.save(
@@ -838,6 +848,193 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "maxCapacity": 99
               }
             }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can sync a new non res location and add mapped service from video link location type`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncNonResRequest.copy(
+                code = "VIDEO-LINK",
+                locationType = LocationType.VIDEO_LINK,
+                localName = "Video Link Room",
+                comments = "This is a video link room",
+                internalMovementAllowed = false,
+                usage = emptySet(),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isCreated
+
+        webTestClient.get().uri("/locations/key/ZZGHI-VIDEO-LINK")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "key": "ZZGHI-VIDEO-LINK",
+              "locationType": "VIDEO_LINK",
+              "localName": "Video Link Room",
+              "comments": "This is a video link room",
+              "servicesUsingLocation": [
+                {
+                  "serviceType": "VIDEO_LINK",
+                  "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS"
+                }
+              ]
+             }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can sync an existing non res location and add mapped service when location type changes to video link`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncNonResRequest.copy(
+                id = nonRes.id,
+                code = "VISIT",
+                locationType = LocationType.VIDEO_LINK,
+                localName = "Visit Hall converted to video link",
+                comments = "Now a video link room",
+                internalMovementAllowed = false,
+                usage = emptySet(),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.get().uri("/locations/${nonRes.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "key": "ZZGHI-B-1-VISIT",
+              "locationType": "VIDEO_LINK",
+              "localName": "Visit Hall converted to video link",
+              "comments": "Now a video link room",
+              "servicesUsingLocation": [
+                {
+                  "serviceType": "VIDEO_LINK",
+                  "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS"
+                }
+              ]
+             }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can sync an existing non res location and remove location-type-mapped service when location type changes`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncNonResRequest.copy(
+                id = videoLinkRoom.id,
+                code = "VIDEO",
+                locationType = LocationType.VISITS,
+                localName = "Video Link Room",
+                usage = setOf(NonResidentialUsageDto(NonResidentialUsageType.VISIT, 10, 1)),
+                internalMovementAllowed = false,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.get().uri("/locations/${videoLinkRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "key": "ZZGHI-VIDEO",
+              "locationType": "VISITS",
+              "usage": [
+                {
+                  "usageType": "VISIT",
+                  "capacity": 10,
+                  "sequence": 1
+                }
+              ],
+              "servicesUsingLocation": [
+                {
+                  "serviceType": "OFFICIAL_VISITS",
+                  "serviceFamilyType": "OFFICIAL_VISITS"
+                }
+              ]
+             }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can sync an existing non res location and keep mapped service when location type does not change`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncNonResRequest.copy(
+                id = videoLinkRoom.id,
+                code = "VIDEO",
+                locationType = LocationType.VIDEO_LINK,
+                localName = "Video Link Room Updated",
+                comments = "Updated but still a video link room",
+                usage = emptySet(),
+                internalMovementAllowed = false,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.get().uri("/locations/${videoLinkRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "key": "ZZGHI-VIDEO",
+              "locationType": "VIDEO_LINK",
+              "localName": "Video Link Room Updated",
+              "comments": "Updated but still a video link room",
+              "servicesUsingLocation": [
+                {
+                  "serviceType": "VIDEO_LINK",
+                  "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS"
+                }
+              ]
+             }
           """,
             JsonCompareMode.LENIENT,
           )
