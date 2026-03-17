@@ -107,7 +107,7 @@ data class NomisSyncLocationRequest(
 
 ) {
 
-  fun toServiceTypes() = usage?.map { it.usageType.toServiceTypes() }?.flatten()?.toSet()
+  fun toServiceTypes() = usage?.flatMap { it.usageType.toServiceTypes() }?.toSet()
 
   fun toNewEntity(clock: Clock, linkedTransaction: LinkedTransaction): Location {
     val location = if (residentialHousingType != null) {
@@ -202,11 +202,19 @@ data class NomisSyncLocationRequest(
         createdBy = lastUpdatedBy,
         whenCreated = createDate ?: LocalDateTime.now(clock),
         childLocations = sortedSetOf(),
-      ).also {
-        usage?.forEach { usage ->
-          it.addUsage(usage.usageType, usage.capacity, usage.sequence)
-          usage.usageType.toServiceTypes().forEach { service -> it.addService(service) }
+      ).also { newLocation ->
+        usage?.forEach { nonResidentialUsage ->
+          newLocation.addUsage(
+            nonResidentialUsage.usageType,
+            nonResidentialUsage.capacity,
+            nonResidentialUsage.sequence,
+          )
+
+          val serviceTypes = nonResidentialUsage.usageType.toServiceTypes()
+          serviceTypes.forEach(newLocation::addService)
         }
+        val mappedServiceTypes = locationType.toMappedServiceTypes()
+        mappedServiceTypes.forEach(newLocation::addService)
       }
     }
 

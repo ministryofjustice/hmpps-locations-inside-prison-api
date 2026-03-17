@@ -137,9 +137,9 @@ fun buildNonResidentialLocation(
     childLocations = sortedSetOf(),
     orderWithinParentLocation = 99,
   )
-  serviceTypes.forEach {
-    nonResidentialLocationJPA.addService(it)
-    nonResidentialLocationJPA.addUsage(it.nonResidentialUsageType, 15, 1)
+  serviceTypes.forEach { serviceType ->
+    serviceType.nonResidentialUsageType?.let { nonResidentialLocationJPA.addUsage(it, 15, 1) }
+    nonResidentialLocationJPA.addService(serviceType)
   }
   usageTypes.forEach { nonResidentialLocationJPA.addUsage(it, 10) }
   return nonResidentialLocationJPA

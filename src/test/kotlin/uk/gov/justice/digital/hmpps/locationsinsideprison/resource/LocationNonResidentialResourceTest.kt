@@ -124,7 +124,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         webTestClient.post().uri("/locations/non-residential/MDI")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(createReq.copy(localName = "Visit Room 2")))
+          .bodyValue(jsonString(createReq.copy(localName = "BVL Room 2", servicesUsingLocation = setOf(ServiceType.VIDEO_LINK, ServiceType.INTERNAL_MOVEMENTS))))
           .exchange()
           .expectStatus().isCreated
           .expectBody().json(
@@ -132,18 +132,18 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
             """ 
              {
               "prisonId": "MDI",
-              "key": "MDI-VSTRM50",
-              "localName": "Visit Room 2",
-              "code": "VSTRM50",
-              "pathHierarchy": "VSTRM50",
-              "locationType": "ADJUDICATION_ROOM",
+              "key": "MDI-BVLRM21",
+              "localName": "Bvl Room 2",
+              "code": "BVLRM21",
+              "pathHierarchy": "BVLRM21",
+              "locationType": "VIDEO_LINK",
               "permanentlyInactive": false,
               "usedByGroupedServices": [
-                "ADJUDICATIONS",
+                "VIDEO_LINK_APPOINTMENTS",
                 "INTERNAL_MOVEMENTS"
               ],
               "usedByServices": [
-                "HEARING_LOCATION",
+                "VIDEO_LINK",
                 "INTERNAL_MOVEMENTS"
               ],
               "status": "ACTIVE",
@@ -153,7 +153,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
-        val newKey = "MDI-${generateNonResidentialCode("MDI", "Visit Room 2")}"
+        val newKey = "MDI-${generateNonResidentialCode("MDI", "BVL Room 2")}"
 
         getDomainEvents(1).let {
           assertThat(it).hasSize(1)

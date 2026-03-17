@@ -98,7 +98,7 @@ data class PatchNonResidentialLocationRequest(
   @param:Schema(description = "Additional comments that can be made about this location", example = "Not to be used", required = false)
   override val comments: String? = null,
 ) : PatchLocationRequest {
-  fun toUsages() = servicesUsingLocation?.map { it.nonResidentialUsageType }?.toSet() ?: emptySet()
+  fun toUsages() = servicesUsingLocation?.mapNotNull { it.nonResidentialUsageType }?.toSet() ?: emptySet()
 }
 
 @Schema(description = "Request to update the local name of a location")

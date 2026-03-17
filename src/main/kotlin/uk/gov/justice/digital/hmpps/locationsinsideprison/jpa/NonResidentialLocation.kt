@@ -228,20 +228,33 @@ class NonResidentialLocation(
     newSetOfUsages.addAll(existingUsages.map { NonResidentialUsageDto(it.usageType, it.capacity, it.sequence) })
 
     // These are things like PROPERTY and OTHER - we don't want to lose them if they aren't mapped to a service
-    val unmappedUsages = this.nonResidentialUsages.filter { it.usageType !in ServiceType.entries.map { st -> st.nonResidentialUsageType } }
+    val unmappedUsages = this.nonResidentialUsages.filter { it.usageType !in ServiceType.entries.mapNotNull { st -> st.nonResidentialUsageType } }
     newSetOfUsages.addAll(unmappedUsages.map { NonResidentialUsageDto(it.usageType, it.capacity, it.sequence) })
 
     return newSetOfUsages.toSet()
   }
 
   override fun sync(upsert: NomisSyncLocationRequest, clock: Clock, linkedTransaction: LinkedTransaction): NonResidentialLocation {
+    val oldLocationType = this.locationType
     super.sync(upsert, clock, linkedTransaction)
     upsert.usage?.let { usages ->
       updateUsage(usages, upsert.lastUpdatedBy, clock, linkedTransaction)
     }
-    upsert.toServiceTypes()?.let { services ->
-      updateServices(services, upsert.lastUpdatedBy, clock, linkedTransaction)
+
+    val serviceTypeForLocation = mutableSetOf<ServiceType>()
+    upsert.toServiceTypes()?.let { serviceTypeForLocation.addAll(it) }
+    serviceTypeForLocation.addAll(upsert.locationType.toMappedServiceTypes())
+
+    // if the oldLocationType is different to the upsert locationType, and it was a type that had a service type mapped then check if it needs to be removed
+    if (oldLocationType != upsert.locationType && oldLocationType.toMappedServiceTypes().isNotEmpty()) {
+      serviceTypeForLocation.removeAll { serviceType ->
+        serviceType.nonResidentialLocationType?.baseType?.let { mappedLocationType ->
+          mappedLocationType != upsert.locationType
+        } ?: false
+      }
     }
+
+    updateServices(serviceTypeForLocation, upsert.lastUpdatedBy, clock, linkedTransaction)
 
     upsert.internalMovementAllowed?.let { internalMovementAllowedUpdate ->
       addHistory(
@@ -335,4 +348,7 @@ class NonResidentialLocation(
   }
 }
 
-fun identifyNonResidentialLocationType(serviceTypes: Set<ServiceType>): NonResidentialLocationType = serviceTypes.firstOrNull { it.nonResidentialLocationType != NonResidentialLocationType.LOCATION }?.nonResidentialLocationType ?: NonResidentialLocationType.LOCATION
+private val DEFAULT_NON_RESIDENTIAL_LOCATION_TYPE = NonResidentialLocationType.LOCATION
+
+fun identifyNonResidentialLocationType(serviceTypes: Set<ServiceType>): NonResidentialLocationType = serviceTypes.firstNotNullOfOrNull(ServiceType::nonResidentialLocationType)
+  ?: DEFAULT_NON_RESIDENTIAL_LOCATION_TYPE
