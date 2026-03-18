@@ -11,6 +11,7 @@ import jakarta.persistence.OneToMany
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import java.time.Clock
 import java.time.LocalDateTime
 import java.util.SortedSet
 import java.util.UUID
@@ -67,13 +68,18 @@ abstract class LocationCertificationApprovalRequest(
     },
   )
 
-  override fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
-    super.approve(approvedBy, approvedDate, linkedTransaction)
+  open fun updateLocations() {
+    locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includePending = true))
+  }
+
+  override fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, clock: Clock) {
+    super.approve(approvedBy, approvedDate, linkedTransaction, clock)
     location.approve(
       pendingApprovalRequest = this,
       approvedDate = approvedDate,
       approvedBy = approvedBy,
       linkedTransaction = linkedTransaction,
+      clock = clock,
     )
   }
 }

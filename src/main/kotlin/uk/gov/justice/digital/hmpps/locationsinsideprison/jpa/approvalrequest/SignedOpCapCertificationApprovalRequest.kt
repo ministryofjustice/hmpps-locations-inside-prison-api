@@ -8,6 +8,7 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.ManyToOne
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCapacity
+import java.time.Clock
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -57,8 +58,9 @@ open class SignedOpCapCertificationApprovalRequest(
     approvedBy: String,
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
+    clock: Clock,
   ) {
-    super.approve(approvedBy, approvedDate, linkedTransaction)
+    super.approve(approvedBy, approvedDate, linkedTransaction, clock)
     signedOperationCapacity.signedOperationCapacity += signedOperationCapacityChange
   }
 }

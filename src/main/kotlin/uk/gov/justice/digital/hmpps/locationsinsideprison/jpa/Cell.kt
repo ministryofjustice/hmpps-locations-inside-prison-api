@@ -589,13 +589,13 @@ class Cell(
 
   private fun getSpecialistCellTypesForCell(): Set<SpecialistCellType> = specialistCellTypes.map { it.specialistCellType }.toSet()
 
-  override fun approve(
+  override fun processApproval(
     pendingApprovalRequest: CertificationApprovalRequest,
     approvedBy: String,
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
+    clock: Clock,
   ) {
-    super.approve(pendingApprovalRequest, approvedBy, approvedDate, linkedTransaction)
     when (pendingApprovalRequest) {
       is DraftChangeApprovalRequest -> {
         certifyCell(approvedBy, approvedDate, linkedTransaction)
@@ -630,17 +630,16 @@ class Cell(
       throw PendingApprovalAlreadyExistsException(getKey())
     }
 
-    val approvalRequest = CellMarkChangeApprovalRequest(
-      location = this,
-      requestedBy = requestedBy,
-      requestedDate = requestedDate,
-      reasonForChange = reasonForChange,
-      cellMark = cellMarkChange,
-      currentCellMark = cellMark,
-    )
-
-    approvalRequests.add(approvalRequest)
-    return approvalRequest
+    return addApprovalToLocation(
+      CellMarkChangeApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        reasonForChange = reasonForChange,
+        cellMark = cellMarkChange,
+        currentCellMark = cellMark,
+      ),
+    ) as CellMarkChangeApprovalRequest
   }
 
   fun requestApprovalForCellSanitationChange(
@@ -652,18 +651,16 @@ class Cell(
     if (hasPendingCertificationApproval()) {
       throw PendingApprovalAlreadyExistsException(getKey())
     }
-
-    val approvalRequest = SanitationChangeApprovalRequest(
-      location = this,
-      requestedBy = requestedBy,
-      requestedDate = requestedDate,
-      reasonForChange = reasonForChange,
-      inCellSanitation = inCellSanitationChange,
-      currentInCellSanitation = inCellSanitation,
-    )
-
-    approvalRequests.add(approvalRequest)
-    return approvalRequest
+    return addApprovalToLocation(
+      SanitationChangeApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        reasonForChange = reasonForChange,
+        inCellSanitation = inCellSanitationChange,
+        currentInCellSanitation = inCellSanitation,
+      ),
+    ) as SanitationChangeApprovalRequest
   }
 
   override fun toDto(

@@ -198,17 +198,16 @@ open class ResidentialLocation(
       throw LocationDoesNotRequireApprovalException(getKey())
     }
 
-    val approvalRequest = DraftChangeApprovalRequest(
-      location = this,
-      requestedBy = requestedBy,
-      requestedDate = requestedDate,
-      maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
-      workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
-      certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
-    )
-
-    approvalRequests.add(approvalRequest)
-    return approvalRequest
+    return addApprovalToLocation(
+      DraftChangeApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
+        workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
+        certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
+      ),
+    ) as DraftChangeApprovalRequest
   }
 
   fun requestApprovalForDeactivation(
@@ -225,20 +224,19 @@ open class ResidentialLocation(
       throw PendingApprovalAlreadyExistsException(getKey())
     }
 
-    val approvalRequest = DeactivationApprovalRequest(
-      location = this,
-      requestedBy = requestedBy,
-      requestedDate = requestedDate,
-      reasonForChange = reasonForChange,
-      workingCapacityChange = workingCapacityChange,
-      deactivatedReason = deactivatedReason,
-      deactivationReasonDescription = deactivationReasonDescription,
-      proposedReactivationDate = proposedReactivationDate,
-      planetFmReference = planetFmReference,
-    )
-
-    approvalRequests.add(approvalRequest)
-    return approvalRequest
+    return addApprovalToLocation(
+      DeactivationApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        reasonForChange = reasonForChange,
+        workingCapacityChange = workingCapacityChange,
+        deactivatedReason = deactivatedReason,
+        deactivationReasonDescription = deactivationReasonDescription,
+        proposedReactivationDate = proposedReactivationDate,
+        planetFmReference = planetFmReference,
+      ),
+    ) as DeactivationApprovalRequest
   }
 
   fun requestApprovalForReactivation(
@@ -250,24 +248,41 @@ open class ResidentialLocation(
     if (hasPendingCertificationApproval()) {
       throw PendingApprovalAlreadyExistsException(getKey())
     }
-
-    val approvalRequest = ReactivationApprovalRequest(
-      location = this,
-      requestedBy = requestedBy,
-      requestedDate = requestedDate,
-      reasonForChange = reasonForChange,
-      workingCapacityChange = workingCapacityChange,
-    )
-
-    approvalRequests.add(approvalRequest)
-    return approvalRequest
+    return addApprovalToLocation(
+      ReactivationApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        reasonForChange = reasonForChange,
+        workingCapacityChange = workingCapacityChange,
+      ),
+    ) as ReactivationApprovalRequest
   }
 
-  open fun approve(
+  open fun processApproval(
     pendingApprovalRequest: CertificationApprovalRequest,
     approvedBy: String,
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
+    clock: Clock,
+  ) {
+    getResidentialLocationsBelowThisLevel().forEach {
+      it.processApproval(
+        pendingApprovalRequest = pendingApprovalRequest,
+        approvedDate = approvedDate,
+        approvedBy = approvedBy,
+        linkedTransaction = linkedTransaction,
+        clock = clock,
+      )
+    }
+  }
+
+  protected fun finishApproval(
+    pendingApprovalRequest: CertificationApprovalRequest,
+    approvedBy: String,
+    approvedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+    clock: Clock,
   ) {
     when (pendingApprovalRequest) {
       is DraftChangeApprovalRequest -> {
@@ -282,6 +297,35 @@ open class ResidentialLocation(
       is ReactivationApprovalRequest -> {
       }
     }
+  }
+
+  fun addApprovalToLocation(approvalRequest: LocationCertificationApprovalRequest): LocationCertificationApprovalRequest {
+    approvalRequests.add(approvalRequest)
+    approvalRequest.updateLocations()
+    return approvalRequest
+  }
+
+  fun approve(
+    pendingApprovalRequest: CertificationApprovalRequest,
+    approvedBy: String,
+    approvedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+    clock: Clock,
+  ) {
+    processApproval(
+      pendingApprovalRequest = pendingApprovalRequest,
+      approvedDate = approvedDate,
+      approvedBy = approvedBy,
+      linkedTransaction = linkedTransaction,
+      clock = clock,
+    )
+    finishApproval(
+      pendingApprovalRequest = pendingApprovalRequest,
+      approvedBy = approvedBy,
+      approvedDate = approvedDate,
+      linkedTransaction = linkedTransaction,
+      clock = clock,
+    )
   }
 
   private fun getAttributes(): Set<ResidentialAttribute> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }

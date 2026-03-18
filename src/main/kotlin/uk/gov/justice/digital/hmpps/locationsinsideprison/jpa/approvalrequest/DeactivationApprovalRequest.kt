@@ -31,7 +31,6 @@ open class DeactivationApprovalRequest(
   requestedDate = requestedDate,
   reasonForChange = reasonForChange,
   workingCapacityChange = workingCapacityChange,
-  locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includePending = true)),
 ) {
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     deactivatedReason = deactivatedReason,

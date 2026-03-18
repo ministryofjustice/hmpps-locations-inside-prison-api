@@ -27,8 +27,11 @@ open class DraftChangeApprovalRequest(
   certifiedNormalAccommodationChange = certifiedNormalAccommodationChange,
   workingCapacityChange = workingCapacityChange,
   maxCapacityChange = maxCapacityChange,
-  locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includeDraft = true)),
 ) {
+
+  override fun updateLocations() {
+    locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includeDraft = true))
+  }
 
   override fun getApprovalType() = ApprovalType.DRAFT
 }

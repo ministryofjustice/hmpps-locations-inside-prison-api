@@ -14,7 +14,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
@@ -60,20 +59,13 @@ class ApprovalDecisionService(
       now = now,
       transactionInvokedBy = transactionInvokedBy,
     )
-    if (approvalRequest is ReactivationApprovalRequest) {
-      approvalRequest.approve(
-        approvedBy = username,
-        approvedDate = now,
-        clock = clock,
-        linkedTransaction = linkedTransaction,
-      )
-    } else {
-      approvalRequest.approve(
-        approvedBy = username,
-        approvedDate = now,
-        linkedTransaction = linkedTransaction,
-      )
-    }
+
+    approvalRequest.approve(
+      approvedBy = username,
+      approvedDate = now,
+      linkedTransaction = linkedTransaction,
+      clock = clock,
+    )
 
     // Create the cell certificate
     val cellCertificate = cellCertificateService.createCellCertificate(

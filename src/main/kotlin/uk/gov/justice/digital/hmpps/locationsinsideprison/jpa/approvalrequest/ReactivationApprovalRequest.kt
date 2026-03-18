@@ -27,14 +27,11 @@ open class ReactivationApprovalRequest(
   requestedDate = requestedDate,
   reasonForChange = reasonForChange,
   workingCapacityChange = workingCapacityChange,
-  locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includePending = true)),
 ) {
 
   override fun getApprovalType() = ApprovalType.REACTIVATION
 
-  override fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction): Unit = throw UnsupportedOperationException("Clock is required for reactivation")
-
-  fun approve(approvedBy: String, approvedDate: LocalDateTime, clock: Clock, linkedTransaction: LinkedTransaction) {
+  override fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, clock: Clock) {
     val locationsReactivated = mutableSetOf<Location>()
     val amendedLocations = mutableSetOf<Location>()
     location.reactivate(
@@ -46,6 +43,6 @@ open class ReactivationApprovalRequest(
       workingCapacity = 0,
       amendedLocations = amendedLocations,
     )
-    super.approve(approvedBy, approvedDate, linkedTransaction)
+    super.approve(approvedBy, approvedDate, linkedTransaction, clock)
   }
 }

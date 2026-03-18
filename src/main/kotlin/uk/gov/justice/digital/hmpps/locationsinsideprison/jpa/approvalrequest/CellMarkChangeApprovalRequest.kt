@@ -28,7 +28,6 @@ open class CellMarkChangeApprovalRequest(
   requestedBy = requestedBy,
   requestedDate = requestedDate,
   reasonForChange = reasonForChange,
-  locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includePending = true)),
 ) {
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     cellMark = cellMark,

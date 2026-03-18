@@ -749,12 +749,10 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
               "key": "${mWing.getKey()}",
               "capacity": {
                 "maxCapacity": 12,
-                "workingCapacity": 0
+                "workingCapacity": 0,
+                "certifiedNormalAccommodation": 6
               },
-              "certification": {
-                "certifiedNormalAccommodation": 6,
-                "certified": true
-              },
+              "certifiedCell":true,
               "status": "INACTIVE",
               "childLocations": [
                 {
