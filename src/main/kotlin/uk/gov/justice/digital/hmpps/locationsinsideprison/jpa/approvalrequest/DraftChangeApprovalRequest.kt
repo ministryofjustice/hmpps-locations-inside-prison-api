@@ -30,7 +30,7 @@ open class DraftChangeApprovalRequest(
 ) {
 
   override fun updateLocations() {
-    locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includeDraft = true))
+    locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includeDraftOrPending = true))
   }
 
   override fun getApprovalType() = ApprovalType.DRAFT

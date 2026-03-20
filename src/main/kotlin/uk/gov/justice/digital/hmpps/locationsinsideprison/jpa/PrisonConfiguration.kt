@@ -1,12 +1,20 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
+import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
 import jakarta.persistence.Entity
+import jakarta.persistence.FetchType
 import jakarta.persistence.Id
+import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
+import org.hibernate.annotations.SortNatural
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.PrisonLevelApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonConfigurationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ServiceStatus
 import java.time.LocalDateTime
+import java.util.SortedSet
 
 @Entity
 class PrisonConfiguration(
@@ -19,6 +27,11 @@ class PrisonConfiguration(
   var certificationApprovalRequired: Boolean = false,
   var whenUpdated: LocalDateTime,
   var updatedBy: String,
+
+  @OneToMany(mappedBy = "prisonId", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @SortNatural
+  private val approvalRequests: SortedSet<PrisonLevelApprovalRequest> = sortedSetOf(),
+
 ) : Comparable<PrisonConfiguration> {
 
   companion object {
@@ -28,7 +41,20 @@ class PrisonConfiguration(
 
   override fun compareTo(other: PrisonConfiguration) = COMPARATOR.compare(this, other)
 
-  fun isCertificationActive() = certificationApprovalRequired
+  fun requestReactivationApproval(locationsToReactivate: List<CertificationApprovalRequestLocation>, requestedDate: LocalDateTime, requestedBy: String): ReactivationApprovalRequest = addApprovalToPrison(
+    ReactivationApprovalRequest(
+      prisonId = this.id,
+      requestedBy = requestedBy,
+      requestedDate = requestedDate,
+      reasonForChange = "Reactivation requested",
+      locations = locationsToReactivate.toSortedSet(),
+    ),
+  ) as ReactivationApprovalRequest
+
+  fun addApprovalToPrison(approvalRequest: PrisonLevelApprovalRequest): PrisonLevelApprovalRequest {
+    approvalRequests.add(approvalRequest)
+    return approvalRequest
+  }
 
   fun toPrisonConfiguration() = PrisonConfigurationDto(
     prisonId = id,

@@ -134,7 +134,12 @@ abstract class CertificationApprovalRequest(
     certificateId = cellCertificateId,
   )
 
-  open fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, clock: Clock) {
+  open fun approve(
+    approvedBy: String,
+    approvedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+    clock: Clock,
+  ) {
     this.status = ApprovalRequestStatus.APPROVED
     this.approvedOrRejectedBy = approvedBy
     this.approvedOrRejectedDate = approvedDate

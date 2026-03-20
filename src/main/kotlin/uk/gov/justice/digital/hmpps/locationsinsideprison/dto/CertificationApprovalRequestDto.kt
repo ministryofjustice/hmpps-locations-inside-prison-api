@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -145,4 +146,5 @@ data class ApprovalResponse(
   val newLocation: Boolean = false,
   val prisonId: String,
   val location: Location? = null,
+  val events: Map<InternalLocationDomainEventType, List<Location>>? = null,
 )

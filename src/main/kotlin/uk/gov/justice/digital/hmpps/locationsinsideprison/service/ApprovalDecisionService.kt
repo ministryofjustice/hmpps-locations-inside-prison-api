@@ -5,24 +5,28 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApprovalResponse
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotInPendingStatusException
-import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivationDetail
 import java.time.Clock
 import java.time.LocalDateTime
-
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 @Service
 @Transactional
 class ApprovalDecisionService(
@@ -32,7 +36,8 @@ class ApprovalDecisionService(
   private val cellCertificateService: CellCertificateService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
-  private val authenticationHolder: HmppsAuthenticationHolder,
+  private val residentialLocationRepository: ResidentialLocationRepository,
+  private val sharedLocationService: SharedLocationService,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -46,9 +51,9 @@ class ApprovalDecisionService(
       throw ApprovalRequestNotInPendingStatusException(approveCertificationRequest.approvalRequestReference)
     }
 
-    val username = getUsername()
+    val username = sharedLocationService.getUsername()
     val now = LocalDateTime.now(clock)
-    val transactionInvokedBy = getUsername()
+    val transactionInvokedBy = sharedLocationService.getUsername()
     val approvedLocation = (approvalRequest as? LocationCertificationApprovalRequest)?.location
     val wasDraft = approvedLocation?.isDraft() ?: false
 
@@ -59,6 +64,12 @@ class ApprovalDecisionService(
       now = now,
       transactionInvokedBy = transactionInvokedBy,
     )
+
+    val events = if (approvalRequest is ReactivationApprovalRequest) {
+      handleReactivation(approvalRequest, linkedTransaction)
+    } else {
+      null
+    }
 
     approvalRequest.approve(
       approvedBy = username,
@@ -103,7 +114,47 @@ class ApprovalDecisionService(
       prisonId = approvalRequest.prisonId,
       newLocation = wasDraft,
       location = approvedLocation?.toDto(includeChildren = true, includeParent = true),
+      events = events,
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
+  }
+
+  private fun handleReactivation(
+    approvalRequest: ReactivationApprovalRequest,
+    linkedTransaction: LinkedTransaction,
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+    val locationsReactivated = mutableSetOf<Location>()
+    val amendedLocations = mutableSetOf<Location>()
+
+    approvalRequest.locations.forEach { approvalChangeLocation ->
+      val locationToUpdate = residentialLocationRepository.findOneByPrisonIdAndPathHierarchy(
+        approvalRequest.prisonId,
+        approvalChangeLocation.pathHierarchy,
+      ) ?: throw LocationNotFoundException(
+        "Location not found for prison ${approvalRequest.prisonId} and path hierarchy ${approvalChangeLocation.pathHierarchy}",
+      )
+
+      sharedLocationService.reactivate(
+        locationToUpdate = locationToUpdate,
+        locationsReactivated = locationsReactivated,
+        amendedLocations = amendedLocations,
+        reactivationDetail = ReactivationDetail(
+          cascadeReactivation = approvalChangeLocation.cascadeReactivation,
+          capacity = Capacity(
+            maxCapacity = approvalChangeLocation.maxCapacity ?: locationToUpdate.calcMaxCapacity(),
+            workingCapacity = approvalChangeLocation.workingCapacity ?: locationToUpdate.calcWorkingCapacity(),
+            certifiedNormalAccommodation = approvalChangeLocation.certifiedNormalAccommodation ?: locationToUpdate.calcCertifiedNormalAccommodation(),
+          ),
+
+        ),
+        linkedTransaction = linkedTransaction,
+      )
+    }
+
+    locationsReactivated.forEach { sharedLocationService.trackLocationUpdate(it, "Re-activated Location") }
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to amendedLocations.map { it.toDto() }.toList(),
+      InternalLocationDomainEventType.LOCATION_REACTIVATED to locationsReactivated.map { it.toDto() }.toList(),
+    )
   }
 
   fun rejectCertificationRequest(rejectCertificationRequest: RejectCertificationRequestDto): ApprovalResponse {
@@ -115,7 +166,7 @@ class ApprovalDecisionService(
     }
 
     val now = LocalDateTime.now(clock)
-    val transactionInvokedBy = getUsername()
+    val transactionInvokedBy = sharedLocationService.getUsername()
     val location = (approvalRequest as? LocationCertificationApprovalRequest)?.location
 
     val linkedTransaction = createLinkedTransaction(
@@ -155,8 +206,8 @@ class ApprovalDecisionService(
     )
     return ApprovalResponse(
       approvalRequest = approvalRequest.toDto(),
-      prisonId = approvalRequest.prisonId,
       newLocation = newLocation,
+      prisonId = approvalRequest.prisonId,
       location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
@@ -171,7 +222,7 @@ class ApprovalDecisionService(
 
     val now = LocalDateTime.now(clock)
     val location = (approvalRequest as? LocationCertificationApprovalRequest)?.location
-    val transactionInvokedBy = getUsername()
+    val transactionInvokedBy = sharedLocationService.getUsername()
     val newLocation = location?.isDraft() ?: false
 
     val linkedTransaction = createLinkedTransaction(
@@ -212,8 +263,8 @@ class ApprovalDecisionService(
 
     return ApprovalResponse(
       approvalRequest = approvalRequest.toDto(),
-      prisonId = approvalRequest.prisonId,
       newLocation = newLocation,
+      prisonId = approvalRequest.prisonId,
       location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
@@ -233,6 +284,4 @@ class ApprovalDecisionService(
       txStartTime = now,
     ),
   )
-
-  private fun getUsername() = authenticationHolder.username ?: SYSTEM_USERNAME
 }

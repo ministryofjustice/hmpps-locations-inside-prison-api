@@ -21,7 +21,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CellMarkChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.SanitationChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ChangesCannotBeMadeWithoutCertificationApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
@@ -606,7 +605,6 @@ class Cell(
       is SanitationChangeApprovalRequest -> {
         setSanitationOfCell(pendingApprovalRequest.inCellSanitation, approvedBy, approvedDate, linkedTransaction)
       }
-      is ReactivationApprovalRequest -> {}
       is CapacityChangeApprovalRequest -> {
         setCapacity(
           maxCapacity = pendingApprovalRequest.maxCapacity ?: getMaxCapacity() ?: 0,

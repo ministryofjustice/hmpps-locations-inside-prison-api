@@ -2,22 +2,17 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Column
-import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
-import jakarta.persistence.OneToMany
-import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import java.time.Clock
 import java.time.LocalDateTime
-import java.util.SortedSet
 import java.util.UUID
 
 @Entity
-@DiscriminatorValue("LOCATION")
 abstract class LocationCertificationApprovalRequest(
   id: UUID? = null,
   requestedBy: String,
@@ -40,12 +35,7 @@ abstract class LocationCertificationApprovalRequest(
   @Column(nullable = false)
   private var maxCapacityChange: Int = 0,
 
-  @SortNatural
-  @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
-  @JoinColumn(name = "certification_approval_request_id", nullable = false)
-  open var locations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
-
-) : CertificationApprovalRequest(
+) : PrisonLevelApprovalRequest(
   id = id,
   prisonId = location.prisonId,
   status = ApprovalRequestStatus.PENDING,
@@ -69,10 +59,15 @@ abstract class LocationCertificationApprovalRequest(
   )
 
   open fun updateLocations() {
-    locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includePending = true))
+    locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includeDraftOrPending = true))
   }
 
-  override fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction, clock: Clock) {
+  override fun approve(
+    approvedBy: String,
+    approvedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+    clock: Clock,
+  ) {
     super.approve(approvedBy, approvedDate, linkedTransaction, clock)
     location.approve(
       pendingApprovalRequest = this,

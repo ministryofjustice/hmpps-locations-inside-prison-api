@@ -990,7 +990,6 @@ abstract class Location(
     userOrSystemInContext: String,
     clock: Clock,
     linkedTransaction: LinkedTransaction,
-    locationsReactivated: MutableSet<Location>? = null,
     maxCapacity: Int? = null,
     workingCapacity: Int? = null,
     certifiedNormalAccommodation: Int? = null,
@@ -1004,7 +1003,6 @@ abstract class Location(
       userOrSystemInContext = userOrSystemInContext,
       clock = clock,
       linkedTransaction = linkedTransaction,
-      locationsReactivated = locationsReactivated,
       reactivatedLocations = reactivatedLocations,
       amendedLocations = amendedLocations,
     )

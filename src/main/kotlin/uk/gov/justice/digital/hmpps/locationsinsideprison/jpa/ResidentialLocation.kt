@@ -24,7 +24,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ce
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DeactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequiredAboveThisLevelException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
@@ -239,26 +238,6 @@ open class ResidentialLocation(
     ) as DeactivationApprovalRequest
   }
 
-  fun requestApprovalForReactivation(
-    requestedDate: LocalDateTime,
-    requestedBy: String,
-    workingCapacityChange: Int,
-    reasonForChange: String,
-  ): LocationCertificationApprovalRequest {
-    if (hasPendingCertificationApproval()) {
-      throw PendingApprovalAlreadyExistsException(getKey())
-    }
-    return addApprovalToLocation(
-      ReactivationApprovalRequest(
-        location = this,
-        requestedBy = requestedBy,
-        requestedDate = requestedDate,
-        reasonForChange = reasonForChange,
-        workingCapacityChange = workingCapacityChange,
-      ),
-    ) as ReactivationApprovalRequest
-  }
-
   open fun processApproval(
     pendingApprovalRequest: CertificationApprovalRequest,
     approvedBy: String,
@@ -293,8 +272,6 @@ open class ResidentialLocation(
           linkedTransaction = linkedTransaction,
           userOrSystemInContext = approvedBy,
         )
-      }
-      is ReactivationApprovalRequest -> {
       }
     }
   }
@@ -571,10 +548,15 @@ open class ResidentialLocation(
     false
   }
 
-  fun toCertificationApprovalRequestLocation(includeDraft: Boolean = false, includePending: Boolean = false): CertificationApprovalRequestLocation {
+  fun toCertificationApprovalRequestLocation(includeDraftOrPending: Boolean = false, capacity: CapacityDto? = null, specialistCellTypeAsCSV: String? = null, cascadeReactivation: Boolean = false): CertificationApprovalRequestLocation {
     val subLocations: List<CertificationApprovalRequestLocation> = getResidentialLocationsBelowThisLevel()
       .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
-      .map { it.toCertificationApprovalRequestLocation(includeDraft = includeDraft, includePending = includePending) }
+      .map {
+        it.toCertificationApprovalRequestLocation(
+          includeDraftOrPending = includeDraftOrPending,
+          specialistCellTypeAsCSV = specialistCellTypeAsCSV,
+        )
+      }
 
     return CertificationApprovalRequestLocation(
       locationType = locationType,
@@ -582,35 +564,36 @@ open class ResidentialLocation(
       pathHierarchy = getPathHierarchy(),
       localName = localName?.capitalizeWords(),
       cellMark = if (this is Cell) {
-        getDoorCellMark(includePending = includePending)
+        getDoorCellMark(includePending = includeDraftOrPending)
       } else {
         null
       },
       level = getLevel(),
       inCellSanitation = if (this is Cell) {
-        getSanitationOfCell(includePending = includePending)
+        getSanitationOfCell(includePending = includeDraftOrPending)
       } else {
         null
       },
       currentMaxCapacity = calcMaxCapacity(false),
-      maxCapacity = calcMaxCapacity(includeDraft),
+      maxCapacity = capacity?.maxCapacity ?: calcMaxCapacity(includeDraftOrPending),
       currentWorkingCapacity = getWorkingCapacityIgnoringInactiveStatus(),
-      workingCapacity = calcWorkingCapacity(includeDraft),
+      workingCapacity = capacity?.workingCapacity ?: calcWorkingCapacity(includeDraftOrPending),
       currentCertifiedNormalAccommodation = calcCertifiedNormalAccommodation(false),
-      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(includeDraft),
+      certifiedNormalAccommodation = capacity?.certifiedNormalAccommodation ?: calcCertifiedNormalAccommodation(includeDraftOrPending),
       usedForTypes = getUsedForValuesAsCSV(),
       accommodationTypes = getAccommodationTypesAsCSV(),
-      specialistCellTypes = getSpecialistCellTypesAsCSV(),
+      specialistCellTypes = specialistCellTypeAsCSV ?: getSpecialistCellTypesAsCSV(),
       convertedCellType = if (this is Cell && isConvertedCell()) {
         convertedCellType
       } else {
         null
       },
       subLocations = subLocations.toSortedSet(),
+      cascadeReactivation = cascadeReactivation,
     )
   }
 
-  private fun getSpecialistCellTypesAsCSV(): String? = getSpecialistCellTypes().map { it.specialistCellType }.distinct().takeIf { it.isNotEmpty() }
+  fun getSpecialistCellTypesAsCSV(): String? = getSpecialistCellTypes().map { it.specialistCellType }.distinct().takeIf { it.isNotEmpty() }
     ?.joinToString(separator = ",") { it.name }
 
   private fun getAccommodationTypesAsCSV(): String? = getAccommodationTypes().takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name }

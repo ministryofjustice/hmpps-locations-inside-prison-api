@@ -32,6 +32,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCer
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
@@ -57,6 +58,7 @@ class LocationServiceTest {
   private val authenticationHolder: HmppsAuthenticationHolder = mock()
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService = mock()
   private val activePrisonService: ActivePrisonService = mock()
+  private val prisonConfigurationRepository: PrisonConfigurationRepository = mock()
   private val groupsProperties: Properties = mock()
 
   private val service = LocationService(
@@ -74,6 +76,7 @@ class LocationServiceTest {
     telemetryClient,
     locationGroupFromPropertiesService,
     activePrisonService,
+    prisonConfigurationRepository,
     groupsProperties,
   )
 

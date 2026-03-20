@@ -51,7 +51,6 @@ open class SignedOpCapCertificationApprovalRequest(
     reasonForSignedOpChange = reasonForChange,
     currentSignedOperationCapacity = currentSignedOperationCapacity,
     signedOperationCapacityChange = signedOperationCapacityChange,
-    certificateId = cellCertificateId,
   )
 
   override fun approve(

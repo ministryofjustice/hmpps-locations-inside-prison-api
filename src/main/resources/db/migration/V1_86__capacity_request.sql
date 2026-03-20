@@ -1,3 +1,5 @@
 ALTER table certification_approval_request ADD COLUMN max_capacity integer;
 ALTER table certification_approval_request ADD COLUMN working_capacity integer;
 ALTER table certification_approval_request ADD COLUMN certified_normal_accommodation integer;
+
+ALTER table certification_approval_request_location ADD COLUMN cascade_reactivation boolean NOT NULL default false;

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.BasicTemporaryDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CapacityChanges
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
@@ -239,8 +240,8 @@ data class ReactivateLocationsRequest(
   @param:Schema(description = "List of locations to reactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
   val locations: Map<UUID, ReactivationDetail>,
 
-  @param:Schema(description = "Explanation of why the location need to be reactivated", example = "The cell has now been repaired and is available again", required = false)
-  val reasonForChange: String? = null,
+  @param:Schema(description = "Force location to be reactivated, regardless of the status of the prison certification process", example = "false", required = false, defaultValue = "false")
+  val forceReactivation: Boolean = false,
 )
 
 @Schema(description = "Reactivation Details")
@@ -250,7 +251,11 @@ data class ReactivationDetail(
   val cascadeReactivation: Boolean = false,
   @param:Schema(description = "New capacity of the location, if null the old values are used", required = false, example = " { \"workingCapacity\": 1, \"maxCapacity\": 2 }")
   val capacity: Capacity? = null,
-)
+  @param:Schema(description = "Specialist Cell Types", required = false)
+  val specialistCellTypes: List<SpecialistCellType>? = null,
+) {
+  fun getSpecialistCellTypesAsCSV(): String? = specialistCellTypes?.distinct() ?.joinToString(separator = ",") { it.name }
+}
 
 @Schema(description = "Bulk Update Cell Capacity Details")
 @JsonInclude(JsonInclude.Include.NON_NULL)
