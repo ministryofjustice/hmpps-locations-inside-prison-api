@@ -76,7 +76,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateCapacityRequest
@@ -1251,60 +1250,40 @@ class LocationService(
 
     val approvalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
     if (approvalRequired && !locationsToReactivate.forceReactivation) {
-      val locations = locationsToReactivate.locations.map { (id, details) ->
-        val locationToUpdate = residentialLocationRepository.findById(id)
-          .orElseThrow { LocationNotFoundException(id.toString()) }
+      throw ChangesCannotBeMadeWithoutCertificationApprovalException(prisonId)
+    }
+    locationsToReactivate.locations.forEach { (id, reactivationDetail) ->
+      val locationToUpdate = locationRepository.findById(id)
+        .orElseThrow { LocationNotFoundException(id.toString()) }
 
-        if (locationToUpdate.isPermanentlyDeactivated()) {
-          throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
-        }
-
-        locationToUpdate.toCertificationApprovalRequestLocation(
-          cascadeReactivation = details.cascadeReactivation,
-          specialistCellTypeAsCSV = details.getSpecialistCellTypesAsCSV(),
-          capacity = details.capacity,
-        )
+      if (locationToUpdate.isPermanentlyDeactivated()) {
+        throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
       }
-      val prison = prisonConfigurationRepository.findById(prisonId).orElseThrow { PrisonNotFoundException(prisonId) }
-      prison.requestReactivationApproval(
-        locations,
-        requestedDate = now(clock),
-        requestedBy = sharedLocationService.getUsername(),
+
+      locationToUpdate.reactivate(
+        userOrSystemInContext = sharedLocationService.getUsername(),
+        clock = clock,
+        reactivatedLocations = locationsReactivated,
+        amendedLocations = amendedLocations,
+        maxCapacity = reactivationDetail.capacity?.maxCapacity,
+        workingCapacity = reactivationDetail.capacity?.workingCapacity,
+        certifiedNormalAccommodation = reactivationDetail.capacity?.certifiedNormalAccommodation,
+        linkedTransaction = linkedTransaction,
       )
-      prisonConfigurationRepository.save(prison)
-    } else {
-      locationsToReactivate.locations.forEach { (id, reactivationDetail) ->
-        val locationToUpdate = locationRepository.findById(id)
-          .orElseThrow { LocationNotFoundException(id.toString()) }
 
-        if (locationToUpdate.isPermanentlyDeactivated()) {
-          throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
-        }
-
-        locationToUpdate.reactivate(
-          userOrSystemInContext = sharedLocationService.getUsername(),
-          clock = clock,
-          reactivatedLocations = locationsReactivated,
-          amendedLocations = amendedLocations,
-          maxCapacity = reactivationDetail.capacity?.maxCapacity,
-          workingCapacity = reactivationDetail.capacity?.workingCapacity,
-          certifiedNormalAccommodation = reactivationDetail.capacity?.certifiedNormalAccommodation,
-          linkedTransaction = linkedTransaction,
-        )
-
-        if (reactivationDetail.cascadeReactivation) {
-          locationToUpdate.findSubLocations().forEach { location ->
-            location.reactivate(
-              userOrSystemInContext = sharedLocationService.getUsername(),
-              clock = clock,
-              reactivatedLocations = locationsReactivated,
-              amendedLocations = amendedLocations,
-              linkedTransaction = linkedTransaction,
-            )
-          }
+      if (reactivationDetail.cascadeReactivation) {
+        locationToUpdate.findSubLocations().forEach { location ->
+          location.reactivate(
+            userOrSystemInContext = sharedLocationService.getUsername(),
+            clock = clock,
+            reactivatedLocations = locationsReactivated,
+            amendedLocations = amendedLocations,
+            linkedTransaction = linkedTransaction,
+          )
         }
       }
     }
+
     locationsReactivated.forEach { sharedLocationService.trackLocationUpdate(it, "Re-activated Location") }
     return mapOf(
       InternalLocationDomainEventType.LOCATION_AMENDED to amendedLocations.map { it.toDto() }.toList(),

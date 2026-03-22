@@ -113,7 +113,7 @@ class ApprovalDecisionService(
       approvalRequest = approvalRequest.toDto(cellCertificateId = cellCertificate.id),
       prisonId = approvalRequest.prisonId,
       newLocation = wasDraft,
-      location = approvedLocation?.toDto(includeChildren = true, includeParent = true),
+      location = if (events != null) null else approvedLocation?.toDto(includeChildren = true, includeParent = true),
       events = events,
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }

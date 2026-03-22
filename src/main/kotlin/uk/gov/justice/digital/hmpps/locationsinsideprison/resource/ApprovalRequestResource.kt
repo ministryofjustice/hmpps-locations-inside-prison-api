@@ -28,6 +28,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalDecisi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalRequestService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
 import java.util.*
 
@@ -81,6 +82,45 @@ class ApprovalRequestResource(
     locationApprovalRequest: LocationApprovalRequest,
   ): CertificationApprovalRequestDto = approvalRequestService.requestDraftApproval(
     requestToApprove = locationApprovalRequest,
+  )
+
+  @PutMapping("/location/reactivation-request-approval")
+  @Operation(
+    summary = "Requests approval to reactivate a set of locations",
+    description = "Requires role LOCATION_CERTIFICATION",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the approval request status",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CERTIFICATION role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun reactivationRequestApproval(
+    @RequestBody
+    @Validated
+    reactivationApprovalRequest: ReactivationApprovalRequest,
+  ): CertificationApprovalRequestDto = approvalRequestService.requestReactivation(
+    reactivationApprovalRequest = reactivationApprovalRequest,
   )
 
   @PutMapping("/prison/signed-op-cap-change")
@@ -301,7 +341,7 @@ class ApprovalRequestResource(
     @NotBlank(message = "Prison ID cannot be blank")
     @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
     @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
-    @PathVariable("prisonId")
+    @PathVariable
     prisonId: String,
     @RequestParam(name = "status", required = false, defaultValue = "PENDING")
     status: ApprovalRequestStatus? = ApprovalRequestStatus.PENDING,

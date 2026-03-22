@@ -6,10 +6,13 @@ import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
+import jakarta.persistence.OneToMany
+import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import java.time.Clock
 import java.time.LocalDateTime
+import java.util.SortedSet
 import java.util.UUID
 
 @Entity
@@ -35,7 +38,12 @@ abstract class LocationCertificationApprovalRequest(
   @Column(nullable = false)
   private var maxCapacityChange: Int = 0,
 
-) : PrisonLevelApprovalRequest(
+  @SortNatural
+  @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @JoinColumn(name = "certification_approval_request_id", nullable = false)
+  open var locations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
+
+) : CertificationApprovalRequest(
   id = id,
   prisonId = location.prisonId,
   status = ApprovalRequestStatus.PENDING,

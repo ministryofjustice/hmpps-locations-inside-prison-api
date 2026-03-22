@@ -234,7 +234,7 @@ data class DeactivateLocationsRequest(
   val updatedBy: String? = null,
 )
 
-@Schema(description = "Reactivate Locations Request")
+@Schema(description = "Bulk reactivate locations Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivateLocationsRequest(
   @param:Schema(description = "List of locations to reactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")

@@ -496,7 +496,7 @@ abstract class Location(
 
   open fun isLeafLevel() = findSubLocations().isEmpty()
 
-  protected fun isInHierarchy(locationToFind: Location): Boolean {
+  fun isInHierarchy(locationToFind: Location): Boolean {
     // Walk up the hierarchy of the location to find
     var current: Location? = this
     while (current != null) {
@@ -996,9 +996,6 @@ abstract class Location(
     reactivatedLocations: MutableSet<Location>? = null,
     amendedLocations: MutableSet<Location>? = null,
   ): Boolean {
-    if (hasPendingCertificationApproval()) {
-      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
-    }
     this.getParent()?.reactivate(
       userOrSystemInContext = userOrSystemInContext,
       clock = clock,

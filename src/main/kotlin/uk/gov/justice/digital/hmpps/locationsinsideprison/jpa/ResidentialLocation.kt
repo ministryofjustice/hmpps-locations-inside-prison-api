@@ -24,6 +24,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ce
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DeactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequiredAboveThisLevelException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
@@ -145,13 +146,12 @@ open class ResidentialLocation(
     ApprovalRequestStatus.APPROVED,
   )?.approvalRequests?.firstOrNull { it.isApproved() && it.getApprovalType() == ApprovalType.DEACTIVATION }
 
-  fun getLatestApprovedRequest(): LocationCertificationApprovalRequest? = findHighestLevelForStatus(
-    ApprovalRequestStatus.APPROVED,
-  )?.approvalRequests?.firstOrNull()
-
   protected fun findHighestLevelPending(includeDrafts: Boolean = false) = findHighestLevelForStatus(includeDrafts = includeDrafts)
 
-  protected fun findHighestLevelForStatus(approvalStatus: ApprovalRequestStatus = ApprovalRequestStatus.PENDING, includeDrafts: Boolean = false): ResidentialLocation? {
+  protected fun findHighestLevelForStatus(
+    approvalStatus: ApprovalRequestStatus = ApprovalRequestStatus.PENDING,
+    includeDrafts: Boolean = false,
+  ): ResidentialLocation? {
     var current: ResidentialLocation? = this
     var highestPending: ResidentialLocation? = null
 
@@ -236,6 +236,29 @@ open class ResidentialLocation(
         planetFmReference = planetFmReference,
       ),
     ) as DeactivationApprovalRequest
+  }
+
+  fun requestReactivationApproval(
+    locationsToReactivate: List<CertificationApprovalRequestLocation>,
+    requestedDate: LocalDateTime,
+    requestedBy: String,
+  ): ReactivationApprovalRequest {
+    if (hasPendingCertificationApproval()) {
+      throw PendingApprovalAlreadyExistsException(getKey())
+    }
+
+    val reactivationRequest = ReactivationApprovalRequest(
+      location = this,
+      requestedBy = requestedBy,
+      requestedDate = requestedDate,
+      maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
+      workingCapacityChange = getWorkingCapacityIgnoringInactiveStatus() - calcWorkingCapacity(),
+      certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
+    )
+
+    approvalRequests.add(reactivationRequest)
+    reactivationRequest.locations = locationsToReactivate.toSortedSet()
+    return reactivationRequest
   }
 
   open fun processApproval(
