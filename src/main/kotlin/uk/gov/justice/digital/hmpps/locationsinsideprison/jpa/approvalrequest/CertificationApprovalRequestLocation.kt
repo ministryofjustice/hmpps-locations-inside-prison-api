@@ -47,19 +47,19 @@ open class CertificationApprovalRequestLocation(
   private val currentCertifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
-  val certifiedNormalAccommodation: Int? = null,
+  var certifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
   private val currentWorkingCapacity: Int? = null,
 
   @Column(nullable = true)
-  val workingCapacity: Int? = null,
+  var workingCapacity: Int? = null,
 
   @Column(nullable = true)
   private val currentMaxCapacity: Int? = null,
 
   @Column(nullable = true)
-  val maxCapacity: Int? = null,
+  var maxCapacity: Int? = null,
 
   @Column(nullable = true)
   private val inCellSanitation: Boolean? = null,
@@ -68,7 +68,7 @@ open class CertificationApprovalRequestLocation(
   @Enumerated(EnumType.STRING)
   private val locationType: LocationType,
 
-  val specialistCellTypes: String? = null,
+  var specialistCellTypes: String? = null,
 
   private val usedForTypes: String? = null,
 
@@ -82,8 +82,6 @@ open class CertificationApprovalRequestLocation(
   @JoinColumn(name = "parent_location_id")
   @SortNatural
   private val subLocations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
-
-  val cascadeReactivation: Boolean = false,
 
 ) : Comparable<CertificationApprovalRequestLocation> {
 
@@ -127,9 +125,45 @@ open class CertificationApprovalRequestLocation(
     subLocations = subLocations.map { it.toDto() }.takeIf { it.isNotEmpty() },
   )
 
-  private fun getSpecialistCellTypesFromList(): List<SpecialistCellType>? = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) }
+  fun getSpecialistCellTypesFromList(): List<SpecialistCellType>? = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) }
 
   private fun getUsedForTypesFromList(): List<UsedForType>? = usedForTypes?.split(",")?.map { UsedForType.valueOf(it.trim()) }
 
   private fun getAccommodationTypesFromList(): List<AccommodationType>? = accommodationTypes?.split(",")?.map { AccommodationType.valueOf(it.trim()) }
+
+  fun findAllLeafLocations(): List<CertificationApprovalRequestLocation> {
+    val leafLocations = mutableListOf<CertificationApprovalRequestLocation>()
+
+    fun traverse(location: CertificationApprovalRequestLocation) {
+      if (location.subLocations.isEmpty()) {
+        leafLocations.add(location)
+      } else {
+        for (childLocation in location.subLocations) {
+          traverse(childLocation)
+        }
+      }
+    }
+
+    traverse(this)
+    return leafLocations
+  }
+
+  fun findSubLocations(): List<CertificationApprovalRequestLocation> {
+    val subLocations = mutableListOf<CertificationApprovalRequestLocation>()
+
+    fun traverse(location: CertificationApprovalRequestLocation) {
+      if (this != location) {
+        subLocations.add(location)
+      }
+      for (childLocation in location.subLocations) {
+        traverse(childLocation)
+      }
+      if (this != location) {
+        subLocations.add(location)
+      }
+    }
+
+    traverse(this)
+    return subLocations
+  }
 }

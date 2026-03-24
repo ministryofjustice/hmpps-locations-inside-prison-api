@@ -390,8 +390,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .bodyValue(
           jsonString(
             ReactivationApprovalRequest(
-              locationId = leedsWing.id!!,
-              locations = mapOf(
+              topLevelLocationId = leedsWing.id!!,
+              cellReactivationChanges = mapOf(
                 leedsWing.id!! to ReactivationDetail(
                   cascadeReactivation = true,
                 ),

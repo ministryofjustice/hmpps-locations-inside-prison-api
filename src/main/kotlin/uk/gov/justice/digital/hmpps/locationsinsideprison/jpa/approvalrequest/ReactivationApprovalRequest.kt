@@ -4,6 +4,7 @@ import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import java.time.LocalDateTime
+import java.util.SortedSet
 import java.util.UUID
 
 @Entity
@@ -16,6 +17,9 @@ open class ReactivationApprovalRequest(
   workingCapacityChange: Int,
   maxCapacityChange: Int,
   certifiedNormalAccommodationChange: Int,
+  locations: SortedSet<CertificationApprovalRequestLocation>,
+
+  open val cascadeReactivation: Boolean = false,
 
 ) : LocationCertificationApprovalRequest(
   id = id,
@@ -26,6 +30,7 @@ open class ReactivationApprovalRequest(
   workingCapacityChange = workingCapacityChange,
   maxCapacityChange = maxCapacityChange,
   certifiedNormalAccommodationChange = certifiedNormalAccommodationChange,
+  locations = locations,
 ) {
   override fun getApprovalType() = ApprovalType.REACTIVATION
 }

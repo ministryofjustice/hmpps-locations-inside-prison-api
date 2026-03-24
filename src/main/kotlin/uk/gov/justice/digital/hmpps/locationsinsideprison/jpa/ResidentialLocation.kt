@@ -239,7 +239,7 @@ open class ResidentialLocation(
   }
 
   fun requestReactivationApproval(
-    locationsToReactivate: List<CertificationApprovalRequestLocation>,
+    locationChanges: CertificationApprovalRequestLocation,
     requestedDate: LocalDateTime,
     requestedBy: String,
   ): ReactivationApprovalRequest {
@@ -254,10 +254,10 @@ open class ResidentialLocation(
       maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
       workingCapacityChange = getWorkingCapacityIgnoringInactiveStatus() - calcWorkingCapacity(),
       certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
+      locations = sortedSetOf(locationChanges),
     )
 
     approvalRequests.add(reactivationRequest)
-    reactivationRequest.locations = locationsToReactivate.toSortedSet()
     return reactivationRequest
   }
 
@@ -284,7 +284,6 @@ open class ResidentialLocation(
     approvedBy: String,
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
-    clock: Clock,
   ) {
     when (pendingApprovalRequest) {
       is DraftChangeApprovalRequest -> {
@@ -324,7 +323,6 @@ open class ResidentialLocation(
       approvedBy = approvedBy,
       approvedDate = approvedDate,
       linkedTransaction = linkedTransaction,
-      clock = clock,
     )
   }
 
@@ -571,13 +569,12 @@ open class ResidentialLocation(
     false
   }
 
-  fun toCertificationApprovalRequestLocation(includeDraftOrPending: Boolean = false, capacity: CapacityDto? = null, specialistCellTypeAsCSV: String? = null, cascadeReactivation: Boolean = false): CertificationApprovalRequestLocation {
+  fun toCertificationApprovalRequestLocation(includeDraftOrPending: Boolean = false): CertificationApprovalRequestLocation {
     val subLocations: List<CertificationApprovalRequestLocation> = getResidentialLocationsBelowThisLevel()
       .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
       .map {
         it.toCertificationApprovalRequestLocation(
           includeDraftOrPending = includeDraftOrPending,
-          specialistCellTypeAsCSV = specialistCellTypeAsCSV,
         )
       }
 
@@ -597,22 +594,21 @@ open class ResidentialLocation(
       } else {
         null
       },
-      currentMaxCapacity = calcMaxCapacity(false),
-      maxCapacity = capacity?.maxCapacity ?: calcMaxCapacity(includeDraftOrPending),
-      currentWorkingCapacity = getWorkingCapacityIgnoringInactiveStatus(),
-      workingCapacity = capacity?.workingCapacity ?: calcWorkingCapacity(includeDraftOrPending),
-      currentCertifiedNormalAccommodation = calcCertifiedNormalAccommodation(false),
-      certifiedNormalAccommodation = capacity?.certifiedNormalAccommodation ?: calcCertifiedNormalAccommodation(includeDraftOrPending),
+      currentMaxCapacity = calcMaxCapacity(),
+      maxCapacity = calcMaxCapacity(includeDraftOrPending),
+      currentWorkingCapacity = calcWorkingCapacity(),
+      workingCapacity = calcWorkingCapacity(includeDraftOrPending),
+      currentCertifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
+      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(includeDraftOrPending),
       usedForTypes = getUsedForValuesAsCSV(),
       accommodationTypes = getAccommodationTypesAsCSV(),
-      specialistCellTypes = specialistCellTypeAsCSV ?: getSpecialistCellTypesAsCSV(),
+      specialistCellTypes = getSpecialistCellTypesAsCSV(),
       convertedCellType = if (this is Cell && isConvertedCell()) {
         convertedCellType
       } else {
         null
       },
       subLocations = subLocations.toSortedSet(),
-      cascadeReactivation = cascadeReactivation,
     )
   }
 

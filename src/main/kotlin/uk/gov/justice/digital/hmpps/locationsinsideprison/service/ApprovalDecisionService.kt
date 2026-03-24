@@ -126,26 +126,31 @@ class ApprovalDecisionService(
     val amendedLocations = mutableSetOf<Location>()
 
     approvalRequest.locations.forEach { approvalChangeLocation ->
-      val locationToUpdate = residentialLocationRepository.findOneByPrisonIdAndPathHierarchy(
+      val locationToReactivate = residentialLocationRepository.findOneByPrisonIdAndPathHierarchy(
         approvalRequest.prisonId,
         approvalChangeLocation.pathHierarchy,
       ) ?: throw LocationNotFoundException(
         "Location not found for prison ${approvalRequest.prisonId} and path hierarchy ${approvalChangeLocation.pathHierarchy}",
       )
 
+      val reactivationDetail = if (approvalRequest.cascadeReactivation) {
+        ReactivationDetail(cascadeReactivation = approvalRequest.cascadeReactivation)
+      } else {
+        ReactivationDetail(
+          specialistCellTypes = approvalChangeLocation.getSpecialistCellTypesFromList()?.toSet(),
+          capacity = Capacity(
+            maxCapacity = approvalChangeLocation.maxCapacity ?: 0,
+            workingCapacity = approvalChangeLocation.workingCapacity ?: 0,
+            certifiedNormalAccommodation = approvalChangeLocation.certifiedNormalAccommodation,
+          ),
+        )
+      }
+
       sharedLocationService.reactivate(
-        locationToUpdate = locationToUpdate,
+        locationToReactivate = locationToReactivate,
         locationsReactivated = locationsReactivated,
         amendedLocations = amendedLocations,
-        reactivationDetail = ReactivationDetail(
-          cascadeReactivation = approvalChangeLocation.cascadeReactivation,
-          capacity = Capacity(
-            maxCapacity = approvalChangeLocation.maxCapacity ?: locationToUpdate.calcMaxCapacity(),
-            workingCapacity = approvalChangeLocation.workingCapacity ?: locationToUpdate.calcWorkingCapacity(),
-            certifiedNormalAccommodation = approvalChangeLocation.certifiedNormalAccommodation ?: locationToUpdate.calcCertifiedNormalAccommodation(),
-          ),
-
-        ),
+        reactivationDetail = reactivationDetail,
         linkedTransaction = linkedTransaction,
       )
     }

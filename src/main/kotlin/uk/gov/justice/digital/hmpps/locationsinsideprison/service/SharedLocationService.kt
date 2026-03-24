@@ -132,24 +132,26 @@ class SharedLocationService(
   }
 
   fun reactivate(
-    locationToUpdate: Location,
+    locationToReactivate: Location,
     locationsReactivated: MutableSet<Location>,
     amendedLocations: MutableSet<Location>,
     reactivationDetail: ReactivationDetail,
     linkedTransaction: LinkedTransaction,
   ) {
-    locationToUpdate.reactivate(
+    locationToReactivate.reactivate(
       userOrSystemInContext = getUsername(),
       clock = clock,
       reactivatedLocations = locationsReactivated,
       amendedLocations = amendedLocations,
       maxCapacity = reactivationDetail.capacity?.maxCapacity,
       workingCapacity = reactivationDetail.capacity?.workingCapacity,
+      certifiedNormalAccommodation = reactivationDetail.capacity?.certifiedNormalAccommodation,
+      specialistCellTypes = reactivationDetail.specialistCellTypes,
       linkedTransaction = linkedTransaction,
     )
 
     if (reactivationDetail.cascadeReactivation) {
-      locationToUpdate.findSubLocations().forEach { location ->
+      locationToReactivate.findSubLocations().forEach { location ->
         location.reactivate(
           userOrSystemInContext = getUsername(),
           clock = clock,

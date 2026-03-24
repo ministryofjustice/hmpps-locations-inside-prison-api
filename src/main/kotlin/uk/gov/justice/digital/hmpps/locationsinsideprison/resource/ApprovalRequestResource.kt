@@ -119,7 +119,7 @@ class ApprovalRequestResource(
     @RequestBody
     @Validated
     reactivationApprovalRequest: ReactivationApprovalRequest,
-  ): CertificationApprovalRequestDto = approvalRequestService.requestReactivation(
+  ): CertificationApprovalRequestDto = approvalRequestService.requestReactivationApproval(
     reactivationApprovalRequest = reactivationApprovalRequest,
   )
 

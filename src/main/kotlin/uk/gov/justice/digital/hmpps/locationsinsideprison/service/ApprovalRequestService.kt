@@ -13,11 +13,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Certifi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellReactivationDetail
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivationDetail
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalDecisionService.Companion.log
 import java.time.Clock
 import java.time.LocalDateTime.now
@@ -87,61 +87,64 @@ class ApprovalRequestService(
   }
 
   @Transactional
-  fun requestReactivation(reactivationApprovalRequest: ReactivationApprovalRequest): CertificationApprovalRequestDto {
-    val location = residentialLocationRepository.findById(reactivationApprovalRequest.locationId)
-      .orElseThrow { LocationNotFoundException(reactivationApprovalRequest.locationId.toString()) }
+  fun requestReactivationApproval(reactivationApprovalRequest: ReactivationApprovalRequest): CertificationApprovalRequestDto {
+    val topLevelLocation = residentialLocationRepository.findById(reactivationApprovalRequest.topLevelLocationId)
+      .orElseThrow { LocationNotFoundException(reactivationApprovalRequest.topLevelLocationId.toString()) }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
-      prisonId = location.prisonId,
+      prisonId = topLevelLocation.prisonId,
       type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
-      detail = "Requesting reactivation approval for location ${location.getKey()}",
+      detail = "Requesting reactivation approval for location ${topLevelLocation.getKey()}",
     )
-    val now = now(clock)
-    val username = sharedLocationService.getUsername()
 
-    val approvalRequired = activePrisonService.isCertificationApprovalRequired(location.prisonId)
+    val approvalRequired = activePrisonService.isCertificationApprovalRequired(topLevelLocation.prisonId)
     if (!approvalRequired) {
-      throw LocationDoesNotRequireApprovalException("Certification approval not required for location ${location.getKey()}")
+      throw LocationDoesNotRequireApprovalException("Certification approval not required for location ${topLevelLocation.getKey()}")
     }
-    val locations = reactivationApprovalRequest.locations.map { (id, details) ->
-      val locationToUpdate = residentialLocationRepository.findById(id)
-        .orElseThrow { LocationNotFoundException(id.toString()) }
+    if (reactivationApprovalRequest.cascadeReactivation && reactivationApprovalRequest.cellReactivationChanges != null) {
+      throw ValidationException("Cannot specify both cascadeReactivation and cellReactivationChanges")
+    }
+    // map out all the changes affected
+    val cellChanges = topLevelLocation.toCertificationApprovalRequestLocation()
 
-      if (locationToUpdate.isPermanentlyDeactivated()) {
-        throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
+    // apply the
+    if (reactivationApprovalRequest.cellReactivationChanges != null) {
+      reactivationApprovalRequest.cellReactivationChanges.map { (id, details) ->
+        val cellToUpdate = residentialLocationRepository.findById(id)
+          .orElseThrow { LocationNotFoundException(id.toString()) }
+
+        if (cellToUpdate.isPermanentlyDeactivated()) {
+          throw LocationCannotBeReactivatedException("Location [${cellToUpdate.getKey()}] permanently deactivated")
+        }
+
+        if (cellToUpdate.hasPendingCertificationApproval()) {
+          throw PendingApprovalAlreadyExistsException(cellToUpdate.getKey())
+        }
+
+        if (!cellToUpdate.isInHierarchy(topLevelLocation)) {
+          throw ValidationException("Location [${cellToUpdate.getKey()}] is not a child of location [${topLevelLocation.getKey()}]")
+        }
+
+        cellChanges
       }
-
-      if (locationToUpdate.hasPendingCertificationApproval()) {
-        throw PendingApprovalAlreadyExistsException(locationToUpdate.getKey())
-      }
-
-      if (!locationToUpdate.isInHierarchy(location)) {
-        throw ValidationException("Location [${locationToUpdate.getKey()}] is not a child of location [${location.getKey()}]")
-      }
-
-      locationToUpdate.toCertificationApprovalRequestLocation(
-        cascadeReactivation = details.cascadeReactivation,
-        specialistCellTypeAsCSV = details.getSpecialistCellTypesAsCSV(),
-        capacity = details.capacity,
-      )
     }
 
     val approvalRequest = certificationApprovalRequestRepository.save(
-      location.requestReactivationApproval(locationsToReactivate = locations, requestedBy = username, requestedDate = now),
+      topLevelLocation.requestReactivationApproval(locationsToReactivate = cellChanges, requestedBy = linkedTransaction.transactionInvokedBy, requestedDate = linkedTransaction.txStartTime),
     )
 
     telemetryClient.trackEvent(
       "reactivation-approval-requested",
       mapOf(
         "id" to approvalRequest.id.toString(),
-        "locationKey" to location.getKey(),
-        "requestedBy" to username,
+        "locationKey" to topLevelLocation.getKey(),
+        "requestedBy" to linkedTransaction.transactionInvokedBy,
         "approvalRequestId" to approvalRequest.id.toString(),
       ),
       null,
     )
 
-    log.info("Reactivation approval requested (${approvalRequest.id}) for location ${location.getKey()} by $username")
+    log.info("Reactivation approval requested (${approvalRequest.id}) for location ${topLevelLocation.getKey()} by ${linkedTransaction.transactionInvokedBy}")
     return approvalRequest.toDto(showLocations = true).also {
       linkedTransaction.txEndTime = now(clock)
     }
@@ -196,10 +199,12 @@ data class LocationApprovalRequest(
 @Schema(description = "Reactivate locations Approval Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivationApprovalRequest(
-  @param:Schema(description = "Location Id of location requiring approval for being certified", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
-  val locationId: UUID,
-  @param:Schema(description = "List of locations below the locationId to reactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
-  val locations: Map<UUID, ReactivationDetail>,
+  @param:Schema(description = "The top level location Id of location for reactivation and requiring approval", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+  val topLevelLocationId: UUID,
+  @param:Schema(description = "Cascade the reactivation from the top level, cells will be reactivated in their previous state, if this is true `cellReactivationChanges` should be null", defaultValue = "false", required = false, example = "true")
+  val cascadeReactivation: Boolean = false,
+  @param:Schema(description = "List of cells below the locationId to reactivate, with capacity and ttype details, missing cells will not be reactivated", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
+  val cellReactivationChanges: Map<UUID, CellReactivationDetail>? = null,
 )
 
 @Schema(description = "Request to approve a location or set of locations and cells below it")

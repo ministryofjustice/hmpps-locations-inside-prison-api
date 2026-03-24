@@ -305,7 +305,7 @@ abstract class Location(
 
   private fun getActiveResidentialLocationsBelowThisLevel() = getResidentialLocationsBelowThisLevel().filter { it.isActiveAndAllParentsActive() }
 
-  fun getResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>()
+  fun getResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { !it.isPermanentlyDeactivated() }
 
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>().filter { !it.isPermanentlyDeactivated() }
 
@@ -993,6 +993,7 @@ abstract class Location(
     maxCapacity: Int? = null,
     workingCapacity: Int? = null,
     certifiedNormalAccommodation: Int? = null,
+    specialistCellTypes: Set<SpecialistCellType>? = null,
     reactivatedLocations: MutableSet<Location>? = null,
     amendedLocations: MutableSet<Location>? = null,
   ): Boolean {
@@ -1009,7 +1010,7 @@ abstract class Location(
       null
     }
     val amendedDate = LocalDateTime.now(clock)
-    val capacityAdjusted = maxCapacity != null || workingCapacity != null
+    val capacityAdjusted = maxCapacity != null || workingCapacity != null || certifiedNormalAccommodation != null
     if (this is Cell && capacityAdjusted) {
       setCapacity(
         maxCapacity = maxCapacity ?: getMaxCapacity(includePending = true) ?: 0,
@@ -1021,6 +1022,10 @@ abstract class Location(
       )
       amendedLocations?.add(this)
       amendedLocations?.addAll(this.getParentLocations())
+    }
+
+    if (this is Cell && specialistCellTypes != null) {
+      updateSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction)
     }
 
     if (isTemporarilyDeactivated()) {

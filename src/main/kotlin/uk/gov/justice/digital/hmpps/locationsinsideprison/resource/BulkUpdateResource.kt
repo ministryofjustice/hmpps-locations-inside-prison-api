@@ -244,7 +244,16 @@ data class ReactivateLocationsRequest(
   val forceReactivation: Boolean = false,
 )
 
-@Schema(description = "Reactivation Details")
+@Schema(description = "Cell reactivation details")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class CellReactivationDetail(
+  @param:Schema(description = "New capacity of the location, if null the old values are used", required = false, example = " { \"workingCapacity\": 1, \"maxCapacity\": 2 }")
+  val capacity: Capacity? = null,
+  @param:Schema(description = "Specialist Cell Types", required = false)
+  val specialistCellTypes: Set<SpecialistCellType>? = null,
+)
+
+@Schema(description = "Bulk reactivation details")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivationDetail(
   @param:Schema(description = "Cascade the reactivation", defaultValue = "false", required = true, example = "true")
@@ -252,10 +261,8 @@ data class ReactivationDetail(
   @param:Schema(description = "New capacity of the location, if null the old values are used", required = false, example = " { \"workingCapacity\": 1, \"maxCapacity\": 2 }")
   val capacity: Capacity? = null,
   @param:Schema(description = "Specialist Cell Types", required = false)
-  val specialistCellTypes: List<SpecialistCellType>? = null,
-) {
-  fun getSpecialistCellTypesAsCSV(): String? = specialistCellTypes?.distinct() ?.joinToString(separator = ",") { it.name }
-}
+  val specialistCellTypes: Set<SpecialistCellType>? = null,
+)
 
 @Schema(description = "Bulk Update Cell Capacity Details")
 @JsonInclude(JsonInclude.Include.NON_NULL)
