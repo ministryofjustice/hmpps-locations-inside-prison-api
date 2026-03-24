@@ -2078,6 +2078,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           .expectBody().json(
             // language=json
             """
+              [
                 {
                   "prisonId": "MDI",
                   "localName":"Visit Room",
@@ -2086,6 +2087,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                   "locationType": "VISITS",
                   "key": "MDI-Z-VISIT"
                 }
+              ]
                """,
             JsonCompareMode.LENIENT,
           )
