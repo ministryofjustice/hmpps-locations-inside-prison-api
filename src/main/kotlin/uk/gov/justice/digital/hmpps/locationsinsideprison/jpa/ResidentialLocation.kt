@@ -574,13 +574,11 @@ open class ResidentialLocation(
       },
       currentMaxCapacity = calcMaxCapacity(),
       maxCapacity = calcMaxCapacity(includeDraftOrPending),
-      currentWorkingCapacity = if (deactivation) {
-        0
-      } else {
-        calcWorkingCapacity()
-      },
+      currentWorkingCapacity = calcWorkingCapacity(),
       workingCapacity = if (reactivation) {
         getWorkingCapacityIgnoringInactiveStatus()
+      } else if (deactivation) {
+        0
       } else {
         calcWorkingCapacity(includeDraftOrPending)
       },

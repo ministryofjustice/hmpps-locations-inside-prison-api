@@ -958,6 +958,34 @@ class LocationService(
           throw ReasonForDeactivationMustBeProvidedException(locationToDeactivate.getKey())
         }
 
+        if (locationToDeactivate is ResidentialLocation && approvalRequired) {
+          if (locationsToDeactivate.reasonForChange == null) {
+            throw ApprovalRequestRequiresReasonForChangeException(locationToDeactivate.getKey())
+          }
+
+          val approvalRequest = locationToDeactivate.requestApprovalForDeactivation(
+            requestedDate = linkedTransaction.txStartTime,
+            requestedBy = linkedTransaction.transactionInvokedBy,
+            workingCapacityChange = -locationToDeactivate.calcWorkingCapacity(),
+            reasonForChange = locationsToDeactivate.reasonForChange,
+            deactivatedReason = deactivationReason,
+            deactivationReasonDescription = deactivationReasonDescription,
+            proposedReactivationDate = proposedReactivationDate,
+            planetFmReference = planetFmReference,
+          )
+
+          val locationHierarchy = approvalRequest.getTopLevelLocation() ?: throw LocationNotFoundException("No top level location")
+          locationHierarchy.findSubLocations().forEach { subLocation ->
+            cellCertificateRepository.findByPrisonIdAndPathHierarchy(locationToDeactivate.prisonId, subLocation.pathHierarchy)?.let { currentCellCert ->
+              subLocation.currentWorkingCapacity = currentCellCert.workingCapacity
+              subLocation.workingCapacity = 0
+              subLocation.currentMaxCapacity = currentCellCert.maxCapacity
+              subLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
+            }
+          }
+          approvalRequest.refreshCapacities()
+        }
+
         if (locationToDeactivate.temporarilyDeactivate(
             deactivatedReason = deactivationReason,
             deactivatedDate = now(clock),

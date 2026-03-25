@@ -117,7 +117,7 @@ class ApprovalRequestService(
     certificationApprovalRequestRepository.save(approvalRequest)
 
     // Update the current capacities from the certificate if there is one.
-    val locationHierarchy = approvalRequest.getTopLevelLocation() ?: throw ValidationException("No top level location")
+    val locationHierarchy = approvalRequest.getTopLevelLocation() ?: throw LocationNotFoundException("No top level location")
     locationHierarchy.findSubLocations().forEach { subLocation ->
       cellCertificateRepository.findByPrisonIdAndPathHierarchy(topLevelLocation.prisonId, subLocation.pathHierarchy)?.let { currentCellCert ->
         subLocation.currentWorkingCapacity = currentCellCert.workingCapacity

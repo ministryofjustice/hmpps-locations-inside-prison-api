@@ -34,7 +34,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ActiveLocationCannotBePermanentlyDeactivatedException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestRequiresReasonForChangeException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NaturalOrderComparator
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
@@ -780,11 +779,6 @@ abstract class Location(
         dataChanged = true
       }
 
-      val workingCapacityChange = if (this is ResidentialLocation) {
-        getWorkingCapacityIgnoringInactiveStatus()
-      } else {
-        0
-      }
       if (isActive() || isDraft()) {
         this.status = LocationStatus.INACTIVE
         this.deactivatedDate = deactivatedDate
@@ -819,22 +813,6 @@ abstract class Location(
               dataChanged = true
             }
           }
-        }
-
-        if (requestApproval) {
-          if (reasonForChange == null) {
-            throw ApprovalRequestRequiresReasonForChangeException(getKey())
-          }
-          requestApprovalForDeactivation(
-            requestedDate = deactivatedDate,
-            requestedBy = userOrSystemInContext,
-            workingCapacityChange = -workingCapacityChange,
-            reasonForChange = reasonForChange,
-            deactivatedReason = deactivatedReason,
-            deactivationReasonDescription = deactivationReasonDescription,
-            proposedReactivationDate = proposedReactivationDate,
-            planetFmReference = planetFmReference,
-          )
         }
       }
     }
