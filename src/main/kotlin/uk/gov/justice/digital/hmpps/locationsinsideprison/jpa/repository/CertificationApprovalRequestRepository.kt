@@ -2,8 +2,8 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository
 
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import java.util.UUID
 
 @Repository

@@ -463,7 +463,12 @@ class LocationResource(
       required = false,
       defaultValue = "false",
     ) cascadeReactivation: Boolean = false,
-  ): LocationDTO = reactivate(locationService.reactivateLocations(ReactivateLocationsRequest(mapOf(id to ReactivationDetail(cascadeReactivation = cascadeReactivation))))).first()
+    @RequestParam(
+      name = "force-reactivation",
+      required = false,
+      defaultValue = "false",
+    ) forceReactivation: Boolean = false,
+  ): LocationDTO = reactivate(locationService.reactivateLocations(ReactivateLocationsRequest(forceReactivation = forceReactivation, locations = mapOf(id to ReactivationDetail(cascadeReactivation = cascadeReactivation))))).first()
 
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)

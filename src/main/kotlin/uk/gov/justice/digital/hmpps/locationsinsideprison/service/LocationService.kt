@@ -53,12 +53,15 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCer
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestRequiresReasonForChangeException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanentDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ChangesCannotBeMadeWithoutCertificationApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateCellMarkForSameHierarchyException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateLocalNameForSameHierarchyException
@@ -79,7 +82,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateCapacit
 import java.lang.Boolean.TRUE
 import java.time.Clock
 import java.time.LocalDate
-import java.time.LocalDateTime
+import java.time.LocalDateTime.now
 import java.util.*
 import java.util.function.Predicate
 import kotlin.jvm.optionals.getOrNull
@@ -102,6 +105,7 @@ class LocationService(
   private val telemetryClient: TelemetryClient,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
   private val activePrisonService: ActivePrisonService,
+  private val prisonConfigurationRepository: PrisonConfigurationRepository,
   @param:Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
@@ -162,7 +166,7 @@ class LocationService(
       ),
       null,
     )
-    tx.txEndTime = LocalDateTime.now(clock)
+    tx.txEndTime = now(clock)
   }?.toDto(includeChildren = true)
     ?: throw LocationNotFoundException(id.toString())
 
@@ -325,7 +329,7 @@ class LocationService(
     sharedLocationService.trackLocationUpdate(createdLocation, "Created Residential Location")
 
     return createdLocation.toDto(includeParent = capacityChanged && !certificationApprovalRequired).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -346,7 +350,7 @@ class LocationService(
       linkedTransaction = linkedTransaction,
     )
     return locationRepository.save(wing).toDto(includeChildren = true, includeNonResidential = false).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -448,7 +452,7 @@ class LocationService(
       includeChildren = true,
       includeNonResidential = false,
     ).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -557,7 +561,7 @@ class LocationService(
         workingCapacity = cell.workingCapacity,
         certifiedNormalAccommodation = cell.certifiedNormalAccommodation,
         userOrSystemInContext = userOrSystemInContext,
-        amendedDate = LocalDateTime.now(clock),
+        amendedDate = now(clock),
         linkedTransaction = linkedTransaction,
       )
       updatedCells = updatedCells.inc()
@@ -567,7 +571,7 @@ class LocationService(
       includeChildren = true,
       includeNonResidential = false,
     ).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
       val txMessage =
         "Created $createdCells, updated $updatedCells and deleted $deletedCells cells under location ${parentLocation.getKey()}"
       linkedTransaction.transactionDetail = txMessage
@@ -609,7 +613,7 @@ class LocationService(
 
     return sharedLocationService.patchLocation(residentialLocation, patchLocationRequest, linkedTransaction).also {
       sharedLocationService.trackLocationUpdate(it.location)
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -638,13 +642,13 @@ class LocationService(
 
     if (activePrisonService.isCertificationApprovalRequired(cell.prisonId) && !cell.isDraft()) {
       if (cellMarkChangeRequest.reasonForChange.isNullOrBlank()) {
-        throw ValidationException("Reason for change cannot be blank")
+        throw ApprovalRequestRequiresReasonForChangeException(cell.getKey())
       }
 
       cell.requestApprovalForCellMarkChange(
         cellMarkChange = cellMarkChangeRequest.cellMark,
         reasonForChange = cellMarkChangeRequest.reasonForChange,
-        requestedDate = LocalDateTime.now(clock),
+        requestedDate = now(clock),
         requestedBy = sharedLocationService.getUsername(),
       )
     } else {
@@ -656,7 +660,7 @@ class LocationService(
       cell.setCellDoorMark(
         cellMarkChangeRequest.cellMark,
         amendedBy = sharedLocationService.getUsername(),
-        amendedDate = LocalDateTime.now(clock),
+        amendedDate = now(clock),
         linkedTransaction = linkedTransaction,
       )
     }
@@ -664,7 +668,7 @@ class LocationService(
     cellLocationRepository.saveAndFlush(cell)
     return cell.toDto().also {
       sharedLocationService.trackLocationUpdate(it)
-      linkedTransaction?.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction?.txEndTime = now(clock)
     }
   }
 
@@ -681,13 +685,13 @@ class LocationService(
 
     if (activePrisonService.isCertificationApprovalRequired(cell.prisonId) && !cell.isDraft()) {
       if (cellSanitationChangeRequest.reasonForChange.isNullOrBlank()) {
-        throw ValidationException("Reason for change cannot be blank")
+        throw ApprovalRequestRequiresReasonForChangeException(cell.getKey())
       }
 
       cell.requestApprovalForCellSanitationChange(
         inCellSanitationChange = cellSanitationChangeRequest.inCellSanitation,
         reasonForChange = cellSanitationChangeRequest.reasonForChange,
-        requestedDate = LocalDateTime.now(clock),
+        requestedDate = now(clock),
         requestedBy = sharedLocationService.getUsername(),
       )
     } else {
@@ -699,7 +703,7 @@ class LocationService(
       cell.setSanitationOfCell(
         cellSanitationChangeRequest.inCellSanitation,
         amendedBy = sharedLocationService.getUsername(),
-        amendedDate = LocalDateTime.now(clock),
+        amendedDate = now(clock),
         linkedTransaction = linkedTransaction,
       )
     }
@@ -707,7 +711,7 @@ class LocationService(
     cellLocationRepository.saveAndFlush(cell)
     return cell.toDto().also {
       sharedLocationService.trackLocationUpdate(it)
-      linkedTransaction?.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction?.txEndTime = now(clock)
     }
   }
 
@@ -718,6 +722,10 @@ class LocationService(
 
     if (residentialLocation.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
+    }
+
+    if (activePrisonService.isCertificationApprovalRequired(residentialLocation.prisonId) && !residentialLocation.isDraft()) {
+      throw ApprovalRequestRequiresReasonForChangeException(residentialLocation.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -737,7 +745,7 @@ class LocationService(
     sharedLocationService.trackLocationUpdate(residentialLocation, "Updated Used For Type below Residential Location")
 
     return residentialLocation.toDto(includeChildren = true, includeNonResidential = false).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -758,6 +766,10 @@ class LocationService(
 
     if (locCapChange.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(locCapChange.getKey())
+    }
+
+    if (activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId) && !locCapChange.isDraft()) {
+      throw ApprovalRequestRequiresReasonForChangeException(locCapChange.getKey())
     }
 
     if (!locCapChange.isDraft()) {
@@ -788,7 +800,7 @@ class LocationService(
         workingCapacity = workingCapacity,
         certifiedNormalAccommodation = changeToCNA,
         userOrSystemInContext = sharedLocationService.getUsername(),
-        amendedDate = LocalDateTime.now(clock),
+        amendedDate = now(clock),
         linkedTransaction = trackingTx,
       )
 
@@ -805,7 +817,7 @@ class LocationService(
       )
 
       return locCapChange.toDto(includeParent = !locCapChange.isDraft(), includeNonResidential = false).also {
-        trackingTx.txEndTime = LocalDateTime.now(clock)
+        trackingTx.txEndTime = now(clock)
       }
     }
     return locCapChange.toDto(includeNonResidential = false)
@@ -821,6 +833,11 @@ class LocationService(
     }
     if (cell.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(cell.getKey())
+    }
+
+    val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(cell.prisonId)
+    if (certificationApprovalRequired) {
+      throw ChangesCannotBeMadeWithoutCertificationApprovalException(cell.getKey())
     }
 
     // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialist cell types
@@ -856,7 +873,7 @@ class LocationService(
       null,
     )
     return cell.toDto(includeParent = false, includeNonResidential = false).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -903,7 +920,7 @@ class LocationService(
     sharedLocationService.trackLocationUpdate(location, "Location local name updated")
 
     return location.toDto().also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -941,9 +958,37 @@ class LocationService(
           throw ReasonForDeactivationMustBeProvidedException(locationToDeactivate.getKey())
         }
 
+        if (locationToDeactivate is ResidentialLocation && approvalRequired) {
+          if (locationsToDeactivate.reasonForChange == null) {
+            throw ApprovalRequestRequiresReasonForChangeException(locationToDeactivate.getKey())
+          }
+
+          val approvalRequest = locationToDeactivate.requestApprovalForDeactivation(
+            requestedDate = linkedTransaction.txStartTime,
+            requestedBy = linkedTransaction.transactionInvokedBy,
+            workingCapacityChange = -locationToDeactivate.calcWorkingCapacity(),
+            reasonForChange = locationsToDeactivate.reasonForChange,
+            deactivatedReason = deactivationReason,
+            deactivationReasonDescription = deactivationReasonDescription,
+            proposedReactivationDate = proposedReactivationDate,
+            planetFmReference = planetFmReference,
+          )
+
+          val locationHierarchy = approvalRequest.getTopLevelLocation() ?: throw LocationNotFoundException("No top level location")
+          locationHierarchy.findSubLocations().forEach { subLocation ->
+            cellCertificateRepository.findByPrisonIdAndPathHierarchy(locationToDeactivate.prisonId, subLocation.pathHierarchy)?.let { currentCellCert ->
+              subLocation.currentWorkingCapacity = currentCellCert.workingCapacity
+              subLocation.workingCapacity = 0
+              subLocation.currentMaxCapacity = currentCellCert.maxCapacity
+              subLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
+            }
+          }
+          approvalRequest.refreshCapacities()
+        }
+
         if (locationToDeactivate.temporarilyDeactivate(
             deactivatedReason = deactivationReason,
-            deactivatedDate = LocalDateTime.now(clock),
+            deactivatedDate = now(clock),
             deactivationReasonDescription = deactivationReasonDescription,
             planetFmReference = planetFmReference,
             proposedReactivationDate = proposedReactivationDate,
@@ -971,7 +1016,7 @@ class LocationService(
       ).toList(),
       InternalLocationDomainEventType.LOCATION_DEACTIVATED to deactivatedLocationsDto.toList(),
     ).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -983,7 +1028,13 @@ class LocationService(
     val deactivatedLocations = mutableSetOf<Location>()
 
     val prisonId = permanentDeactivationRequest.locations.firstOrNull()?.let { key ->
-      locationRepository.findOneByKey(key)?.prisonId ?: throw LocationNotFoundException(key)
+      val prisonId = locationRepository.findOneByKey(key)?.prisonId ?: throw LocationNotFoundException(key)
+      val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
+
+      if (certificationApprovalRequired && permanentDeactivationRequest.reasonForChange.isNullOrEmpty()) {
+        throw ApprovalRequestRequiresReasonForChangeException(key)
+      }
+      prisonId
     } ?: throw LocationNotFoundException("No location found in request")
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -997,7 +1048,7 @@ class LocationService(
 
       if (locationToPermanentlyDeactivate.permanentlyDeactivate(
           reason = permanentDeactivationRequest.reason,
-          deactivatedDate = LocalDateTime.now(clock),
+          deactivatedDate = now(clock),
           userOrSystemInContext = sharedLocationService.getUsername(),
           clock = clock,
           activeLocationCanBePermDeactivated = activeLocationCanBePermDeactivated,
@@ -1011,7 +1062,7 @@ class LocationService(
       sharedLocationService.trackLocationUpdate(it, "Permanently deactivated location")
     }
     return deactivatedLocations.map { it.toDto() }.also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -1058,7 +1109,7 @@ class LocationService(
       )
     }
     return locationToUpdate.toDto().also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -1091,7 +1142,12 @@ class LocationService(
     val audit = mutableMapOf<String, List<CapacityChanges>>()
 
     val prisonId = capacitiesToUpdate.locations.entries.firstOrNull()?.key?.let { key ->
-      locationRepository.findOneByKey(key)?.prisonId ?: throw LocationNotFoundException(key)
+      val prisonId = locationRepository.findOneByKey(key)?.prisonId ?: throw LocationNotFoundException(key)
+      val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
+      if (certificationApprovalRequired && capacitiesToUpdate.reasonForChange.isNullOrEmpty()) {
+        throw ApprovalRequestRequiresReasonForChangeException(key)
+      }
+      prisonId
     } ?: throw LocationNotFoundException("No location found in request")
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -1107,10 +1163,10 @@ class LocationService(
         if (!location.isPermanentlyDeactivated()) {
           if (location is Cell) {
             with(capacityChange) {
-              if (location.getMaxCapacity(includePendingChange = true) != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
+              if (location.getMaxCapacity(includePending = true) != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
                 try {
                   val oldWorkingCapacity = location.getWorkingCapacity()
-                  val oldMaxCapacity = location.getMaxCapacity(includePendingChange = true)
+                  val oldMaxCapacity = location.getMaxCapacity(includePending = true)
                   val oldCertifiedNormalAccommodation = location.getCertifiedNormalAccommodation()
                   updateCellCapacity(
                     location.id!!,
@@ -1200,7 +1256,7 @@ class LocationService(
       ),
       audit = audit,
     ).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -1220,6 +1276,10 @@ class LocationService(
       "Reactivating locations",
     )
 
+    val approvalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
+    if (approvalRequired && !locationsToReactivate.forceReactivation) {
+      throw ChangesCannotBeMadeWithoutCertificationApprovalException(prisonId)
+    }
     locationsToReactivate.locations.forEach { (id, reactivationDetail) ->
       val locationToUpdate = locationRepository.findById(id)
         .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -1228,27 +1288,13 @@ class LocationService(
         throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
       }
 
-      locationToUpdate.reactivate(
-        userOrSystemInContext = sharedLocationService.getUsername(),
-        clock = clock,
-        reactivatedLocations = locationsReactivated,
+      sharedLocationService.reactivate(
+        locationToReactivate = locationToUpdate,
+        locationsReactivated = locationsReactivated,
         amendedLocations = amendedLocations,
-        maxCapacity = reactivationDetail.capacity?.maxCapacity,
-        workingCapacity = reactivationDetail.capacity?.workingCapacity,
+        reactivationDetail = reactivationDetail,
         linkedTransaction = linkedTransaction,
       )
-
-      if (reactivationDetail.cascadeReactivation) {
-        locationToUpdate.findSubLocations().forEach { location ->
-          location.reactivate(
-            userOrSystemInContext = sharedLocationService.getUsername(),
-            clock = clock,
-            reactivatedLocations = locationsReactivated,
-            amendedLocations = amendedLocations,
-            linkedTransaction = linkedTransaction,
-          )
-        }
-      }
     }
 
     locationsReactivated.forEach { sharedLocationService.trackLocationUpdate(it, "Re-activated Location") }
@@ -1256,7 +1302,7 @@ class LocationService(
       InternalLocationDomainEventType.LOCATION_AMENDED to amendedLocations.map { it.toDto() }.toList(),
       InternalLocationDomainEventType.LOCATION_REACTIVATED to locationsReactivated.map { it.toDto() }.toList(),
     ).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -1292,7 +1338,7 @@ class LocationService(
 
     sharedLocationService.trackLocationUpdate(nonResCellToUpdate, "Updated non-residential cell type")
     return nonResCellToUpdate.toDto().also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -1307,6 +1353,11 @@ class LocationService(
 
     if (locationToConvert.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(locationToConvert.getKey())
+    }
+
+    val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(locationToConvert.prisonId)
+    if (certificationApprovalRequired) {
+      throw ChangesCannotBeMadeWithoutCertificationApprovalException(locationToConvert.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -1344,7 +1395,7 @@ class LocationService(
 
     sharedLocationService.trackLocationUpdate(locationToConvert, "Converted Location to non-residential cell")
     return locationToConvert.toDto(includeParent = true).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 
@@ -1362,6 +1413,11 @@ class LocationService(
 
     if (locationToConvert.hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(locationToConvert.getKey())
+    }
+
+    val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(locationToConvert.prisonId)
+    if (certificationApprovalRequired) {
+      throw ChangesCannotBeMadeWithoutCertificationApprovalException(locationToConvert.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -1387,7 +1443,7 @@ class LocationService(
 
     sharedLocationService.trackLocationUpdate(locationToConvert, "Converted non-residential cell to residential cell")
     return locationToConvert.toDto(includeParent = true).also {
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      linkedTransaction.txEndTime = now(clock)
     }
   }
 

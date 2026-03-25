@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.BasicTemporaryDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CapacityChanges
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
@@ -195,6 +196,9 @@ data class UpdateCapacityRequest(
     example = "{\"TCI-A-1-001\": { \"maxCapacity\": 2, \"workingCapacity\": 1, \"certifiedNormalAccommodation\": 2 }, \"TCI-A-1-002\": { \"maxCapacity\": 3, \"workingCapacity\": 1, \"certifiedNormalAccommodation\": 1 } }",
   )
   val locations: Map<String, CellCapacityUpdateDetail>,
+
+  @param:Schema(description = "The reason why the approval was requested, mandatory if it must be approved", example = "The cell capacity has changed", required = false)
+  val reasonForChange: String? = null,
 )
 
 @Schema(description = "Bulk permanent deactivation request")
@@ -211,6 +215,9 @@ data class BulkPermanentDeactivationRequest(
   )
   @field:NotEmpty(message = "At least one location must be provided")
   val locations: List<String>,
+
+  @param:Schema(description = "The reason why the approval was requested, mandatory if it must be approved", example = "The cell is no longer needed", required = false)
+  val reasonForChange: String? = null,
 )
 
 @Schema(description = "Deactivate Locations Request")
@@ -227,20 +234,37 @@ data class DeactivateLocationsRequest(
   val updatedBy: String? = null,
 )
 
-@Schema(description = "Reactivate Locations Request")
+@Schema(description = "Bulk reactivate locations Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivateLocationsRequest(
   @param:Schema(description = "List of locations to reactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
   val locations: Map<UUID, ReactivationDetail>,
+
+  @param:Schema(description = "Force location to be reactivated, regardless of the status of the prison certification process", example = "false", required = false, defaultValue = "false")
+  val forceReactivation: Boolean = false,
 )
 
-@Schema(description = "Reactivation Details")
+@Schema(description = "Cell reactivation details")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class CellReactivationDetail(
+  @param:Schema(description = "New capacity of the location, if null the old values are used", required = false, example = " { \"workingCapacity\": 1, \"maxCapacity\": 2 }")
+  val capacity: Capacity? = null,
+  @param:Schema(description = "Specialist Cell Types", required = false)
+  val specialistCellTypes: Set<SpecialistCellType>? = null,
+) {
+  fun getSpecialistCellTypesAsCSV(): String? = specialistCellTypes?.takeIf { it.isNotEmpty() }
+    ?.joinToString(separator = ",") { it.name }
+}
+
+@Schema(description = "Bulk reactivation details")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivationDetail(
-  @param:Schema(description = "List of locations to reactivate", defaultValue = "false", required = true, example = "true")
+  @param:Schema(description = "Cascade the reactivation", defaultValue = "false", required = true, example = "true")
   val cascadeReactivation: Boolean = false,
   @param:Schema(description = "New capacity of the location, if null the old values are used", required = false, example = " { \"workingCapacity\": 1, \"maxCapacity\": 2 }")
   val capacity: Capacity? = null,
+  @param:Schema(description = "Specialist Cell Types", required = false)
+  val specialistCellTypes: Set<SpecialistCellType>? = null,
 )
 
 @Schema(description = "Bulk Update Cell Capacity Details")

@@ -17,6 +17,13 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PendingChangeDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DeactivationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequiredAboveThisLevelException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
@@ -62,7 +69,7 @@ open class ResidentialLocation(
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
-  protected val approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
+  open val approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
 
 ) : Location(
   id = id,
@@ -140,7 +147,10 @@ open class ResidentialLocation(
 
   protected fun findHighestLevelPending(includeDrafts: Boolean = false) = findHighestLevelForStatus(includeDrafts = includeDrafts)
 
-  protected fun findHighestLevelForStatus(approvalStatus: ApprovalRequestStatus = ApprovalRequestStatus.PENDING, includeDrafts: Boolean = false): ResidentialLocation? {
+  protected fun findHighestLevelForStatus(
+    approvalStatus: ApprovalRequestStatus = ApprovalRequestStatus.PENDING,
+    includeDrafts: Boolean = false,
+  ): ResidentialLocation? {
     var current: ResidentialLocation? = this
     var highestPending: ResidentialLocation? = null
 
@@ -172,7 +182,7 @@ open class ResidentialLocation(
   fun requestApprovalForDraftLocation(
     requestedDate: LocalDateTime,
     requestedBy: String,
-  ): LocationCertificationApprovalRequest {
+  ): DraftChangeApprovalRequest {
     val topLevelPendingLocation = findHighestLevelPending(includeDrafts = true)
     if (topLevelPendingLocation != null && this != topLevelPendingLocation) {
       throw ApprovalRequiredAboveThisLevelException(this.getKey(), topLevelPendingLocation.getKey())
@@ -186,21 +196,16 @@ open class ResidentialLocation(
       throw LocationDoesNotRequireApprovalException(getKey())
     }
 
-    val approvalRequest = LocationCertificationApprovalRequest(
-      location = this,
-      locationKey = this.getKey(),
-      requestedBy = requestedBy,
-      requestedDate = requestedDate,
-      maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
-      workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
-      certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
-      locations = sortedSetOf(toCertificationApprovalRequestLocation(includeDraft = true)),
-    ).apply {
-      linkPendingChangesToApprovalRequest(approvalRequest = this)
-    }
-
-    approvalRequests.add(approvalRequest)
-    return approvalRequest
+    return addApprovalToLocation(
+      DraftChangeApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
+        workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
+        certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
+      ),
+    ) as DraftChangeApprovalRequest
   }
 
   fun requestApprovalForDeactivation(
@@ -217,59 +222,84 @@ open class ResidentialLocation(
       throw PendingApprovalAlreadyExistsException(getKey())
     }
 
-    val approvalRequest = DeactivationApprovalRequest(
-      location = this,
-      requestedBy = requestedBy,
-      requestedDate = requestedDate,
-      reasonForChange = reasonForChange,
-      workingCapacityChange = workingCapacityChange,
-      deactivatedReason = deactivatedReason,
-      deactivationReasonDescription = deactivationReasonDescription,
-      proposedReactivationDate = proposedReactivationDate,
-      planetFmReference = planetFmReference,
-    ).apply {
-      linkPendingChangesToApprovalRequest(approvalRequest = this)
-    }
-
-    approvalRequests.add(approvalRequest)
-    return approvalRequest
+    return addApprovalToLocation(
+      DeactivationApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        reasonForChange = reasonForChange,
+        workingCapacityChange = workingCapacityChange,
+        deactivatedReason = deactivatedReason,
+        deactivationReasonDescription = deactivationReasonDescription,
+        proposedReactivationDate = proposedReactivationDate,
+        planetFmReference = planetFmReference,
+      ),
+    ) as DeactivationApprovalRequest
   }
 
-  open fun linkPendingChangesToApprovalRequest(approvalRequest: LocationCertificationApprovalRequest) {
-    getResidentialLocationsBelowThisLevel()
-      .forEach { it.linkPendingChangesToApprovalRequest(approvalRequest = approvalRequest) }
-  }
-
-  open fun applyPendingChanges(
+  open fun processApproval(
+    pendingApprovalRequest: CertificationApprovalRequest,
     approvedBy: String,
     approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
+    clock: Clock,
   ) {
     getResidentialLocationsBelowThisLevel().forEach {
-      it.applyPendingChanges(
+      it.processApproval(
+        pendingApprovalRequest = pendingApprovalRequest,
         approvedDate = approvedDate,
         approvedBy = approvedBy,
         linkedTransaction = linkedTransaction,
+        clock = clock,
       )
     }
   }
 
-  fun approve(
-    approvedDate: LocalDateTime,
+  protected fun finishApproval(
+    pendingApprovalRequest: CertificationApprovalRequest,
     approvedBy: String,
+    approvedDate: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ) {
-    applyPendingChanges(approvedDate = approvedDate, approvedBy = approvedBy, linkedTransaction = linkedTransaction)
-
-    if (isDraft()) {
-      temporarilyDeactivate(
-        deactivationReasonDescription = "New location",
-        deactivatedReason = DeactivatedReason.OTHER,
-        deactivatedDate = approvedDate,
-        linkedTransaction = linkedTransaction,
-        userOrSystemInContext = approvedBy,
-      )
+    when (pendingApprovalRequest) {
+      is DraftChangeApprovalRequest -> {
+        temporarilyDeactivate(
+          deactivationReasonDescription = "New location",
+          deactivatedReason = DeactivatedReason.OTHER,
+          deactivatedDate = approvedDate,
+          linkedTransaction = linkedTransaction,
+          userOrSystemInContext = approvedBy,
+        )
+      }
     }
+  }
+
+  fun addApprovalToLocation(approvalRequest: LocationCertificationApprovalRequest): LocationCertificationApprovalRequest {
+    approvalRequests.add(approvalRequest)
+    approvalRequest.locations = sortedSetOf(approvalRequest.generateLocationHierarchy())
+    return approvalRequest
+  }
+
+  fun approve(
+    pendingApprovalRequest: CertificationApprovalRequest,
+    approvedBy: String,
+    approvedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+    clock: Clock,
+  ) {
+    processApproval(
+      pendingApprovalRequest = pendingApprovalRequest,
+      approvedDate = approvedDate,
+      approvedBy = approvedBy,
+      linkedTransaction = linkedTransaction,
+      clock = clock,
+    )
+    finishApproval(
+      pendingApprovalRequest = pendingApprovalRequest,
+      approvedBy = approvedBy,
+      approvedDate = approvedDate,
+      linkedTransaction = linkedTransaction,
+    )
   }
 
   private fun getAttributes(): Set<ResidentialAttribute> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
@@ -507,7 +537,7 @@ open class ResidentialLocation(
   }
 
   private fun draftApprovalLocationIsPartOfHierarchy(approvalRequest: CertificationApprovalRequest): Boolean = if (approvalRequest.getApprovalType() == ApprovalType.DRAFT) {
-    val locationRequest = approvalRequest as? LocationCertificationApprovalRequest
+    val locationRequest = approvalRequest as? DraftChangeApprovalRequest
     locationRequest?.location?.let { location ->
       isInHierarchy(location) || findLocation(location.getKey()) != null
     } ?: false
@@ -515,10 +545,16 @@ open class ResidentialLocation(
     false
   }
 
-  fun toCertificationApprovalRequestLocation(includeDraft: Boolean = false, includePending: Boolean = false): CertificationApprovalRequestLocation {
+  fun toCertificationApprovalRequestLocation(includeDraftOrPending: Boolean = false, reactivation: Boolean = false, deactivation: Boolean = false): CertificationApprovalRequestLocation {
     val subLocations: List<CertificationApprovalRequestLocation> = getResidentialLocationsBelowThisLevel()
       .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
-      .map { it.toCertificationApprovalRequestLocation(includeDraft = includeDraft, includePending = includePending) }
+      .map {
+        it.toCertificationApprovalRequestLocation(
+          includeDraftOrPending = includeDraftOrPending,
+          reactivation = reactivation,
+          deactivation = deactivation,
+        )
+      }
 
     return CertificationApprovalRequestLocation(
       locationType = locationType,
@@ -526,22 +562,28 @@ open class ResidentialLocation(
       pathHierarchy = getPathHierarchy(),
       localName = localName?.capitalizeWords(),
       cellMark = if (this is Cell) {
-        getDoorCellMark(includePending = includePending)
+        getDoorCellMark(includePending = includeDraftOrPending)
       } else {
         null
       },
       level = getLevel(),
       inCellSanitation = if (this is Cell) {
-        getSanitationOfCell(includePending = includePending)
+        getSanitationOfCell(includePending = includeDraftOrPending)
       } else {
         null
       },
-      currentMaxCapacity = calcMaxCapacity(false),
-      maxCapacity = calcMaxCapacity(includeDraft),
-      currentWorkingCapacity = getWorkingCapacityIgnoringInactiveStatus(),
-      workingCapacity = calcWorkingCapacity(includeDraft),
-      currentCertifiedNormalAccommodation = calcCertifiedNormalAccommodation(false),
-      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(includeDraft),
+      currentMaxCapacity = calcMaxCapacity(),
+      maxCapacity = calcMaxCapacity(includeDraftOrPending),
+      currentWorkingCapacity = calcWorkingCapacity(),
+      workingCapacity = if (reactivation) {
+        getWorkingCapacityIgnoringInactiveStatus()
+      } else if (deactivation) {
+        0
+      } else {
+        calcWorkingCapacity(includeDraftOrPending)
+      },
+      currentCertifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
+      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(includeDraftOrPending),
       usedForTypes = getUsedForValuesAsCSV(),
       accommodationTypes = getAccommodationTypesAsCSV(),
       specialistCellTypes = getSpecialistCellTypesAsCSV(),
@@ -554,7 +596,7 @@ open class ResidentialLocation(
     )
   }
 
-  private fun getSpecialistCellTypesAsCSV(): String? = getSpecialistCellTypes().map { it.specialistCellType }.distinct().takeIf { it.isNotEmpty() }
+  fun getSpecialistCellTypesAsCSV(): String? = getSpecialistCellTypes().map { it.specialistCellType }.distinct().takeIf { it.isNotEmpty() }
     ?.joinToString(separator = ",") { it.name }
 
   private fun getAccommodationTypesAsCSV(): String? = getAccommodationTypes().takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name }

@@ -11,6 +11,7 @@ import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.SignedOpCapCertificationApprovalRequest
 import java.time.LocalDateTime
 import java.util.SortedSet
 

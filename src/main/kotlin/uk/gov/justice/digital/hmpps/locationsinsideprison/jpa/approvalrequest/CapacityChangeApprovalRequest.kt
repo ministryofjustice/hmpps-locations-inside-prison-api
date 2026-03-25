@@ -1,24 +1,30 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
+package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 
 import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import java.time.LocalDateTime
 import java.util.UUID
 
 @Entity
-@DiscriminatorValue("CELL_SANITATION")
-open class SanitationChangeApprovalRequest(
+@DiscriminatorValue("CAPACITY_CHANGE")
+open class CapacityChangeApprovalRequest(
   id: UUID? = null,
   location: Cell,
   requestedBy: String,
   requestedDate: LocalDateTime,
   reasonForChange: String? = null,
 
-  var inCellSanitation: Boolean,
+  @Column(nullable = true)
+  var workingCapacity: Int? = null,
 
   @Column(nullable = true)
-  private var currentInCellSanitation: Boolean? = null,
+  var maxCapacity: Int? = null,
+
+  @Column(nullable = true)
+  var certifiedNormalAccommodation: Int? = null,
+
 ) : LocationCertificationApprovalRequest(
   id = id,
   location = location,
@@ -26,12 +32,12 @@ open class SanitationChangeApprovalRequest(
   requestedBy = requestedBy,
   requestedDate = requestedDate,
   reasonForChange = reasonForChange,
-  locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includePending = true)),
 ) {
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
-    inCellSanitation = inCellSanitation,
-    currentInCellSanitation = currentInCellSanitation,
+    workingCapacity = workingCapacity,
+    maxCapacity = maxCapacity,
+    certifiedNormalAccommodation = certifiedNormalAccommodation,
   )
 
-  override fun getApprovalType() = ApprovalType.CELL_SANITATION
+  override fun getApprovalType() = ApprovalType.CAPACITY_CHANGE
 }
