@@ -9,6 +9,8 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
@@ -36,6 +38,7 @@ class ApprovalRequestService(
   private val sharedLocationService: SharedLocationService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
+  private val cellCertificateRepository: CellCertificateRepository,
 ) {
 
   fun getApprovalRequests(prisonId: String, status: ApprovalRequestStatus? = ApprovalRequestStatus.PENDING): List<CertificationApprovalRequestDto> {
@@ -87,7 +90,7 @@ class ApprovalRequestService(
   }
 
   @Transactional
-  fun requestReactivationApproval(reactivationApprovalRequest: ReactivationApprovalRequest): CertificationApprovalRequestDto {
+  fun requestReactivationApproval(reactivationApprovalRequest: ReactivationLocationsApprovalRequest): CertificationApprovalRequestDto {
     val topLevelLocation = residentialLocationRepository.findById(reactivationApprovalRequest.topLevelLocationId)
       .orElseThrow { LocationNotFoundException(reactivationApprovalRequest.topLevelLocationId.toString()) }
 
@@ -104,34 +107,59 @@ class ApprovalRequestService(
     if (reactivationApprovalRequest.cascadeReactivation && reactivationApprovalRequest.cellReactivationChanges != null) {
       throw ValidationException("Cannot specify both cascadeReactivation and cellReactivationChanges")
     }
-    // map out all the changes affected
-    val cellChanges = topLevelLocation.toCertificationApprovalRequestLocation()
 
-    // apply the
-    if (reactivationApprovalRequest.cellReactivationChanges != null) {
-      reactivationApprovalRequest.cellReactivationChanges.map { (id, details) ->
-        val cellToUpdate = residentialLocationRepository.findById(id)
-          .orElseThrow { LocationNotFoundException(id.toString()) }
+    val approvalRequest = ReactivationApprovalRequest(
+      location = topLevelLocation,
+      requestedBy = linkedTransaction.transactionInvokedBy,
+      requestedDate = linkedTransaction.txStartTime,
+    )
+    topLevelLocation.addApprovalToLocation(approvalRequest)
+    certificationApprovalRequestRepository.save(approvalRequest)
 
-        if (cellToUpdate.isPermanentlyDeactivated()) {
-          throw LocationCannotBeReactivatedException("Location [${cellToUpdate.getKey()}] permanently deactivated")
-        }
-
-        if (cellToUpdate.hasPendingCertificationApproval()) {
-          throw PendingApprovalAlreadyExistsException(cellToUpdate.getKey())
-        }
-
-        if (!cellToUpdate.isInHierarchy(topLevelLocation)) {
-          throw ValidationException("Location [${cellToUpdate.getKey()}] is not a child of location [${topLevelLocation.getKey()}]")
-        }
-
-        cellChanges
+    // Update the current capacities from the certificate if there is one.
+    val locationHierarchy = approvalRequest.getTopLevelLocation() ?: throw ValidationException("No top level location")
+    locationHierarchy.findSubLocations().forEach { subLocation ->
+      cellCertificateRepository.findByPrisonIdAndPathHierarchy(topLevelLocation.prisonId, subLocation.pathHierarchy)?.let { currentCellCert ->
+        subLocation.currentWorkingCapacity = currentCellCert.workingCapacity
+        subLocation.currentMaxCapacity = currentCellCert.maxCapacity
+        subLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
+      }
+      if (reactivationApprovalRequest.cascadeReactivation && subLocation.findSubLocations().isEmpty()) {
+        subLocation.reactivateThisLocation = true
       }
     }
 
-    val approvalRequest = certificationApprovalRequestRepository.save(
-      topLevelLocation.requestReactivationApproval(locationsToReactivate = cellChanges, requestedBy = linkedTransaction.transactionInvokedBy, requestedDate = linkedTransaction.txStartTime),
-    )
+    // Go through the cellReactivationChanges and update the certificationChanges to reflect the capacity and specialist cell types held in the cellReactivationChanges
+    reactivationApprovalRequest.cellReactivationChanges?.map { (id, details) ->
+      val cellToUpdate = residentialLocationRepository.findById(id)
+        .orElseThrow { LocationNotFoundException(id.toString()) }
+
+      if (cellToUpdate.isPermanentlyDeactivated()) {
+        throw LocationCannotBeReactivatedException("Location [${cellToUpdate.getKey()}] permanently deactivated")
+      }
+
+      if (cellToUpdate.hasPendingCertificationApproval()) {
+        throw PendingApprovalAlreadyExistsException(cellToUpdate.getKey())
+      }
+
+      if (!cellToUpdate.isInHierarchy(topLevelLocation)) {
+        throw ValidationException("Location [${cellToUpdate.getKey()}] is not a child of location [${topLevelLocation.getKey()}]")
+      }
+
+      locationHierarchy.findLocationById(cellToUpdate.id!!)?.let { approvalCell ->
+        approvalCell.reactivateThisLocation = true
+        details.capacity?.let {
+          approvalCell.workingCapacity = it.workingCapacity
+          approvalCell.maxCapacity = it.maxCapacity
+          approvalCell.certifiedNormalAccommodation = it.certifiedNormalAccommodation
+        }
+        details.getSpecialistCellTypesAsCSV()?.let {
+          approvalCell.specialistCellTypes = it
+        }
+      }
+    }
+
+    approvalRequest.refreshCapacities()
 
     telemetryClient.trackEvent(
       "reactivation-approval-requested",
@@ -198,7 +226,7 @@ data class LocationApprovalRequest(
 
 @Schema(description = "Reactivate locations Approval Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
-data class ReactivationApprovalRequest(
+data class ReactivationLocationsApprovalRequest(
   @param:Schema(description = "The top level location Id of location for reactivation and requiring approval", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
   val topLevelLocationId: UUID,
   @param:Schema(description = "Cascade the reactivation from the top level, cells will be reactivated in their previous state, if this is true `cellReactivationChanges` should be null", defaultValue = "false", required = false, example = "true")

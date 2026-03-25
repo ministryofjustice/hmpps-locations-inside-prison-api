@@ -289,9 +289,6 @@ class Cell(
       virtualLocation = isVirtualResidentialLocation(),
     )
 
-    if (hasPendingCertificationApproval()) {
-      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
-    }
     super.setCapacity(
       maxCapacity = maxCapacity,
       workingCapacity = workingCapacity,
@@ -454,9 +451,6 @@ class Cell(
     clock: Clock,
     linkedTransaction: LinkedTransaction,
   ) {
-    if (hasPendingCertificationApproval()) {
-      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
-    }
     recordRemovedSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction)
     this.specialistCellTypes.retainAll(
       specialistCellTypes.map {

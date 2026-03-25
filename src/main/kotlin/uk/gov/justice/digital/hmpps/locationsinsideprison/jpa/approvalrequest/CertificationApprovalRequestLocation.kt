@@ -44,19 +44,19 @@ open class CertificationApprovalRequestLocation(
   val level: Int,
 
   @Column(nullable = true)
-  private val currentCertifiedNormalAccommodation: Int? = null,
+  var currentCertifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
   var certifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
-  private val currentWorkingCapacity: Int? = null,
+  var currentWorkingCapacity: Int? = null,
 
   @Column(nullable = true)
   var workingCapacity: Int? = null,
 
   @Column(nullable = true)
-  private val currentMaxCapacity: Int? = null,
+  var currentMaxCapacity: Int? = null,
 
   @Column(nullable = true)
   var maxCapacity: Int? = null,
@@ -82,6 +82,9 @@ open class CertificationApprovalRequestLocation(
   @JoinColumn(name = "parent_location_id")
   @SortNatural
   private val subLocations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
+
+  @Column(nullable = false)
+  var reactivateThisLocation: Boolean = false,
 
 ) : Comparable<CertificationApprovalRequestLocation> {
 
@@ -148,6 +151,8 @@ open class CertificationApprovalRequestLocation(
     return leafLocations
   }
 
+  fun findLocationById(id: UUID): CertificationApprovalRequestLocation? = findSubLocations().find { it.id == id }
+
   fun findSubLocations(): List<CertificationApprovalRequestLocation> {
     val subLocations = mutableListOf<CertificationApprovalRequestLocation>()
 
@@ -166,4 +171,22 @@ open class CertificationApprovalRequestLocation(
     traverse(this)
     return subLocations
   }
+
+  fun approvedWorkingCapacity(): Int = findAllLeafLocations().sumOf { it.workingCapacity ?: 0 }
+
+  fun approvedMaxCapacity(): Int = findAllLeafLocations().sumOf { it.maxCapacity ?: 0 }
+
+  fun approvedCertifiedNormalAccommodation(): Int = findAllLeafLocations().sumOf { it.certifiedNormalAccommodation ?: 0 }
+
+  fun calcCurrentWorkingCapacity(): Int = findAllLeafLocations().sumOf { it.currentWorkingCapacity ?: 0 }
+
+  fun calcCurrentMaxCapacity(): Int = findAllLeafLocations().sumOf { it.currentMaxCapacity ?: 0 }
+
+  fun calcCurrentCertifiedNormalAccommodation(): Int = findAllLeafLocations().sumOf { it.currentCertifiedNormalAccommodation ?: 0 }
+
+  fun workingCapacityChange(): Int = approvedWorkingCapacity() - calcCurrentWorkingCapacity()
+
+  fun maxCapacityChange(): Int = approvedMaxCapacity() - calcCurrentMaxCapacity()
+
+  fun certifiedNormalAccommodationChange(): Int = approvedCertifiedNormalAccommodation() - calcCurrentCertifiedNormalAccommodation()
 }

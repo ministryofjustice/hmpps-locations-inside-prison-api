@@ -251,7 +251,10 @@ data class CellReactivationDetail(
   val capacity: Capacity? = null,
   @param:Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: Set<SpecialistCellType>? = null,
-)
+) {
+  fun getSpecialistCellTypesAsCSV(): String? = specialistCellTypes?.takeIf { it.isNotEmpty() }
+    ?.joinToString(separator = ",") { it.name }
+}
 
 @Schema(description = "Bulk reactivation details")
 @JsonInclude(JsonInclude.Include.NON_NULL)

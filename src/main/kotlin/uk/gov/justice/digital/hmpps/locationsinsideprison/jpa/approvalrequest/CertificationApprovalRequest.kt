@@ -167,12 +167,14 @@ enum class ApprovalRequestStatus {
   WITHDRAWN,
 }
 
-enum class ApprovalType {
+enum class ApprovalType(
+  val hasPendingValues: Boolean = false,
+) {
   SIGNED_OP_CAP,
-  DRAFT,
+  DRAFT(true),
   DEACTIVATION,
-  CELL_MARK,
-  CELL_SANITATION,
+  CELL_MARK(true),
+  CELL_SANITATION(true),
   REACTIVATION,
-  CAPACITY_CHANGE,
+  CAPACITY_CHANGE(true),
 }

@@ -24,7 +24,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ce
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DeactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequiredAboveThisLevelException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
@@ -238,29 +237,6 @@ open class ResidentialLocation(
     ) as DeactivationApprovalRequest
   }
 
-  fun requestReactivationApproval(
-    locationChanges: CertificationApprovalRequestLocation,
-    requestedDate: LocalDateTime,
-    requestedBy: String,
-  ): ReactivationApprovalRequest {
-    if (hasPendingCertificationApproval()) {
-      throw PendingApprovalAlreadyExistsException(getKey())
-    }
-
-    val reactivationRequest = ReactivationApprovalRequest(
-      location = this,
-      requestedBy = requestedBy,
-      requestedDate = requestedDate,
-      maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
-      workingCapacityChange = getWorkingCapacityIgnoringInactiveStatus() - calcWorkingCapacity(),
-      certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
-      locations = sortedSetOf(locationChanges),
-    )
-
-    approvalRequests.add(reactivationRequest)
-    return reactivationRequest
-  }
-
   open fun processApproval(
     pendingApprovalRequest: CertificationApprovalRequest,
     approvedBy: String,
@@ -300,7 +276,7 @@ open class ResidentialLocation(
 
   fun addApprovalToLocation(approvalRequest: LocationCertificationApprovalRequest): LocationCertificationApprovalRequest {
     approvalRequests.add(approvalRequest)
-    approvalRequest.updateLocations()
+    approvalRequest.locations = sortedSetOf(approvalRequest.generateLocationHierarchy())
     return approvalRequest
   }
 
@@ -569,12 +545,14 @@ open class ResidentialLocation(
     false
   }
 
-  fun toCertificationApprovalRequestLocation(includeDraftOrPending: Boolean = false): CertificationApprovalRequestLocation {
+  fun toCertificationApprovalRequestLocation(includeDraftOrPending: Boolean = false, reactivation: Boolean = false, deactivation: Boolean = false): CertificationApprovalRequestLocation {
     val subLocations: List<CertificationApprovalRequestLocation> = getResidentialLocationsBelowThisLevel()
       .filter { (it.isStructural() || it.isCell() || it.isConvertedCell()) }
       .map {
         it.toCertificationApprovalRequestLocation(
           includeDraftOrPending = includeDraftOrPending,
+          reactivation = reactivation,
+          deactivation = deactivation,
         )
       }
 
@@ -596,8 +574,16 @@ open class ResidentialLocation(
       },
       currentMaxCapacity = calcMaxCapacity(),
       maxCapacity = calcMaxCapacity(includeDraftOrPending),
-      currentWorkingCapacity = calcWorkingCapacity(),
-      workingCapacity = calcWorkingCapacity(includeDraftOrPending),
+      currentWorkingCapacity = if (deactivation) {
+        0
+      } else {
+        calcWorkingCapacity()
+      },
+      workingCapacity = if (reactivation) {
+        getWorkingCapacityIgnoringInactiveStatus()
+      } else {
+        calcWorkingCapacity(includeDraftOrPending)
+      },
       currentCertifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
       certifiedNormalAccommodation = calcCertifiedNormalAccommodation(includeDraftOrPending),
       usedForTypes = getUsedForValuesAsCSV(),

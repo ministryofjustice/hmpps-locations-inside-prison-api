@@ -721,9 +721,6 @@ abstract class Location(
     var dataChanged = false
 
     if (!isPermanentlyDeactivated()) {
-      if (hasPendingCertificationApproval()) {
-        throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
-      }
       val amendedDate = deactivatedDate
 
       if (addHistory(
@@ -1009,7 +1006,7 @@ abstract class Location(
     } else {
       null
     }
-    val amendedDate = LocalDateTime.now(clock)
+
     val capacityAdjusted = maxCapacity != null || workingCapacity != null || certifiedNormalAccommodation != null
     if (this is Cell && capacityAdjusted) {
       setCapacity(
@@ -1017,7 +1014,7 @@ abstract class Location(
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
         certifiedNormalAccommodation = certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
         userOrSystemInContext = userOrSystemInContext,
-        amendedDate = amendedDate,
+        amendedDate = linkedTransaction.txStartTime,
         linkedTransaction = linkedTransaction,
       )
       amendedLocations?.add(this)
@@ -1034,7 +1031,7 @@ abstract class Location(
         this.getDerivedStatus().description,
         LocationStatus.ACTIVE.description,
         userOrSystemInContext,
-        amendedDate,
+        linkedTransaction.txStartTime,
         linkedTransaction,
       )
       addHistory(
@@ -1042,7 +1039,7 @@ abstract class Location(
         proposedReactivationDate?.format(DATE_FORMAT),
         null,
         userOrSystemInContext,
-        amendedDate,
+        linkedTransaction.txStartTime,
         linkedTransaction,
       )
       addHistory(
@@ -1050,7 +1047,7 @@ abstract class Location(
         planetFmReference,
         null,
         userOrSystemInContext,
-        amendedDate,
+        linkedTransaction.txStartTime,
         linkedTransaction,
       )
 
@@ -1061,13 +1058,13 @@ abstract class Location(
       this.planetFmReference = null
       this.proposedReactivationDate = null
       this.updatedBy = userOrSystemInContext
-      this.whenUpdated = amendedDate
+      this.whenUpdated = linkedTransaction.txStartTime
       this.deactivatedBy = null
 
       if (this is Cell && !isConvertedCell()) {
         certifyCell(
           cellUpdatedBy = userOrSystemInContext,
-          updatedDate = amendedDate,
+          updatedDate = linkedTransaction.txStartTime,
           linkedTransaction = linkedTransaction,
         )
         this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()

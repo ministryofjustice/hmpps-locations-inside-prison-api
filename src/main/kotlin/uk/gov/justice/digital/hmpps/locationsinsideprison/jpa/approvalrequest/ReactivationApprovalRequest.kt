@@ -14,12 +14,10 @@ open class ReactivationApprovalRequest(
   location: ResidentialLocation,
   requestedBy: String,
   requestedDate: LocalDateTime,
-  workingCapacityChange: Int,
-  maxCapacityChange: Int,
-  certifiedNormalAccommodationChange: Int,
-  locations: SortedSet<CertificationApprovalRequestLocation>,
-
-  open val cascadeReactivation: Boolean = false,
+  workingCapacityChange: Int = 0,
+  maxCapacityChange: Int = 0,
+  certifiedNormalAccommodationChange: Int = 0,
+  locations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
 
 ) : LocationCertificationApprovalRequest(
   id = id,

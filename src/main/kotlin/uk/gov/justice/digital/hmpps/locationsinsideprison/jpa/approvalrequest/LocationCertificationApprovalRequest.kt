@@ -30,13 +30,13 @@ abstract class LocationCertificationApprovalRequest(
   private val locationKey: String,
 
   @Column(nullable = false)
-  private var certifiedNormalAccommodationChange: Int = 0,
+  var certifiedNormalAccommodationChange: Int = 0,
 
   @Column(nullable = false)
-  private var workingCapacityChange: Int = 0,
+  var workingCapacityChange: Int = 0,
 
   @Column(nullable = false)
-  private var maxCapacityChange: Int = 0,
+  var maxCapacityChange: Int = 0,
 
   @SortNatural
   @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
@@ -66,9 +66,13 @@ abstract class LocationCertificationApprovalRequest(
     },
   )
 
-  open fun updateLocations() {
-    locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includeDraftOrPending = true))
-  }
+  fun generateLocationHierarchy(): CertificationApprovalRequestLocation = location.toCertificationApprovalRequestLocation(
+    includeDraftOrPending = getApprovalType().hasPendingValues,
+    deactivation = getApprovalType() == ApprovalType.DEACTIVATION,
+    reactivation = getApprovalType() == ApprovalType.REACTIVATION,
+  )
+
+  fun getTopLevelLocation() = locations.firstOrNull { it.pathHierarchy == location.getPathHierarchy() }
 
   override fun approve(
     approvedBy: String,
@@ -84,5 +88,13 @@ abstract class LocationCertificationApprovalRequest(
       linkedTransaction = linkedTransaction,
       clock = clock,
     )
+  }
+
+  fun refreshCapacities() {
+    getTopLevelLocation()?.let { topLocation ->
+      workingCapacityChange = topLocation.workingCapacityChange()
+      maxCapacityChange = topLocation.maxCapacityChange()
+      certifiedNormalAccommodationChange = topLocation.certifiedNormalAccommodationChange()
+    }
   }
 }

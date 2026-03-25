@@ -20,7 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationLocationsApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 
@@ -389,13 +389,9 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .header("Content-Type", "application/json")
         .bodyValue(
           jsonString(
-            ReactivationApprovalRequest(
+            ReactivationLocationsApprovalRequest(
               topLevelLocationId = leedsWing.id!!,
-              cellReactivationChanges = mapOf(
-                leedsWing.id!! to ReactivationDetail(
-                  cascadeReactivation = true,
-                ),
-              ),
+              cascadeReactivation = true,
             ),
           ),
         )
@@ -424,11 +420,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locationId).isEqualTo(leedsWing.id)
       assertThat(pendingApproval.prisonId).isEqualTo(leedsWing.prisonId)
       assertThat(pendingApproval.locationKey).isEqualTo(leedsWing.getKey())
-      assertThat(pendingApproval.workingCapacityChange).isEqualTo(6)
       assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(0)
       assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
       assertThat(pendingApproval.locations).hasSize(1)
       assertThat(pendingApproval.locations!![0].subLocations).hasSize(2)
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(6)
 
       val approvedRequest = webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -447,10 +443,10 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       val updatedLocations = leedsWing.findSubLocations().filter { it.isStructural() }.map { it.getKey() }.plus(leedsWing.getKey())
       val reactivatedLocations = leedsWing.findSubLocations().map { it.getKey() }.plus(leedsWing.getKey())
-      getDomainEvents(reactivatedLocations.size + updatedLocations.size).let { messages ->
+      getDomainEvents(reactivatedLocations.size * 2).let { messages ->
         assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
           *reactivatedLocations.map { "location.inside.prison.reactivated" to it }.toTypedArray(),
-          *updatedLocations.map { "location.inside.prison.amended" to it }.toTypedArray(),
+          *reactivatedLocations.map { "location.inside.prison.amended" to it }.toTypedArray(),
         )
       }
 

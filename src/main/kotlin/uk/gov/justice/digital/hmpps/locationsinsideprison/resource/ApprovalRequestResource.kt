@@ -28,7 +28,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalDecisi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalRequestService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationLocationsApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
 import java.util.*
 
@@ -118,7 +118,7 @@ class ApprovalRequestResource(
   fun reactivationRequestApproval(
     @RequestBody
     @Validated
-    reactivationApprovalRequest: ReactivationApprovalRequest,
+    reactivationApprovalRequest: ReactivationLocationsApprovalRequest,
   ): CertificationApprovalRequestDto = approvalRequestService.requestReactivationApproval(
     reactivationApprovalRequest = reactivationApprovalRequest,
   )

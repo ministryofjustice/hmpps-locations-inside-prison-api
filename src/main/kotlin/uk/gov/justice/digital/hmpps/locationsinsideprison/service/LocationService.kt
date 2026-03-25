@@ -1260,28 +1260,13 @@ class LocationService(
         throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
       }
 
-      locationToUpdate.reactivate(
-        userOrSystemInContext = sharedLocationService.getUsername(),
-        clock = clock,
-        reactivatedLocations = locationsReactivated,
+      sharedLocationService.reactivate(
+        locationToReactivate = locationToUpdate,
+        locationsReactivated = locationsReactivated,
         amendedLocations = amendedLocations,
-        maxCapacity = reactivationDetail.capacity?.maxCapacity,
-        workingCapacity = reactivationDetail.capacity?.workingCapacity,
-        certifiedNormalAccommodation = reactivationDetail.capacity?.certifiedNormalAccommodation,
+        reactivationDetail = reactivationDetail,
         linkedTransaction = linkedTransaction,
       )
-
-      if (reactivationDetail.cascadeReactivation) {
-        locationToUpdate.findSubLocations().forEach { location ->
-          location.reactivate(
-            userOrSystemInContext = sharedLocationService.getUsername(),
-            clock = clock,
-            reactivatedLocations = locationsReactivated,
-            amendedLocations = amendedLocations,
-            linkedTransaction = linkedTransaction,
-          )
-        }
-      }
     }
 
     locationsReactivated.forEach { sharedLocationService.trackLocationUpdate(it, "Re-activated Location") }

@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
@@ -125,7 +126,7 @@ class ApprovalDecisionService(
     val locationsReactivated = mutableSetOf<Location>()
     val amendedLocations = mutableSetOf<Location>()
 
-    approvalRequest.locations.forEach { approvalChangeLocation ->
+    approvalRequest.getTopLevelLocation()?.findAllLeafLocations()?.forEach { approvalChangeLocation ->
       val locationToReactivate = residentialLocationRepository.findOneByPrisonIdAndPathHierarchy(
         approvalRequest.prisonId,
         approvalChangeLocation.pathHierarchy,
@@ -133,26 +134,15 @@ class ApprovalDecisionService(
         "Location not found for prison ${approvalRequest.prisonId} and path hierarchy ${approvalChangeLocation.pathHierarchy}",
       )
 
-      val reactivationDetail = if (approvalRequest.cascadeReactivation) {
-        ReactivationDetail(cascadeReactivation = approvalRequest.cascadeReactivation)
-      } else {
-        ReactivationDetail(
-          specialistCellTypes = approvalChangeLocation.getSpecialistCellTypesFromList()?.toSet(),
-          capacity = Capacity(
-            maxCapacity = approvalChangeLocation.maxCapacity ?: 0,
-            workingCapacity = approvalChangeLocation.workingCapacity ?: 0,
-            certifiedNormalAccommodation = approvalChangeLocation.certifiedNormalAccommodation,
-          ),
+      buildReactivationDetail(approvalChangeLocation)?.let { reactivationDetail ->
+        sharedLocationService.reactivate(
+          locationToReactivate = locationToReactivate,
+          locationsReactivated = locationsReactivated,
+          amendedLocations = amendedLocations,
+          reactivationDetail = reactivationDetail,
+          linkedTransaction = linkedTransaction,
         )
       }
-
-      sharedLocationService.reactivate(
-        locationToReactivate = locationToReactivate,
-        locationsReactivated = locationsReactivated,
-        amendedLocations = amendedLocations,
-        reactivationDetail = reactivationDetail,
-        linkedTransaction = linkedTransaction,
-      )
     }
 
     locationsReactivated.forEach { sharedLocationService.trackLocationUpdate(it, "Re-activated Location") }
@@ -160,6 +150,21 @@ class ApprovalDecisionService(
       InternalLocationDomainEventType.LOCATION_AMENDED to amendedLocations.map { it.toDto() }.toList(),
       InternalLocationDomainEventType.LOCATION_REACTIVATED to locationsReactivated.map { it.toDto() }.toList(),
     )
+  }
+
+  private fun buildReactivationDetail(
+    approvalChangeLocation: CertificationApprovalRequestLocation,
+  ): ReactivationDetail? = if (approvalChangeLocation.reactivateThisLocation) {
+    ReactivationDetail(
+      specialistCellTypes = approvalChangeLocation.getSpecialistCellTypesFromList()?.toSet(),
+      capacity = Capacity(
+        maxCapacity = approvalChangeLocation.maxCapacity ?: 0,
+        workingCapacity = approvalChangeLocation.workingCapacity ?: 0,
+        certifiedNormalAccommodation = approvalChangeLocation.certifiedNormalAccommodation,
+      ),
+    )
+  } else {
+    null
   }
 
   fun rejectCertificationRequest(rejectCertificationRequest: RejectCertificationRequestDto): ApprovalResponse {

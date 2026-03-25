@@ -29,9 +29,5 @@ open class DraftChangeApprovalRequest(
   maxCapacityChange = maxCapacityChange,
 ) {
 
-  override fun updateLocations() {
-    locations = sortedSetOf(location.toCertificationApprovalRequestLocation(includeDraftOrPending = true))
-  }
-
   override fun getApprovalType() = ApprovalType.DRAFT
 }
