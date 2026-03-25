@@ -32,12 +32,14 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
   inner class DeactivateLocationTest {
 
     @Test
-    fun `workingCapacityChange is correctly calculated when some cells are already inactive`() {
+    fun `workingCapacityChange is correctly calculated when some cells are already off cert inactive`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      dummyCertSetup(firstCell)
+
       val now = LocalDateTime.now(clock)
       val proposedReactivationDate = now.plusMonths(1).toLocalDate()
 
       // Get one cell and deactivate it first (without approval)
-      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
       prisonerSearchMockServer.stubSearchByLocations(
         leedsWing.prisonId,
         listOf(firstCell.getPathHierarchy()),
@@ -102,7 +104,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .returnResult().responseBody!!
 
       // Even though one cell was already inactive, the workingCapacityChange should still be -6
-      // because we're reporting the total change from the current working capacity
+      // because we're reporting the total change from the current working capacity from the certificate
       assertThat(pendingApproval.workingCapacityChange).isEqualTo(-6)
     }
 
@@ -347,6 +349,37 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(rejectedDeactivatedLocation.pendingApprovalRequestId).isNull()
       assertThat(rejectedDeactivatedLocation.lastDeactivationReasonForChange).isNull()
     }
+  }
+
+  private fun dummyCertSetup(cell: Cell) {
+    val pendingCell = webTestClient.put().uri("/locations/residential/${cell.id}/cell-mark-change")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          CellMarkChangeRequest(
+            reasonForChange = "The door number is wrong",
+            cellMark = "CM-001",
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<Location>()
+      .returnResult().responseBody!!
+
+    webTestClient.put().uri("/certification/location/approve")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          ApproveCertificationRequestDto(
+            approvalRequestReference = pendingCell.pendingApprovalRequestId!!,
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
   }
 
   @DisplayName("PUT /locations/{id}/reactivate")
