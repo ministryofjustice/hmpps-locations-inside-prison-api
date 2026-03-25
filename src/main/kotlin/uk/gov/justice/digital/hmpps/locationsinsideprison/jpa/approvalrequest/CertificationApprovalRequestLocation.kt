@@ -151,7 +151,7 @@ open class CertificationApprovalRequestLocation(
     return leafLocations
   }
 
-  fun findLocationById(id: UUID): CertificationApprovalRequestLocation? = findSubLocations().find { it.id == id }
+  fun findLocationByPathHierarchy(pathHierarchy: String): CertificationApprovalRequestLocation? = findSubLocations().find { it.pathHierarchy == pathHierarchy }
 
   fun findSubLocations(): List<CertificationApprovalRequestLocation> {
     val subLocations = mutableListOf<CertificationApprovalRequestLocation>()

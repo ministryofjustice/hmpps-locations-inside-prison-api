@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
@@ -252,6 +253,7 @@ data class CellReactivationDetail(
   @param:Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: Set<SpecialistCellType>? = null,
 ) {
+  @JsonIgnore
   fun getSpecialistCellTypesAsCSV(): String? = specialistCellTypes?.takeIf { it.isNotEmpty() }
     ?.joinToString(separator = ",") { it.name }
 }
