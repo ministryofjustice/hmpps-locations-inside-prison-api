@@ -19,6 +19,7 @@ class PrisonConfiguration(
   var certificationApprovalRequired: Boolean = false,
   var whenUpdated: LocalDateTime,
   var updatedBy: String,
+
 ) : Comparable<PrisonConfiguration> {
 
   companion object {
@@ -27,8 +28,6 @@ class PrisonConfiguration(
   }
 
   override fun compareTo(other: PrisonConfiguration) = COMPARATOR.compare(this, other)
-
-  fun isCertificationActive() = certificationApprovalRequired
 
   fun toPrisonConfiguration() = PrisonConfigurationDto(
     prisonId = id,

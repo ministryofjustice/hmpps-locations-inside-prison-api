@@ -825,6 +825,8 @@ data class TemporaryDeactivationLocationRequest(
   val requiresApproval: Boolean = false,
   @param:Schema(description = "Explanation of why the capacity need to be decreased", example = "The cell is damaged and will be take 6 months to repair", required = false)
   val reasonForChange: String? = null,
+  @param:Schema(description = "Skip certificate approval", example = "true", required = false)
+  val forceReactivation: Boolean = false,
 ) {
   fun toBasicDeactivation() = BasicTemporaryDeactivationRequest(
     deactivationReason = deactivationReason,
