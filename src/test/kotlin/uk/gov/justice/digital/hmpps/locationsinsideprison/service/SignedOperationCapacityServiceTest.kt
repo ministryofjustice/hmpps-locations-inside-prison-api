@@ -26,11 +26,13 @@ class SignedOperationCapacityServiceTest {
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository = mock()
   private val linkedTransactionRepository: LinkedTransactionRepository = mock()
   private val prisonConfigurationService: PrisonConfigurationService = mock()
+  private val sharedLocationService: SharedLocationService = mock()
+  private val tx: LinkedTransaction = mock()
   private val telemetryClient: TelemetryClient = mock()
   private val service: SignedOperationCapacityService = SignedOperationCapacityService(
     locationService,
     signedOperationCapacityRepository,
-    linkedTransactionRepository,
+    sharedLocationService,
     prisonConfigurationService,
     telemetryClient,
     clock,
@@ -49,18 +51,6 @@ class SignedOperationCapacityServiceTest {
       ),
     )
   }
-
-  private val residentialSummary = ResidentialSummary(
-    prisonSummary = PrisonSummary(
-      prisonName = "HMP Moorland",
-      signedOperationalCapacity = 0,
-      workingCapacity = 100,
-      maxCapacity = 135,
-      numberOfCellLocations = 100,
-    ),
-    subLocations = emptyList(),
-    topLevelLocationType = "Wing",
-  )
 
   @Test
   fun `Get signed operation capacity for the prison when record found`() {
@@ -104,6 +94,7 @@ class SignedOperationCapacityServiceTest {
     whenever(signedOperationCapacityRepository.findById(any())).thenReturn(Optional.empty())
     whenever(signedOperationCapacityRepository.save(any<SignedOperationCapacity>())).thenReturn(signedOpCapResponse)
     whenever(locationService.calculateMaxCapOfPrison(prisonId = prisonId)).thenReturn(130)
+    whenever(sharedLocationService.createLinkedTransaction(prisonId = any(), type = any(), detail = any(), transactionInvokedBy = any())).thenReturn(tx)
     val result = service.saveSignedOperationalCapacity(request)
     assertThat(result.newRecord).isTrue()
 
@@ -139,6 +130,7 @@ class SignedOperationCapacityServiceTest {
     whenever(signedOperationCapacityRepository.findByPrisonId(any())).thenReturn(existingRecord)
     whenever(signedOperationCapacityRepository.save(any<SignedOperationCapacity>())).thenReturn(signedOperationCapacityResponse)
     whenever(locationService.calculateMaxCapOfPrison(prisonId = prisonId)).thenReturn(130)
+    whenever(sharedLocationService.createLinkedTransaction(prisonId = any(), type = any(), detail = any(), transactionInvokedBy = any())).thenReturn(tx)
 
     service.saveSignedOperationalCapacity(request)
 

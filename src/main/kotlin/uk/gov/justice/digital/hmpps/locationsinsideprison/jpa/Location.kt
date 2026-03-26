@@ -19,7 +19,6 @@ import jakarta.persistence.NamedEntityGraph
 import jakarta.persistence.NamedEntityGraphs
 import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToMany
-import jakarta.xml.bind.ValidationException
 import org.hibernate.Hibernate
 import org.hibernate.annotations.SortNatural
 import org.slf4j.Logger
@@ -80,7 +79,6 @@ val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
             NamedAttributeNode("usedFor"),
             NamedAttributeNode("specialistCellTypes"),
             NamedAttributeNode("attributes"),
-            NamedAttributeNode("pendingChange"),
           ],
         ),
       ],
@@ -306,7 +304,7 @@ abstract class Location(
 
   private fun getActiveResidentialLocationsBelowThisLevel() = getResidentialLocationsBelowThisLevel().filter { it.isActiveAndAllParentsActive() }
 
-  fun getResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>()
+  fun getResidentialLocationsBelowThisLevel() = childLocations.filterIsInstance<ResidentialLocation>().filter { !it.isPermanentlyDeactivated() }
 
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>().filter { !it.isPermanentlyDeactivated() }
 
@@ -497,7 +495,7 @@ abstract class Location(
 
   open fun isLeafLevel() = findSubLocations().isEmpty()
 
-  protected fun isInHierarchy(locationToFind: Location): Boolean {
+  fun isInHierarchy(locationToFind: Location): Boolean {
     // Walk up the hierarchy of the location to find
     var current: Location? = this
     while (current != null) {
@@ -722,9 +720,6 @@ abstract class Location(
     var dataChanged = false
 
     if (!isPermanentlyDeactivated()) {
-      if (hasPendingCertificationApproval()) {
-        throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
-      }
       val amendedDate = deactivatedDate
 
       if (addHistory(
@@ -784,11 +779,6 @@ abstract class Location(
         dataChanged = true
       }
 
-      val workingCapacityChange = if (this is ResidentialLocation) {
-        getWorkingCapacityIgnoringInactiveStatus()
-      } else {
-        0
-      }
       if (isActive() || isDraft()) {
         this.status = LocationStatus.INACTIVE
         this.deactivatedDate = deactivatedDate
@@ -823,22 +813,6 @@ abstract class Location(
               dataChanged = true
             }
           }
-        }
-
-        if (requestApproval) {
-          if (reasonForChange == null) {
-            throw ValidationException("Reason for change must be provided when requesting approval for deactivation")
-          }
-          requestApprovalForDeactivation(
-            requestedDate = deactivatedDate,
-            requestedBy = userOrSystemInContext,
-            workingCapacityChange = -workingCapacityChange,
-            reasonForChange = reasonForChange,
-            deactivatedReason = deactivatedReason,
-            deactivationReasonDescription = deactivationReasonDescription,
-            proposedReactivationDate = proposedReactivationDate,
-            planetFmReference = planetFmReference,
-          )
         }
       }
     }
@@ -991,21 +965,17 @@ abstract class Location(
     userOrSystemInContext: String,
     clock: Clock,
     linkedTransaction: LinkedTransaction,
-    locationsReactivated: MutableSet<Location>? = null,
     maxCapacity: Int? = null,
     workingCapacity: Int? = null,
     certifiedNormalAccommodation: Int? = null,
+    specialistCellTypes: Set<SpecialistCellType>? = null,
     reactivatedLocations: MutableSet<Location>? = null,
     amendedLocations: MutableSet<Location>? = null,
   ): Boolean {
-    if (hasPendingCertificationApproval()) {
-      throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
-    }
     this.getParent()?.reactivate(
       userOrSystemInContext = userOrSystemInContext,
       clock = clock,
       linkedTransaction = linkedTransaction,
-      locationsReactivated = locationsReactivated,
       reactivatedLocations = reactivatedLocations,
       amendedLocations = amendedLocations,
     )
@@ -1014,19 +984,23 @@ abstract class Location(
     } else {
       null
     }
-    val amendedDate = LocalDateTime.now(clock)
-    val capacityAdjusted = maxCapacity != null || workingCapacity != null
+
+    val capacityAdjusted = maxCapacity != null || workingCapacity != null || certifiedNormalAccommodation != null
     if (this is Cell && capacityAdjusted) {
       setCapacity(
-        maxCapacity = maxCapacity ?: getMaxCapacity(includePendingChange = true) ?: 0,
+        maxCapacity = maxCapacity ?: getMaxCapacity(includePending = true) ?: 0,
         workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
         certifiedNormalAccommodation = certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
         userOrSystemInContext = userOrSystemInContext,
-        amendedDate = amendedDate,
+        amendedDate = linkedTransaction.txStartTime,
         linkedTransaction = linkedTransaction,
       )
       amendedLocations?.add(this)
       amendedLocations?.addAll(this.getParentLocations())
+    }
+
+    if (this is Cell && specialistCellTypes != null) {
+      updateSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction)
     }
 
     if (isTemporarilyDeactivated()) {
@@ -1035,7 +1009,7 @@ abstract class Location(
         this.getDerivedStatus().description,
         LocationStatus.ACTIVE.description,
         userOrSystemInContext,
-        amendedDate,
+        linkedTransaction.txStartTime,
         linkedTransaction,
       )
       addHistory(
@@ -1043,7 +1017,7 @@ abstract class Location(
         proposedReactivationDate?.format(DATE_FORMAT),
         null,
         userOrSystemInContext,
-        amendedDate,
+        linkedTransaction.txStartTime,
         linkedTransaction,
       )
       addHistory(
@@ -1051,7 +1025,7 @@ abstract class Location(
         planetFmReference,
         null,
         userOrSystemInContext,
-        amendedDate,
+        linkedTransaction.txStartTime,
         linkedTransaction,
       )
 
@@ -1062,13 +1036,13 @@ abstract class Location(
       this.planetFmReference = null
       this.proposedReactivationDate = null
       this.updatedBy = userOrSystemInContext
-      this.whenUpdated = amendedDate
+      this.whenUpdated = linkedTransaction.txStartTime
       this.deactivatedBy = null
 
       if (this is Cell && !isConvertedCell()) {
         certifyCell(
           cellUpdatedBy = userOrSystemInContext,
-          updatedDate = amendedDate,
+          updatedDate = linkedTransaction.txStartTime,
           linkedTransaction = linkedTransaction,
         )
         this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()

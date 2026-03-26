@@ -19,11 +19,11 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
@@ -749,12 +749,10 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
               "key": "${mWing.getKey()}",
               "capacity": {
                 "maxCapacity": 12,
-                "workingCapacity": 0
+                "workingCapacity": 0,
+                "certifiedNormalAccommodation": 6
               },
-              "certification": {
-                "certifiedNormalAccommodation": 6,
-                "certified": true
-              },
+              "certifiedCell":true,
               "status": "INACTIVE",
               "childLocations": [
                 {

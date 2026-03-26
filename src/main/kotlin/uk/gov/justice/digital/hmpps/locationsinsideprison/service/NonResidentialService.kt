@@ -99,10 +99,18 @@ class NonResidentialService(
     }
   }
 
-  fun findByPrisonIdAndLocalName(prisonId: String, localName: String) = nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId, localName)
-    .filter { !it.isPermanentlyDeactivated() }
-    .map { it.toDto() }
-    .firstOrNull() ?: throw LocationNotFoundException("No location found with prisonId $prisonId and localName $localName")
+  fun findByPrisonIdAndLocalName(prisonId: String, localName: String): List<LocationDTO> {
+    val locations = nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId, localName)
+    val activeLocations = locations
+      .filter { !it.isPermanentlyDeactivated() }
+      .map { it.toDto() }
+
+    if (activeLocations.isEmpty()) {
+      val errorMessage = "No location found with prisonId $prisonId and localName $localName"
+      throw LocationNotFoundException(errorMessage)
+    }
+    return activeLocations
+  }
 
   fun getByPrisonAndUsageType(
     prisonId: String,
@@ -257,9 +265,13 @@ class NonResidentialService(
     if (nonResLocation.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(nonResLocation.getKey())
     }
-    if (updateRequest.localName != null && nonResLocation.localName != updateRequest.localName) {
-      validateLocalNameNotDuplicated(nonResLocation.prisonId, updateRequest.localName, nonResLocation.id!!)
+
+    updateRequest.localName?.let { localName ->
+      if (localName.lowercase() != nonResLocation.localName?.lowercase()) {
+        validateLocalNameNotDuplicated(nonResLocation.prisonId, localName, nonResLocation.id!!)
+      }
     }
+
     val linkedTransaction = commonLocationService.createLinkedTransaction(
       prisonId = nonResLocation.prisonId,
       TransactionType.LOCATION_UPDATE_NON_RESI,
@@ -320,17 +332,9 @@ class NonResidentialService(
     return true
   }
 
-  private fun validateLocalNameNotDuplicated(prisonId: String, localName: String) {
+  private fun validateLocalNameNotDuplicated(prisonId: String, localName: String, locationId: UUID? = null) {
     if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
-        .any { !it.isPermanentlyDeactivated() }
-    ) {
-      throw DuplicateNonResidentialLocalNameInPrisonException(prisonId = prisonId, localName = localName)
-    }
-  }
-
-  private fun validateLocalNameNotDuplicated(prisonId: String, localName: String, locationId: UUID) {
-    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
-        .any { !it.isPermanentlyDeactivated() && it.id != locationId }
+        .any { !it.isPermanentlyDeactivated() && (locationId == null || it.id != locationId) }
     ) {
       throw DuplicateNonResidentialLocalNameInPrisonException(prisonId = prisonId, localName = localName)
     }

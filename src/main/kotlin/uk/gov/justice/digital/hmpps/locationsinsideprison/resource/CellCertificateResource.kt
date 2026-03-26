@@ -9,14 +9,19 @@ import io.swagger.v3.oas.annotations.tags.Tag
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Pattern
 import jakarta.validation.constraints.Size
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
+import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalDecisionService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CellCertificateService
 import java.util.UUID
 
@@ -27,6 +32,7 @@ import java.util.UUID
 @PreAuthorize("hasRole('ROLE_LOCATION_CERTIFICATION')")
 class CellCertificateResource(
   private val cellCertificateService: CellCertificateService,
+  private val approvalDecisionService: ApprovalDecisionService,
 ) {
 
   @GetMapping("/{id}")
@@ -85,12 +91,11 @@ class CellCertificateResource(
     ],
   )
   fun getCellCertificatesForPrison(
-    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
     @NotBlank(message = "Prison ID cannot be blank")
     @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
     @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
-    @PathVariable("prisonId")
     prisonId: String,
   ): List<CellCertificateDto> = cellCertificateService.getCellCertificatesForPrison(prisonId)
 
@@ -122,12 +127,49 @@ class CellCertificateResource(
     ],
   )
   fun getCurrentCellCertificateForPrison(
-    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @PathVariable @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
     @NotBlank(message = "Prison ID cannot be blank")
     @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
     @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
-    @PathVariable("prisonId")
     prisonId: String,
   ): CellCertificateDto = cellCertificateService.getCurrentCellCertificateForPrison(prisonId)
+
+  @PostMapping("/prison/{prisonId}/baseline")
+  @ResponseStatus(HttpStatus.CREATED)
+  @PreAuthorize("hasRole('ROLE_LOCATION_CERTIFICATION') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Baselines a certificate for a prison based on the current location setup",
+    description = "Requires LOCATION_CERTIFICATION role and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "201",
+        description = "Cell certificate generated - prison base-lined",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = CertificationApprovalRequestDto::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json")],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CERTIFICATION role and write scope",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "No prison found",
+        content = [Content(mediaType = "application/json")],
+      ),
+    ],
+  )
+  fun baselineCellCertificateForPrison(
+    @PathVariable @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
+    @NotBlank(message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
+    prisonId: String,
+  ): CertificationApprovalRequestDto = approvalDecisionService.baselinePrisonCertificate(prisonId)
 }

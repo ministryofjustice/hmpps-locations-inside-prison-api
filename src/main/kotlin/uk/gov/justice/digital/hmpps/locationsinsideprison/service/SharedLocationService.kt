@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlrea
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivationDetail
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService.Companion.log
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
@@ -128,6 +129,38 @@ class SharedLocationService(
       }
     }
     return UpdatedSummary(codeChanged = codeChanged, oldParent = oldParent, parentChanged = parentChanged)
+  }
+
+  fun reactivate(
+    locationToReactivate: Location,
+    locationsReactivated: MutableSet<Location>,
+    amendedLocations: MutableSet<Location>,
+    reactivationDetail: ReactivationDetail,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    locationToReactivate.reactivate(
+      userOrSystemInContext = getUsername(),
+      clock = clock,
+      reactivatedLocations = locationsReactivated,
+      amendedLocations = amendedLocations,
+      maxCapacity = reactivationDetail.capacity?.maxCapacity,
+      workingCapacity = reactivationDetail.capacity?.workingCapacity,
+      certifiedNormalAccommodation = reactivationDetail.capacity?.certifiedNormalAccommodation,
+      specialistCellTypes = reactivationDetail.specialistCellTypes,
+      linkedTransaction = linkedTransaction,
+    )
+
+    if (reactivationDetail.cascadeReactivation) {
+      locationToReactivate.findSubLocations().forEach { location ->
+        location.reactivate(
+          userOrSystemInContext = getUsername(),
+          clock = clock,
+          reactivatedLocations = locationsReactivated,
+          amendedLocations = amendedLocations,
+          linkedTransaction = linkedTransaction,
+        )
+      }
+    }
   }
 
   fun checkParentValid(
