@@ -22,6 +22,7 @@ class PrisonConfigurationService(
   private val activePrisonService: ActivePrisonService,
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val authenticationHolder: HmppsAuthenticationHolder,
+  private val approvalDecisionService: ApprovalDecisionService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
 ) {
@@ -124,6 +125,10 @@ class PrisonConfigurationService(
         null,
       )
       log.info("Updated certification approval status [$tx]")
+
+      if (approvalActive) {
+        approvalDecisionService.baselinePrisonCertificate(prisonId)
+      }
       tx.txEndTime = LocalDateTime.now(clock)
     } else {
       log.warn("No change applied approval process, service already is $certificationApprovalProcessStatus")

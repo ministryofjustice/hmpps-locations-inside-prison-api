@@ -177,4 +177,5 @@ enum class ApprovalType(
   CELL_SANITATION(true),
   REACTIVATION,
   CAPACITY_CHANGE(true),
+  PRISON_BASELINE,
 }

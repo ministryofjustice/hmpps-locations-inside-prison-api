@@ -30,13 +30,13 @@ abstract class LocationCertificationApprovalRequest(
   private val locationKey: String,
 
   @Column(nullable = false)
-  var certifiedNormalAccommodationChange: Int = 0,
+  open var certifiedNormalAccommodationChange: Int = 0,
 
   @Column(nullable = false)
-  var workingCapacityChange: Int = 0,
+  open var workingCapacityChange: Int = 0,
 
   @Column(nullable = false)
-  var maxCapacityChange: Int = 0,
+  open var maxCapacityChange: Int = 0,
 
   @SortNatural
   @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)

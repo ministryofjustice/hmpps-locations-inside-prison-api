@@ -76,7 +76,6 @@ class LocationServiceTest {
     telemetryClient,
     locationGroupFromPropertiesService,
     activePrisonService,
-    prisonConfigurationRepository,
     groupsProperties,
   )
 

@@ -16,7 +16,7 @@ open class SanitationChangeApprovalRequest(
   requestedDate: LocalDateTime,
   reasonForChange: String? = null,
 
-  var inCellSanitation: Boolean,
+  open var inCellSanitation: Boolean,
 
   @Column(nullable = true)
   private var currentInCellSanitation: Boolean? = null,

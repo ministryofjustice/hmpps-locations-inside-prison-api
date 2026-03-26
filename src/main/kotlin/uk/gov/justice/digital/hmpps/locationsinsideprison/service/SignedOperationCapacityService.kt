@@ -7,10 +7,8 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityValidRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
@@ -23,7 +21,7 @@ import java.time.LocalDateTime
 class SignedOperationCapacityService(
   private val locationService: LocationService,
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
-  private val linkedTransactionRepository: LinkedTransactionRepository,
+  private val sharedLocationService: SharedLocationService,
   private val prisonConfigurationService: PrisonConfigurationService,
   private val telemetryClient: TelemetryClient,
   private val clock: Clock,
@@ -43,7 +41,7 @@ class SignedOperationCapacityService(
 
     var newRecord = true
 
-    val tx = createLinkedTransaction(prisonId = request.prisonId, TransactionType.SIGNED_OP_CAP, "Signed op cap for prison ${request.prisonId} set to ${request.signedOperationCapacity}", request.updatedBy)
+    val tx = sharedLocationService.createLinkedTransaction(prisonId = request.prisonId, type = TransactionType.SIGNED_OP_CAP, detail = "Signed op cap for prison ${request.prisonId} set to ${request.signedOperationCapacity}", transactionInvokedBy = request.updatedBy)
 
     validateSignedOpCap(request.prisonId, request.signedOperationCapacity)
     val record =
@@ -88,19 +86,6 @@ class SignedOperationCapacityService(
         "Signed operational capacity cannot be more than the establishment's maximum capacity of $maxCap",
         ErrorCode.SignedOpCapCannotBeMoreThanMaxCap,
       )
-    }
-  }
-
-  private fun createLinkedTransaction(prisonId: String, type: TransactionType, detail: String, transactionInvokedBy: String): LinkedTransaction {
-    val linkedTransaction = LinkedTransaction(
-      prisonId = prisonId,
-      transactionType = type,
-      transactionDetail = detail,
-      transactionInvokedBy = transactionInvokedBy,
-      txStartTime = LocalDateTime.now(clock),
-    )
-    return linkedTransactionRepository.save(linkedTransaction).also {
-      LocationService.log.info("Created linked transaction: $it")
     }
   }
 }
