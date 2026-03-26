@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
+package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 
 import jakarta.persistence.Column
 import jakarta.persistence.DiscriminatorColumn
@@ -15,7 +15,9 @@ import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.Table
 import org.hibernate.Hibernate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
+import java.time.Clock
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -132,7 +134,12 @@ abstract class CertificationApprovalRequest(
     certificateId = cellCertificateId,
   )
 
-  open fun approve(approvedBy: String, approvedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
+  open fun approve(
+    approvedBy: String,
+    approvedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+    clock: Clock,
+  ) {
     this.status = ApprovalRequestStatus.APPROVED
     this.approvedOrRejectedBy = approvedBy
     this.approvedOrRejectedDate = approvedDate
@@ -160,12 +167,15 @@ enum class ApprovalRequestStatus {
   WITHDRAWN,
 }
 
-enum class ApprovalType {
+enum class ApprovalType(
+  val hasPendingValues: Boolean = false,
+) {
   SIGNED_OP_CAP,
-  DRAFT,
+  DRAFT(true),
   DEACTIVATION,
-  CELL_MARK,
-  CELL_SANITATION,
+  CELL_MARK(true),
+  CELL_SANITATION(true),
   REACTIVATION,
-  CAPACITY_CHANGE,
+  CAPACITY_CHANGE(true),
+  PRISON_BASELINE,
 }

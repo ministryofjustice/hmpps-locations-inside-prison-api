@@ -5,35 +5,42 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApprovalResponse
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationCertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.PrisonBaselineApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotInPendingStatusException
-import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivationDetail
 import java.time.Clock
 import java.time.LocalDateTime
-import java.util.*
-
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 @Service
 @Transactional
 class ApprovalDecisionService(
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val certificationApprovalRequestRepository: CertificationApprovalRequestRepository,
-  private val linkedTransactionRepository: LinkedTransactionRepository,
   private val cellCertificateService: CellCertificateService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
-  private val authenticationHolder: HmppsAuthenticationHolder,
+  private val residentialLocationRepository: ResidentialLocationRepository,
+  private val sharedLocationService: SharedLocationService,
+  private val activePrisonService: ActivePrisonService,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -47,23 +54,30 @@ class ApprovalDecisionService(
       throw ApprovalRequestNotInPendingStatusException(approveCertificationRequest.approvalRequestReference)
     }
 
-    val username = getUsername()
+    val username = sharedLocationService.getUsername()
     val now = LocalDateTime.now(clock)
-    val transactionInvokedBy = getUsername()
+    val transactionInvokedBy = sharedLocationService.getUsername()
     val approvedLocation = (approvalRequest as? LocationCertificationApprovalRequest)?.location
     val wasDraft = approvedLocation?.isDraft() ?: false
 
-    val linkedTransaction = createLinkedTransaction(
-      transactionType = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
       prisonId = approvalRequest.prisonId,
       detail = "Approval for approval request ${approveCertificationRequest.approvalRequestReference} for ${approvalRequest.prisonId} " + if (approvedLocation != null) "at ${approvedLocation.getKey()}" else "",
-      now = now,
       transactionInvokedBy = transactionInvokedBy,
     )
+
+    val events = if (approvalRequest is ReactivationApprovalRequest) {
+      handleReactivation(approvalRequest, linkedTransaction)
+    } else {
+      null
+    }
+
     approvalRequest.approve(
       approvedBy = username,
       approvedDate = now,
       linkedTransaction = linkedTransaction,
+      clock = clock,
     )
 
     // Create the cell certificate
@@ -101,8 +115,57 @@ class ApprovalDecisionService(
       approvalRequest = approvalRequest.toDto(cellCertificateId = cellCertificate.id),
       prisonId = approvalRequest.prisonId,
       newLocation = wasDraft,
-      location = approvedLocation?.toDto(includeChildren = true, includeParent = true),
+      location = if (events != null) null else approvedLocation?.toDto(includeChildren = true, includeParent = true),
+      events = events,
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
+  }
+
+  private fun handleReactivation(
+    approvalRequest: ReactivationApprovalRequest,
+    linkedTransaction: LinkedTransaction,
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+    val locationsReactivated = mutableSetOf<Location>()
+    val amendedLocations = mutableSetOf<Location>()
+
+    approvalRequest.getTopLevelLocation()?.findAllLeafLocations()?.forEach { approvalChangeLocation ->
+      val locationToReactivate = residentialLocationRepository.findOneByPrisonIdAndPathHierarchy(
+        approvalRequest.prisonId,
+        approvalChangeLocation.pathHierarchy,
+      ) ?: throw LocationNotFoundException(
+        "Location not found for prison ${approvalRequest.prisonId} and path hierarchy ${approvalChangeLocation.pathHierarchy}",
+      )
+
+      buildReactivationDetail(approvalChangeLocation)?.let { reactivationDetail ->
+        sharedLocationService.reactivate(
+          locationToReactivate = locationToReactivate,
+          locationsReactivated = locationsReactivated,
+          amendedLocations = amendedLocations,
+          reactivationDetail = reactivationDetail,
+          linkedTransaction = linkedTransaction,
+        )
+      }
+    }
+
+    locationsReactivated.forEach { sharedLocationService.trackLocationUpdate(it, "Re-activated Location") }
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to amendedLocations.map { it.toDto() }.toList(),
+      InternalLocationDomainEventType.LOCATION_REACTIVATED to locationsReactivated.map { it.toDto() }.toList(),
+    )
+  }
+
+  private fun buildReactivationDetail(
+    approvalChangeLocation: CertificationApprovalRequestLocation,
+  ): ReactivationDetail? = if (approvalChangeLocation.reactivateThisLocation) {
+    ReactivationDetail(
+      specialistCellTypes = approvalChangeLocation.getSpecialistCellTypesFromList()?.toSet(),
+      capacity = Capacity(
+        maxCapacity = approvalChangeLocation.maxCapacity ?: 0,
+        workingCapacity = approvalChangeLocation.workingCapacity ?: 0,
+        certifiedNormalAccommodation = approvalChangeLocation.certifiedNormalAccommodation,
+      ),
+    )
+  } else {
+    null
   }
 
   fun rejectCertificationRequest(rejectCertificationRequest: RejectCertificationRequestDto): ApprovalResponse {
@@ -114,14 +177,13 @@ class ApprovalDecisionService(
     }
 
     val now = LocalDateTime.now(clock)
-    val transactionInvokedBy = getUsername()
+    val transactionInvokedBy = sharedLocationService.getUsername()
     val location = (approvalRequest as? LocationCertificationApprovalRequest)?.location
 
-    val linkedTransaction = createLinkedTransaction(
-      transactionType = TransactionType.REJECT_CERTIFICATION_REQUEST,
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      type = TransactionType.REJECT_CERTIFICATION_REQUEST,
       prisonId = approvalRequest.prisonId,
       detail = "Rejection of approval request ${rejectCertificationRequest.approvalRequestReference} for ${approvalRequest.prisonId} " + if (location != null) "at ${location.getKey()}" else "",
-      now = now,
       transactionInvokedBy = transactionInvokedBy,
     )
     val newLocation = location?.isDraft() ?: false
@@ -154,8 +216,8 @@ class ApprovalDecisionService(
     )
     return ApprovalResponse(
       approvalRequest = approvalRequest.toDto(),
-      prisonId = approvalRequest.prisonId,
       newLocation = newLocation,
+      prisonId = approvalRequest.prisonId,
       location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
@@ -170,14 +232,13 @@ class ApprovalDecisionService(
 
     val now = LocalDateTime.now(clock)
     val location = (approvalRequest as? LocationCertificationApprovalRequest)?.location
-    val transactionInvokedBy = getUsername()
+    val transactionInvokedBy = sharedLocationService.getUsername()
     val newLocation = location?.isDraft() ?: false
 
-    val linkedTransaction = createLinkedTransaction(
-      transactionType = TransactionType.WITHDRAW_CERTIFICATION_REQUEST,
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      type = TransactionType.WITHDRAW_CERTIFICATION_REQUEST,
       prisonId = approvalRequest.prisonId,
       detail = "Withdrawal of approval request ${withdrawCertificationRequest.approvalRequestReference} for ${approvalRequest.prisonId} " + if (location != null) "at ${location.getKey()}" else "",
-      now = now,
       transactionInvokedBy = transactionInvokedBy,
     )
 
@@ -211,27 +272,35 @@ class ApprovalDecisionService(
 
     return ApprovalResponse(
       approvalRequest = approvalRequest.toDto(),
-      prisonId = approvalRequest.prisonId,
       newLocation = newLocation,
+      prisonId = approvalRequest.prisonId,
       location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
 
-  private fun createLinkedTransaction(
-    transactionType: TransactionType,
-    prisonId: String,
-    detail: String,
-    now: LocalDateTime,
-    transactionInvokedBy: String,
-  ): LinkedTransaction = linkedTransactionRepository.save(
-    LinkedTransaction(
-      prisonId = prisonId,
-      transactionType = transactionType,
-      transactionDetail = detail,
-      transactionInvokedBy = transactionInvokedBy,
-      txStartTime = now,
-    ),
-  )
+  @Transactional
+  fun baselinePrisonCertificate(prisonId: String): CertificationApprovalRequestDto {
+    val approvalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
+    if (!approvalRequired) {
+      throw LocationDoesNotRequireApprovalException("Certification approval not required for prison $prisonId")
+    }
 
-  private fun getUsername() = authenticationHolder.username ?: SYSTEM_USERNAME
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      type = TransactionType.CERTIFICATE_BASELINE,
+      prisonId = prisonId,
+      detail = "Baseline certificate for prison $prisonId",
+    )
+
+    val baselineRequest = certificationApprovalRequestRepository.save(
+      PrisonBaselineApprovalRequest(
+        prisonId = prisonId,
+        requestedBy = linkedTransaction.transactionInvokedBy,
+        requestedDate = linkedTransaction.txStartTime,
+        reasonForChange = "Baseline certificate for prison $prisonId",
+      ),
+    )
+
+    return approveCertificationRequest(ApproveCertificationRequestDto(baselineRequest.id!!)).approvalRequest
+      .also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
+  }
 }

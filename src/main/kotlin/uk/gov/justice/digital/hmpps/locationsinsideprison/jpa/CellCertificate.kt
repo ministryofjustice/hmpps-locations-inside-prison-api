@@ -18,6 +18,7 @@ import org.hibernate.Hibernate
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateLocationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
 import java.util.SortedSet

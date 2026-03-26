@@ -104,7 +104,7 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
     cellCertificateId = certificate!!.id!!
 
     // activate the wing
-    webTestClient.put().uri("/locations/${mWing.id}/reactivate?cascade-reactivation=true")
+    webTestClient.put().uri("/locations/${mWing.id}/reactivate?cascade-reactivation=true&force-reactivation=true")
       .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
       .header("Content-Type", "application/json")
       .exchange()
