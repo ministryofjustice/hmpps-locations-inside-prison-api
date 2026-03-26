@@ -108,6 +108,10 @@ class ApprovalRequestService(
       throw ValidationException("Cannot specify both cascadeReactivation and cellReactivationChanges")
     }
 
+    if (topLevelLocation.hasPendingCertificationApproval()) {
+      throw PendingApprovalAlreadyExistsException(topLevelLocation.getKey())
+    }
+
     val approvalRequest = ReactivationApprovalRequest(
       location = topLevelLocation,
       requestedBy = linkedTransaction.transactionInvokedBy,
@@ -138,15 +142,11 @@ class ApprovalRequestService(
         throw LocationCannotBeReactivatedException("Location [${cellToUpdate.getKey()}] permanently deactivated")
       }
 
-      if (cellToUpdate.hasPendingCertificationApproval()) {
-        throw PendingApprovalAlreadyExistsException(cellToUpdate.getKey())
-      }
-
       if (!cellToUpdate.isInHierarchy(topLevelLocation)) {
         throw ValidationException("Location [${cellToUpdate.getKey()}] is not a child of location [${topLevelLocation.getKey()}]")
       }
 
-      locationHierarchy.findLocationById(cellToUpdate.id!!)?.let { approvalCell ->
+      locationHierarchy.findLocationByPathHierarchy(cellToUpdate.getPathHierarchy())?.let { approvalCell ->
         approvalCell.reactivateThisLocation = true
         details.capacity?.let {
           approvalCell.workingCapacity = it.workingCapacity
