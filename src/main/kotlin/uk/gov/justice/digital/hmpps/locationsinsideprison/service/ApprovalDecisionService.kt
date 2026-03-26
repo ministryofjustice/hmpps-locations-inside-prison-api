@@ -58,11 +58,10 @@ class ApprovalDecisionService(
     val approvedLocation = (approvalRequest as? LocationCertificationApprovalRequest)?.location
     val wasDraft = approvedLocation?.isDraft() ?: false
 
-    val linkedTransaction = createLinkedTransaction(
-      transactionType = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
       prisonId = approvalRequest.prisonId,
       detail = "Approval for approval request ${approveCertificationRequest.approvalRequestReference} for ${approvalRequest.prisonId} " + if (approvedLocation != null) "at ${approvedLocation.getKey()}" else "",
-      now = now,
       transactionInvokedBy = transactionInvokedBy,
     )
 
@@ -179,11 +178,10 @@ class ApprovalDecisionService(
     val transactionInvokedBy = sharedLocationService.getUsername()
     val location = (approvalRequest as? LocationCertificationApprovalRequest)?.location
 
-    val linkedTransaction = createLinkedTransaction(
-      transactionType = TransactionType.REJECT_CERTIFICATION_REQUEST,
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      type = TransactionType.REJECT_CERTIFICATION_REQUEST,
       prisonId = approvalRequest.prisonId,
       detail = "Rejection of approval request ${rejectCertificationRequest.approvalRequestReference} for ${approvalRequest.prisonId} " + if (location != null) "at ${location.getKey()}" else "",
-      now = now,
       transactionInvokedBy = transactionInvokedBy,
     )
     val newLocation = location?.isDraft() ?: false
@@ -235,11 +233,10 @@ class ApprovalDecisionService(
     val transactionInvokedBy = sharedLocationService.getUsername()
     val newLocation = location?.isDraft() ?: false
 
-    val linkedTransaction = createLinkedTransaction(
-      transactionType = TransactionType.WITHDRAW_CERTIFICATION_REQUEST,
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      type = TransactionType.WITHDRAW_CERTIFICATION_REQUEST,
       prisonId = approvalRequest.prisonId,
       detail = "Withdrawal of approval request ${withdrawCertificationRequest.approvalRequestReference} for ${approvalRequest.prisonId} " + if (location != null) "at ${location.getKey()}" else "",
-      now = now,
       transactionInvokedBy = transactionInvokedBy,
     )
 
@@ -278,20 +275,4 @@ class ApprovalDecisionService(
       location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
-
-  private fun createLinkedTransaction(
-    transactionType: TransactionType,
-    prisonId: String,
-    detail: String,
-    now: LocalDateTime,
-    transactionInvokedBy: String,
-  ): LinkedTransaction = linkedTransactionRepository.save(
-    LinkedTransaction(
-      prisonId = prisonId,
-      transactionType = transactionType,
-      transactionDetail = detail,
-      transactionInvokedBy = transactionInvokedBy,
-      txStartTime = now,
-    ),
-  )
 }

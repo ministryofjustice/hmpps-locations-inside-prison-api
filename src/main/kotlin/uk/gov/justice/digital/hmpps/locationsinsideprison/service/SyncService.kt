@@ -16,7 +16,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
@@ -30,7 +29,7 @@ import kotlin.jvm.optionals.getOrNull
 @Transactional
 class SyncService(
   private val locationRepository: LocationRepository,
-  private val linkedTransactionRepository: LinkedTransactionRepository,
+  private val sharedLocationService: SharedLocationService,
   private val entityManager: EntityManager,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
@@ -82,7 +81,7 @@ class SyncService(
       TransactionType.SYNC
     }
 
-    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, txType, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()}] in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(prisonId = upsert.prisonId, txType, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()}] in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
 
     locationToUpdate = handleChangeOfType(id, locationToUpdate, upsert, linkedTransaction)
 
@@ -144,7 +143,7 @@ class SyncService(
   }
 
   private fun createLocation(upsert: NomisSyncLocationRequest): LegacyLocation {
-    val linkedTransaction = createLinkedTransaction(prisonId = upsert.prisonId, if (upsert.residentialHousingType != null) TransactionType.SYNC_NON_RESIDENTIAL else TransactionType.SYNC, "<pending>", upsert.lastUpdatedBy)
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(prisonId = upsert.prisonId, if (upsert.residentialHousingType != null) TransactionType.SYNC_NON_RESIDENTIAL else TransactionType.SYNC, "<pending>", upsert.lastUpdatedBy)
 
     val locationToCreate = upsert.toNewEntity(clock, linkedTransaction)
     findParent(upsert)?.let { locationToCreate.setParent(it) }
@@ -168,7 +167,7 @@ class SyncService(
       throw ValidationException("Cannot delete location with sub-locations")
     }
 
-    val tx = createLinkedTransaction(prisonId = it.prisonId, TransactionType.DELETE, "NOMIS Sync (Delete) [${it.getPathHierarchy()}] in prison ${it.prisonId}", "NOMIS")
+    val tx = sharedLocationService.createLinkedTransaction(prisonId = it.prisonId, TransactionType.DELETE, "NOMIS Sync (Delete) [${it.getPathHierarchy()}] in prison ${it.prisonId}", "NOMIS")
 
     locationRepository.deleteLocationById(id)
     log.info("Deleted Location: $id (${it.getKey()})")
@@ -184,17 +183,4 @@ class SyncService(
     tx.txEndTime = LocalDateTime.now(clock)
   }?.toLegacyDto()
     ?: throw LocationNotFoundException(id.toString())
-
-  private fun createLinkedTransaction(prisonId: String, type: TransactionType, detail: String, transactionInvokedBy: String): LinkedTransaction {
-    val linkedTransaction = LinkedTransaction(
-      prisonId = prisonId,
-      transactionType = type,
-      transactionDetail = detail,
-      transactionInvokedBy = transactionInvokedBy,
-      txStartTime = LocalDateTime.now(clock),
-    )
-    return linkedTransactionRepository.save(linkedTransaction).also {
-      LocationService.log.info("Created linked transaction: $it")
-    }
-  }
 }

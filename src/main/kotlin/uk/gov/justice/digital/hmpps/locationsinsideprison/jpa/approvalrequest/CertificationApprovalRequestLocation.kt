@@ -41,25 +41,25 @@ open class CertificationApprovalRequestLocation(
   open val pathHierarchy: String,
 
   @Column(nullable = false)
-  val level: Int,
+  open val level: Int,
 
   @Column(nullable = true)
-  var currentCertifiedNormalAccommodation: Int? = null,
+  open var currentCertifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
-  var certifiedNormalAccommodation: Int? = null,
+  open var certifiedNormalAccommodation: Int? = null,
 
   @Column(nullable = true)
-  var currentWorkingCapacity: Int? = null,
+  open var currentWorkingCapacity: Int? = null,
 
   @Column(nullable = true)
-  var workingCapacity: Int? = null,
+  open var workingCapacity: Int? = null,
 
   @Column(nullable = true)
-  var currentMaxCapacity: Int? = null,
+  open var currentMaxCapacity: Int? = null,
 
   @Column(nullable = true)
-  var maxCapacity: Int? = null,
+  open var maxCapacity: Int? = null,
 
   @Column(nullable = true)
   private val inCellSanitation: Boolean? = null,
@@ -68,7 +68,7 @@ open class CertificationApprovalRequestLocation(
   @Enumerated(EnumType.STRING)
   private val locationType: LocationType,
 
-  var specialistCellTypes: String? = null,
+  open var specialistCellTypes: String? = null,
 
   private val usedForTypes: String? = null,
 
@@ -84,7 +84,7 @@ open class CertificationApprovalRequestLocation(
   private val subLocations: SortedSet<CertificationApprovalRequestLocation> = sortedSetOf(),
 
   @Column(nullable = false)
-  var reactivateThisLocation: Boolean = false,
+  open var reactivateThisLocation: Boolean = false,
 
 ) : Comparable<CertificationApprovalRequestLocation> {
 
