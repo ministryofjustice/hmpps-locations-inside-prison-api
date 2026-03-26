@@ -36,7 +36,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     @Test
     fun `workingCapacityChange is correctly calculated when some cells are already off cert inactive`() {
       val firstCell = leedsWing.findAllLeafLocations().first() as Cell
-      dummyCertSetup(firstCell)
+      baselinePrison(leedsWing.prisonId)
 
       val now = LocalDateTime.now(clock)
       val proposedReactivationDate = now.plusMonths(1).toLocalDate()
@@ -161,7 +161,6 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .returnResult().responseBody!!
 
       assertThat(firstApprovedDeactivatedCell.status).isEqualTo(DerivedLocationStatus.LOCKED_INACTIVE)
-      assertThat(firstApprovedDeactivatedCell.currentCellCertificate).isNull()
 
       val pendingApprovalRequestId = deactivatedLocation.pendingApprovalRequestId!!
 
@@ -917,34 +916,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     }
   }
 
-  private fun dummyCertSetup(cell: Cell) {
-    val pendingCell = webTestClient.put().uri("/locations/residential/${cell.id}/cell-mark-change")
-      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+  private fun baselinePrison(prisonId: String) {
+    webTestClient.post().uri("/cell-certificates/prison/$prisonId/baseline")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
       .header("Content-Type", "application/json")
-      .bodyValue(
-        jsonString(
-          CellMarkChangeRequest(
-            reasonForChange = "The door number is wrong",
-            cellMark = "CM-001",
-          ),
-        ),
-      )
       .exchange()
-      .expectStatus().isOk
-      .expectBody<Location>()
-      .returnResult().responseBody!!
-
-    webTestClient.put().uri("/certification/location/approve")
-      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
-      .header("Content-Type", "application/json")
-      .bodyValue(
-        jsonString(
-          ApproveCertificationRequestDto(
-            approvalRequestReference = pendingCell.pendingApprovalRequestId!!,
-          ),
-        ),
-      )
-      .exchange()
-      .expectStatus().isOk
+      .expectStatus().isCreated
   }
 }

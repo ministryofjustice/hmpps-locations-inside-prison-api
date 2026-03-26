@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApprovalResponse
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
@@ -16,13 +17,14 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.PrisonBaselineApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotInPendingStatusException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivationDetail
 import java.time.Clock
@@ -33,12 +35,12 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as Locati
 class ApprovalDecisionService(
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val certificationApprovalRequestRepository: CertificationApprovalRequestRepository,
-  private val linkedTransactionRepository: LinkedTransactionRepository,
   private val cellCertificateService: CellCertificateService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val sharedLocationService: SharedLocationService,
+  private val activePrisonService: ActivePrisonService,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -274,5 +276,31 @@ class ApprovalDecisionService(
       prisonId = approvalRequest.prisonId,
       location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
+  }
+
+  @Transactional
+  fun baselinePrisonCertificate(prisonId: String): CertificationApprovalRequestDto {
+    val approvalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
+    if (!approvalRequired) {
+      throw LocationDoesNotRequireApprovalException("Certification approval not required for prison $prisonId")
+    }
+
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      type = TransactionType.CERTIFICATE_BASELINE,
+      prisonId = prisonId,
+      detail = "Baseline certificate for prison $prisonId",
+    )
+
+    val baselineRequest = certificationApprovalRequestRepository.save(
+      PrisonBaselineApprovalRequest(
+        prisonId = prisonId,
+        requestedBy = linkedTransaction.transactionInvokedBy,
+        requestedDate = linkedTransaction.txStartTime,
+        reasonForChange = "Baseline certificate for prison $prisonId",
+      ),
+    )
+
+    return approveCertificationRequest(ApproveCertificationRequestDto(baselineRequest.id!!)).approvalRequest
+      .also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
 }

@@ -53,7 +53,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCer
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
@@ -105,7 +104,6 @@ class LocationService(
   private val telemetryClient: TelemetryClient,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
   private val activePrisonService: ActivePrisonService,
-  private val prisonConfigurationRepository: PrisonConfigurationRepository,
   @param:Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
