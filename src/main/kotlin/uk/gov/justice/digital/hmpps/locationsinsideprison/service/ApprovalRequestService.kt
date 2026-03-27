@@ -231,7 +231,31 @@ data class ReactivationLocationsApprovalRequest(
   val topLevelLocationId: UUID,
   @param:Schema(description = "Cascade the reactivation from the top level, cells will be reactivated in their previous state, if this is true `cellReactivationChanges` should be null", defaultValue = "false", required = false, example = "true")
   val cascadeReactivation: Boolean = false,
-  @param:Schema(description = "List of cells below the locationId to reactivate, with capacity and ttype details, missing cells will not be reactivated", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
+  @param:Schema(
+    description = "List of cells below the locationId to reactivate, with capacity and ttype details, missing cells will not be reactivated",
+    example = """{
+    "0199e835-9eb8-7183-ab7e-f79149e5c1f8": {
+      "capacity": {
+        "workingCapacity": 1,
+        "maxCapacity": 2,
+        "certifiedNormalAccommodation": 2
+      },
+      "specialistCellTypes": [
+        "ACCESSIBLE_CELL", "ESCAPE_LIST"
+      ]
+    },
+    "0199e345-f9f1-7961-a4dc-39fed02b66ab": {
+      "capacity": {
+        "workingCapacity": 1,
+        "maxCapacity": 2,
+        "certifiedNormalAccommodation": 1
+      },
+      "specialistCellTypes": [
+        "ESCAPE_LIST"
+      ]
+    }
+  } """,
+  )
   val cellReactivationChanges: Map<UUID, CellReactivationDetail>? = null,
 )
 
