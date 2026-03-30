@@ -238,7 +238,17 @@ data class DeactivateLocationsRequest(
 @Schema(description = "Bulk reactivate locations Request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ReactivateLocationsRequest(
-  @param:Schema(description = "List of locations to reactivate", example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": { \"workingCapacity\": 1, \"maxCapacity\": 2 } } }")
+  @param:Schema(
+    description = "List of locations to reactivate",
+    example = "{ \"de91dfa7-821f-4552-a427-bf2f32eafeb0\": { \"cascadeReactivation\": false, \"capacity\": {\n" +
+      "        \"workingCapacity\": 1,\n" +
+      "        \"maxCapacity\": 2,\n" +
+      "        \"certifiedNormalAccommodation\": 2\n" +
+      "      },\n" +
+      "      \"specialistCellTypes\": [\n" +
+      "        \"ACCESSIBLE_CELL\", \"ESCAPE_LIST\"\n" +
+      "      ] } }",
+  )
   val locations: Map<UUID, ReactivationDetail>,
 
   @param:Schema(description = "Force location to be reactivated, regardless of the status of the prison certification process", example = "false", required = false, defaultValue = "false")
@@ -263,7 +273,15 @@ data class CellReactivationDetail(
 data class ReactivationDetail(
   @param:Schema(description = "Cascade the reactivation", defaultValue = "false", required = true, example = "true")
   val cascadeReactivation: Boolean = false,
-  @param:Schema(description = "New capacity of the location, if null the old values are used", required = false, example = " { \"workingCapacity\": 1, \"maxCapacity\": 2 }")
+  @param:Schema(
+    description = "New capacity of the location, if null the old values are used",
+    required = false,
+    example = "{\n" +
+      "        \"workingCapacity\": 1,\n" +
+      "        \"maxCapacity\": 2,\n" +
+      "        \"certifiedNormalAccommodation\": 2\n" +
+      "      }",
+  )
   val capacity: Capacity? = null,
   @param:Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: Set<SpecialistCellType>? = null,
