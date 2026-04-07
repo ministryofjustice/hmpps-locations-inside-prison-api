@@ -1,0 +1,2 @@
+ALTER TABLE certification_approval_request_location
+ADD COLUMN current_specialist_cell_types varchar(300);

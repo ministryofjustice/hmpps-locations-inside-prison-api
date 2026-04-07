@@ -358,6 +358,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
     @Test
     fun `can request to reactivate a location with cascade and then approve`() {
+      baselinePrison(leedsWing.prisonId)
       deactivateOffCert()
       webTestClient.put().uri("/certification/location/reactivation-request-approval")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
@@ -399,7 +400,13 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
       assertThat(pendingApproval.locations).hasSize(1)
       assertThat(pendingApproval.locations!![0].subLocations).hasSize(2)
-      assertThat(pendingApproval.workingCapacityChange).isEqualTo(6)
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(0)
+      assertThat(pendingApproval.locations).hasSize(1)
+      assertThat(pendingApproval.locations[0].subLocations).hasSize(2)
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations).hasSize(3)
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.ESCAPE_LIST,
+      )
 
       val approvedRequest = webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -446,10 +453,12 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .jsonPath("$.locations[0].subLocations[0].subLocations[0].maxCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].workingCapacity").isEqualTo(1)
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].maxCapacity").isEqualTo(2)
+        .jsonPath("$.locations[0].subLocations[1].subLocations[0].specialistCellTypes").isEqualTo("ESCAPE_LIST")
     }
 
     @Test
     fun `can request to reactivate a locations explicitly and then approve`() {
+      baselinePrison(leedsWing.prisonId)
       deactivateOffCert()
       webTestClient.put().uri("/certification/location/reactivation-request-approval")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
@@ -465,7 +474,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
                     maxCapacity = 2,
                     certifiedNormalAccommodation = 2,
                   ),
-                  specialistCellTypes = setOf(SpecialistCellType.ESCAPE_LIST),
+                  specialistCellTypes = setOf(SpecialistCellType.SAFE_CELL, SpecialistCellType.CONSTANT_SUPERVISION),
                 )
               },
             ),
@@ -498,10 +507,16 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locationKey).isEqualTo(leedsWing.getKey())
       assertThat(pendingApproval.locations).hasSize(1)
       assertThat(pendingApproval.locations!![0].subLocations).hasSize(2)
-      assertThat(pendingApproval.workingCapacityChange).isEqualTo(12)
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(6)
       assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(6)
       assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
-
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.ESCAPE_LIST,
+      )
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.specialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.SAFE_CELL,
+        SpecialistCellType.CONSTANT_SUPERVISION,
+      )
       val approvedRequest = webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
         .header("Content-Type", "application/json")
@@ -549,6 +564,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].workingCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].maxCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].certifiedNormalAccommodation").isEqualTo(2)
+        .jsonPath("$.locations[0].subLocations[1].subLocations[0].specialistCellTypes").isEqualTo(listOf("CONSTANT_SUPERVISION", "SAFE_CELL"))
     }
 
     private fun deactivateOffCert() {

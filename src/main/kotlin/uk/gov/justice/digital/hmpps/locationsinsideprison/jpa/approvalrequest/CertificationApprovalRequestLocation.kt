@@ -68,6 +68,8 @@ open class CertificationApprovalRequestLocation(
   @Enumerated(EnumType.STRING)
   private val locationType: LocationType,
 
+  open var currentSpecialistCellTypes: String? = null,
+
   open var specialistCellTypes: String? = null,
 
   private val usedForTypes: String? = null,
@@ -121,14 +123,15 @@ open class CertificationApprovalRequestLocation(
     currentMaxCapacity = currentMaxCapacity,
     inCellSanitation = inCellSanitation,
     locationType = locationType,
-    specialistCellTypes = getSpecialistCellTypesFromList(),
+    currentSpecialistCellTypes = getSpecialistCellTypesFromList(currentSpecialistCellTypes),
+    specialistCellTypes = getSpecialistCellTypesFromList(specialistCellTypes),
     accommodationTypes = getAccommodationTypesFromList(),
     usedFor = getUsedForTypesFromList(),
     convertedCellType = convertedCellType,
     subLocations = subLocations.map { it.toDto() }.takeIf { it.isNotEmpty() },
   )
 
-  fun getSpecialistCellTypesFromList(): List<SpecialistCellType>? = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) }
+  fun getSpecialistCellTypesFromList(): List<SpecialistCellType>? = getSpecialistCellTypesFromList(specialistCellTypes)
 
   private fun getUsedForTypesFromList(): List<UsedForType>? = usedForTypes?.split(",")?.map { UsedForType.valueOf(it.trim()) }
 
@@ -189,4 +192,6 @@ open class CertificationApprovalRequestLocation(
   fun maxCapacityChange(): Int = approvedMaxCapacity() - calcCurrentMaxCapacity()
 
   fun certifiedNormalAccommodationChange(): Int = approvedCertifiedNormalAccommodation() - calcCurrentCertifiedNormalAccommodation()
+
+  fun getSpecialistCellTypesFromList(specialCellTypes: String?): List<SpecialistCellType>? = specialCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) }
 }
