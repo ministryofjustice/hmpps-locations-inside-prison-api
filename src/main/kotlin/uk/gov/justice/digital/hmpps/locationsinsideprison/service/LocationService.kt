@@ -55,6 +55,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedT
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.validateCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestRequiresReasonForChangeException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanentDeactivationRequest
@@ -754,6 +755,7 @@ class LocationService(
     workingCapacity: Int,
     certifiedNormalAccommodation: Int? = null,
     linkedTransaction: LinkedTransaction? = null,
+    temporaryWorkingCapacityChange: Boolean = false,
   ): LocationDTO {
     val locCapChange = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -766,53 +768,82 @@ class LocationService(
       throw PermanentlyDeactivatedUpdateNotAllowedException(locCapChange.getKey())
     }
 
-    if (activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId) && !locCapChange.isDraft()) {
-      throw ApprovalRequestRequiresReasonForChangeException(locCapChange.getKey())
-    }
+    val workingCapacityChange = locCapChange.calcWorkingCapacity() - workingCapacity
+    val maxCapacityChange = locCapChange.calcMaxCapacity() - maxCapacity
+    val cna = certifiedNormalAccommodation ?: locCapChange.calcCertifiedNormalAccommodation()
+    val cnaChange = locCapChange.calcCertifiedNormalAccommodation() - cna
 
-    if (!locCapChange.isDraft()) {
-      val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
-      if (maxCapacity < prisoners.size) {
-        throw CapacityException(
-          locCapChange.getKey(),
-          "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})",
-          ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
-        )
+    val prisonRequiresApprovalForChanges = activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId)
+    val capacityChangesRequested = workingCapacityChange != 0 || maxCapacityChange != 0 || cnaChange != 0
+
+    if (capacityChangesRequested) {
+      val wcTempChangeAllowed = prisonRequiresApprovalForChanges && temporaryWorkingCapacityChange && workingCapacityChange != 0 && maxCapacityChange == 0 && cnaChange == 0
+      val changeMustBeApproved = prisonRequiresApprovalForChanges && !wcTempChangeAllowed && !locCapChange.isDraft()
+
+      if (!locCapChange.isDraft() && maxCapacityChange != 0) {
+        val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
+        if (maxCapacity < prisoners.size) {
+          throw CapacityException(
+            locCapChange.getKey(),
+            "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})",
+            ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
+          )
+        }
       }
-    }
 
-    val changeToCNA = certifiedNormalAccommodation ?: locCapChange.calcCertifiedNormalAccommodation()
-
-    if (locCapChange.calcWorkingCapacity() != workingCapacity ||
-      locCapChange.capacity?.maxCapacity != maxCapacity ||
-      locCapChange.capacity?.certifiedNormalAccommodation != changeToCNA
-    ) {
-      val trackingTx = linkedTransaction ?: sharedLocationService.createLinkedTransaction(
+      var trackingTx = linkedTransaction ?: sharedLocationService.createLinkedTransaction(
         prisonId = locCapChange.prisonId,
         type = TransactionType.CAPACITY_CHANGE,
-        detail = "Capacities for ${locCapChange.getKey()} w/c changed from ${locCapChange.calcWorkingCapacity()} to $workingCapacity, max capacity changed from ${locCapChange.capacity?.maxCapacity} to $maxCapacity and CNA changed from ${locCapChange.capacity?.certifiedNormalAccommodation} to $changeToCNA",
+        detail = "Capacities for ${locCapChange.getKey()} w/c changed from ${locCapChange.calcWorkingCapacity()} to $workingCapacity, max capacity changed from ${locCapChange.capacity?.maxCapacity} to $maxCapacity and CNA changed from ${locCapChange.capacity?.certifiedNormalAccommodation} to $cna",
       )
+      if (changeMustBeApproved) {
+        if (locCapChange is Cell) {
+          validateCapacity(
+            locationKey = locCapChange.getKey(),
+            certifiedNormalAccommodation = cna,
+            workingCapacity = workingCapacity,
+            maxCapacity = maxCapacity,
+            accommodationType = locCapChange.accommodationType,
+            specialistCellTypes = locCapChange.getSpecialistCellTypesForCell(),
+            temporarilyDeactivated = locCapChange.isTemporarilyDeactivated(),
+          )
+          trackingTx = linkedTransaction ?: sharedLocationService.createLinkedTransaction(
+            prisonId = locCapChange.prisonId,
+            type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+            detail = "Capacity request change for ${locCapChange.getKey()} w/c changing from ${locCapChange.calcWorkingCapacity()} to $workingCapacity, max capacity changing from ${locCapChange.capacity?.maxCapacity} to $maxCapacity and CNA changing from ${locCapChange.capacity?.certifiedNormalAccommodation} to $cna",
+          )
+          val approvalRequest = locCapChange.requestApprovalForCapacityChange(
+            requestedDate = trackingTx.txStartTime,
+            requestedBy = trackingTx.transactionInvokedBy,
+            newWorkingCapacity = workingCapacity,
+            newMaxCapacity = maxCapacity,
+            newCna = cna,
+          )
+          approvalRequest.refreshCapacities()
+          cellLocationRepository.saveAndFlush(locCapChange)
+        }
+      } else {
+        locCapChange.setCapacity(
+          maxCapacity = maxCapacity,
+          workingCapacity = workingCapacity,
+          certifiedNormalAccommodation = cna,
+          userOrSystemInContext = sharedLocationService.getUsername(),
+          amendedDate = now(clock),
+          linkedTransaction = trackingTx,
+        )
 
-      locCapChange.setCapacity(
-        maxCapacity = maxCapacity,
-        workingCapacity = workingCapacity,
-        certifiedNormalAccommodation = changeToCNA,
-        userOrSystemInContext = sharedLocationService.getUsername(),
-        amendedDate = now(clock),
-        linkedTransaction = trackingTx,
-      )
-
-      telemetryClient.trackEvent(
-        "Capacity updated",
-        mapOf(
-          "id" to id.toString(),
-          "key" to locCapChange.getKey(),
-          "maxCapacity" to maxCapacity.toString(),
-          "workingCapacity" to workingCapacity.toString(),
-          "CNA" to changeToCNA.toString(),
-        ),
-        null,
-      )
+        telemetryClient.trackEvent(
+          "Capacity updated",
+          mapOf(
+            "id" to id.toString(),
+            "key" to locCapChange.getKey(),
+            "maxCapacity" to maxCapacity.toString(),
+            "workingCapacity" to workingCapacity.toString(),
+            "CNA" to cna.toString(),
+          ),
+          null,
+        )
+      }
 
       return locCapChange.toDto(includeParent = !locCapChange.isDraft(), includeNonResidential = false).also {
         trackingTx.txEndTime = now(clock)

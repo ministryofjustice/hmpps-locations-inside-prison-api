@@ -137,9 +137,10 @@ class SharedLocationService(
     amendedLocations: MutableSet<Location>,
     reactivationDetail: ReactivationDetail,
     linkedTransaction: LinkedTransaction,
+    reactivatedBy: String = getUsername(),
   ) {
     locationToReactivate.reactivate(
-      userOrSystemInContext = getUsername(),
+      userOrSystemInContext = reactivatedBy,
       clock = clock,
       reactivatedLocations = locationsReactivated,
       amendedLocations = amendedLocations,
@@ -153,7 +154,7 @@ class SharedLocationService(
     if (reactivationDetail.cascadeReactivation) {
       locationToReactivate.findSubLocations().forEach { location ->
         location.reactivate(
-          userOrSystemInContext = getUsername(),
+          userOrSystemInContext = reactivatedBy,
           clock = clock,
           reactivatedLocations = locationsReactivated,
           amendedLocations = amendedLocations,

@@ -21,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CellMarkChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.SanitationChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ChangesCannotBeMadeWithoutCertificationApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
@@ -580,7 +581,7 @@ class Cell(
     }
   }
 
-  private fun getSpecialistCellTypesForCell(): Set<SpecialistCellType> = specialistCellTypes.map { it.specialistCellType }.toSet()
+  fun getSpecialistCellTypesForCell(): Set<SpecialistCellType> = specialistCellTypes.map { it.specialistCellType }.toSet()
 
   override fun processApproval(
     pendingApprovalRequest: CertificationApprovalRequest,
@@ -591,25 +592,48 @@ class Cell(
   ) {
     when (pendingApprovalRequest) {
       is DraftChangeApprovalRequest -> {
-        certifyCell(approvedBy, approvedDate, linkedTransaction)
+        certifyCell(pendingApprovalRequest.requestedBy, approvedDate, linkedTransaction)
       }
       is CellMarkChangeApprovalRequest -> {
-        setCellDoorMark(pendingApprovalRequest.cellMark, approvedBy, approvedDate, linkedTransaction)
+        setCellDoorMark(pendingApprovalRequest.cellMark, pendingApprovalRequest.requestedBy, approvedDate, linkedTransaction)
       }
       is SanitationChangeApprovalRequest -> {
-        setSanitationOfCell(pendingApprovalRequest.inCellSanitation, approvedBy, approvedDate, linkedTransaction)
+        setSanitationOfCell(pendingApprovalRequest.inCellSanitation, pendingApprovalRequest.requestedBy, approvedDate, linkedTransaction)
       }
       is CapacityChangeApprovalRequest -> {
         setCapacity(
           maxCapacity = pendingApprovalRequest.maxCapacity ?: getMaxCapacity() ?: 0,
-          workingCapacity = getWorkingCapacity() ?: 0,
+          workingCapacity = pendingApprovalRequest.workingCapacity ?: getWorkingCapacity() ?: 0,
           certifiedNormalAccommodation = pendingApprovalRequest.certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
-          userOrSystemInContext = approvedBy,
+          userOrSystemInContext = pendingApprovalRequest.requestedBy,
           amendedDate = approvedDate,
           linkedTransaction = linkedTransaction,
         )
       }
     }
+  }
+
+  fun requestApprovalForCapacityChange(
+    requestedDate: LocalDateTime,
+    requestedBy: String,
+    newWorkingCapacity: Int,
+    newMaxCapacity: Int,
+    newCna: Int,
+  ): LocationCertificationApprovalRequest {
+    if (hasPendingCertificationApproval()) {
+      throw PendingApprovalAlreadyExistsException(getKey())
+    }
+
+    return addApprovalToLocation(
+      CapacityChangeApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        workingCapacity = newWorkingCapacity,
+        maxCapacity = newMaxCapacity,
+        certifiedNormalAccommodation = newCna,
+      ),
+    ) as CapacityChangeApprovalRequest
   }
 
   fun requestApprovalForCellMarkChange(

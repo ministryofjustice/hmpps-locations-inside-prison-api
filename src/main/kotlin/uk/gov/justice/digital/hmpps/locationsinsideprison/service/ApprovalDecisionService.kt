@@ -142,6 +142,7 @@ class ApprovalDecisionService(
           amendedLocations = amendedLocations,
           reactivationDetail = reactivationDetail,
           linkedTransaction = linkedTransaction,
+          reactivatedBy = approvalRequest.requestedBy,
         )
       }
     }
