@@ -127,6 +127,7 @@ class ApprovalRequestService(
         subLocation.currentWorkingCapacity = currentCellCert.workingCapacity
         subLocation.currentMaxCapacity = currentCellCert.maxCapacity
         subLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
+        subLocation.currentSpecialistCellTypes = currentCellCert.specialistCellTypes
       }
       if (reactivationApprovalRequest.cascadeReactivation && subLocation.findSubLocations().isEmpty()) {
         subLocation.reactivateThisLocation = true

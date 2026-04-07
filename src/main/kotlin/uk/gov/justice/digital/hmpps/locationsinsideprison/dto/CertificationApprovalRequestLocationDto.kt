@@ -57,6 +57,9 @@ data class CertificationApprovalRequestLocationDto(
   @param:Schema(description = "Accommodation Types", required = false)
   val accommodationTypes: List<AccommodationType>? = null,
 
+  @param:Schema(description = "Current specialist Cell Types", required = false)
+  val currentSpecialistCellTypes: List<SpecialistCellType>? = null,
+
   @param:Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: List<SpecialistCellType>? = null,
 
