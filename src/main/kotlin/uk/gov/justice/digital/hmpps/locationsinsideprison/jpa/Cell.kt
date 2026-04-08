@@ -600,16 +600,6 @@ class Cell(
       is SanitationChangeApprovalRequest -> {
         setSanitationOfCell(pendingApprovalRequest.inCellSanitation, pendingApprovalRequest.requestedBy, approvedDate, linkedTransaction)
       }
-      is CapacityChangeApprovalRequest -> {
-        setCapacity(
-          maxCapacity = pendingApprovalRequest.maxCapacity ?: getMaxCapacity() ?: 0,
-          workingCapacity = pendingApprovalRequest.workingCapacity ?: getWorkingCapacity() ?: 0,
-          certifiedNormalAccommodation = pendingApprovalRequest.certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
-          userOrSystemInContext = pendingApprovalRequest.requestedBy,
-          amendedDate = approvedDate,
-          linkedTransaction = linkedTransaction,
-        )
-      }
     }
   }
 

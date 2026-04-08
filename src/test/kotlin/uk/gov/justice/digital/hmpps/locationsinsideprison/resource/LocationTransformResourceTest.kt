@@ -12,11 +12,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonData
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
 @WithMockAuthUser(username = EXPECTED_USERNAME)
@@ -900,63 +898,6 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.ZeroCapacityForNonSpecialistNormalAccommodationNotAllowed.errorCode)
-      }
-
-      @Disabled
-      fun `cannot change a locations capacity once it is locked`() {
-        val aCell = repository.findOneByKey("LEI-A-1-001") as Cell
-        prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
-
-        webTestClient.put().uri("/locations/${aCell.id}/capacity")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity(
-                workingCapacity = 1,
-                maxCapacity = 3,
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isOk
-        getDomainEvents(1).let {
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to aCell.getKey(),
-          )
-        }
-        webTestClient.put().uri("/certification/location/request-approval")
-          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              LocationApprovalRequest(
-                locationId = aCell.id!!,
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isOk
-
-        prisonerSearchMockServer.stubSearchByLocations(aCell.prisonId, listOf(aCell.getPathHierarchy()), false)
-
-        assertThat(
-          webTestClient.put().uri("/locations/${aCell.id}/capacity")
-            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-            .header("Content-Type", "application/json")
-            .bodyValue(
-              jsonString(
-                CapacityDto(
-                  workingCapacity = 2,
-                  maxCapacity = 2,
-                ),
-              ),
-            )
-            .exchange()
-            .expectStatus().isEqualTo(409)
-            .expectBody<ErrorResponse>()
-            .returnResult().responseBody!!.errorCode,
-        ).isEqualTo(ErrorCode.PendingApprovalLocationCannotBeUpdated.errorCode)
       }
     }
 

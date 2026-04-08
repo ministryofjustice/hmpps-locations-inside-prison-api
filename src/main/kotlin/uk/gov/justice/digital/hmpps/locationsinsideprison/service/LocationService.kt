@@ -22,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellMarkChangeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellSanitationChangeRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateWingAndStructureRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
@@ -756,7 +757,7 @@ class LocationService(
     certifiedNormalAccommodation: Int? = null,
     linkedTransaction: LinkedTransaction? = null,
     temporaryWorkingCapacityChange: Boolean = false,
-  ): LocationDTO {
+  ): Pair<LocationDTO, CertificationApprovalRequestDto?> {
     val locCapChange = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -776,6 +777,10 @@ class LocationService(
     val prisonRequiresApprovalForChanges = activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId)
     val capacityChangesRequested = workingCapacityChange != 0 || maxCapacityChange != 0 || cnaChange != 0
 
+    var locationUpdated: LocationDTO = locCapChange.toDto(includeNonResidential = false)
+    var approvalRequestDto: CertificationApprovalRequestDto? = null
+    var trackingTx = linkedTransaction
+
     if (capacityChangesRequested) {
       val wcTempChangeAllowed = prisonRequiresApprovalForChanges && temporaryWorkingCapacityChange && workingCapacityChange != 0 && maxCapacityChange == 0 && cnaChange == 0
       val changeMustBeApproved = prisonRequiresApprovalForChanges && !wcTempChangeAllowed && !locCapChange.isDraft()
@@ -791,7 +796,7 @@ class LocationService(
         }
       }
 
-      var trackingTx = linkedTransaction ?: sharedLocationService.createLinkedTransaction(
+      trackingTx = linkedTransaction ?: sharedLocationService.createLinkedTransaction(
         prisonId = locCapChange.prisonId,
         type = TransactionType.CAPACITY_CHANGE,
         detail = "Capacities for ${locCapChange.getKey()} w/c changed from ${locCapChange.calcWorkingCapacity()} to $workingCapacity, max capacity changed from ${locCapChange.capacity?.maxCapacity} to $maxCapacity and CNA changed from ${locCapChange.capacity?.certifiedNormalAccommodation} to $cna",
@@ -819,8 +824,20 @@ class LocationService(
             newMaxCapacity = maxCapacity,
             newCna = cna,
           )
+          approvalRequest.locations.forEach { subLocation ->
+            cellCertificateRepository.findByPrisonIdAndPathHierarchy(locCapChange.prisonId, subLocation.pathHierarchy)?.let { currentCellCert ->
+              subLocation.currentWorkingCapacity = currentCellCert.workingCapacity
+              subLocation.currentMaxCapacity = currentCellCert.maxCapacity
+              subLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
+              subLocation.workingCapacity = workingCapacity
+              subLocation.maxCapacity = maxCapacity
+              subLocation.certifiedNormalAccommodation = cna
+            }
+          }
           approvalRequest.refreshCapacities()
           cellLocationRepository.saveAndFlush(locCapChange)
+
+          approvalRequestDto = approvalRequest.toDto()
         }
       } else {
         locCapChange.setCapacity(
@@ -844,12 +861,11 @@ class LocationService(
           null,
         )
       }
-
-      return locCapChange.toDto(includeParent = !locCapChange.isDraft(), includeNonResidential = false).also {
-        trackingTx.txEndTime = now(clock)
-      }
+      locationUpdated = locCapChange.toDto(includeParent = !locCapChange.isDraft(), includeNonResidential = false)
     }
-    return locCapChange.toDto(includeNonResidential = false)
+    return Pair(locationUpdated, approvalRequestDto).also {
+      trackingTx?.txEndTime = now(clock)
+    }
   }
 
   @Transactional

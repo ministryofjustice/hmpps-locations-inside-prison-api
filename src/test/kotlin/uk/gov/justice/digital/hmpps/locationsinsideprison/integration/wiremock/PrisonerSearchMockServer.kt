@@ -38,6 +38,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
     prisonId: String,
     locations: List<String>,
     returnResult: Boolean = false,
+    numberOfPrisonersInCell: Int = 1,
   ) {
     val requestBody = mapper.writeValueAsString(
       /* value = */
@@ -62,12 +63,14 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
     )
     if (returnResult) {
       result = result.copy(
-        content = locations.mapIndexed { index, location ->
-          createPrisoner(
-            prisonId = prisonId,
-            cellLocation = location,
-            index = index,
-          )
+        content = locations.flatMapIndexed { index, location ->
+          (0 until numberOfPrisonersInCell).map { prisonerIndex ->
+            createPrisoner(
+              prisonId = prisonId,
+              cellLocation = location,
+              prisonerCount = index * numberOfPrisonersInCell + prisonerIndex,
+            )
+          }
         },
       )
     }
@@ -91,17 +94,17 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
   ) {
     val result = SearchResult(
       content = listOf(
-        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-001", index = 1000, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-002", index = 1001, inOutStatus = "OUT", status = "ACTIVE OUT"),
-        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-003", index = 1002, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "RECP", index = 1003, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "TAP", index = 1004, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "COURT", index = 1005, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "COURT", index = 1006, inOutStatus = "OUT", status = "ACTIVE OUT"),
-        createPrisoner(prisonId = prisonId, cellLocation = "RECP", index = 1007, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "RECP", index = 1008, inOutStatus = "OUT", status = "ACTIVE OUT"),
-        createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", index = 1009, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", index = 1010, inOutStatus = "OUT", status = "ACTIVE OUT"),
+        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-001", prisonerCount = 1000, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-002", prisonerCount = 1001, inOutStatus = "OUT", status = "ACTIVE OUT"),
+        createPrisoner(prisonId = prisonId, cellLocation = "Z-1-003", prisonerCount = 1002, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "RECP", prisonerCount = 1003, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "TAP", prisonerCount = 1004, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "COURT", prisonerCount = 1005, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "COURT", prisonerCount = 1006, inOutStatus = "OUT", status = "ACTIVE OUT"),
+        createPrisoner(prisonId = prisonId, cellLocation = "RECP", prisonerCount = 1007, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "RECP", prisonerCount = 1008, inOutStatus = "OUT", status = "ACTIVE OUT"),
+        createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", prisonerCount = 1009, inOutStatus = "IN", status = "ACTIVE IN"),
+        createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", prisonerCount = 1010, inOutStatus = "OUT", status = "ACTIVE OUT"),
       ),
     )
 
@@ -117,10 +120,10 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
   }
 }
 
-fun createPrisoner(prisonId: String, cellLocation: String, index: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN") = Prisoner(
-  prisonerNumber = "A${index.toString().padStart(4, '0')}AA",
-  firstName = "Firstname-$index",
-  lastName = "Surname-$index",
+fun createPrisoner(prisonId: String, cellLocation: String, prisonerCount: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN") = Prisoner(
+  prisonerNumber = "A${prisonerCount.toString().padStart(4, '0')}AA",
+  firstName = "Firstname-$prisonerCount",
+  lastName = "Surname-$prisonerCount",
   prisonId = prisonId,
   prisonName = prisonId,
   cellLocation = cellLocation,

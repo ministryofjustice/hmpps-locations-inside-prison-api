@@ -1,10 +1,12 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.http.HttpStatus
+import org.springframework.test.json.JsonCompareMode
 import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
@@ -15,6 +17,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationSta
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
@@ -29,6 +32,388 @@ import java.time.LocalDateTime
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class CertificationApprovalResourceTest : CommonDataTestBase() {
 
+  @BeforeEach
+  fun beforeEach() {
+    baselinePrison(leedsWing.prisonId)
+  }
+
+  @DisplayName("PUT /locations/{id}/capacity")
+  @Nested
+  inner class CapacityLocationTest {
+
+    @Test
+    fun `can change capacity a location and request approval`() {
+      // will return a prisoner for each location under the Leeds wing
+      leedsWing.findAllLeafLocations().forEach {
+        prisonerSearchMockServer.stubSearchByLocations(
+          leedsWing.prisonId,
+          listOf(it.getPathHierarchy()),
+          true,
+        )
+      }
+      val firstCell = leedsWing.findAllLeafLocations().first()
+      webTestClient.put().uri("/locations/${firstCell.id}/capacity")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CapacityChangeRequest(
+              workingCapacity = 1,
+              maxCapacity = 1,
+              certifiedNormalAccommodation = 1,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().json(
+          // language=json
+          """
+              {
+                "id": "${firstCell.id}",
+                "prisonId": "${firstCell.prisonId}",
+                "pathHierarchy": "${firstCell.getPathHierarchy()}",
+                "locationType": "CELL",
+                "capacity": {
+                  "maxCapacity": 2,
+                  "workingCapacity": 1,
+                  "certifiedNormalAccommodation": 1
+                },
+                "pendingChanges": {
+                  "maxCapacity": 1,
+                  "workingCapacity": 1,
+                  "certifiedNormalAccommodation": 1
+                },
+                "active": true,
+                "key": "${firstCell.getKey()}"
+              }
+          """,
+          JsonCompareMode.LENIENT,
+        )
+
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val capacityChangedLocation = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(capacityChangedLocation.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
+      assertThat(capacityChangedLocation.pendingApprovalRequestId).isNotNull
+      assertThat(capacityChangedLocation.capacity?.maxCapacity).isEqualTo(2)
+      assertThat(capacityChangedLocation.capacity?.workingCapacity).isEqualTo(1)
+
+      val pendingApprovalRequestId = capacityChangedLocation.pendingApprovalRequestId!!
+
+      val pendingApproval = webTestClient.get().uri("/certification/request-approvals/$pendingApprovalRequestId")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.CAPACITY_CHANGE)
+      assertThat(pendingApproval.locationId).isEqualTo(firstCell.id)
+      assertThat(pendingApproval.prisonId).isEqualTo(firstCell.prisonId)
+      assertThat(pendingApproval.locationKey).isEqualTo(firstCell.getKey())
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(0)
+      assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(0)
+      assertThat(pendingApproval.maxCapacityChange).isEqualTo(-1)
+      assertThat(pendingApproval.workingCapacity).isEqualTo(1)
+      assertThat(pendingApproval.maxCapacity).isEqualTo(1)
+      assertThat(pendingApproval.certifiedNormalAccommodation).isEqualTo(1)
+      assertThat(pendingApproval.locations).isNotNull
+      assertThat(pendingApproval.locations).hasSize(1)
+      val locationChanged = pendingApproval.locations?.get(0)!!
+      assertThat(locationChanged).isNotNull
+      assertThat(locationChanged.currentWorkingCapacity).isEqualTo(1)
+      assertThat(locationChanged.currentMaxCapacity).isEqualTo(2)
+      assertThat(locationChanged.currentCertifiedNormalAccommodation).isEqualTo(1)
+      assertThat(locationChanged.workingCapacity).isEqualTo(1)
+      assertThat(locationChanged.maxCapacity).isEqualTo(1)
+      assertThat(locationChanged.certifiedNormalAccommodation).isEqualTo(1)
+
+      val approvedRequest = webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            ApproveCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      getDomainEvents(3).let {
+        assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+          "location.inside.prison.amended" to firstCell.getKey(),
+          "location.inside.prison.amended" to firstCell.getParent()?.getKey(),
+          "location.inside.prison.amended" to firstCell.getParent()?.getParent()?.getKey(),
+        )
+      }
+
+      webTestClient.get().uri("/cell-certificates/${approvedRequest.certificateId}")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.id").isEqualTo(approvedRequest.certificateId)
+        .jsonPath("$.prisonId").isEqualTo("LEI")
+        .jsonPath("$.current").isEqualTo(true)
+        .jsonPath("$.locations").isArray()
+        .jsonPath("$.totalMaxCapacity").isEqualTo(11)
+        .jsonPath("$.totalWorkingCapacity").isEqualTo(6)
+        .jsonPath("$.totalCertifiedNormalAccommodation").isEqualTo(6)
+        // Verify that there are locations in the response
+        .jsonPath("$.locations.length()").isEqualTo(1)
+        .jsonPath("$.locations[0].workingCapacity").isEqualTo(6)
+        .jsonPath("$.locations[0].subLocations.length()").isEqualTo(2)
+        .jsonPath("$.locations[0].subLocations[0].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[0].subLocations[1].subLocations.length()").isEqualTo(3)
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].workingCapacity").isEqualTo(1)
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].maxCapacity").isEqualTo(1)
+        .jsonPath("$.locations[0].subLocations[1].subLocations[0].workingCapacity").isEqualTo(1)
+        .jsonPath("$.locations[0].subLocations[1].subLocations[0].maxCapacity").isEqualTo(2)
+
+      val approvedCapacityLocation = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(approvedCapacityLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(approvedCapacityLocation.pendingApprovalRequestId).isNull()
+      assertThat(approvedCapacityLocation.currentCellCertificate).isNotNull
+      assertThat(approvedCapacityLocation.currentCellCertificate!!.maxCapacity).isEqualTo(1)
+    }
+
+    @Test
+    fun `can change capacity a location and request approval but be stopped by an addition prisoners being moved in`() {
+      // will return a prisoner for each location under the Leeds wing
+      leedsWing.findAllLeafLocations().forEach {
+        prisonerSearchMockServer.stubSearchByLocations(
+          leedsWing.prisonId,
+          listOf(it.getPathHierarchy()),
+          true,
+        )
+      }
+      val firstCell = leedsWing.findAllLeafLocations().first()
+      webTestClient.put().uri("/locations/${firstCell.id}/capacity")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CapacityChangeRequest(
+              workingCapacity = 1,
+              maxCapacity = 1,
+              certifiedNormalAccommodation = 1,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val pendingApprovalRequestId = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!.pendingApprovalRequestId!!
+
+      prisonerSearchMockServer.resetAll()
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(firstCell.getPathHierarchy()),
+        true,
+        numberOfPrisonersInCell = 2,
+      )
+
+      assertThat(
+        webTestClient.put().uri("/certification/location/approve")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ApproveCertificationRequestDto(
+                approvalRequestReference = pendingApprovalRequestId,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().is4xxClientError
+          .expectBody<ErrorResponse>()
+          .returnResult().responseBody!!.errorCode,
+      ).isEqualTo(ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel.errorCode)
+
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val approvedCapacityLocation = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(approvedCapacityLocation.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
+      assertThat(approvedCapacityLocation.pendingApprovalRequestId).isNotNull()
+      assertThat(approvedCapacityLocation.currentCellCertificate).isNotNull
+      assertThat(approvedCapacityLocation.currentCellCertificate!!.maxCapacity).isEqualTo(2)
+    }
+
+    @Test
+    fun `can change capacity a location and request withdrawal`() {
+      // will return a prisoner for each location under the Leeds wing
+      leedsWing.findAllLeafLocations().forEach {
+        prisonerSearchMockServer.stubSearchByLocations(
+          leedsWing.prisonId,
+          listOf(it.getPathHierarchy()),
+          true,
+        )
+      }
+      val firstCell = leedsWing.findAllLeafLocations().first()
+      webTestClient.put().uri("/locations/${firstCell.id}/capacity")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CapacityChangeRequest(
+              workingCapacity = 1,
+              maxCapacity = 1,
+              certifiedNormalAccommodation = 1,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val pendingApprovalRequestId = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!.pendingApprovalRequestId!!
+
+      val withdrawnRequest = webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            WithdrawCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+              comments = "Do not approve this capacity change, it is not correct.",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawnRequest.certificateId).isNull()
+      assertThat(withdrawnRequest.status).isEqualTo(ApprovalRequestStatus.WITHDRAWN)
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val approvedCapacityLocation = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(approvedCapacityLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(approvedCapacityLocation.pendingApprovalRequestId).isNull()
+      assertThat(approvedCapacityLocation.currentCellCertificate).isNotNull
+      assertThat(approvedCapacityLocation.currentCellCertificate!!.maxCapacity).isEqualTo(2)
+    }
+
+    @Test
+    fun `can change just working capacity a location and not required request approval`() {
+      // will return a prisoner for each location under the Leeds wing
+      leedsWing.findAllLeafLocations().forEach {
+        prisonerSearchMockServer.stubSearchByLocations(
+          leedsWing.prisonId,
+          listOf(it.getPathHierarchy()),
+          true,
+        )
+      }
+      val firstCell = leedsWing.findAllLeafLocations().first()
+      webTestClient.put().uri("/locations/${firstCell.id}/capacity")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CapacityChangeRequest(
+              workingCapacity = 2,
+              maxCapacity = 2,
+              certifiedNormalAccommodation = 1,
+              temporaryWorkingCapacityChange = true,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().json(
+          // language=json
+          """
+              {
+                "id": "${firstCell.id}",
+                "prisonId": "${firstCell.prisonId}",
+                "pathHierarchy": "${firstCell.getPathHierarchy()}",
+                "locationType": "CELL",
+                "capacity": {
+                  "maxCapacity": 2,
+                  "workingCapacity": 2,
+                  "certifiedNormalAccommodation": 1
+                },
+                "active": true,
+                "key": "${firstCell.getKey()}"
+              }
+          """,
+          JsonCompareMode.LENIENT,
+        )
+
+      getDomainEvents(3).let {
+        assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+          "location.inside.prison.amended" to firstCell.getKey(),
+          "location.inside.prison.amended" to firstCell.getParent()?.getKey(),
+          "location.inside.prison.amended" to firstCell.getParent()?.getParent()?.getKey(),
+        )
+      }
+
+      val capacityChangedLocation = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(capacityChangedLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(capacityChangedLocation.pendingApprovalRequestId).isNull()
+      assertThat(capacityChangedLocation.capacity?.maxCapacity).isEqualTo(2)
+      assertThat(capacityChangedLocation.capacity?.workingCapacity).isEqualTo(2)
+      assertThat(capacityChangedLocation.currentCellCertificate).isNotNull
+      assertThat(capacityChangedLocation.currentCellCertificate!!.workingCapacity).isEqualTo(1)
+    }
+  }
+
   @DisplayName("PUT /locations/{id}/deactivate")
   @Nested
   inner class DeactivateLocationTest {
@@ -36,7 +421,6 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     @Test
     fun `workingCapacityChange is correctly calculated when some cells are already off cert inactive`() {
       val firstCell = leedsWing.findAllLeafLocations().first() as Cell
-      baselinePrison(leedsWing.prisonId)
 
       val now = LocalDateTime.now(clock)
       val proposedReactivationDate = now.plusMonths(1).toLocalDate()
@@ -358,7 +742,6 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
     @Test
     fun `can request to reactivate a location with cascade and then approve`() {
-      baselinePrison(leedsWing.prisonId)
       deactivateOffCert()
       webTestClient.put().uri("/certification/location/reactivation-request-approval")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
@@ -458,7 +841,6 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
     @Test
     fun `can request to reactivate a locations explicitly and then approve`() {
-      baselinePrison(leedsWing.prisonId)
       deactivateOffCert()
       webTestClient.put().uri("/certification/location/reactivation-request-approval")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
@@ -565,6 +947,74 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].maxCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].certifiedNormalAccommodation").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].specialistCellTypes").isEqualTo(listOf("CONSTANT_SUPERVISION", "SAFE_CELL"))
+    }
+
+    @Test
+    fun `can request to reactivate a locations explicitly and then reject`() {
+      deactivateOffCert()
+      webTestClient.put().uri("/certification/location/reactivation-request-approval")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            ReactivationLocationsApprovalRequest(
+              topLevelLocationId = leedsWing.id!!,
+              cellReactivationChanges = leedsWing.cellLocations().associate {
+                it.id!! to CellReactivationDetail(
+                  capacity = Capacity(
+                    workingCapacity = 2,
+                    maxCapacity = 2,
+                    certifiedNormalAccommodation = 2,
+                  ),
+                  specialistCellTypes = setOf(SpecialistCellType.SAFE_CELL, SpecialistCellType.CONSTANT_SUPERVISION),
+                )
+              },
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      val pendingApprovalRequestId = webTestClient.get().uri("/locations/${leedsWing.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!.pendingApprovalRequestId!!
+
+      val rejectedRequest = webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            RejectCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+              comments = "I don't want to approve this",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedRequest.certificateId).isNull()
+      assertThat(rejectedRequest.status).isEqualTo(ApprovalRequestStatus.REJECTED)
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val rejectedDeactivatedLocation = webTestClient.get().uri("/locations/${leedsWing.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedDeactivatedLocation.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(rejectedDeactivatedLocation.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
+      assertThat(rejectedDeactivatedLocation.pendingApprovalRequestId).isNull()
+      assertThat(rejectedDeactivatedLocation.lastDeactivationReasonForChange).isNull()
     }
 
     private fun deactivateOffCert() {

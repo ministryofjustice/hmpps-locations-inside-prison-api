@@ -164,15 +164,21 @@ class LocationTransformResource(
     @RequestBody
     @Validated
     capacity: CapacityChangeRequest,
-  ): Location = eventPublishAndAudit(
-    InternalLocationDomainEventType.LOCATION_AMENDED,
-  ) {
-    locationService.updateCellCapacity(
+  ): Location {
+    val (updateCellCapacity, approvalRequest) = locationService.updateCellCapacity(
       id = id,
       maxCapacity = capacity.maxCapacity,
       workingCapacity = capacity.workingCapacity,
       certifiedNormalAccommodation = capacity.certifiedNormalAccommodation,
+      temporaryWorkingCapacityChange = capacity.temporaryWorkingCapacityChange,
     )
+    if (approvalRequest == null) {
+      eventPublishAndAudit(
+        InternalLocationDomainEventType.LOCATION_AMENDED,
+      ) { updateCellCapacity }
+    }
+
+    return updateCellCapacity
   }
 }
 
