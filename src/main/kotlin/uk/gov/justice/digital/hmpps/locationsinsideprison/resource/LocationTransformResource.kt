@@ -1,10 +1,13 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.PositiveOrZero
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
@@ -160,15 +163,61 @@ class LocationTransformResource(
     id: UUID,
     @RequestBody
     @Validated
-    capacity: Capacity,
-  ): Location = eventPublishAndAudit(
-    InternalLocationDomainEventType.LOCATION_AMENDED,
-  ) {
-    locationService.updateCellCapacity(
+    capacity: CapacityChangeRequest,
+  ): Location {
+    val (updateCellCapacity, approvalRequest) = locationService.updateCellCapacity(
       id = id,
       maxCapacity = capacity.maxCapacity,
       workingCapacity = capacity.workingCapacity,
       certifiedNormalAccommodation = capacity.certifiedNormalAccommodation,
+      temporaryWorkingCapacityChange = capacity.temporaryWorkingCapacityChange,
     )
+    if (approvalRequest == null) {
+      eventPublishAndAudit(
+        InternalLocationDomainEventType.LOCATION_AMENDED,
+      ) { updateCellCapacity }
+    }
+
+    return updateCellCapacity
+  }
+}
+
+@Schema(description = "Capacity change request")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class CapacityChangeRequest(
+  @param:Schema(description = "Temporary w/c change", example = "false", required = false, defaultValue = "false")
+  val temporaryWorkingCapacityChange: Boolean = false,
+
+  @param:Schema(description = "Max capacity of the cell", example = "2", required = true)
+  @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
+  @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
+  val maxCapacity: Int = 0,
+  @param:Schema(description = "Working capacity of the cell", example = "1", required = true)
+  @field:Max(value = 99, message = "Working capacity cannot be greater than 99")
+  @field:PositiveOrZero(message = "Working capacity cannot be less than 0")
+  val workingCapacity: Int = 0,
+  @param:Schema(description = "CNA of the cell", example = "2", required = false)
+  @field:Max(value = 99, message = "CNA cannot be greater than 99")
+  @field:PositiveOrZero(message = "CNA cannot be less than 0")
+  val certifiedNormalAccommodation: Int? = null,
+) {
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+
+    other as Capacity
+
+    if (maxCapacity != other.maxCapacity) return false
+    if (workingCapacity != other.workingCapacity) return false
+    if (certifiedNormalAccommodation != other.certifiedNormalAccommodation) return false
+
+    return true
+  }
+
+  override fun hashCode(): Int {
+    var result = maxCapacity
+    result = 31 * result + workingCapacity
+    result = 31 * result + (certifiedNormalAccommodation ?: 0)
+    return result
   }
 }

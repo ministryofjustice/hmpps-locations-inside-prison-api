@@ -15,6 +15,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CapacityChangeApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.PrisonBaselineApprovalRequest
@@ -24,6 +26,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Residen
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotInPendingStatusException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivationDetail
@@ -41,6 +45,7 @@ class ApprovalDecisionService(
   private val residentialLocationRepository: ResidentialLocationRepository,
   private val sharedLocationService: SharedLocationService,
   private val activePrisonService: ActivePrisonService,
+  private val prisonerLocationService: PrisonerLocationService,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -67,11 +72,8 @@ class ApprovalDecisionService(
       transactionInvokedBy = transactionInvokedBy,
     )
 
-    val events = if (approvalRequest is ReactivationApprovalRequest) {
-      handleReactivation(approvalRequest, linkedTransaction)
-    } else {
-      null
-    }
+    // some approvals change location data which need an event to be raised for synchronisation purposes
+    val events = handleComplexApprovalProcesses(approvalRequest, linkedTransaction)
 
     approvalRequest.approve(
       approvedBy = username,
@@ -120,6 +122,52 @@ class ApprovalDecisionService(
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
 
+  private fun handleComplexApprovalProcesses(
+    approvalRequest: CertificationApprovalRequest,
+    linkedTransaction: LinkedTransaction,
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>>? = when (approvalRequest) {
+    is ReactivationApprovalRequest -> {
+      handleReactivation(approvalRequest, linkedTransaction)
+    }
+
+    is CapacityChangeApprovalRequest -> {
+      handleCapacityChange(approvalRequest, linkedTransaction)
+    }
+
+    else -> {
+      null
+    }
+  }
+
+  private fun handleCapacityChange(
+    approvalRequest: CapacityChangeApprovalRequest,
+    linkedTransaction: LinkedTransaction,
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+    // need to check that the new max cap value is not exceeding the number of prisoners in the cell at this time.
+    val prisoners = prisonerLocationService.prisonersInLocations(approvalRequest.location)
+    val newMaxCap = approvalRequest.maxCapacity
+    if (newMaxCap < prisoners.size) {
+      throw CapacityException(
+        approvalRequest.location.getKey(),
+        "Max capacity ($newMaxCap) cannot be decreased below current cell occupancy (${prisoners.size})",
+        ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
+      )
+    }
+
+    approvalRequest.location.setCapacity(
+      maxCapacity = approvalRequest.maxCapacity,
+      workingCapacity = approvalRequest.workingCapacity,
+      certifiedNormalAccommodation = approvalRequest.certifiedNormalAccommodation,
+      userOrSystemInContext = approvalRequest.requestedBy,
+      amendedDate = linkedTransaction.txStartTime,
+      linkedTransaction = linkedTransaction,
+    )
+
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to listOf(approvalRequest.location.toDto(includeParent = true)),
+    )
+  }
+
   private fun handleReactivation(
     approvalRequest: ReactivationApprovalRequest,
     linkedTransaction: LinkedTransaction,
@@ -142,6 +190,7 @@ class ApprovalDecisionService(
           amendedLocations = amendedLocations,
           reactivationDetail = reactivationDetail,
           linkedTransaction = linkedTransaction,
+          reactivatedBy = approvalRequest.requestedBy,
         )
       }
     }
@@ -218,7 +267,6 @@ class ApprovalDecisionService(
       approvalRequest = approvalRequest.toDto(),
       newLocation = newLocation,
       prisonId = approvalRequest.prisonId,
-      location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
 
@@ -274,7 +322,6 @@ class ApprovalDecisionService(
       approvalRequest = approvalRequest.toDto(),
       newLocation = newLocation,
       prisonId = approvalRequest.prisonId,
-      location = location?.toDto(includeChildren = !newLocation, includeParent = !newLocation),
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
 

@@ -17,13 +17,13 @@ open class CapacityChangeApprovalRequest(
   reasonForChange: String? = null,
 
   @Column(nullable = true)
-  open var workingCapacity: Int? = null,
+  open var workingCapacity: Int,
 
   @Column(nullable = true)
-  open var maxCapacity: Int? = null,
+  open var maxCapacity: Int,
 
   @Column(nullable = true)
-  open var certifiedNormalAccommodation: Int? = null,
+  open var certifiedNormalAccommodation: Int,
 
 ) : LocationCertificationApprovalRequest(
   id = id,

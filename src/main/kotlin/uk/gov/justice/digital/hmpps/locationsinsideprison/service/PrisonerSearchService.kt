@@ -62,7 +62,7 @@ class PrisonerSearchService(
       ),
     )
 
-    log.info("Checking for prisoners in locations {}", searchTerm)
+    log.info("Checking for prisoners in locations {} -> {}", prisonId, searchTerm)
 
     val prisonersInLocations = prisonerSearchWebClient
       .post()
