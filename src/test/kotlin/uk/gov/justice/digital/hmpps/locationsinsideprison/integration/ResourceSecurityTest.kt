@@ -20,18 +20,6 @@ class ResourceSecurityTest : SqsIntegrationTestBase() {
     "GET /v3/api-docs/swagger-config",
     " /error",
     "PUT /queue-admin/retry-all-dlqs",
-    "GET /reports/{reportId}/{reportVariantId}/count",
-    "GET /reports/{reportId}/{reportVariantId}",
-    "GET /reports/{reportId}/{reportVariantId}/{fieldId}",
-    "GET /definitions",
-    "GET /definitions/{reportId}",
-    "GET /definitions/{reportId}/{variantId}",
-    "GET /definitions/{dataProductDefinitionId}/dashboards/{dashboardId}",
-    "GET /statements",
-    "GET /async",
-    "GET /productCollections",
-    "GET /reports/{reportId}/dashboards/{dashboardId}",
-    "GET /productCollections/{id}",
   )
 
   @Test

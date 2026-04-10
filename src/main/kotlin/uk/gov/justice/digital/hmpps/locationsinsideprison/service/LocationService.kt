@@ -1604,7 +1604,11 @@ class LocationService(
   private fun checkForPrisonersInLocation(location: Location) {
     val locationsWithPrisoners = prisonerLocationService.prisonersInLocations(location).groupBy { it.cellLocation!! }
     if (locationsWithPrisoners.isNotEmpty()) {
-      throw LocationContainsPrisonersException(locationsWithPrisoners)
+      location.cellLocations().forEach {
+        if (!locationsWithPrisoners[it.getPathHierarchy()].isNullOrEmpty()) {
+          throw LocationContainsPrisonersException(locationsWithPrisoners)
+        }
+      }
     }
   }
 
