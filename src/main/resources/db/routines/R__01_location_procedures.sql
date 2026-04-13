@@ -419,7 +419,7 @@ BEGIN
     -- update in A-1
     PERFORM update_cell(p_cell_path := 'A-1-001', p_prison_id := p_prison_id, p_username := p_username, p_cell_type := array ['ACCESSIBLE_CELL'], p_max_cap := 2, p_working_cap := 2);
     PERFORM update_cell(p_cell_path := 'A-1-002', p_prison_id := p_prison_id, p_username := p_username, p_cell_type := array ['ACCESSIBLE_CELL'], p_max_cap := 2, p_working_cap := 2);
-    PERFORM create_inactive_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'A-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_deactivation_reason := 'PEST', p_deactivation_desc := 'Bed bugs');
+    PERFORM create_inactive_cell(p_code := '005', p_prison_id := p_prison_id, p_parent_path := 'A-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_deactivation_reason := 'PEST', p_deactivation_desc := 'Bed bugs');
     PERFORM create_non_res_cell(p_code := '007', p_prison_id := p_prison_id, p_parent_path := 'A-1', p_username := p_username, p_non_res_cell_type := 'OFFICE');
     PERFORM update_cell(p_cell_path := 'A-1-010', p_prison_id := p_prison_id, p_username := p_username, p_cell_type := array ['LISTENER_CRISIS'], p_max_cap := 2, p_working_cap := 1);
 
@@ -430,11 +430,11 @@ BEGIN
     -- cells in A-2
     PERFORM create_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
     PERFORM create_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
-    PERFORM create_inactive_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_deactivation_reason := 'DAMAGED', p_deactivation_desc := 'Flooded');
+    PERFORM create_inactive_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_deactivation_reason := 'DAMAGED', p_deactivation_desc := 'Flooded');
     PERFORM create_cell(p_code := '006', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_cell_type := array['CONSTANT_SUPERVISION']);
     PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_cell_type := array['LISTENER_CRISIS']);
     PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
-    PERFORM create_inactive_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_deactivation_reason := 'MAINTENANCE', p_deactivation_desc := 'No running water');
+    PERFORM create_inactive_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'A-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_deactivation_reason := 'MAINTENANCE', p_deactivation_desc := 'No running water');
 
 
     -- cells in A-3
@@ -458,7 +458,7 @@ BEGIN
 
 
     -- cells in B-2
-    PERFORM create_inactive_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_deactivation_reason := 'DAMP');
+    PERFORM create_inactive_cell(p_code := '003', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_deactivation_reason := 'DAMP');
     PERFORM create_cell(p_code := '004', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
     PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_cell_type := array['LISTENER_CRISIS']);
     PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'B-2', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
@@ -484,8 +484,8 @@ BEGIN
 
     PERFORM create_wing(p_prison_id := p_prison_id, p_wing_code := 'C', p_number_landings := 3, p_number_cells_per_landing := 15, p_working_cap := 2, p_max_cap := 2, p_username := p_username);
     -- cells in C-1
-    PERFORM create_inactive_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_deactivation_reason := 'DAMP', p_cell_type := array['ACCESSIBLE_CELL']);
-    PERFORM create_inactive_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 0, p_deactivation_reason := 'DAMP');
+    PERFORM create_inactive_cell(p_code := '001', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_deactivation_reason := 'DAMP', p_cell_type := array['ACCESSIBLE_CELL']);
+    PERFORM create_inactive_cell(p_code := '002', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_deactivation_reason := 'DAMP');
     PERFORM create_cell(p_code := '010', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 2, p_cell_type := array['LISTENER_CRISIS']);
     PERFORM create_cell(p_code := '011', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
     PERFORM create_cell(p_code := '012', p_prison_id := p_prison_id, p_parent_path := 'C-1', p_username := p_username, p_max_cap := 2, p_working_cap := 1);
