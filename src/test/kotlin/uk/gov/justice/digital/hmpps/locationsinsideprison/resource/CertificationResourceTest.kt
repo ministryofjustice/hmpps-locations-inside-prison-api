@@ -48,6 +48,12 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
     cellCertificateRepository.deleteAll()
     super.setUp()
 
+    webTestClient.put().uri("/prison-configuration/${wingZ.prisonId}/certification-approval-required/ACTIVE")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+      .header("Content-Type", "application/json")
+      .exchange()
+      .expectStatus().isOk
+
     locationService.createCells(
       createCellsRequest = CellInitialisationRequest(
         prisonId = wingZ.prisonId,

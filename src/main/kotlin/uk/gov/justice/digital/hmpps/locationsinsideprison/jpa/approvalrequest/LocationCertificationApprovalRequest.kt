@@ -95,6 +95,10 @@ abstract class LocationCertificationApprovalRequest(
       workingCapacityChange = topLocation.workingCapacityChange()
       maxCapacityChange = topLocation.maxCapacityChange()
       certifiedNormalAccommodationChange = topLocation.certifiedNormalAccommodationChange()
+      topLocation.refreshCapacities()
+      topLocation.findSubLocations().forEach { eachLocation ->
+        eachLocation.refreshCapacities()
+      }
     }
   }
 }

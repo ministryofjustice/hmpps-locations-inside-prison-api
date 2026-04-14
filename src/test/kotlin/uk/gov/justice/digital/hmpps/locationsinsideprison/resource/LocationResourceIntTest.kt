@@ -1293,11 +1293,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "newValues": ["Active"]
                         },
                         {
-                          "attribute": "Working capacity",
-                          "oldValues": ["0"],
-                          "newValues": ["2"]
-                        },
-                        {
                           "attribute": "Deactivation reason",
                           "newValues": ["Mothballed"]
                         },
@@ -1509,12 +1504,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "attribute": "Status",
                           "oldValues": ["Inactive"],
                           "newValues": ["Active"]
-                        },
-                        {
-                          "transactionType": "REACTIVATION",
-                          "attribute": "Working capacity",
-                          "oldValues": ["0"],
-                          "newValues": ["2"]
                         },
                         {
                           "transactionType": "DEACTIVATION",
@@ -2235,7 +2224,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                         },
                         {
                           "attribute": "Working capacity",
-                          "oldValues": ["0"],
+                          "oldValues": ["2"],
                           "newValues": ["3"]
                         },
                         {
@@ -2276,11 +2265,6 @@ class LocationResourceIntTest : CommonDataTestBase() {
                           "attribute": "Status",
                           "oldValues": ["Inactive"],
                           "newValues": ["Active"]
-                        },
-                        {
-                          "attribute": "Working capacity",
-                          "oldValues": ["0"],
-                          "newValues": ["2"]
                         },
                        {
                           "attribute": "Deactivation reason",

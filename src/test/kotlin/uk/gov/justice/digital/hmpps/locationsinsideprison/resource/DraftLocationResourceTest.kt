@@ -38,6 +38,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
   @BeforeEach
   override fun setUp() {
     super.setUp()
+    baselinePrison("LEI")
     // Create a draft wing in Leeds prison
     draftWing = repository.saveAndFlush(
       CreateEntireWingRequest(
@@ -1172,7 +1173,7 @@ fun Cell.toCellInformation(specialistCellTypes: Set<SpecialistCellType>? = setOf
   code = getLocationCode(),
   cellMark = cellMark,
   maxCapacity = getMaxCapacity()!!,
-  workingCapacity = getWorkingCapacity()!!,
+  workingCapacity = getCurrentlyHeldWorkingCapacity()!!,
   certifiedNormalAccommodation = getCertifiedNormalAccommodation()!!,
   specialistCellTypes = specialistCellTypes,
   inCellSanitation = inCellSanitation ?: false,

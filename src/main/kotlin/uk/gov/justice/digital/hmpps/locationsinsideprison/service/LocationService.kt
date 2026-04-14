@@ -886,7 +886,7 @@ class LocationService(
     }
 
     // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialist cell types
-    if (isCapacityRequired(specialistCellTypes, cell.accommodationType) && cell.getWorkingCapacity() == 0) {
+    if (isCapacityRequired(specialistCellTypes, cell.accommodationType) && cell.getCurrentlyHeldWorkingCapacity() == 0) {
       throw CapacityException(
         cell.getKey(),
         "Cannot removes specialist cell types for a normal accommodation with a working capacity of 0",
@@ -1208,9 +1208,9 @@ class LocationService(
         if (!location.isPermanentlyDeactivated()) {
           if (location is Cell) {
             with(capacityChange) {
-              if (location.getMaxCapacity(includePending = true) != maxCapacity || location.getWorkingCapacity() != workingCapacity) {
+              if (location.getMaxCapacity(includePending = true) != maxCapacity || location.getCurrentlyHeldWorkingCapacity() != workingCapacity) {
                 try {
-                  val oldWorkingCapacity = location.getWorkingCapacity()
+                  val oldWorkingCapacity = location.getCurrentlyHeldWorkingCapacity()
                   val oldMaxCapacity = location.getMaxCapacity(includePending = true)
                   val oldCertifiedNormalAccommodation = location.getCertifiedNormalAccommodation()
                   updateCellCapacity(
@@ -1644,7 +1644,7 @@ class LocationService(
         prisonId = cell.prisonId,
         pathHierarchy = cell.getPathHierarchy(),
         maxCapacity = cell.getMaxCapacity() ?: 0,
-        workingCapacity = cell.getWorkingCapacity() ?: 0,
+        workingCapacity = cell.getCurrentlyHeldWorkingCapacity() ?: 0,
         localName = cell.localName,
         specialistCellTypes = cell.specialistCellTypes.map {
           CellWithSpecialistCellTypes.CellType(

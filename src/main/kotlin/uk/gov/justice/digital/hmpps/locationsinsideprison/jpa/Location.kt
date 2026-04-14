@@ -92,7 +92,7 @@ abstract class Location(
   @Id
   @GeneratedUuidV7
   @Column(name = "id", updatable = false, nullable = false)
-  open val id: UUID? = null,
+  open var id: UUID? = null,
 
   open var code: String,
 
@@ -101,7 +101,7 @@ abstract class Location(
   @Enumerated(EnumType.STRING)
   open var locationType: LocationType,
 
-  open val prisonId: String,
+  open var prisonId: String,
 
   @ManyToOne(fetch = FetchType.EAGER, cascade = [CascadeType.PERSIST])
   @JoinColumn(name = "parent_id")
@@ -126,13 +126,13 @@ abstract class Location(
 
   @OneToMany(mappedBy = "parent", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
   @SortNatural
-  protected open val childLocations: SortedSet<Location> = sortedSetOf(),
+  protected open var childLocations: SortedSet<Location> = sortedSetOf(),
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
-  protected open val history: SortedSet<LocationHistory> = sortedSetOf(),
+  protected open var history: SortedSet<LocationHistory> = sortedSetOf(),
 
-  open val whenCreated: LocalDateTime,
+  open var whenCreated: LocalDateTime,
   open var whenUpdated: LocalDateTime,
   open var updatedBy: String,
   open var deactivatedBy: String? = null,
@@ -980,7 +980,7 @@ abstract class Location(
       amendedLocations = amendedLocations,
     )
     val previousWorkingCapacity = if (this is ResidentialLocation) {
-      calcWorkingCapacity()
+      calcOldWorkingCapacity()
     } else {
       null
     }
@@ -989,7 +989,7 @@ abstract class Location(
     if (this is Cell && capacityAdjusted) {
       setCapacity(
         maxCapacity = maxCapacity ?: getMaxCapacity(includePending = true) ?: 0,
-        workingCapacity = workingCapacity ?: getWorkingCapacity() ?: 0,
+        workingCapacity = workingCapacity ?: getCurrentlyHeldWorkingCapacity() ?: 0,
         certifiedNormalAccommodation = certifiedNormalAccommodation ?: getCertifiedNormalAccommodation() ?: 0,
         userOrSystemInContext = userOrSystemInContext,
         amendedDate = linkedTransaction.txStartTime,

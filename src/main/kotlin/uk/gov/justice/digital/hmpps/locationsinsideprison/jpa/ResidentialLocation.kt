@@ -69,7 +69,7 @@ open class ResidentialLocation(
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
-  open val approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
+  open var approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
 
 ) : Location(
   id = id,
@@ -117,14 +117,22 @@ open class ResidentialLocation(
   fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
   fun isLocationShownOnResidentialSummary() = locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
 
+  fun getCurrentlyHeldWorkingCapacity(): Int? = capacity?.workingCapacity
+
   fun getWorkingCapacityIgnoreParent(): Int = cellLocations().filter { it.isActive() }
-    .sumOf { it.getWorkingCapacity() ?: 0 }
+    .sumOf { it.getCurrentlyHeldWorkingCapacity() ?: 0 }
 
   fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .sumOf { it.getCurrentlyHeldWorkingCapacity() ?: 0 }
+
+  fun calcPendingWorkingCapacity(includeDraft: Boolean = false): Int = cellLocations().filter { it.isActiveAndAllParentsActive() || (includeDraft && it.isDraft()) }
     .sumOf { it.getWorkingCapacity() ?: 0 }
 
-  fun calcWorkingCapacity(includeDraft: Boolean = false): Int = cellLocations().filter { it.isActiveAndAllParentsActive() || (includeDraft && it.isDraft()) }
-    .sumOf { it.getWorkingCapacity() ?: 0 }
+  fun calcOldWorkingCapacity() = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft()) }
+    .sumOf { it.getOldWorkingCapacity() ?: 0 }
+
+  fun calcWorkingCapacity(includePendingOrDraft: Boolean = false) = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
+    .sumOf { it.getWorkingCapacity(includePendingOrDraft) ?: 0 }
 
   fun calcMaxCapacity(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
     .sumOf { it.getMaxCapacity(includePendingOrDraft) ?: 0 }
@@ -746,9 +754,9 @@ open class ResidentialLocation(
     if (isCell() || isVirtualResidentialLocation()) {
       if (maxCapacity != (capacity?.maxCapacity ?: 0) ||
         certifiedNormalAccommodation != (capacity?.certifiedNormalAccommodation ?: 0) ||
-        workingCapacity != (capacity?.workingCapacity ?: 0)
+        workingCapacity != (getCurrentlyHeldWorkingCapacity() ?: 0)
       ) {
-        log.info("${getKey()}: Updating max capacity from ${capacity?.maxCapacity ?: 0} to $maxCapacity, CNA from ${capacity?.certifiedNormalAccommodation ?: 0} to $certifiedNormalAccommodation and working capacity from ${capacity?.workingCapacity ?: 0} to $workingCapacity")
+        log.info("${getKey()}: Updating max capacity from ${capacity?.maxCapacity ?: 0} to $maxCapacity, CNA from ${capacity?.certifiedNormalAccommodation ?: 0} to $certifiedNormalAccommodation and working capacity from ${getCurrentlyHeldWorkingCapacity() ?: 0} to $workingCapacity")
 
         addHistory(
           LocationAttribute.MAX_CAPACITY,
@@ -760,7 +768,7 @@ open class ResidentialLocation(
         )
         addHistory(
           LocationAttribute.WORKING_CAPACITY,
-          capacity?.workingCapacity?.let { calcWorkingCapacity().toString() } ?: "None",
+          getCurrentlyHeldWorkingCapacity()?.let { getCurrentlyHeldWorkingCapacity().toString() } ?: "None",
           workingCapacity.toString(),
           userOrSystemInContext,
           amendedDate,

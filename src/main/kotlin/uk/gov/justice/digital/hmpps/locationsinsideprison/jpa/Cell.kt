@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PendingChangeDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CapacityChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CellMarkChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.SanitationChangeApprovalRequest
@@ -62,18 +63,18 @@ class Cell(
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
-  val attributes: SortedSet<ResidentialAttribute> = sortedSetOf(),
+  var attributes: SortedSet<ResidentialAttribute> = sortedSetOf(),
 
   @Enumerated(EnumType.STRING)
   var accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
-  val usedFor: SortedSet<CellUsedFor> = sortedSetOf(),
+  var usedFor: SortedSet<CellUsedFor> = sortedSetOf(),
 
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
-  val specialistCellTypes: SortedSet<SpecialistCell> = sortedSetOf(),
+  var specialistCellTypes: SortedSet<SpecialistCell> = sortedSetOf(),
 
   @Enumerated(EnumType.STRING)
   var convertedCellType: ConvertedCellType? = null,
@@ -103,16 +104,25 @@ class Cell(
   capacity = capacity,
 ) {
 
-  fun getWorkingCapacity() = capacity?.workingCapacity
+  fun getOldWorkingCapacity(): Int? = findPendingLeafLocation(true)?.currentWorkingCapacity ?: capacity?.workingCapacity
 
-  fun getMaxCapacity(includePending: Boolean = false): Int? {
-    val pendingChange = getPendingCapacityChange(includePending)
-    return pendingChange?.maxCapacity ?: capacity?.maxCapacity
+  fun getWorkingCapacity(includePending: Boolean = false): Int? = findPendingLeafLocation(includePending)?.workingCapacity ?: if (isActiveAndAllParentsActive() || (includePending && isDraft())) {
+    getCurrentlyHeldWorkingCapacity()
+  } else {
+    null
   }
 
-  fun getCertifiedNormalAccommodation(includePending: Boolean = false): Int? {
-    val pendingChange = getPendingCapacityChange(includePending)
-    return pendingChange?.certifiedNormalAccommodation ?: capacity?.certifiedNormalAccommodation
+  fun getMaxCapacity(includePending: Boolean = false): Int? = findPendingLeafLocation(includePending)?.maxCapacity ?: capacity?.maxCapacity
+
+  fun getCertifiedNormalAccommodation(includePending: Boolean = false): Int? = findPendingLeafLocation(includePending)?.certifiedNormalAccommodation ?: capacity?.certifiedNormalAccommodation
+
+  private fun findPendingLeafLocation(includePending: Boolean): CertificationApprovalRequestLocation? {
+    val topLevelLocation = getPendingCapacityChange(includePending)?.getTopLevelLocation() ?: return null
+    return if (topLevelLocation.pathHierarchy == this.getPathHierarchy()) {
+      topLevelLocation
+    } else {
+      topLevelLocation.findSubLocations().firstOrNull { it.pathHierarchy == this.getPathHierarchy() }
+    }
   }
 
   fun getDoorCellMark(includePending: Boolean = false): String? {
@@ -134,7 +144,7 @@ class Cell(
   }
 
   private fun getPendingCapacityChange(shouldIncludePending: Boolean) = if (shouldIncludePending) {
-    getPendingApprovalRequest() as? CapacityChangeApprovalRequest
+    getPendingApprovalRequest()
   } else {
     null
   }
@@ -691,7 +701,7 @@ class Cell(
     cellCertificateLocation = cellCertificateLocation,
   ).copy(
     oldWorkingCapacity = if (isTemporarilyDeactivated()) {
-      getWorkingCapacity()
+      calcOldWorkingCapacity()
     } else {
       null
     },
