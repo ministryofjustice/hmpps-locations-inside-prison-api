@@ -862,7 +862,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
                     maxCapacity = 2,
                     certifiedNormalAccommodation = 2,
                   ),
-                  specialistCellTypes = setOf(SpecialistCellType.SAFE_CELL, SpecialistCellType.CONSTANT_SUPERVISION),
+                  specialistCellTypes = if (it.getPathHierarchy() == "A-1-001") {
+                    emptySet()
+                  } else {
+                    setOf(SpecialistCellType.SAFE_CELL, SpecialistCellType.CONSTANT_SUPERVISION)
+                  },
                 )
               },
             ),
@@ -907,7 +911,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
         SpecialistCellType.ESCAPE_LIST,
       )
-      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.specialistCellTypes).containsExactlyInAnyOrder(
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.specialistCellTypes).isNull()
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.ESCAPE_LIST,
+      )
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.specialistCellTypes).containsExactlyInAnyOrder(
         SpecialistCellType.SAFE_CELL,
         SpecialistCellType.CONSTANT_SUPERVISION,
       )
@@ -955,6 +963,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .jsonPath("$.locations[0].subLocations[0].subLocations[0].workingCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[0].subLocations[0].maxCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[0].subLocations[0].certifiedNormalAccommodation").isEqualTo(2)
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].specialistCellTypes").doesNotExist()
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].workingCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].maxCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].certifiedNormalAccommodation").isEqualTo(2)

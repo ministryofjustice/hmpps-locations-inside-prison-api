@@ -154,8 +154,8 @@ class ApprovalRequestService(
           approvalCell.maxCapacity = it.maxCapacity
           approvalCell.certifiedNormalAccommodation = it.certifiedNormalAccommodation
         }
-        details.getSpecialistCellTypesAsCSV()?.let {
-          approvalCell.specialistCellTypes = it
+        details.specialistCellTypes?.let {
+          approvalCell.specialistCellTypes = details.getSpecialistCellTypesAsCSV()
         }
       }
     }

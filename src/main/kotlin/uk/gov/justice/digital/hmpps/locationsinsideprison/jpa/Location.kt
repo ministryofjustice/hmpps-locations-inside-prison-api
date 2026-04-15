@@ -999,8 +999,8 @@ abstract class Location(
       amendedLocations?.addAll(this.getParentLocations())
     }
 
-    if (this is Cell && specialistCellTypes != null) {
-      updateSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction)
+    if (this is Cell) {
+      updateSpecialistCellTypes(specialistCellTypes ?: emptySet(), userOrSystemInContext, clock, linkedTransaction)
     }
 
     if (isTemporarilyDeactivated()) {
