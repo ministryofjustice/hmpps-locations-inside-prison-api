@@ -28,7 +28,7 @@ import kotlin.collections.component1
 import kotlin.collections.component2
 
 @Service
-@Transactional(readOnly = true)
+@Transactional
 class ApprovalRequestService(
   private val certificationApprovalRequestRepository: CertificationApprovalRequestRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
@@ -41,6 +41,7 @@ class ApprovalRequestService(
   private val cellCertificateRepository: CellCertificateRepository,
 ) {
 
+  @Transactional(readOnly = true)
   fun getApprovalRequests(prisonId: String, status: ApprovalRequestStatus? = ApprovalRequestStatus.PENDING): List<CertificationApprovalRequestDto> {
     val requests = when {
       status != null -> certificationApprovalRequestRepository.findByPrisonIdAndStatusOrderByRequestedDateDesc(prisonId, status)
@@ -50,6 +51,7 @@ class ApprovalRequestService(
     return requests.map { it.toDto() }
   }
 
+  @Transactional(readOnly = true)
   fun getApprovalRequest(id: UUID): CertificationApprovalRequestDto {
     val request = certificationApprovalRequestRepository.findById(id)
       .orElseThrow { ApprovalRequestNotFoundException(id) }
@@ -57,7 +59,6 @@ class ApprovalRequestService(
     return request.toDto(showLocations = true)
   }
 
-  @Transactional
   fun requestDraftApproval(requestToApprove: LocationApprovalRequest): CertificationApprovalRequestDto {
     val location = residentialLocationRepository.findById(requestToApprove.locationId)
       .orElseThrow { LocationNotFoundException(requestToApprove.locationId.toString()) }
@@ -89,7 +90,6 @@ class ApprovalRequestService(
     }
   }
 
-  @Transactional
   fun requestReactivationApproval(reactivationApprovalRequest: ReactivationLocationsApprovalRequest): CertificationApprovalRequestDto {
     val topLevelLocation = residentialLocationRepository.findById(reactivationApprovalRequest.topLevelLocationId)
       .orElseThrow { LocationNotFoundException(reactivationApprovalRequest.topLevelLocationId.toString()) }
@@ -179,7 +179,6 @@ class ApprovalRequestService(
     }
   }
 
-  @Transactional
   fun requestSignedOpCapApproval(requestToApprove: SignedOpCapApprovalRequest): CertificationApprovalRequestDto {
     val signedOpCap = signedOperationCapacityRepository.findByPrisonId(requestToApprove.prisonId)
       ?: throw LocationNotFoundException(requestToApprove.prisonId)

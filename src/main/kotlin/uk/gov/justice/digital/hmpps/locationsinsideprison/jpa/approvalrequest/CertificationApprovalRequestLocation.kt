@@ -166,9 +166,6 @@ open class CertificationApprovalRequestLocation(
       for (childLocation in location.subLocations) {
         traverse(childLocation)
       }
-      if (this != location) {
-        subLocations.add(location)
-      }
     }
 
     traverse(this)
@@ -194,4 +191,13 @@ open class CertificationApprovalRequestLocation(
   fun certifiedNormalAccommodationChange(): Int = approvedCertifiedNormalAccommodation() - calcCurrentCertifiedNormalAccommodation()
 
   fun getSpecialistCellTypesFromList(specialCellTypes: String?): List<SpecialistCellType>? = specialCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) }
+
+  fun refreshCapacities() {
+    workingCapacity = approvedWorkingCapacity()
+    maxCapacity = approvedMaxCapacity()
+    certifiedNormalAccommodation = approvedCertifiedNormalAccommodation()
+    currentWorkingCapacity = calcCurrentWorkingCapacity()
+    currentMaxCapacity = calcCurrentMaxCapacity()
+    currentCertifiedNormalAccommodation = calcCurrentCertifiedNormalAccommodation()
+  }
 }

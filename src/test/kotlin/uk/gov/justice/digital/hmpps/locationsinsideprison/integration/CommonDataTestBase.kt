@@ -331,4 +331,11 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       ),
     )
   }
+  fun baselinePrison(prisonId: String) {
+    webTestClient.post().uri("/cell-certificates/prison/$prisonId/baseline")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .exchange()
+      .expectStatus().isCreated
+  }
 }

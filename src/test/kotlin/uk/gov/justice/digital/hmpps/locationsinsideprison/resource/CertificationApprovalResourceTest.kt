@@ -785,6 +785,12 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations!![0].subLocations).hasSize(2)
       assertThat(pendingApproval.workingCapacityChange).isEqualTo(0)
       assertThat(pendingApproval.locations).hasSize(1)
+      assertThat(pendingApproval.locations[0].currentWorkingCapacity).isEqualTo(6)
+      assertThat(pendingApproval.locations[0].currentMaxCapacity).isEqualTo(12)
+      assertThat(pendingApproval.locations[0].currentCertifiedNormalAccommodation).isEqualTo(6)
+      assertThat(pendingApproval.locations[0].workingCapacity).isEqualTo(6)
+      assertThat(pendingApproval.locations[0].maxCapacity).isEqualTo(12)
+      assertThat(pendingApproval.locations[0].certifiedNormalAccommodation).isEqualTo(6)
       assertThat(pendingApproval.locations[0].subLocations).hasSize(2)
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations).hasSize(3)
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
@@ -892,6 +898,12 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.workingCapacityChange).isEqualTo(6)
       assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(6)
       assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
+      assertThat(pendingApproval.locations[0].currentWorkingCapacity).isEqualTo(6)
+      assertThat(pendingApproval.locations[0].currentMaxCapacity).isEqualTo(12)
+      assertThat(pendingApproval.locations[0].currentCertifiedNormalAccommodation).isEqualTo(6)
+      assertThat(pendingApproval.locations[0].workingCapacity).isEqualTo(12)
+      assertThat(pendingApproval.locations[0].maxCapacity).isEqualTo(12)
+      assertThat(pendingApproval.locations[0].certifiedNormalAccommodation).isEqualTo(12)
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
         SpecialistCellType.ESCAPE_LIST,
       )
@@ -1380,13 +1392,5 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(rejectedLocation.pendingChanges).isNull()
       assertThat(rejectedLocation.pendingApprovalRequestId).isNull()
     }
-  }
-
-  private fun baselinePrison(prisonId: String) {
-    webTestClient.post().uri("/cell-certificates/prison/$prisonId/baseline")
-      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
-      .header("Content-Type", "application/json")
-      .exchange()
-      .expectStatus().isCreated
   }
 }
