@@ -89,6 +89,7 @@ enum class LocationAttribute(
 
   // These are all returned as history changes
   STATUS(description = "Status", display = true, displayOrder = 0),
+  LOCATION_CREATED(description = "Location created", display = true, displayOrder = 1),
   CERTIFICATION(description = "Certification", display = true, displayOrder = 5),
   ACCOMMODATION_TYPE(description = "Accommodation type", display = true, displayOrder = 10),
   USED_FOR(description = "Used for", display = true, displayOrder = 15),
@@ -96,13 +97,15 @@ enum class LocationAttribute(
   CONVERTED_CELL_TYPE(description = "Non-residential room", display = true, displayOrder = 25),
   WORKING_CAPACITY(description = "Working capacity", display = true, displayOrder = 30),
   MAX_CAPACITY(description = "Maximum capacity", display = true, displayOrder = 35),
-  CERTIFIED_CAPACITY(description = "Certified normal accommodation", displayOrder = 36),
+  CERTIFIED_CAPACITY(description = "Certified normal accommodation", display = true, displayOrder = 36),
   DEACTIVATION_REASON(description = "Deactivation reason", display = true, displayOrder = 40),
   PROPOSED_REACTIVATION_DATE(description = "Estimated reactivation date", display = true, displayOrder = 45),
   PLANET_FM_NUMBER(description = "Planet FM reference number", display = true, displayOrder = 50),
   LOCAL_NAME(description = "Local name", display = true, displayOrder = 55),
+  CELL_MARK(description = "Cell mark", display = true, displayOrder = 60),
+  IN_CELL_SANITATION(description = "In-cell sanitation", display = true, displayOrder = 65),
 
-  // non res only
+  // non-res only
   USAGE(description = "Usage", display = true),
   NON_RESIDENTIAL_CAPACITY(description = "Non residential capacity", display = true),
   INTERNAL_MOVEMENT_ALLOWED(description = "Internal movement allowed", display = true),
@@ -117,9 +120,6 @@ enum class LocationAttribute(
   COMMENTS(description = "Comments"),
   ATTRIBUTES(description = "Attributes"),
   PERMANENT_DEACTIVATION(description = "Permanent deactivation"),
-  LOCATION_CREATED(description = "Location created"),
-  CELL_MARK(description = "Cell mark"),
-  IN_CELL_SANITATION(description = "In-cell sanitation"),
 
   // These are not recorded
   ACTIVE(description = "Active", notUsed = true),
