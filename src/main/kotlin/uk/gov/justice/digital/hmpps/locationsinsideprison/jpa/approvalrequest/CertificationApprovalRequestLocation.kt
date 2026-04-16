@@ -131,7 +131,9 @@ open class CertificationApprovalRequestLocation(
     subLocations = subLocations.map { it.toDto() }.takeIf { it.isNotEmpty() },
   )
 
-  fun getSpecialistCellTypesFromList(): List<SpecialistCellType>? = getSpecialistCellTypesFromList(specialistCellTypes)
+  fun getSpecialistCellTypesFromList(): List<SpecialistCellType>? = specialistCellTypes?.let { types ->
+    types.takeIf { it.isNotEmpty() }?.let { getSpecialistCellTypesFromList(it) } ?: emptyList()
+  }
 
   private fun getUsedForTypesFromList(): List<UsedForType>? = usedForTypes?.split(",")?.map { UsedForType.valueOf(it.trim()) }
 
@@ -190,7 +192,12 @@ open class CertificationApprovalRequestLocation(
 
   fun certifiedNormalAccommodationChange(): Int = approvedCertifiedNormalAccommodation() - calcCurrentCertifiedNormalAccommodation()
 
-  fun getSpecialistCellTypesFromList(specialCellTypes: String?): List<SpecialistCellType>? = specialCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) }
+  fun getSpecialistCellTypesFromList(specialCellTypes: String?): List<SpecialistCellType>? = specialCellTypes?.let { types ->
+    types.takeIf { it.isNotEmpty() }
+      ?.split(",")
+      ?.map { SpecialistCellType.valueOf(it.trim()) }
+      ?: emptyList()
+  }
 
   fun refreshCapacities() {
     workingCapacity = approvedWorkingCapacity()

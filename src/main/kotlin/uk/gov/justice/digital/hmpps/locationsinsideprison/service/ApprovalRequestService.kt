@@ -155,7 +155,7 @@ class ApprovalRequestService(
           approvalCell.certifiedNormalAccommodation = it.certifiedNormalAccommodation
         }
         details.specialistCellTypes?.let {
-          approvalCell.specialistCellTypes = details.getSpecialistCellTypesAsCSV()
+          approvalCell.specialistCellTypes = if (it.isNotEmpty()) details.getSpecialistCellTypesAsCSV() else ""
         }
       }
     }

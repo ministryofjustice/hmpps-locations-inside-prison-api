@@ -1000,7 +1000,7 @@ abstract class Location(
     }
 
     if (this is Cell) {
-      updateSpecialistCellTypes(specialistCellTypes ?: emptySet(), userOrSystemInContext, clock, linkedTransaction)
+      specialistCellTypes?.let { updateSpecialistCellTypes(specialistCellTypes, userOrSystemInContext, clock, linkedTransaction) }
     }
 
     if (isTemporarilyDeactivated()) {

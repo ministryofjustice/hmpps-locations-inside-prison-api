@@ -862,10 +862,10 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
                     maxCapacity = 2,
                     certifiedNormalAccommodation = 2,
                   ),
-                  specialistCellTypes = if (it.getPathHierarchy() == "A-1-001") {
-                    emptySet()
-                  } else {
-                    setOf(SpecialistCellType.SAFE_CELL, SpecialistCellType.CONSTANT_SUPERVISION)
+                  specialistCellTypes = when (it.getPathHierarchy()) {
+                    "A-1-001" -> emptySet()
+                    "A-1-002" -> null
+                    else -> setOf(SpecialistCellType.SAFE_CELL, SpecialistCellType.CONSTANT_SUPERVISION)
                   },
                 )
               },
@@ -911,11 +911,14 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
         SpecialistCellType.ESCAPE_LIST,
       )
-      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.specialistCellTypes).isNull()
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.specialistCellTypes).isEmpty()
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
         SpecialistCellType.ESCAPE_LIST,
       )
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.specialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.ESCAPE_LIST,
+      )
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(2)?.specialistCellTypes).containsExactlyInAnyOrder(
         SpecialistCellType.SAFE_CELL,
         SpecialistCellType.CONSTANT_SUPERVISION,
       )
