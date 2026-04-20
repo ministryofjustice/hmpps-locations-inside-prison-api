@@ -25,3 +25,7 @@ spring:
 
   jpa:
     show-sql: true
+
+springdoc:
+  swagger-ui:
+    enabled: true
