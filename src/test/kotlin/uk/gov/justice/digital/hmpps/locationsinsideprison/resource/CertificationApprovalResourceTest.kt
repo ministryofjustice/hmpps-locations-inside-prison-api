@@ -344,16 +344,29 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     }
 
     @Test
-    fun `can change just working capacity a location and not required request approval`() {
-      // will return a prisoner for each location under the Leeds wing
-      leedsWing.findAllLeafLocations().forEach {
-        prisonerSearchMockServer.stubSearchByLocations(
-          leedsWing.prisonId,
-          listOf(it.getPathHierarchy()),
-          true,
-        )
-      }
-      val firstCell = leedsWing.findAllLeafLocations().first()
+    fun `can change just working capacity a location and not require a request approval`() {
+      val firstCell = temporaryUpdateWorkingCapacity()
+
+      val capacityChangedLocation = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(capacityChangedLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(capacityChangedLocation.pendingApprovalRequestId).isNull()
+      assertThat(capacityChangedLocation.capacity?.maxCapacity).isEqualTo(2)
+      assertThat(capacityChangedLocation.capacity?.workingCapacity).isEqualTo(2)
+      assertThat(capacityChangedLocation.currentCellCertificate).isNotNull
+      assertThat(capacityChangedLocation.currentCellCertificate!!.workingCapacity).isEqualTo(1)
+    }
+
+    @Test
+    fun `can change a working capacity to match a capacity on a certificate`() {
+      val firstCell = temporaryUpdateWorkingCapacity()
+      // Now reflect on the cert the same values
       webTestClient.put().uri("/locations/${firstCell.id}/capacity")
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
         .header("Content-Type", "application/json")
@@ -363,7 +376,6 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
               workingCapacity = 2,
               maxCapacity = 2,
               certifiedNormalAccommodation = 1,
-              temporaryWorkingCapacityChange = true,
             ),
           ),
         )
@@ -382,10 +394,63 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
                   "workingCapacity": 2,
                   "certifiedNormalAccommodation": 1
                 },
+                "pendingChanges": {
+                  "maxCapacity": 2,
+                  "workingCapacity": 2,
+                  "certifiedNormalAccommodation": 1
+                },
                 "active": true,
                 "key": "${firstCell.getKey()}"
               }
           """,
+          JsonCompareMode.LENIENT,
+        )
+
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+    }
+
+    private fun temporaryUpdateWorkingCapacity(workingCapacity: Int = 2): uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location {
+      // will return a prisoner for each location under the Leeds wing
+      leedsWing.findAllLeafLocations().forEach {
+        prisonerSearchMockServer.stubSearchByLocations(
+          leedsWing.prisonId,
+          listOf(it.getPathHierarchy()),
+          true,
+        )
+      }
+      val firstCell = leedsWing.findAllLeafLocations().first()
+      webTestClient.put().uri("/locations/${firstCell.id}/capacity")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CapacityChangeRequest(
+              workingCapacity = workingCapacity,
+              maxCapacity = 2,
+              certifiedNormalAccommodation = 1,
+              temporaryWorkingCapacityChange = true,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().json(
+          // language=json
+          """
+                  {
+                    "id": "${firstCell.id}",
+                    "prisonId": "${firstCell.prisonId}",
+                    "pathHierarchy": "${firstCell.getPathHierarchy()}",
+                    "locationType": "CELL",
+                    "capacity": {
+                      "maxCapacity": 2,
+                      "workingCapacity": 2,
+                      "certifiedNormalAccommodation": 1
+                    },
+                    "active": true,
+                    "key": "${firstCell.getKey()}"
+                  }
+              """,
           JsonCompareMode.LENIENT,
         )
 
@@ -396,21 +461,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
           "location.inside.prison.amended" to firstCell.getParent()?.getParent()?.getKey(),
         )
       }
-
-      val capacityChangedLocation = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
-        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
-        .header("Content-Type", "application/json")
-        .exchange()
-        .expectStatus().isOk
-        .expectBody<Location>()
-        .returnResult().responseBody!!
-
-      assertThat(capacityChangedLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
-      assertThat(capacityChangedLocation.pendingApprovalRequestId).isNull()
-      assertThat(capacityChangedLocation.capacity?.maxCapacity).isEqualTo(2)
-      assertThat(capacityChangedLocation.capacity?.workingCapacity).isEqualTo(2)
-      assertThat(capacityChangedLocation.currentCellCertificate).isNotNull
-      assertThat(capacityChangedLocation.currentCellCertificate!!.workingCapacity).isEqualTo(1)
+      return firstCell
     }
   }
 
