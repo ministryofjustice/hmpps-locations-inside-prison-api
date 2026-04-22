@@ -769,10 +769,17 @@ class LocationService(
       throw PermanentlyDeactivatedUpdateNotAllowedException(locCapChange.getKey())
     }
 
-    val workingCapacityChange = locCapChange.calcWorkingCapacity() - workingCapacity
-    val maxCapacityChange = locCapChange.calcMaxCapacity() - maxCapacity
+    val certificateValue = cellCertificateRepository.findByPrisonIdAndPathHierarchy(locCapChange.prisonId, locCapChange.getPathHierarchy())
+
+    val workingCapacityChange = if (temporaryWorkingCapacityChange) {
+      locCapChange.calcWorkingCapacity() - workingCapacity
+    } else {
+      (certificateValue?.workingCapacity ?: locCapChange.calcWorkingCapacity()) - workingCapacity
+    }
+
+    val maxCapacityChange = (certificateValue?.maxCapacity ?: locCapChange.calcMaxCapacity()) - maxCapacity
     val cna = certifiedNormalAccommodation ?: locCapChange.calcCertifiedNormalAccommodation()
-    val cnaChange = locCapChange.calcCertifiedNormalAccommodation() - cna
+    val cnaChange = (certificateValue?.certifiedNormalAccommodation ?: locCapChange.calcCertifiedNormalAccommodation()) - cna
 
     val prisonRequiresApprovalForChanges = activePrisonService.isCertificationApprovalRequired(locCapChange.prisonId)
     val capacityChangesRequested = workingCapacityChange != 0 || maxCapacityChange != 0 || cnaChange != 0
@@ -782,7 +789,8 @@ class LocationService(
     var trackingTx = linkedTransaction
 
     if (capacityChangesRequested) {
-      val wcTempChangeAllowed = prisonRequiresApprovalForChanges && temporaryWorkingCapacityChange && workingCapacityChange != 0 && maxCapacityChange == 0 && cnaChange == 0
+      val wcTempChangeAllowed =
+        prisonRequiresApprovalForChanges && temporaryWorkingCapacityChange && workingCapacityChange != 0 && maxCapacityChange == 0 && cnaChange == 0
       val changeMustBeApproved = prisonRequiresApprovalForChanges && !wcTempChangeAllowed && !locCapChange.isDraft()
 
       if (!locCapChange.isDraft() && maxCapacityChange != 0) {
@@ -825,14 +833,15 @@ class LocationService(
             newCna = cna,
           )
           approvalRequest.locations.forEach { subLocation ->
-            cellCertificateRepository.findByPrisonIdAndPathHierarchy(locCapChange.prisonId, subLocation.pathHierarchy)?.let { currentCellCert ->
-              subLocation.currentWorkingCapacity = currentCellCert.workingCapacity
-              subLocation.currentMaxCapacity = currentCellCert.maxCapacity
-              subLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
-              subLocation.workingCapacity = workingCapacity
-              subLocation.maxCapacity = maxCapacity
-              subLocation.certifiedNormalAccommodation = cna
-            }
+            cellCertificateRepository.findByPrisonIdAndPathHierarchy(locCapChange.prisonId, subLocation.pathHierarchy)
+              ?.let { currentCellCert ->
+                subLocation.currentWorkingCapacity = currentCellCert.workingCapacity
+                subLocation.currentMaxCapacity = currentCellCert.maxCapacity
+                subLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
+                subLocation.workingCapacity = workingCapacity
+                subLocation.maxCapacity = maxCapacity
+                subLocation.certifiedNormalAccommodation = cna
+              }
           }
           approvalRequest.refreshCapacities()
           cellLocationRepository.saveAndFlush(locCapChange)
@@ -862,6 +871,8 @@ class LocationService(
         )
       }
       locationUpdated = locCapChange.toDto(includeParent = !locCapChange.isDraft(), includeNonResidential = false)
+    } else {
+      log.warn("No capacity changes requested for location [${locCapChange.getKey()}]")
     }
     return Pair(locationUpdated, approvalRequestDto).also {
       trackingTx?.txEndTime = now(clock)
