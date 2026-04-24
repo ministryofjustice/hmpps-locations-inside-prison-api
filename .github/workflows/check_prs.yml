@@ -44,7 +44,7 @@ jobs:
 
       - name: Slack message to review failing PRs
         if: ${{ steps.check-prs.outputs.failure_count != '0' }}
-        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+        uses: slackapi/slack-github-action@03ea5433c137af7c0495bc0cad1af10403fc800c # v3.0.2
         env:
           SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SRE_SLACK_BOT_TOKEN }}
         with:
@@ -70,7 +70,7 @@ jobs:
 
       - name: Slack message to review combined PR
         if: steps.check-prs.outputs.combined_pr
-        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+        uses: slackapi/slack-github-action@03ea5433c137af7c0495bc0cad1af10403fc800c # v3.0.2
         env:
           SLACK_BOT_TOKEN: ${{ secrets.HMPPS_SRE_SLACK_BOT_TOKEN }}
         with:
@@ -96,7 +96,7 @@ jobs:
 
       - name: Slack message to review PRs
         if: ${{ steps.check-prs.outputs.failure_count != steps.check-prs.outputs.pr_count && steps.check-prs.outputs.combined_pr == '' }}
-        uses: slackapi/slack-github-action@af78098f536edbc4de71162a307590698245be95 # v3.0.1
+        uses: slackapi/slack-github-action@03ea5433c137af7c0495bc0cad1af10403fc800c # v3.0.2
         with:
           method: chat.postMessage
           token: ${{ secrets.HMPPS_SRE_SLACK_BOT_TOKEN }}
