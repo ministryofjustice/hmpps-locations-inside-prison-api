@@ -252,6 +252,20 @@ abstract class Location(
     return parents
   }
 
+  fun findParentLocations(): List<Location> {
+    val parents = mutableListOf<Location>()
+
+    fun traverseUp(location: Location?) {
+      if (location != null) {
+        parents.add(location)
+        traverseUp(location.getParent())
+      }
+    }
+
+    traverseUp(this.getParent())
+    return parents
+  }
+
   protected fun getLevel(): Int {
     fun goUp(location: Location?, level: Int): Int {
       if (location == null) {
