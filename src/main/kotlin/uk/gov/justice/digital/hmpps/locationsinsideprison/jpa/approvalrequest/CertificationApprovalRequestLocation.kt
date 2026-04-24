@@ -66,7 +66,7 @@ open class CertificationApprovalRequestLocation(
 
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
-  private val locationType: LocationType,
+  val locationType: LocationType,
 
   open var currentSpecialistCellTypes: String? = null,
 
@@ -128,6 +128,7 @@ open class CertificationApprovalRequestLocation(
     accommodationTypes = getAccommodationTypesFromList(),
     usedFor = getUsedForTypesFromList(),
     convertedCellType = convertedCellType,
+    reactivateThisLocation = reactivateThisLocation,
     subLocations = subLocations.map { it.toDto() }.takeIf { it.isNotEmpty() },
   )
 

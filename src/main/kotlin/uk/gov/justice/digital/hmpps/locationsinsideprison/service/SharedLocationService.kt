@@ -2,7 +2,8 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import com.microsoft.applicationinsights.TelemetryClient
 import jakarta.validation.ValidationException
-import org.springframework.stereotype.Component
+import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
@@ -23,7 +24,8 @@ import java.time.LocalDateTime
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
-@Component
+@Service
+@Transactional
 class SharedLocationService(
   private val locationRepository: LocationRepository,
   private val linkedTransactionRepository: LinkedTransactionRepository,
@@ -162,6 +164,8 @@ class SharedLocationService(
         )
       }
     }
+
+    locationRepository.saveAll(locationsReactivated)
   }
 
   fun checkParentValid(

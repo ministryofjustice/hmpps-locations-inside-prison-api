@@ -69,6 +69,9 @@ data class CertificationApprovalRequestLocationDto(
   @param:Schema(description = "Converted cell type", example = "OFFICE", required = false)
   val convertedCellType: ConvertedCellType? = null,
 
+  @param:Schema(description = "Indicates this location will be reactivated", example = "true", required = false)
+  val reactivateThisLocation: Boolean? = null,
+
   @param:Schema(description = "Sub-locations", required = false)
   val subLocations: List<CertificationApprovalRequestLocationDto>? = null,
 )

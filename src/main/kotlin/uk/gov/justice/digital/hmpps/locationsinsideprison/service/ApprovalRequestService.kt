@@ -7,8 +7,10 @@ import jakarta.xml.bind.ValidationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
@@ -122,16 +124,9 @@ class ApprovalRequestService(
 
     // Update the current capacities from the certificate if there is one.
     val locationHierarchy = approvalRequest.getTopLevelLocation() ?: throw LocationNotFoundException("No top level location")
+    updateApprovalLocationDetails(topLevelLocation.prisonId, locationHierarchy, true)
     locationHierarchy.findSubLocations().forEach { subLocation ->
-      cellCertificateRepository.findByPrisonIdAndPathHierarchy(topLevelLocation.prisonId, subLocation.pathHierarchy)?.let { currentCellCert ->
-        subLocation.currentWorkingCapacity = currentCellCert.workingCapacity
-        subLocation.currentMaxCapacity = currentCellCert.maxCapacity
-        subLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
-        subLocation.currentSpecialistCellTypes = currentCellCert.specialistCellTypes
-      }
-      if (reactivationApprovalRequest.cascadeReactivation && subLocation.findSubLocations().isEmpty()) {
-        subLocation.reactivateThisLocation = true
-      }
+      updateApprovalLocationDetails(topLevelLocation.prisonId, subLocation, reactivationApprovalRequest.cascadeReactivation)
     }
 
     // Go through the cellReactivationChanges and update the certificationChanges to reflect the capacity and specialist cell types held in the cellReactivationChanges
@@ -147,16 +142,11 @@ class ApprovalRequestService(
         throw ValidationException("Location [${cellToUpdate.getKey()}] is not a child of location [${topLevelLocation.getKey()}]")
       }
 
+      if (locationHierarchy.pathHierarchy == cellToUpdate.getPathHierarchy()) {
+        updateLocationCapacitiesForApproval(locationHierarchy, details)
+      }
       locationHierarchy.findLocationByPathHierarchy(cellToUpdate.getPathHierarchy())?.let { approvalCell ->
-        approvalCell.reactivateThisLocation = true
-        details.capacity?.let {
-          approvalCell.workingCapacity = it.workingCapacity
-          approvalCell.maxCapacity = it.maxCapacity
-          approvalCell.certifiedNormalAccommodation = it.certifiedNormalAccommodation
-        }
-        details.specialistCellTypes?.let {
-          approvalCell.specialistCellTypes = if (it.isNotEmpty()) details.getSpecialistCellTypesAsCSV() else ""
-        }
+        updateLocationCapacitiesForApproval(approvalCell, details)
       }
     }
 
@@ -176,6 +166,38 @@ class ApprovalRequestService(
     log.info("Reactivation approval requested (${approvalRequest.id}) for location ${topLevelLocation.getKey()} by ${linkedTransaction.transactionInvokedBy}")
     return approvalRequest.toDto(showLocations = true).also {
       linkedTransaction.txEndTime = now(clock)
+    }
+  }
+
+  private fun updateLocationCapacitiesForApproval(
+    approvalRequestLocation: CertificationApprovalRequestLocation,
+    reactivationDetails: CellReactivationDetail,
+  ) {
+    approvalRequestLocation.reactivateThisLocation = true
+    reactivationDetails.capacity?.let {
+      approvalRequestLocation.workingCapacity = it.workingCapacity
+      approvalRequestLocation.maxCapacity = it.maxCapacity
+      approvalRequestLocation.certifiedNormalAccommodation = it.certifiedNormalAccommodation
+    }
+    reactivationDetails.specialistCellTypes?.let {
+      approvalRequestLocation.specialistCellTypes = if (it.isNotEmpty()) reactivationDetails.getSpecialistCellTypesAsCSV() else ""
+    }
+  }
+
+  private fun updateApprovalLocationDetails(
+    prisonId: String,
+    approvalRequestLocation: CertificationApprovalRequestLocation,
+    cascadeReactivation: Boolean,
+  ) {
+    cellCertificateRepository.findByPrisonIdAndPathHierarchy(prisonId, approvalRequestLocation.pathHierarchy)
+      ?.let { currentCellCert ->
+        approvalRequestLocation.currentWorkingCapacity = currentCellCert.workingCapacity
+        approvalRequestLocation.currentMaxCapacity = currentCellCert.maxCapacity
+        approvalRequestLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
+        approvalRequestLocation.currentSpecialistCellTypes = currentCellCert.specialistCellTypes
+      }
+    if (cascadeReactivation && approvalRequestLocation.locationType == LocationType.CELL) {
+      approvalRequestLocation.reactivateThisLocation = true
     }
   }
 
