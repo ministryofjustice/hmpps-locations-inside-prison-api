@@ -133,6 +133,9 @@ data class Location(
   @param:Schema(description = "Indicates the location is enabled", example = "true", required = true, deprecated = true)
   val active: Boolean = true,
 
+  @param:Schema(description = "If this location is inactive, indicates the type of inactive status", example = "true", required = true, deprecated = true)
+  val inactiveStatus: InactiveStatus? = null,
+
   @param:Schema(description = "In-cell sanitation", required = false, example = "true")
   val inCellSanitation: Boolean? = null,
 
@@ -259,6 +262,14 @@ data class Location(
     result = 31 * result + pathHierarchy.hashCode()
     return result
   }
+}
+
+enum class InactiveStatus(
+  val description: String,
+) {
+  INACTIVE_TEMP("Temporary inactive cell"),
+  INACTIVE_PEND_CHANGE_REQ("Inactive cell with certificate change requests"),
+  INACTIVE_MATCHING_CELL_CERT("Inactive cell with capacity decreased on cell certificate"),
 }
 
 @Schema(description = "Pending changes")
