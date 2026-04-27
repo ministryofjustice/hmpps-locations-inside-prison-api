@@ -997,8 +997,9 @@ class LocationService(
       transactionInvokedBy = transactionInvokedBy,
     )
 
+    val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
     val approvalRequired =
-      locationsToDeactivate.requiresApproval && activePrisonService.isCertificationApprovalRequired(prisonId)
+      locationsToDeactivate.requiresApproval && certificationApprovalRequired
     locationsToDeactivate.locations.forEach { (id, deactivationDetail) ->
       val locationToDeactivate = locationRepository.findById(id)
         .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -1063,7 +1064,11 @@ class LocationService(
     }
 
     locationRepository.saveAllAndFlush(deactivatedLocations)
-    val deactivatedLocationsDto = deactivatedLocations.map { it.toDto() }.toSet()
+    val deactivatedLocationsDto = deactivatedLocations.map {
+      it.toDto(
+        cellCertificateLocation = cellCertificateRepository.findByPrisonIdAndPathHierarchy(it.prisonId, it.getPathHierarchy()).takeIf { certificationApprovalRequired },
+      )
+    }.toSet()
     return mapOf(
       InternalLocationDomainEventType.LOCATION_AMENDED to deactivatedLocations.flatMap { deactivatedLoc ->
         deactivatedLoc.getParentLocations().map { it.toDto() }
@@ -1595,6 +1600,8 @@ class LocationService(
     .sortedWith(NaturalOrderComparator())
 
   fun getResidentialInactiveLocations(prisonId: String, parentLocationId: UUID?): List<LocationDTO> {
+    val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
+
     val startLocation = parentLocationId?.let {
       residentialLocationRepository.findById(parentLocationId).getOrNull() ?: throw LocationNotFoundException(
         parentLocationId.toString(),
@@ -1608,7 +1615,15 @@ class LocationService(
       )
       )
       .filter { it.isTemporarilyDeactivated() }
-      .map { it.toDto() }
+      .map {
+        it.toDto(
+          cellCertificateLocation = if (certificationApprovalRequired) {
+            cellCertificateRepository.findByPrisonIdAndPathHierarchy(it.prisonId, it.getPathHierarchy())
+          } else {
+            null
+          },
+        )
+      }
       .sortedWith(NaturalOrderComparator())
   }
 

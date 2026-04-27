@@ -11,6 +11,7 @@ import jakarta.persistence.OneToMany
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.InactiveStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -679,6 +680,16 @@ class Cell(
     ) as SanitationChangeApprovalRequest
   }
 
+  private fun deriveInactiveStatus(cellCertificateLocation: CellCertificateLocation): InactiveStatus {
+    if (hasPendingCertificationApproval()) {
+      return InactiveStatus.INACTIVE_PEND_CHANGE_REQ
+    }
+    if (cellCertificateLocation.workingCapacity == calcWorkingCapacity()) {
+      return InactiveStatus.INACTIVE_MATCHING_CELL_CERT
+    }
+    return InactiveStatus.INACTIVE_TEMP
+  }
+
   override fun toDto(
     includeChildren: Boolean,
     includeParent: Boolean,
@@ -720,6 +731,7 @@ class Cell(
     otherConvertedCellType = otherConvertedCellType,
     inCellSanitation = getSanitationOfCell(false),
     cellMark = getDoorCellMark(false),
+    inactiveStatus = cellCertificateLocation?.let { deriveInactiveStatus(it) },
   )
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(
