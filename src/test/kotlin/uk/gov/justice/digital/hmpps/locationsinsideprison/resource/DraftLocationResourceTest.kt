@@ -321,16 +321,14 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               ],
               "capacity": {
                 "maxCapacity": 0,
-                "workingCapacity": 0
+                "workingCapacity": 0,
+                "certifiedNormalAccommodation": 0
               },
               "pendingChanges": {
                 "maxCapacity": 1,
                 "workingCapacity": 1
               },
-              "certification": {
-                "certified": false,
-                "certifiedNormalAccommodation": 0
-              },
+              "certifiedCell": false,
               "childLocations": [
                 {
                   "key": "MDI-Z-J-001",
@@ -339,16 +337,14 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   "topLevelApprovalLocationId": "${repository.findOneByKey("${request.prisonId}-${wingZ.getLocationCode()}-${request.newLevelAboveCells?.levelCode}")?.id}",
                   "capacity": {
                     "maxCapacity": 0,
-                    "workingCapacity": 0
+                    "workingCapacity": 0,
+                    "certifiedNormalAccommodation": 0
                   },
                   "pendingChanges": {
                     "maxCapacity": 1,
                     "workingCapacity": 1
                   },
-                  "certification": {
-                    "certified": false,
-                    "certifiedNormalAccommodation": 0
-                  },
+                  "certifiedCell": false,
                   "accommodationTypes": [
                     "NORMAL_ACCOMMODATION"
                   ],
@@ -404,16 +400,14 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               ],
               "capacity": {
                 "maxCapacity": 0,
-                "workingCapacity": 0
+                "workingCapacity": 0,
+                "certifiedNormalAccommodation": 0
               },
               "pendingChanges": {
                 "maxCapacity": 1,
                 "workingCapacity": 1
               },
-              "certification": {
-                "certified": false,
-                "certifiedNormalAccommodation": 0
-              },
+              "certifiedCell": false,
               "childLocations": [
                 {
                   "key": "MDI-J-001",
@@ -422,16 +416,14 @@ class DraftLocationResourceTest : CommonDataTestBase() {
                   "topLevelApprovalLocationId": "${repository.findOneByKey("MDI-J")?.id}",
                   "capacity": {
                     "maxCapacity": 0,
-                    "workingCapacity": 0
+                    "workingCapacity": 0,
+                    "certifiedNormalAccommodation": 0
                   },
                   "pendingChanges": {
                     "maxCapacity": 1,
                     "workingCapacity": 1
                   },
-                  "certification": {
-                    "certified": false,
-                    "certifiedNormalAccommodation": 0
-                  },
+                  "certifiedCell": false,
                   "accommodationTypes": [
                     "NORMAL_ACCOMMODATION"
                   ],
@@ -487,16 +479,14 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               ],
               "capacity": {
                 "maxCapacity": 4,
-                "workingCapacity": 4
+                "workingCapacity": 4,
+                "certifiedNormalAccommodation": 4
               },
               "pendingChanges": {
                 "maxCapacity": 5,
                 "workingCapacity": 5
               },
-              "certification": {
-                "certified": true,
-                "certifiedNormalAccommodation": 4
-              },
+              "certifiedCell": true,
               "childLocations": [
                 {
                   "key": "MDI-Z-1-001",
@@ -558,12 +548,10 @@ class DraftLocationResourceTest : CommonDataTestBase() {
               "usedFor": [ ],
               "capacity": {
                 "maxCapacity": 0,
-                "workingCapacity": 0
-              },
-              "certification": {
-                "certified": false,
+                "workingCapacity": 0,
                 "certifiedNormalAccommodation": 0
               },
+              "certifiedCell": false,
               "childLocations": []
             }
           """,

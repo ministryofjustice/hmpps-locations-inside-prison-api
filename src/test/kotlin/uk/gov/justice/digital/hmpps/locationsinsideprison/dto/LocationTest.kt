@@ -23,7 +23,6 @@ data class LocationTest(
   val permanentlyInactive: Boolean? = false,
   val permanentlyInactiveReason: String? = null,
   val capacity: Capacity? = null,
-  val certification: Certification? = null,
   val usage: List<NonResidentialUsageDto>? = null,
   val accommodationTypes: List<AccommodationType>? = null,
   val specialistCellTypes: List<SpecialistCellType>? = null,

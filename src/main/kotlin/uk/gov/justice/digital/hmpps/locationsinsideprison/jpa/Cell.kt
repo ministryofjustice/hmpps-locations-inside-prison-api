@@ -9,7 +9,6 @@ import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import org.hibernate.annotations.SortNatural
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.InactiveStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
@@ -482,7 +481,6 @@ class Cell(
     setAccommodationTypeForCell(residentialHousingType.mapToAccommodationType(), upsert.lastUpdatedBy, clock, linkedTransaction)
     handleNomisCapacitySync(upsert, upsert.lastUpdatedBy, clock, linkedTransaction)
     upsert.certifiedCell?.let { certifiedCell = it }
-    handleNomisCertSync(upsert, upsert.lastUpdatedBy, clock, linkedTransaction)
 
     if (upsert.attributes != null) {
       recordRemovedAttributes(upsert.attributes, upsert.lastUpdatedBy, clock, linkedTransaction)
@@ -507,44 +505,6 @@ class Cell(
       addUsedFor(UsedForType.STANDARD_ACCOMMODATION, userOrSystemInContext, clock, linkedTransaction)
     } else {
       removeUsedFor(userOrSystemInContext = userOrSystemInContext, clock = clock, linkedTransaction = linkedTransaction)
-    }
-  }
-
-  @Deprecated("Separate certification upsert not needed")
-  private fun handleNomisCertSync(
-    upsert: NomisSyncLocationRequest,
-    userOrSystemInContext: String,
-    clock: Clock,
-    linkedTransaction: LinkedTransaction,
-  ) {
-    upsert.certification?.let { cert ->
-      with(cert) {
-        addHistory(
-          LocationAttribute.CERTIFIED_CAPACITY,
-          capacity?.certifiedNormalAccommodation?.toString(),
-          getCNA().toString(),
-          userOrSystemInContext,
-          LocalDateTime.now(clock),
-          linkedTransaction,
-        )
-
-        if (capacity != null) {
-          capacity!!.certifiedNormalAccommodation = getCNA()
-        } else {
-          capacity = Capacity(certifiedNormalAccommodation = getCNA())
-        }
-
-        val oldCertification = getCertifiedSummary()
-        certifiedCell = certified
-        addHistory(
-          LocationAttribute.CERTIFICATION,
-          oldCertification,
-          getCertifiedSummary(),
-          userOrSystemInContext,
-          LocalDateTime.now(clock),
-          linkedTransaction,
-        )
-      }
     }
   }
 
@@ -738,9 +698,5 @@ class Cell(
     ignoreWorkingCapacity = false,
     capacity = capacity?.toDto(),
     certifiedCell = certifiedCell,
-    certification = Certification(
-      certifiedNormalAccommodation = capacity?.certifiedNormalAccommodation,
-      certified = certifiedCell,
-    ),
   )
 }

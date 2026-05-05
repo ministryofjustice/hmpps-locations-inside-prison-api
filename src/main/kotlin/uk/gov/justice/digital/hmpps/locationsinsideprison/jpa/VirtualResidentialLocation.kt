@@ -96,7 +96,6 @@ open class VirtualResidentialLocation(
       workingCapacity = getWorkingCapacity(),
       certifiedNormalAccommodation = getCertifiedNormalAccommodation(),
     ),
-    certification = null,
     accommodationTypes = null,
     usedFor = null,
     specialistCellTypes = null,

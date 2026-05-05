@@ -133,12 +133,10 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                               "accommodationTypes":["NORMAL_ACCOMMODATION"],
                               "capacity": {
                                 "maxCapacity": 2,
-                                "workingCapacity": 2
-                              },
-                              "certification": {
-                                "certified": true,
+                                "workingCapacity": 2,
                                 "certifiedNormalAccommodation": 2
                               },
+                              "certifiedCell": true,
                               "isResidential": true,
                               "key": "MDI-Z-1-001"
                             },
@@ -152,12 +150,10 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                               "accommodationTypes":["CARE_AND_SEPARATION"],
                               "capacity": {
                                 "maxCapacity": 2,
-                                "workingCapacity": 2
-                              },
-                              "certification": {
-                                "certified": true,
+                                "workingCapacity": 2,
                                 "certifiedNormalAccommodation": 2
                               },
+                              "certifiedCell": true,
                               "isResidential": true,
                               "key": "MDI-Z-1-002"
                             },
@@ -178,12 +174,10 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                           "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                           "capacity": {
                             "maxCapacity": 4,
-                            "workingCapacity": 4
-                          },
-                          "certification": {
-                            "certified": true,
+                            "workingCapacity": 4,
                             "certifiedNormalAccommodation": 4
                           },
+                          "certifiedCell": true,
                           "isResidential": true,
                           "key": "MDI-Z-1"
                         },
@@ -197,12 +191,10 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                           "accommodationTypes":[],
                           "capacity": {
                             "maxCapacity": 0,
-                            "workingCapacity": 0
-                          },
-                          "certification": {
-                            "certified": false,
+                            "workingCapacity": 0,
                             "certifiedNormalAccommodation": 0
                           },
+                          "certifiedCell": false,
                           "isResidential": true,
                           "key": "MDI-Z-2"
                         }
@@ -212,12 +204,10 @@ class LocationKeyResourceTest : CommonDataTestBase() {
                       "accommodationTypes":["NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION"],
                       "capacity": {
                         "maxCapacity": 4,
-                        "workingCapacity": 4
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 4,
                         "certifiedNormalAccommodation": 4
                       },
+                      "certifiedCell": true,
                       "isResidential": true,
                       "key": "MDI-Z"
                     }

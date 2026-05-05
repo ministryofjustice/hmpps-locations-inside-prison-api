@@ -41,7 +41,7 @@ import java.time.LocalDateTime
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDTO
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDTO
+
 class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
 
   @Autowired
@@ -404,8 +404,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 id = cell.id,
                 code = "001",
                 attributes = setOf(ResidentialAttributeValue.CAT_A),
-                capacity = CapacityDTO(3, 3),
-                certification = CertificationDTO(certified = false, capacityOfCertifiedCell = 0),
+                capacity = CapacityDTO(3, 3, 0),
+                certifiedCell = false,
               ),
             ),
           )
@@ -427,12 +427,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "CAT_A"
               ],
               "ignoreWorkingCapacity": false,
+              "certifiedCell": false,
               "capacity": {
                 "maxCapacity": 3,
-                "workingCapacity": 3
-              },
-              "certification": {
-                "certified": false,
+                "workingCapacity": 3,
                 "certifiedNormalAccommodation": 0
               }
             }
@@ -475,12 +473,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 "CAT_A"
               ],
               "ignoreWorkingCapacity": false,
+              "certifiedCell": false,
               "capacity": {
                 "maxCapacity": 3,
-                "workingCapacity": 3
-              },
-              "certification": {
-                "certified": false,
+                "workingCapacity": 3,
                 "certifiedNormalAccommodation": 0
               }
             }
@@ -520,12 +516,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "ignoreWorkingCapacity": true,
               "capacity": {
                 "maxCapacity": 0,
-                "workingCapacity": 0
-              },
-              "certification": {
-                "certified": false,
+                "workingCapacity": 0,
                 "certifiedNormalAccommodation": 0
-              }
+              },
+              "certifiedCell": false
             }
           """,
             JsonCompareMode.LENIENT,
@@ -615,7 +609,6 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
                 locationType = LocationType.CELL,
                 certifiedCell = true,
                 capacity = CapacityDTO(1, 1, 1),
-                certification = CertificationDTO(certified = true, capacityOfCertifiedCell = 1),
               ),
             ),
           )
@@ -634,12 +627,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "key": "ZZGHI-B-1-012",
               "orderWithinParentLocation": 1,
               "ignoreWorkingCapacity": false,
+              "certifiedCell": true,
               "capacity": {
                 "maxCapacity": 1,
-                "workingCapacity": 1
-              },
-              "certification": {
-                "certified": true,
+                "workingCapacity": 1,                
                 "certifiedNormalAccommodation": 1
               }
             }
@@ -668,12 +659,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               ],
               "active": true,
               "key": "ZZGHI-B-1-012",
+              "certifiedCell": true,
               "capacity": {
                 "maxCapacity": 1,
-                "workingCapacity": 1
-              },
-              "certification": {
-                "certified": true,
+                "workingCapacity": 1,                
                 "certifiedNormalAccommodation": 1
               }
             }
@@ -715,12 +704,10 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "key": "ZZGHI-B-1-005",
               "orderWithinParentLocation": 1,
               "ignoreWorkingCapacity": false,
+              "certifiedCell": true,
               "capacity": {
                 "maxCapacity": 1,
-                "workingCapacity": 1
-              },
-              "certification": {
-                "certified": true,
+                "workingCapacity": 1,                
                 "certifiedNormalAccommodation": 1
               }
             }

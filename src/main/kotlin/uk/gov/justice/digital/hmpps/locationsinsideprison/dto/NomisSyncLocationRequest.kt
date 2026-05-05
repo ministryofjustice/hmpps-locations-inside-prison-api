@@ -83,10 +83,6 @@ data class NomisSyncLocationRequest(
   @param:Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
   val certifiedCell: Boolean? = null,
 
-  @param:Schema(description = "Deprecated mechanism for displaying and updating CNA and certified status", required = false)
-  @Deprecated("Use capacity and certifiedCell instead")
-  val certification: Certification? = null,
-
   @param:Schema(description = "Location Attributes", required = false)
   val attributes: Set<ResidentialAttributeValue>? = null,
 
@@ -135,10 +131,10 @@ data class NomisSyncLocationRequest(
             uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity(
               maxCapacity = it.maxCapacity,
               workingCapacity = it.workingCapacity,
-              certifiedNormalAccommodation = it.certifiedNormalAccommodation ?: certification?.certifiedNormalAccommodation ?: 0,
+              certifiedNormalAccommodation = it.certifiedNormalAccommodation ?: 0,
             )
           },
-          certifiedCell = (certifiedCell ?: certification?.certified) == true,
+          certifiedCell = certifiedCell == true,
         ).also {
           attributes?.forEach { attribute ->
             it.addAttribute(attribute)

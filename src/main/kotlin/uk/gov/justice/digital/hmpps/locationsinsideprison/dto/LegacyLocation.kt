@@ -50,10 +50,6 @@ data class LegacyLocation(
   )
   val certifiedCell: Boolean? = null,
 
-  @param:Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
-  @Deprecated("Use certifiedCell instead")
-  val certification: Certification? = null,
-
   @param:Schema(description = "Location Attributes", required = false)
   val attributes: List<ResidentialAttributeValue>? = null,
 

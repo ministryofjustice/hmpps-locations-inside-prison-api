@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -936,9 +935,7 @@ class LocationTransformResourceTest : CommonDataTestBase() {
                   "maxCapacity": 2,
                   "workingCapacity": 1
                 },
-                "certification": {
-                  "certified": true
-                },
+                "certifiedCell": true,
                 "active": true,
                 "isResidential": true,
                 "key": "MDI-Z-1-001"
@@ -999,102 +996,6 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-CSWAP",
           )
         }
-      }
-
-      @Disabled("Will add once cap approval process is in place")
-      fun `can change the max capacity of a cell for an certification approval required prison`() {
-        val aCell = leedsWing.cellLocations().find { it.getKey() == "LEI-A-1-001" } ?: throw RuntimeException("Cell not found")
-        prisonerSearchMockServer.stubSearchByLocations("LEI", listOf(aCell.getPathHierarchy()), false)
-
-        var incMaxCap = aCell.getMaxCapacity()?.inc() ?: 1
-        val workingCapacity = aCell.getWorkingCapacity()?.inc() ?: 1
-        webTestClient.put().uri("/locations/${aCell.id}/capacity")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              CapacityDto(
-                workingCapacity = workingCapacity,
-                maxCapacity = incMaxCap,
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-              {
-                "key": "${aCell.getKey()}",
-                "id": "${aCell.id}",
-                "prisonId": "${aCell.prisonId}",
-                "code": "${aCell.getLocationCode()}",
-                "pathHierarchy": "${aCell.getPathHierarchy()}",
-                "capacity": {
-                  "maxCapacity": ${aCell.getMaxCapacity()},
-                  "workingCapacity": $workingCapacity
-                },
-                "pendingChanges": {
-                   "maxCapacity": $incMaxCap
-                },
-                "certification": {
-                  "certified": true
-                },
-                "status": "ACTIVE"
-
-              }
-          """,
-            JsonCompareMode.LENIENT,
-          )
-
-        getDomainEvents(3).let {
-          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to aCell.getKey(),
-            "location.inside.prison.amended" to aCell.getParent()?.getKey(),
-            "location.inside.prison.amended" to aCell.getParent()?.getParent()?.getKey(),
-          )
-        }
-        incMaxCap += 1
-        webTestClient.put().uri("/locations/${aCell.id}/capacity")
-          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
-          .header("Content-Type", "application/json")
-          .bodyValue(
-            jsonString(
-              CapacityDto(
-                workingCapacity = workingCapacity,
-                maxCapacity = incMaxCap,
-              ),
-            ),
-          )
-          .exchange()
-          .expectStatus().isOk
-          .expectBody().json(
-            // language=json
-            """
-              {
-                "key": "${aCell.getKey()}",
-                "id": "${aCell.id}",
-                "prisonId": "${aCell.prisonId}",
-                "code": "${aCell.getLocationCode()}",
-                "pathHierarchy": "${aCell.getPathHierarchy()}",
-                "capacity": {
-                  "maxCapacity": ${aCell.getMaxCapacity()},
-                  "workingCapacity": $workingCapacity
-                },
-                "pendingChanges": {
-                   "maxCapacity": $incMaxCap
-                },
-                "certification": {
-                  "certified": true
-                },
-                "status": "ACTIVE"
-
-              }
-          """,
-            JsonCompareMode.LENIENT,
-          )
-
-        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isEqualTo(1)
       }
     }
   }

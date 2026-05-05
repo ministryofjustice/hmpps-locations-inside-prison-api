@@ -96,10 +96,6 @@ data class Location(
   )
   val certifiedCell: Boolean? = null,
 
-  @param:Schema(description = "Indicates that this location is certified for use as a residential location", required = false)
-  @Deprecated("Use certified instead")
-  val certification: Certification? = null,
-
   @param:Schema(description = "Location Usage", required = false)
   val usage: List<NonResidentialUsageDto>? = null,
 
@@ -474,47 +470,6 @@ data class TransactionHistory(
   val transactionDetails: List<TransactionDetail>,
 ) {
   fun toChangeHistory(): List<ChangeHistory> = transactionDetails.mapNotNull { it.toChangeHistory(this) }
-}
-
-@Schema(description = "Certification")
-@JsonInclude(JsonInclude.Include.NON_NULL)
-@Deprecated("CNA and certified marker have moved under capacity and location")
-data class Certification(
-  @param:Schema(
-    description = "Indicates that this location is certified for use as a residential location",
-    example = "true",
-    required = false,
-  )
-  val certified: Boolean = false,
-  @param:Schema(description = "Old name for CNA (Certified normal accommodation)", example = "1", required = false, deprecated = true)
-  @Deprecated("Use certifiedNormalAccommodation instead")
-  val capacityOfCertifiedCell: Int = 0,
-
-  @param:Schema(description = "CNA (Certified normal accommodation)", example = "1", required = false)
-  @Deprecated("Use certifiedNormalAccommodation in capacity instead")
-  val certifiedNormalAccommodation: Int? = null,
-) {
-
-  @JsonIgnore
-  fun getCNA() = certifiedNormalAccommodation ?: capacityOfCertifiedCell
-
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (javaClass != other?.javaClass) return false
-
-    other as Certification
-
-    if (certified != other.certified) return false
-    if (getCNA() != other.getCNA()) return false
-
-    return true
-  }
-
-  override fun hashCode(): Int {
-    var result = certified.hashCode()
-    result = 31 * result + getCNA()
-    return result
-  }
 }
 
 /**

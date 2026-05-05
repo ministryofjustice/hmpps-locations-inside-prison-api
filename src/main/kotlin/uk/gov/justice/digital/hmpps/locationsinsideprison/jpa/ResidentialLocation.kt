@@ -36,7 +36,6 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Certification as CertificationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
 @Entity
@@ -124,9 +123,6 @@ open class ResidentialLocation(
 
   fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .sumOf { it.getCurrentlyHeldWorkingCapacity() ?: 0 }
-
-  fun calcPendingWorkingCapacity(includeDraft: Boolean = false): Int = cellLocations().filter { it.isActiveAndAllParentsActive() || (includeDraft && it.isDraft()) }
-    .sumOf { it.getWorkingCapacity() ?: 0 }
 
   fun calcOldWorkingCapacity() = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft()) }
     .sumOf { it.getOldWorkingCapacity() ?: 0 }
@@ -656,11 +652,6 @@ open class ResidentialLocation(
     },
 
     certifiedCell = hasCertifiedCells(),
-    certification = CertificationDto(
-      certified = hasCertifiedCells(),
-      capacityOfCertifiedCell = calcCertifiedNormalAccommodation(),
-      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
-    ),
 
     accommodationTypes = getAccommodationTypes().map { it }.distinct().sortedBy { it.sequence },
     usedFor = getUsedForValues().map { it.usedFor }.distinct().sortedBy { it.sequence },
@@ -697,14 +688,7 @@ open class ResidentialLocation(
       workingCapacity = calcWorkingCapacity(),
       certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
     ),
-
     certifiedCell = hasCertifiedCells(),
-    certification = CertificationDto(
-      certified = hasCertifiedCells(),
-      capacityOfCertifiedCell = calcCertifiedNormalAccommodation(),
-      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
-    ),
-
     attributes = getAttributes().map { it.attributeValue }.distinct().sortedBy { it.name },
   )
 

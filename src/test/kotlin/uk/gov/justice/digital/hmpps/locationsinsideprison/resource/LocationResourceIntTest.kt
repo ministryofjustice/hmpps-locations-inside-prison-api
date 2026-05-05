@@ -196,9 +196,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "key": "MDI-Z",
               "capacity": {
                 "maxCapacity": 4,
-                "workingCapacity": 4
-              },
-              "certification": {
+                "workingCapacity": 4,
                 "certifiedNormalAccommodation": 4
               },
               "accommodationTypes": [
@@ -241,9 +239,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "key": "MDI-Z-1",
                   "capacity": {
                     "maxCapacity": 4,
-                    "workingCapacity": 4
-                  },
-                  "certification": {
+                    "workingCapacity": 4,
                     "certifiedNormalAccommodation": 4
                   },
                   "childLocations": [
@@ -256,12 +252,10 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "key": "MDI-Z-1-001",
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 2
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 2,
                         "certifiedNormalAccommodation": 2
-                      }
+                      },
+                      "certifiedCell": true
                     },
                     {
                       "prisonId": "MDI",
@@ -272,12 +266,10 @@ class LocationResourceIntTest : CommonDataTestBase() {
                       "key": "MDI-Z-1-002",
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 2
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 2,
                         "certifiedNormalAccommodation": 2
-                      }
+                      },
+                      "certifiedCell": true
                     },
                     {
                       "prisonId": "MDI",
@@ -292,15 +284,12 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "pathHierarchy": "Z-2",
                   "locationType": "LANDING",
                   "accommodationTypes":[],
+                  "certifiedCell": false,
                   "capacity": {
                     "maxCapacity": 0,
-                    "workingCapacity": 0
-                  },
-                  "certification": {
-                    "certified": false,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 0
                   },
-                  
                   "active": true,
                   "childLocations": [],
                   "isResidential": true,
@@ -542,12 +531,10 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "permanentlyInactive": false,
               "proposedReactivationDate": "$proposedReactivationDate",
               "deactivatedDate": "$now",
+              "certifiedCell": true,
               "capacity": {
                 "maxCapacity": 2,
-                "workingCapacity": 0
-              },
-              "certification": {
-                "certified": true,
+                "workingCapacity": 0,
                 "certifiedNormalAccommodation": 2
               },
               "changeHistory": [
@@ -1227,9 +1214,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "key": "MDI-Z",
               "capacity": {
                 "maxCapacity": 4,
-                "workingCapacity": 4
-              },
-              "certification": {
+                "workingCapacity": 4,
                 "certifiedNormalAccommodation": 4
               },
               "changeHistory": [
@@ -1445,9 +1430,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "key": "MDI-Z",
               "capacity": {
                 "maxCapacity": 4,
-                "workingCapacity": 2
-              },
-              "certification": {
+                "workingCapacity": 2,
                 "certifiedNormalAccommodation": 4
               },
               "childLocations": [
@@ -1834,15 +1817,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "pathHierarchy": "Z-1-001",
                   "locationType": "CELL",
                   "permanentlyInactive": false,
+                  "certifiedCell": true,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 0
-                  },
-                  "oldWorkingCapacity": 2,
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 2
                   },
+                  "oldWorkingCapacity": 2,
                   "accommodationTypes": [
                     "NORMAL_ACCOMMODATION"
                   ],
@@ -1872,15 +1853,13 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   "pathHierarchy": "Z-1-002",
                   "locationType": "CELL",
                   "permanentlyInactive": false,
+                  "certifiedCell": true,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 0
-                  },
-                  "oldWorkingCapacity": 2,
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 2
                   },
+                  "oldWorkingCapacity": 2,
                   "accommodationTypes": [
                     "CARE_AND_SEPARATION"
                   ],
@@ -2148,9 +2127,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
               "key": "MDI-Z",
               "capacity": {
                 "maxCapacity": 5,
-                "workingCapacity": 5
-              },
-              "certification": {
+                "workingCapacity": 5,
                 "certifiedNormalAccommodation": 4
               },
               "changeHistory": [
@@ -2686,12 +2663,10 @@ class LocationResourceIntTest : CommonDataTestBase() {
             """
               {
                 "key": "MDI-Z",
+                "certifiedCell": true,
                 "capacity": {
                   "maxCapacity": 5,
-                  "workingCapacity": 5
-                },
-                "certification": {
-                  "certified": true,
+                  "workingCapacity": 5,
                   "certifiedNormalAccommodation": 5
                 },
                 "childLocations": [
@@ -2703,23 +2678,19 @@ class LocationResourceIntTest : CommonDataTestBase() {
                   },
                   {
                     "key": "MDI-Z-1",
+                    "certifiedCell": true,
                     "capacity": {
                       "maxCapacity": 5,
-                      "workingCapacity": 5
-                    },
-                    "certification": {
-                      "certified": true,
+                      "workingCapacity": 5,
                       "certifiedNormalAccommodation": 5
                     },
                     "childLocations": [
                       {
                         "key": "MDI-Z-1-01S",
+                        "certifiedCell": false,
                         "capacity": {
                           "maxCapacity": 0,
-                          "workingCapacity": 0
-                        },
-                        "certification": {
-                          "certified": false,
+                          "workingCapacity": 0,
                           "certifiedNormalAccommodation": 0
                         }
                       },
@@ -2727,24 +2698,20 @@ class LocationResourceIntTest : CommonDataTestBase() {
                         "key": "MDI-Z-1-001",
                         "cellMark": "X001",
                         "inCellSanitation": true,
+                        "certifiedCell": true,
                         "capacity": {
                           "maxCapacity": 3,
-                          "workingCapacity": 3
-                        },
-                        "certification": {
-                          "certified": true,
+                          "workingCapacity": 3,
                           "certifiedNormalAccommodation": 3
                         }
                       },
                       {
                         "key": "MDI-Z-1-002",
                         "cellMark": "X002",
+                        "certifiedCell": true,
                         "capacity": {
                           "maxCapacity": 2,
-                          "workingCapacity": 2
-                        },
-                        "certification": {
-                          "certified": true,
+                          "workingCapacity": 2,
                           "certifiedNormalAccommodation": 2
                         }
                       }
@@ -2754,12 +2721,10 @@ class LocationResourceIntTest : CommonDataTestBase() {
                     "key": "MDI-Z-2",
                     "capacity": {
                       "maxCapacity": 0,
-                      "workingCapacity": 0
-                    },
-                    "certification": {
-                      "certified": false,
+                      "workingCapacity": 0,
                       "certifiedNormalAccommodation": 0
-                    }
+                    },
+                    "certifiedCell": false
                   }
                 ]
               } 
