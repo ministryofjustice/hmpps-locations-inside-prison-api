@@ -108,9 +108,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "inactiveCells": 0,
               "capacity": {
                 "maxCapacity": 4,
-                "workingCapacity": 4
-              },
-              "certification": {
+                "workingCapacity": 4,
                 "certifiedNormalAccommodation": 4
               },
               "accommodationTypes": [
@@ -135,9 +133,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "inactiveCells": 1,
               "capacity": {
                 "maxCapacity": 2,
-                "workingCapacity": 0
-              },
-              "certification": {
+                "workingCapacity": 0,
                 "certifiedNormalAccommodation": 2
               }
             }
@@ -170,9 +166,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "maxCapacity": 4,
                   "workingCapacity": 4
                 },
-                "certification": {
-                  "certified": true
-                },
+                "certifiedCell": true,
                 "accommodationTypes": [
                   "NORMAL_ACCOMMODATION",
                   "CARE_AND_SEPARATION"
@@ -216,9 +210,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                 "inactiveCells": 0,
                 "capacity": {
                   "maxCapacity": 4,
-                  "workingCapacity": 4
-                },
-                "certification": {
+                  "workingCapacity": 4,
                   "certifiedNormalAccommodation": 4
                 },
                 "accommodationTypes": [
@@ -242,12 +234,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "inactiveCells": 0,
                   "capacity": {
                     "maxCapacity": 0,
-                    "workingCapacity": 0
-                  },
-                  "certification": {
-                    "certified": false,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 0
                   },
+                  "certifiedCell": false,
 
                   "active": true,
                   "isResidential": true,
@@ -283,9 +273,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "maxCapacity": 4,
                   "workingCapacity": 4
                 },
-                "certification": {
-                  "certified": true
-                },
+                "certifiedCell": true,
                 "accommodationTypes": [
                   "NORMAL_ACCOMMODATION",
                   "CARE_AND_SEPARATION"
@@ -328,12 +316,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                     "leafLevel": true,
                     "capacity": {
                       "maxCapacity": 2,
-                      "workingCapacity": 2
-                    },
-                    "certification": {
-                      "certified": true,
+                      "workingCapacity": 2,
                       "certifiedNormalAccommodation": 2
                     },
+                    "certifiedCell": true,
                     "accommodationTypes": [
                       "NORMAL_ACCOMMODATION"
                     ],
@@ -353,12 +339,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                     "leafLevel": true,
                     "capacity": {
                       "maxCapacity": 2,
-                      "workingCapacity": 2
-                    },
-                    "certification": {
-                      "certified": true,
+                      "workingCapacity": 2,
                       "certifiedNormalAccommodation": 2
                     },
+                    "certifiedCell": true,
                     "accommodationTypes": [
                       "CARE_AND_SEPARATION"
                     ],
@@ -475,9 +459,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "maxCapacity": 0,
                   "workingCapacity": 0
                 },
-                "certification": {
-                  "certified": false
-                },
+                "certifiedCell": false,
                 "accommodationTypes": [
                 ],
                 "specialistCellTypes": [
@@ -532,9 +514,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "maxCapacity": 2,
                   "workingCapacity": 0
                 },
-                "certification": {
-                  "certified": true
-                },
+                "certifiedCell": true,
                 "accommodationTypes": [
                   "NORMAL_ACCOMMODATION"
                 ],
@@ -563,9 +543,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "inactiveCells": 1,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 0
-                  },
-                  "certification": {
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 2
                   },
                   "accommodationTypes": [
@@ -731,12 +709,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "key": "MDI-Z-1-004",
               "capacity": {
                 "maxCapacity": 2,
-                "workingCapacity": 2
-              },
-              "certification": {
-                "certified": true,
+                "workingCapacity": 2,
                 "certifiedNormalAccommodation": 2
               },
+              "certifiedCell": true,
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
               ],
@@ -814,10 +790,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "pendingChanges": {
                 "maxCapacity": 2
               },
-              "certification": {
-                "certified": false,
-                "certifiedNormalAccommodation": 0
-              }
+              "certifiedCell": false
             }
           """,
             JsonCompareMode.LENIENT,
@@ -847,12 +820,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "key": "MDI-Z-1-004",
               "capacity": {
                 "maxCapacity": 2,
-                "workingCapacity": 2
-              },
-              "certification": {
-                "certified": true,
+                "workingCapacity": 2,
                 "certifiedNormalAccommodation": 2
               },
+              "certifiedCell": true,
               "usedFor": [
                 "STANDARD_ACCOMMODATION"
               ]
@@ -1642,12 +1613,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                 "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
                 "capacity": {
                   "maxCapacity": 4,
-                  "workingCapacity": 4
-                },
-                "certification": {
-                  "certified": true,
+                  "workingCapacity": 4,
                   "certifiedNormalAccommodation": 4
                 },
+                "certifiedCell": true,
                 "isResidential": true,
                 "key": "MDI-B-1"
               }
@@ -1668,12 +1637,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "key": "MDI-Z",
               "capacity": {
                 "maxCapacity": 0,
-                "workingCapacity": 0
-              },
-              "certification": {
-                "certified": false,
+                "workingCapacity": 0,
                 "certifiedNormalAccommodation": 0
               },
+              "certifiedCell": false,
               "childLocations": [
                  {
                   "prisonId": "MDI",
@@ -1720,12 +1687,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "key": "MDI-Z-2",
                   "capacity": {
                     "maxCapacity": 0,
-                    "workingCapacity": 0
-                  },
-                  "certification": {
-                    "certified": false,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 0
                   },
+                  "certifiedCell": false,
                   "childLocations": []
                 }
               ]
@@ -1747,12 +1712,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "key": "MDI-B",
               "capacity": {
                 "maxCapacity": 6,
-                "workingCapacity": 4
-              },
-              "certification": {
-                "certified": true,
+                "workingCapacity": 4,
                 "certifiedNormalAccommodation": 6
               },
+              "certifiedCell": true,
               "childLocations": [
                 {
                   "prisonId": "MDI",
@@ -1763,12 +1726,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "permanentlyInactive": false,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 0
-                  },
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 2
                   },
+                  "certifiedCell": true,
                   "active": true,
                   "deactivatedByParent": false,
                   "childLocations": [
@@ -1781,12 +1742,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                       "permanentlyInactive": false,
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 0
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 0,
                         "certifiedNormalAccommodation": 2
                       },
+                      "certifiedCell": true,
                       "active": false,
                       "deactivatedByParent": false,
                       "deactivatedDate": "2023-12-05T12:34:56.123456",
@@ -1806,12 +1765,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "key": "MDI-B-1",
                   "capacity": {
                     "maxCapacity": 4,
-                    "workingCapacity": 4
-                  },
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 4,
                     "certifiedNormalAccommodation": 4
                   },
+                  "certifiedCell": true,
                   "childLocations": [
                     {
                       "pathHierarchy": "B-1-001",
@@ -1819,12 +1776,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                       "key": "MDI-B-1-001",
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 2
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 2,
                         "certifiedNormalAccommodation": 2
-                      }
+                      },
+                      "certifiedCell": true
                     },
                     {
                       "pathHierarchy": "B-1-002",
@@ -1832,12 +1787,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                       "key": "MDI-B-1-002",
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 2
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 2,
                         "certifiedNormalAccommodation": 2
-                      }
+                      },
+                      "certifiedCell": true
                     },
                   {
                   "prisonId": "MDI",
@@ -1878,12 +1831,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                 "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
                 "capacity": {
                   "maxCapacity": 4,
-                  "workingCapacity": 4
-                },
-                "certification": {
-                  "certified": true,
+                  "workingCapacity": 4,
                   "certifiedNormalAccommodation": 4
                 },
+                "certifiedCell": true,
                 "isResidential": true,
                 "key": "MDI-B-1"
               }
@@ -1904,12 +1855,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "key": "MDI-Z",
               "capacity": {
                 "maxCapacity": 0,
-                "workingCapacity": 0
-              },
-              "certification": {
-                "certified": false,
+                "workingCapacity": 0,
                 "certifiedNormalAccommodation": 0
               },
+              "certifiedCell": false,
               "childLocations": [
                  {
                   "prisonId": "MDI",
@@ -1956,12 +1905,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "key": "MDI-Z-2",
                   "capacity": {
                     "maxCapacity": 0,
-                    "workingCapacity": 0
-                  },
-                  "certification": {
-                    "certified": false,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 0
                   },
+                  "certifiedCell": false,
                   "childLocations": []
                 }
               ]
@@ -1983,12 +1930,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "key": "MDI-B",
               "capacity": {
                 "maxCapacity": 6,
-                "workingCapacity": 4
-              },
-              "certification": {
-                "certified": true,
+                "workingCapacity": 4,
                 "certifiedNormalAccommodation": 6
               },
+              "certifiedCell": true,
               "childLocations": [
                 {
                   "prisonId": "MDI",
@@ -1999,12 +1944,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "permanentlyInactive": false,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 0
-                  },
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 2
                   },
+                  "certifiedCell": true,
                   "active": true,
                   "deactivatedByParent": false,
                   "childLocations": [
@@ -2017,12 +1960,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                       "permanentlyInactive": false,
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 0
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 0,
                         "certifiedNormalAccommodation": 2
                       },
+                      "certifiedCell": true,
                       "active": false,
                       "deactivatedByParent": false,
                       "deactivatedDate": "2023-12-05T12:34:56.123456",
@@ -2042,12 +1983,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "key": "MDI-B-1",
                   "capacity": {
                     "maxCapacity": 4,
-                    "workingCapacity": 4
-                  },
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 4,
                     "certifiedNormalAccommodation": 4
                   },
+                  "certifiedCell": true,
                   "childLocations": [
                     {
                       "pathHierarchy": "B-1-001",
@@ -2055,12 +1994,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                       "key": "MDI-B-1-001",
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 2
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 2,
                         "certifiedNormalAccommodation": 2
-                      }
+                      },
+                      "certifiedCell": true
                     },
                     {
                       "pathHierarchy": "B-1-002",
@@ -2068,12 +2005,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                       "key": "MDI-B-1-002",
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 2
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 2,
                         "certifiedNormalAccommodation": 2
-                      }
+                      },
+                      "certifiedCell": true
                     },
                   {
                   "prisonId": "MDI",
@@ -2126,12 +2061,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                 "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
                 "capacity": {
                   "maxCapacity": 4,
-                  "workingCapacity": 4
-                },
-                "certification": {
-                  "certified": true,
+                  "workingCapacity": 4,
                   "certifiedNormalAccommodation": 4
                 },
+                "certifiedCell": true,
                 "isResidential": true,
                 "key": "MDI-Y"
               }
@@ -2152,12 +2085,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "key": "MDI-Z",
               "capacity": {
                 "maxCapacity": 0,
-                "workingCapacity": 0
-              },
-              "certification": {
-                "certified": false,
+                "workingCapacity": 0,
                 "certifiedNormalAccommodation": 0
               },
+              "certifiedCell": false,
               "childLocations": [
                  {
                   "prisonId": "MDI",
@@ -2204,12 +2135,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "key": "MDI-Z-2",
                   "capacity": {
                     "maxCapacity": 0,
-                    "workingCapacity": 0
-                  },
-                  "certification": {
-                    "certified": false,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 0
                   },
+                  "certifiedCell": false,
                   "childLocations": []
                 }
               ]
@@ -2232,12 +2161,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "localName": "Wing Y",
               "capacity": {
                 "maxCapacity": 4,
-                "workingCapacity": 4
-              },
-              "certification": {
-                "certified": true,
+                "workingCapacity": 4,
                 "certifiedNormalAccommodation": 4
               },
+              "certifiedCell": true,
               "childLocations": [
                 {
                   "key": "MDI-Y-001",
@@ -2432,12 +2359,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                 "accommodationTypes": [ "NORMAL_ACCOMMODATION", "CARE_AND_SEPARATION" ],
                 "capacity": {
                   "maxCapacity": 4,
-                  "workingCapacity": 4
-                },
-                "certification": {
-                  "certified": true,
+                  "workingCapacity": 4,
                   "certifiedNormalAccommodation": 4
                 },
+                "certifiedCell": true,
                 "isResidential": true,
                 "key": "MDI-B-1"
               }
@@ -2459,12 +2384,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "leafLevel": false,
               "capacity": {
                 "maxCapacity": 0,
-                "workingCapacity": 0
-              },
-              "certification": {
-                "certified": false,
+                "workingCapacity": 0,
                 "certifiedNormalAccommodation": 0
               },
+              "certifiedCell": false,
               "childLocations": [
                  {
                   "prisonId": "MDI",
@@ -2511,12 +2434,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "key": "MDI-Z-2",
                   "capacity": {
                     "maxCapacity": 0,
-                    "workingCapacity": 0
-                  },
-                  "certification": {
-                    "certified": false,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 0
                   },
+                  "certifiedCell": false,
                   "childLocations": []
                 }
               ]
@@ -2538,12 +2459,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
               "key": "MDI-B",
               "capacity": {
                 "maxCapacity": 6,
-                "workingCapacity": 4
-              },
-              "certification": {
-                "certified": true,
+                "workingCapacity": 4,
                 "certifiedNormalAccommodation": 6
               },
+              "certifiedCell": true,
               "childLocations": [
                 {
                   "prisonId": "MDI",
@@ -2554,12 +2473,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "permanentlyInactive": false,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 0
-                  },
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 2
                   },
+                  "certifiedCell": true,
                   "active": true,
                   "deactivatedByParent": false,
                   "childLocations": [
@@ -2572,12 +2489,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                       "permanentlyInactive": false,
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 0
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 0,
                         "certifiedNormalAccommodation": 2
                       },
+                      "certifiedCell": true,
                       "active": false,
                       "deactivatedByParent": false,
                       "deactivatedDate": "2023-12-05T12:34:56.123456",
@@ -2597,12 +2512,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                   "key": "MDI-B-1",
                   "capacity": {
                     "maxCapacity": 4,
-                    "workingCapacity": 4
-                  },
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 4,
                     "certifiedNormalAccommodation": 4
                   },
+                  "certifiedCell": true,
                   "childLocations": [
                     {
                       "pathHierarchy": "B-1-001",
@@ -2610,12 +2523,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                       "key": "MDI-B-1-001",
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 2
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 2,
                         "certifiedNormalAccommodation": 2
-                      }
+                      },
+                      "certifiedCell": true
                     },
                     {
                       "pathHierarchy": "B-1-002",
@@ -2623,12 +2534,10 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
                       "key": "MDI-B-1-002",
                       "capacity": {
                         "maxCapacity": 2,
-                        "workingCapacity": 2
-                      },
-                      "certification": {
-                        "certified": true,
+                        "workingCapacity": 2,
                         "certifiedNormalAccommodation": 2
-                      }
+                      },
+                      "certifiedCell": true
                     },
                    {
                     "prisonId": "MDI",

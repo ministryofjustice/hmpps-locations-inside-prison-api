@@ -894,13 +894,11 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "permanentlyInactive": false,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 0
-                  },
-                  "oldWorkingCapacity": 2,
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 2
                   },
+                  "oldWorkingCapacity": 2,
+                  "certifiedCell": true,
                   "status": "INACTIVE",
                   "active": false,
                   "deactivatedByParent": false,
@@ -955,13 +953,11 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "permanentlyInactive": false,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 0
-                  },
-                  "oldWorkingCapacity": 2,
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 2
                   },
+                  "oldWorkingCapacity": 2,
+                  "certifiedCell": true,
                   "status": "INACTIVE",
                   "active": false,
                   "deactivatedByParent": false,
@@ -1063,13 +1059,11 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                   "permanentlyInactive": false,
                   "capacity": {
                     "maxCapacity": 2,
-                    "workingCapacity": 0
-                  },
-                  "oldWorkingCapacity": 2,
-                  "certification": {
-                    "certified": true,
+                    "workingCapacity": 0,
                     "certifiedNormalAccommodation": 2
                   },
+                  "oldWorkingCapacity": 2,
+                  "certifiedCell": true,
                   "status": "INACTIVE",
                   "active": false,
                   "deactivatedByParent": false,
