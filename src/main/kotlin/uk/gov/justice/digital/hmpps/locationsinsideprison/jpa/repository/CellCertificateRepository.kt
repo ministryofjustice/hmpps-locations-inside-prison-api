@@ -43,4 +43,28 @@ interface CellCertificateRepository : JpaRepository<CellCertificate, UUID> {
     nativeQuery = true,
   )
   fun findByPrisonIdAndPathHierarchy(prisonId: String, pathHierarchy: String): CellCertificateLocation?
+
+  @Query(
+    value = """
+        WITH RECURSIVE
+        current_cert AS (SELECT cc.id
+                         FROM cell_certificate cc
+                         WHERE cc.prison_id = :prisonId
+                           AND cc.current = TRUE),
+        tree AS (
+            SELECT ccl.*
+            FROM cell_certificate_location ccl
+                     JOIN current_cert c ON ccl.cell_certificate_id = c.id
+            UNION ALL
+            SELECT child.*
+            FROM cell_certificate_location child
+                     JOIN tree parent
+                          ON child.parent_location_id = parent.id)
+    SELECT *
+    FROM tree
+    WHERE path_hierarchy IN (:pathHierarchies)
+  """,
+    nativeQuery = true,
+  )
+  fun findByPrisonIdAndPathHierarchies(prisonId: String, pathHierarchies: List<String>): List<CellCertificateLocation>
 }
