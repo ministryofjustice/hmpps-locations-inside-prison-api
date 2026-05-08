@@ -127,7 +127,7 @@ open class CellCertificateLocation(
   private val localName: String? = null,
 
   @Column(nullable = false)
-  private val pathHierarchy: String,
+  val pathHierarchy: String,
 
   @Column(nullable = false)
   open val level: Int,
