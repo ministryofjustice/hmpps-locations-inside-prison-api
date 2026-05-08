@@ -18,7 +18,7 @@ services:
       - SPRING_PROFILES_ACTIVE=seed
 
   localstack:
-    image: localstack/localstack:4
+    image: localstack/localstack:community-archive
     networks:
       - hmpps
     container_name: localstack
@@ -61,7 +61,7 @@ services:
       - POSTGRES_DB=locations_inside_prison
 
   prison-register:
-    image: quay.io/hmpps/prison-register:latest
+    image: ghcr.io/ministryofjustice/prison-register:latest
     container_name: prison-register
     depends_on:
       - hmpps-auth
