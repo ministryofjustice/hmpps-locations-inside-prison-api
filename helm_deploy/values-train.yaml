@@ -53,7 +53,7 @@ generic-service:
           timeoutSeconds: 5
           failureThreshold: 5
     - name: localstack
-      image: "localstack/localstack:community-archive"
+      image: "ghcr.io/ministryofjustice/hmpps-localstack:latest"
       imagePullPolicy: IfNotPresent
       ports:
         - name: http
