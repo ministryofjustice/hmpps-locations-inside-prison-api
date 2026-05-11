@@ -1608,22 +1608,18 @@ class LocationService(
       )
     }
 
-    return (
-      startLocation?.cellLocations() ?: cellLocationRepository.findAllByPrisonIdAndStatus(
-        prisonId,
-        LocationStatus.INACTIVE,
-      )
-      )
+    val cells = (startLocation?.cellLocations() ?: cellLocationRepository.findAllByPrisonIdAndStatus(prisonId, LocationStatus.INACTIVE))
       .filter { it.isTemporarilyDeactivated() }
-      .map {
-        it.toDto(
-          cellCertificateLocation = if (certificationApprovalRequired) {
-            cellCertificateRepository.findByPrisonIdAndPathHierarchy(it.prisonId, it.getPathHierarchy())
-          } else {
-            null
-          },
-        )
-      }
+
+    val cellCertsMap = if (certificationApprovalRequired) {
+      cellCertificateRepository.findByPrisonIdAndPathHierarchies(prisonId, cells.map { it.getPathHierarchy() })
+        .associateBy { it.pathHierarchy }
+    } else {
+      emptyMap()
+    }
+
+    return cells
+      .map { it.toDto(cellCertificateLocation = cellCertsMap[it.getPathHierarchy()]) }
       .sortedWith(NaturalOrderComparator())
   }
 
