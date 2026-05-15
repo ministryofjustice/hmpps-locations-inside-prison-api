@@ -73,3 +73,6 @@ sonar-project.properties
 
 #Helm
 **/Chart.lock
+
+#Synk
+.snyk

@@ -723,10 +723,6 @@ class LocationService(
       throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
     }
 
-    if (activePrisonService.isCertificationApprovalRequired(residentialLocation.prisonId) && !residentialLocation.isDraft()) {
-      throw ApprovalRequestRequiresReasonForChangeException(residentialLocation.getKey())
-    }
-
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = residentialLocation.prisonId,
       TransactionType.LOCATION_UPDATE,
