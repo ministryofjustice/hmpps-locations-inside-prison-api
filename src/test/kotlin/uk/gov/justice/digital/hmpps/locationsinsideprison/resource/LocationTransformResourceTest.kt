@@ -406,6 +406,48 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
       }
+
+      @Test
+      fun `can update Use for type to a value successfully when cert approval is enabled for prison`() {
+        val expectedUsedFor = setOf(UsedForType.PERSONALITY_DISORDER)
+
+        val result = webTestClient.put().uri("/locations/${leedsWing.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(UsedForType.PERSONALITY_DISORDER)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<LocationTest>()
+          .returnResult().responseBody!!
+
+        assertThat(result.usedFor == expectedUsedFor)
+
+        val landingZ1 = result.findByPathHierarchy("A-1")!!
+        assertThat(landingZ1.usedFor == expectedUsedFor)
+
+        val cellZ1001 = result.findByPathHierarchy("A-1-001")!!
+        assertThat(cellZ1001.usedFor == expectedUsedFor)
+
+        val cellZ1002 = result.findByPathHierarchy("A-1-002")!!
+        assertThat(cellZ1002.usedFor == expectedUsedFor)
+
+        val landingZ2 = result.findByPathHierarchy("A-2")!!
+        assertThat(landingZ2.usedFor!!.isEmpty())
+
+        val cellVisit = result.findByPathHierarchy("A-VISIT")
+        assertThat(cellVisit == null)
+
+        getDomainEvents(6).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to "LEI-A-1-001",
+            "location.inside.prison.amended" to "LEI-A-1-002",
+            "location.inside.prison.amended" to "LEI-A-1-003",
+            "location.inside.prison.amended" to "LEI-A-1",
+            "location.inside.prison.amended" to "LEI-A-2",
+            "location.inside.prison.amended" to "LEI-A",
+          )
+        }
+      }
     }
   }
 
