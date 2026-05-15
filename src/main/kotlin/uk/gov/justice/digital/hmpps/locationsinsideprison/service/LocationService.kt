@@ -57,7 +57,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Locatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.validateCapacity
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.AlreadyDeactivatedLocationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestRequiresReasonForChangeException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanentDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
@@ -978,8 +977,6 @@ class LocationService(
 
   @Transactional
   fun deactivateLocations(locationsToDeactivate: DeactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
-    val deactivatedLocations = mutableSetOf<Location>()
-
     val prisonId = locationsToDeactivate.locations.entries.firstOrNull()?.key?.let { id ->
       locationRepository.findById(id)
         .orElseThrow { LocationNotFoundException(id.toString()) }.prisonId
@@ -994,15 +991,14 @@ class LocationService(
     )
 
     val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
-    val approvalRequired =
-      locationsToDeactivate.requiresApproval && certificationApprovalRequired
+    val approvalRequired = locationsToDeactivate.requiresApproval && certificationApprovalRequired
+
+    val deactivatedLocations = mutableSetOf<Location>()
+    val updatedLocations = mutableSetOf<Location>()
+
     locationsToDeactivate.locations.forEach { (id, deactivationDetail) ->
       val locationToDeactivate = locationRepository.findById(id)
         .orElseThrow { LocationNotFoundException(id.toString()) }
-
-      if (locationToDeactivate.isTemporarilyDeactivated()) {
-        throw AlreadyDeactivatedLocationException(locationToDeactivate.getKey())
-      }
 
       checkForPrisonersInLocation(locationToDeactivate)
 
@@ -1016,6 +1012,7 @@ class LocationService(
             throw ApprovalRequestRequiresReasonForChangeException(locationToDeactivate.getKey())
           }
 
+          log.info("Requesting certification approval for deactivation of location [${locationToDeactivate.getKey()}]")
           val approvalRequest = locationToDeactivate.requestApprovalForDeactivation(
             requestedDate = linkedTransaction.txStartTime,
             requestedBy = linkedTransaction.transactionInvokedBy,
@@ -1039,38 +1036,46 @@ class LocationService(
           approvalRequest.refreshCapacities()
         }
 
-        if (locationToDeactivate.temporarilyDeactivate(
-            deactivatedReason = deactivationReason,
-            deactivatedDate = now(clock),
-            deactivationReasonDescription = deactivationReasonDescription,
-            planetFmReference = planetFmReference,
-            proposedReactivationDate = proposedReactivationDate,
-            userOrSystemInContext = transactionInvokedBy,
-            deactivatedLocations = deactivatedLocations,
-            linkedTransaction = linkedTransaction,
-            requestApproval = approvalRequired,
-            reasonForChange = locationsToDeactivate.reasonForChange,
-          )
-        ) {
-          deactivatedLocations.forEach {
-            sharedLocationService.trackLocationUpdate(it, "Temporarily Deactivated Location")
-          }
-        }
+        locationToDeactivate.temporarilyDeactivate(
+          deactivatedReason = deactivationReason,
+          deactivatedDate = now(clock),
+          deactivationReasonDescription = deactivationReasonDescription,
+          planetFmReference = planetFmReference,
+          proposedReactivationDate = proposedReactivationDate,
+          userOrSystemInContext = transactionInvokedBy,
+          deactivatedLocations = deactivatedLocations,
+          updatedLocations = updatedLocations,
+          linkedTransaction = linkedTransaction,
+          requestApproval = approvalRequired,
+          reasonForChange = locationsToDeactivate.reasonForChange,
+        )
+
+        locationRepository.saveAndFlush(locationToDeactivate)
       }
     }
 
-    locationRepository.saveAllAndFlush(deactivatedLocations)
+    deactivatedLocations.forEach {
+      sharedLocationService.trackLocationUpdate(it, "Temporarily Deactivated Location")
+    }
+    updatedLocations.forEach {
+      sharedLocationService.trackLocationUpdate(it, "Updated Deactivated Location")
+    }
+
     val deactivatedLocationsDto = deactivatedLocations.map {
       it.toDto(
         cellCertificateLocation = cellCertificateRepository.findByPrisonIdAndPathHierarchy(it.prisonId, it.getPathHierarchy()).takeIf { certificationApprovalRequired },
       )
     }.toSet()
+
+    val updatedLocationsDto = deactivatedLocations.flatMap { deactivatedLoc ->
+      deactivatedLoc.getParentLocations().map { it.toDto() }
+    }.toSet()
+      .plus(updatedLocations.map { it.toDto() })
+      .minus(deactivatedLocationsDto)
+
+    log.info("Deactivated ${deactivatedLocationsDto.size} locations and updated ${updatedLocationsDto.size} locations")
     return mapOf(
-      InternalLocationDomainEventType.LOCATION_AMENDED to deactivatedLocations.flatMap { deactivatedLoc ->
-        deactivatedLoc.getParentLocations().map { it.toDto() }
-      }.toSet().minus(
-        deactivatedLocationsDto,
-      ).toList(),
+      InternalLocationDomainEventType.LOCATION_AMENDED to updatedLocationsDto.toList(),
       InternalLocationDomainEventType.LOCATION_DEACTIVATED to deactivatedLocationsDto.toList(),
     ).also {
       linkedTransaction.txEndTime = now(clock)

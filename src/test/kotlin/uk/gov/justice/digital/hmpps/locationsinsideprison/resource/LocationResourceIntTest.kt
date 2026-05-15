@@ -1381,7 +1381,7 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.deactivated" to "MDI-Z",
             "location.inside.prison.deactivated" to "MDI-Z-1",
             "location.inside.prison.deactivated" to "MDI-Z-2",
-            "location.inside.prison.deactivated" to "MDI-Z-1-001",
+            "location.inside.prison.amended" to "MDI-Z-1-001",
             "location.inside.prison.deactivated" to "MDI-Z-1-002",
           )
         }

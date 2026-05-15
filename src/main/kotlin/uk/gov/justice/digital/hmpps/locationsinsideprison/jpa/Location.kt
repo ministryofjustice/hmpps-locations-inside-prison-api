@@ -728,9 +728,10 @@ abstract class Location(
     proposedReactivationDate: LocalDate? = null,
     userOrSystemInContext: String,
     deactivatedLocations: MutableSet<Location>? = null,
+    updatedLocations: MutableSet<Location>? = null,
     requestApproval: Boolean = false,
     reasonForChange: String? = null,
-  ): Boolean {
+  ) {
     var dataChanged = false
 
     if (!isPermanentlyDeactivated()) {
@@ -798,6 +799,7 @@ abstract class Location(
         this.deactivatedDate = deactivatedDate
         this.deactivatedBy = userOrSystemInContext
         log.info("Temporarily Deactivated Location [${getKey()}]")
+        deactivatedLocations?.add(this)
       }
 
       if (dataChanged) {
@@ -807,31 +809,28 @@ abstract class Location(
         this.planetFmReference = planetFmReference
         this.updatedBy = userOrSystemInContext
         this.whenUpdated = amendedDate
-        deactivatedLocations?.add(this)
+        log.info("Deactivated Location updated [${getKey()}]")
+        updatedLocations?.add(this)
       }
 
       if (this is ResidentialLocation) {
         findSubLocations().filterIsInstance<ResidentialLocation>().forEach { location ->
           if (!location.isResidentialRoomOrConvertedCell()) {
-            if (location.temporarilyDeactivate(
-                deactivatedReason = deactivatedReason,
-                deactivatedDate = deactivatedDate,
-                deactivationReasonDescription = deactivationReasonDescription,
-                linkedTransaction = linkedTransaction,
-                planetFmReference = planetFmReference,
-                proposedReactivationDate = proposedReactivationDate,
-                userOrSystemInContext = userOrSystemInContext,
-                deactivatedLocations = deactivatedLocations,
-              )
-            ) {
-              dataChanged = true
-            }
+            location.temporarilyDeactivate(
+              deactivatedReason = deactivatedReason,
+              deactivatedDate = deactivatedDate,
+              deactivationReasonDescription = deactivationReasonDescription,
+              linkedTransaction = linkedTransaction,
+              planetFmReference = planetFmReference,
+              proposedReactivationDate = proposedReactivationDate,
+              userOrSystemInContext = userOrSystemInContext,
+              deactivatedLocations = deactivatedLocations,
+              updatedLocations = updatedLocations,
+            )
           }
         }
       }
     }
-
-    return dataChanged
   }
 
   open fun update(
