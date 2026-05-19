@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import org.hibernate.annotations.SortNatural
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.InactiveStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -69,6 +70,9 @@ open class ResidentialLocation(
   @OneToMany(mappedBy = "location", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @SortNatural
   open var approvalRequests: SortedSet<LocationCertificationApprovalRequest> = sortedSetOf(),
+
+  @Enumerated(EnumType.STRING)
+  var inactiveStatus: InactiveStatus? = null,
 
 ) : Location(
   id = id,
