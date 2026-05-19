@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.time.LocalDateTime
 import java.util.UUID
+import kotlin.collections.forEach
 
 @Schema(description = "Cell Certificate")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -48,7 +49,25 @@ data class CellCertificateDto(
 
   @param:Schema(description = "Locations in the certificate", required = true)
   val locations: List<CellCertificateLocationDto>? = null,
-)
+) {
+  fun findLocationInCertificate(pathHierarchy: String) = findAllLocations().firstOrNull { it.pathHierarchy == pathHierarchy }
+
+  private fun findAllLocations(): List<CellCertificateLocationDto> {
+    val subLocations = mutableListOf<CellCertificateLocationDto>()
+
+    fun traverse(location: CellCertificateLocationDto) {
+      subLocations.add(location)
+      if (location.subLocations != null) {
+        for (childLocation in location.subLocations) {
+          traverse(childLocation)
+        }
+      }
+    }
+
+    locations?.forEach { traverse(it) }
+    return subLocations
+  }
+}
 
 @Schema(description = "Cell Certificate Location")
 @JsonInclude(JsonInclude.Include.NON_NULL)

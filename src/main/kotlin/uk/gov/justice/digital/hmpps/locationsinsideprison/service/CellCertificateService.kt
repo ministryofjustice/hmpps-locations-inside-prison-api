@@ -30,8 +30,7 @@ class CellCertificateService(
     approvalRequest: CertificationApprovalRequest,
     signedOperationCapacity: Int,
   ): CellCertificateDto {
-    // Mark any existing current certificates as not current
-    cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(approvalRequest.prisonId)?.markAsNotCurrent()
+    val currentCellCertificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(approvalRequest.prisonId)
 
     // Create the cell certificate
     val cellCertificate = cellCertificateRepository.saveAndFlush(
@@ -44,7 +43,7 @@ class CellCertificateService(
         locations = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(approvalRequest.prisonId)
           .filter { !it.isPermanentlyDeactivated() && !it.isDraft() && it.isStructural() }
           .map {
-            it.toCellCertificateLocation(approvalRequest)
+            it.toCellCertificateLocation(approvalRequest, currentCellCertificate)
           }.toSortedSet(),
       ).apply {
         totalWorkingCapacity = locations.sumOf { it.workingCapacity ?: 0 }
@@ -52,6 +51,8 @@ class CellCertificateService(
         totalCertifiedNormalAccommodation = locations.sumOf { it.certifiedNormalAccommodation ?: 0 }
       },
     )
+    // Mark any existing current certificates as not current
+    currentCellCertificate?.markAsNotCurrent()
 
     log.info("Created cell certificate for prison ${approvalRequest.prisonId} with ID ${cellCertificate.id}")
     return cellCertificate.toDto()

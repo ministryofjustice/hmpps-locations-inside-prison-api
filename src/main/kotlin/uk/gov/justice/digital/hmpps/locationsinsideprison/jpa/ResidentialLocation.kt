@@ -500,54 +500,54 @@ open class ResidentialLocation(
     return this
   }
 
-  fun toCellCertificateLocation(approvalRequest: CertificationApprovalRequest): CellCertificateLocation {
+  fun toCellCertificateLocation(approvalRequest: CertificationApprovalRequest, currentCellCertificate: CellCertificate?): CellCertificateLocation {
     val subLocations: List<CellCertificateLocation> = getResidentialLocationsBelowThisLevel()
       .filter { !it.isDraft() && (it.isStructural() || it.isCell() || it.isConvertedCell()) }
-      .map { it.toCellCertificateLocation(approvalRequest) }
+      .map { it.toCellCertificateLocation(approvalRequest, currentCellCertificate) }
 
-    return CellCertificateLocation(
-      locationType = locationType,
-      locationCode = getLocationCode(),
-      pathHierarchy = getPathHierarchy(),
-      localName = localName?.capitalizeWords(),
-      cellMark = if (this is Cell) {
-        getDoorCellMark()
-      } else {
-        null
-      },
-      level = getLevel(),
-      inCellSanitation = if (this is Cell) {
-        getSanitationOfCell()
-      } else {
-        null
-      },
-      maxCapacity = calcMaxCapacity(),
-      workingCapacity = if (draftApprovalLocationIsPartOfHierarchy(approvalRequest)) {
-        getWorkingCapacityIgnoringInactiveStatus()
-      } else {
-        calcWorkingCapacity()
-      },
-      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
-      usedForTypes = getUsedForValuesAsCSV(),
-      accommodationTypes = getAccommodationTypesAsCSV(),
-      specialistCellTypes = getSpecialistCellTypesAsCSV(),
-      convertedCellType = if (this is Cell && isConvertedCell()) {
-        convertedCellType
-      } else {
-        null
-      },
-      subLocations = subLocations.toSortedSet(),
-    )
+    val locationInExistingCertificate = currentCellCertificate?.findLocationInCertificate(getPathHierarchy())
+    if (approvalLocationIsPartOfHierarchy(approvalRequest) || locationInExistingCertificate == null) {
+      return CellCertificateLocation(
+        locationType = locationType,
+        locationCode = getLocationCode(),
+        pathHierarchy = getPathHierarchy(),
+        localName = localName?.capitalizeWords(),
+        cellMark = if (this is Cell) {
+          getDoorCellMark()
+        } else {
+          null
+        },
+        level = getLevel(),
+        inCellSanitation = if (this is Cell) {
+          getSanitationOfCell()
+        } else {
+          null
+        },
+        maxCapacity = calcMaxCapacity(),
+        workingCapacity = if (approvalRequest is DraftChangeApprovalRequest) {
+          getWorkingCapacityIgnoringInactiveStatus()
+        } else {
+          calcWorkingCapacity()
+        },
+        certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
+        usedForTypes = getUsedForValuesAsCSV(),
+        accommodationTypes = getAccommodationTypesAsCSV(),
+        specialistCellTypes = getSpecialistCellTypesAsCSV(),
+        convertedCellType = if (this is Cell && isConvertedCell()) {
+          convertedCellType
+        } else {
+          null
+        },
+        subLocations = subLocations.toSortedSet(),
+      )
+    } else {
+      return locationInExistingCertificate.clone(subLocations.toSortedSet())
+    }
   }
 
-  private fun draftApprovalLocationIsPartOfHierarchy(approvalRequest: CertificationApprovalRequest): Boolean = if (approvalRequest.getApprovalType() == ApprovalType.DRAFT) {
-    val locationRequest = approvalRequest as? DraftChangeApprovalRequest
-    locationRequest?.location?.let { location ->
-      isInHierarchy(location) || findLocation(location.getKey()) != null
-    } ?: false
-  } else {
-    false
-  }
+  fun approvalLocationIsPartOfHierarchy(approvalRequest: CertificationApprovalRequest) = (approvalRequest as? LocationCertificationApprovalRequest)?.location?.let { location ->
+    isInHierarchy(location) || findLocation(location.getKey()) != null
+  } ?: false
 
   fun toCertificationApprovalRequestLocation(includeDraftOrPending: Boolean = false, reactivation: Boolean = false, deactivation: Boolean = false): CertificationApprovalRequestLocation {
     val subLocations: List<CertificationApprovalRequestLocation> = getResidentialLocationsBelowThisLevel()
