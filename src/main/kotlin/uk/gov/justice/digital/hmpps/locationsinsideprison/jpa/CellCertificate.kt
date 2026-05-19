@@ -85,6 +85,22 @@ open class CellCertificate(
 ) {
   override fun toString(): String = "CellCertificate(prisonId='$prisonId', certificationApprovalRequest=$certificationApprovalRequest, current=$current)"
 
+  fun findLocationInCertificate(pathHierarchy: String) = findAllLocations().firstOrNull { it.pathHierarchy == pathHierarchy }
+
+  private fun findAllLocations(): List<CellCertificateLocation> {
+    val subLocations = mutableListOf<CellCertificateLocation>()
+
+    fun traverse(location: CellCertificateLocation) {
+      subLocations.add(location)
+      for (childLocation in location.subLocations) {
+        traverse(childLocation)
+      }
+    }
+
+    locations.forEach { traverse(it) }
+    return subLocations
+  }
+
   fun markAsNotCurrent() {
     current = false
   }
@@ -161,7 +177,7 @@ open class CellCertificateLocation(
   @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "parent_location_id")
   @SortNatural
-  private val subLocations: SortedSet<CellCertificateLocation> = sortedSetOf(),
+  val subLocations: SortedSet<CellCertificateLocation> = sortedSetOf(),
 
 ) : Comparable<CellCertificateLocation> {
 
@@ -206,4 +222,21 @@ open class CellCertificateLocation(
   private fun getUsedForTypesFromList(): List<UsedForType>? = usedForTypes?.split(",")?.map { UsedForType.valueOf(it.trim()) }
 
   private fun getAccommodationTypesFromList(): List<AccommodationType>? = accommodationTypes?.split(",")?.map { AccommodationType.valueOf(it.trim()) }
+
+  fun clone(subLocations: SortedSet<CellCertificateLocation>): CellCertificateLocation = CellCertificateLocation(
+    pathHierarchy = pathHierarchy,
+    locationCode = locationCode,
+    locationType = locationType,
+    cellMark = cellMark,
+    localName = localName,
+    level = level,
+    certifiedNormalAccommodation = certifiedNormalAccommodation,
+    workingCapacity = workingCapacity,
+    maxCapacity = maxCapacity,
+    inCellSanitation = inCellSanitation,
+    specialistCellTypes = specialistCellTypes,
+    accommodationTypes = accommodationTypes,
+    usedForTypes = usedForTypes,
+    subLocations = subLocations,
+  )
 }
