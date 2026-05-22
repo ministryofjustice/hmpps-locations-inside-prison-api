@@ -1904,6 +1904,19 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `can retrieve non-residential locations for multiple service families`() {
+        webTestClient.get()
+          .uri("/locations/non-residential/summary/${wingZ.prisonId}?serviceFamilyType=OFFICIAL_VISITS,ADJUDICATIONS")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.locations.content[?(@.localName == 'Visit Room')]").exists()
+          .jsonPath("$.locations.content[?(@.localName == 'Adjudication Room')]").exists()
+      }
+
+      @Test
       fun `can retrieve a particular page of locations`() {
         webTestClient.get().uri("/locations/non-residential/summary/${wingZ.prisonId}?size=1&page=1")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
