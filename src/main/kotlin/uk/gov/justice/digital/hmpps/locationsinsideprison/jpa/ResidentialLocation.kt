@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import org.hibernate.annotations.SortNatural
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.InactiveStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -107,11 +108,7 @@ open class ResidentialLocation(
 
   override fun isResidentialRoomOrConvertedCell() = isNonResType() || isConvertedCell()
 
-  override fun hasDeactivatedParent() = if (!isResidentialRoomOrConvertedCell()) {
-    findDeactivatedParent() != null
-  } else {
-    false
-  }
+  override fun hasDeactivatedParent() = !isResidentialRoomOrConvertedCell() && findDeactivatedParent() != null
 
   fun isNonResType() = locationType in ResidentialLocationType.entries.filter { it.nonResType }.map { it.baseType }
   fun isLocationShownOnResidentialSummary() = locationType in ResidentialLocationType.entries.filter { it.display }.map { it.baseType }
@@ -268,11 +265,11 @@ open class ResidentialLocation(
     when (pendingApprovalRequest) {
       is DraftChangeApprovalRequest -> {
         temporarilyDeactivate(
-          deactivationReasonDescription = "New location",
-          deactivatedReason = DeactivatedReason.OTHER,
+          deactivatedReason = DeactivatedReason.NEW_BUILD,
           deactivatedDate = approvedDate,
           linkedTransaction = linkedTransaction,
           userOrSystemInContext = approvedBy,
+          shortTermDeactivation = true,
         )
       }
     }
@@ -339,12 +336,7 @@ open class ResidentialLocation(
       .forEach { it.updateUsedFor(newUsedFor, userOrSystemInContext, clock, linkedTransaction) }
   }
 
-  fun removeCell(cell: Cell): Boolean {
-    if (cell.isDraft()) {
-      return childLocations.remove(cell)
-    }
-    return false
-  }
+  fun removeCell(cell: Cell): Boolean = cell.isDraft() && childLocations.remove(cell)
 
   open fun addUsedFor(
     usedForType: UsedForType,
@@ -475,6 +467,31 @@ open class ResidentialLocation(
           )
         }
       }
+    }
+  }
+
+  fun getInactiveStatus(): InactiveStatus? {
+    if (!isTemporarilyDeactivated()) return null
+    return when {
+      hasPendingCertificationApproval() -> InactiveStatus.INACTIVE_PEND_CHANGE_REQ
+      isShortTermInactive() -> InactiveStatus.INACTIVE_TEMP
+      else -> InactiveStatus.INACTIVE_MATCHING_CELL_CERT
+    }
+  }
+
+  fun isShortTermInactive(): Boolean = cellLocations().any {
+    it.isShortTermInactive()
+  }
+
+  fun markAsTemporarilyOffCellCert() {
+    cellLocations().forEach {
+      it.markAsTemporarilyOffCellCert()
+    }
+  }
+
+  fun removeTemporarilyOffCellCert() {
+    cellLocations().forEach {
+      it.removeTemporarilyOffCellCert()
     }
   }
 
@@ -631,7 +648,7 @@ open class ResidentialLocation(
   ).copy(
 
     wingStructure = getStructure(),
-
+    inactiveStatus = getInactiveStatus(),
     capacity = CapacityDto(
       maxCapacity = calcMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),

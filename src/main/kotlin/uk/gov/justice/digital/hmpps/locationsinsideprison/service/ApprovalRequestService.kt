@@ -7,6 +7,7 @@ import jakarta.xml.bind.ValidationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.InactiveStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
@@ -109,9 +110,11 @@ class ApprovalRequestService(
     if (reactivationApprovalRequest.cascadeReactivation && reactivationApprovalRequest.cellReactivationChanges != null) {
       throw ValidationException("Cannot specify both cascadeReactivation and cellReactivationChanges")
     }
-
     if (topLevelLocation.hasPendingCertificationApproval()) {
       throw PendingApprovalAlreadyExistsException(topLevelLocation.getKey())
+    }
+    if (topLevelLocation.getInactiveStatus() == InactiveStatus.INACTIVE_TEMP) {
+      throw LocationCannotBeReactivatedException("Location ${topLevelLocation.getKey()} is currently short term inactive")
     }
 
     val approvalRequest = ReactivationApprovalRequest(

@@ -1046,8 +1046,7 @@ class LocationService(
           deactivatedLocations = deactivatedLocations,
           updatedLocations = updatedLocations,
           linkedTransaction = linkedTransaction,
-          requestApproval = approvalRequired,
-          reasonForChange = locationsToDeactivate.reasonForChange,
+          shortTermDeactivation = !approvalRequired,
         )
 
         locationRepository.saveAndFlush(locationToDeactivate)
@@ -1339,15 +1338,17 @@ class LocationService(
     )
 
     val approvalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
-    if (approvalRequired && !locationsToReactivate.forceReactivation) {
-      throw ChangesCannotBeMadeWithoutCertificationApprovalException(prisonId)
-    }
+
     locationsToReactivate.locations.forEach { (id, reactivationDetail) ->
       val locationToUpdate = locationRepository.findById(id)
         .orElseThrow { LocationNotFoundException(id.toString()) }
 
       if (locationToUpdate.isPermanentlyDeactivated()) {
         throw LocationCannotBeReactivatedException("Location [${locationToUpdate.getKey()}] permanently deactivated")
+      }
+
+      if (locationToUpdate is ResidentialLocation && !locationToUpdate.isShortTermInactive() && approvalRequired && !locationsToReactivate.forceReactivation) {
+        throw ChangesCannotBeMadeWithoutCertificationApprovalException(prisonId)
       }
 
       sharedLocationService.reactivate(
@@ -1601,8 +1602,6 @@ class LocationService(
     .sortedWith(NaturalOrderComparator())
 
   fun getResidentialInactiveLocations(prisonId: String, parentLocationId: UUID?): List<LocationDTO> {
-    val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
-
     val startLocation = parentLocationId?.let {
       residentialLocationRepository.findById(parentLocationId).getOrNull() ?: throw LocationNotFoundException(
         parentLocationId.toString(),
@@ -1612,15 +1611,8 @@ class LocationService(
     val cells = (startLocation?.cellLocations() ?: cellLocationRepository.findAllByPrisonIdAndStatus(prisonId, LocationStatus.INACTIVE))
       .filter { it.isTemporarilyDeactivated() }
 
-    val cellCertsMap = if (certificationApprovalRequired) {
-      cellCertificateRepository.findByPrisonIdAndPathHierarchies(prisonId, cells.map { it.getPathHierarchy() })
-        .associateBy { it.pathHierarchy }
-    } else {
-      emptyMap()
-    }
-
     return cells
-      .map { it.toDto(cellCertificateLocation = cellCertsMap[it.getPathHierarchy()]) }
+      .map { it.toDto() }
       .sortedWith(NaturalOrderComparator())
   }
 

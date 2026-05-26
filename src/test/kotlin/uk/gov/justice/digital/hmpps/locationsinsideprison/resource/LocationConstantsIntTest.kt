@@ -298,6 +298,10 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Staff shortage"
                   },
                   {
+                    "key": "NEW_BUILD",
+                    "description": "New build"
+                  },
+                  {
                     "key": "OTHER",
                     "description": "Other"
                   }

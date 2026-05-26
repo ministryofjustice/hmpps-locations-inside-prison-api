@@ -529,12 +529,6 @@ data class CreateResidentialLocationRequest(
   @param:Schema(description = "Specialist Cell Types", required = false)
   val specialistCellTypes: Set<SpecialistCellType>? = null,
 
-  @param:Schema(description = "CNA value", required = false, defaultValue = "0")
-  @field:Max(value = 99, message = "CNA cannot be greater than 99")
-  @field:PositiveOrZero(message = "CNA cannot be less than 0")
-  @Deprecated("Use certifiedNormalAccommodation in capacity instead")
-  val certifiedNormalAccommodation: Int = 0,
-
   @param:Schema(description = "In-cell sanitation", required = false, defaultValue = "false")
   val inCellSanitation: Boolean = false,
 ) {
@@ -554,9 +548,9 @@ data class CreateResidentialLocationRequest(
       whenCreated = LocalDateTime.now(clock),
       childLocations = sortedSetOf(),
       accommodationType = accommodationType,
-      capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity, certifiedNormalAccommodation = it.certifiedNormalAccommodation ?: certifiedNormalAccommodation) },
+      capacity = capacity?.let { CapacityJPA(maxCapacity = it.maxCapacity, workingCapacity = it.workingCapacity, certifiedNormalAccommodation = it.certifiedNormalAccommodation ?: 0) },
       inCellSanitation = inCellSanitation,
-      certifiedCell = if (createInDraft) false else certified,
+      certifiedCell = !createInDraft && certified,
     ).apply {
       if (request.accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
         addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction)
