@@ -416,7 +416,7 @@ class NonResidentialService(
   fun getNonResidentialLocationSummaryForPrison(
     prisonId: String,
     statuses: List<LocationStatus> = emptyList(),
-    serviceFamilyType: ServiceFamilyType? = null,
+    serviceFamilyTypes: List<ServiceFamilyType> = emptyList(),
     searchByLocalName: String? = null,
     filterParents: Boolean = false,
     includeBoxes: Boolean = false,
@@ -437,9 +437,9 @@ class NonResidentialService(
         searchByLocalName?.let {
           add(filterByLocalName(it))
         }
-        serviceFamilyType?.let {
-          add(filterByServiceTypes(it.getServiceTypes()))
-          if (!filterParents && !it.editableInParent) {
+        if (serviceFamilyTypes.isNotEmpty()) {
+          add(filterByServiceTypes(serviceFamilyTypes.flatMap { it.getServiceTypes() }.distinct()))
+          if (!filterParents && serviceFamilyTypes.all { !it.editableInParent }) {
             add(filterByIsLeaf())
           }
         }
