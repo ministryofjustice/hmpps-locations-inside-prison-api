@@ -590,7 +590,6 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
     @Test
     fun `can deactivate a wing and sublocations and request approval`() {
-      val now = LocalDateTime.now(clock)
       val deactivatedLocation = deactivateLocation(
         leedsWing,
         DeactivatedReason.MOTHBALLED,
@@ -617,13 +616,6 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(firstApprovedDeactivatedCell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_PEND_CHANGE_REQ)
 
       val pendingApprovalRequestId = deactivatedLocation.pendingApprovalRequestId!!
-
-      val results = leedsWing.findSubLocations().map { it.getKey() }.plus(leedsWing.getKey())
-      getDomainEvents(results.size).let { messages ->
-        assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-          *results.map { "location.inside.prison.deactivated" to it }.toTypedArray(),
-        )
-      }
 
       val pendingApproval = webTestClient.get().uri("/certification/request-approvals/$pendingApprovalRequestId")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -860,6 +852,56 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
   inner class ReactivateLocationTest {
 
     @Test
+    fun `can request to reactivate a cell that was short term deactivated`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      val deactivatedCell = deactivateLocation(
+        firstCell,
+        deactivatedReason = DeactivatedReason.MOTHBALLED,
+        planetFmReference = "11111",
+        reasonForChange = "The wing has been flooded",
+        requiresApproval = false,
+        approveDeactivation = false,
+      )
+
+      assertThat(deactivatedCell.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(deactivatedCell.pendingApprovalRequestId).isNull()
+      assertThat(deactivatedCell.currentCellCertificate).isNotNull
+      assertThat(deactivatedCell.currentCellCertificate!!.workingCapacity).isEqualTo(1)
+      assertThat(deactivatedCell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+
+      webTestClient.put().uri("/locations/${deactivatedCell.id}/reactivate")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+
+      val parentResults = firstCell.getParentLocations().associate {
+        it.getKey() to "location.inside.prison.amended"
+      }
+      val results = mapOf(firstCell.getKey() to "location.inside.prison.reactivated") + parentResults
+
+      getDomainEvents(results.size).let { messages ->
+        assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+          *results.map { it.value to it.key }.toTypedArray(),
+        )
+      }
+
+      val reactivatedCell = webTestClient.get().uri("/locations/${deactivatedCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(reactivatedCell.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(reactivatedCell.pendingApprovalRequestId).isNull()
+      assertThat(reactivatedCell.currentCellCertificate).isNotNull
+      assertThat(reactivatedCell.currentCellCertificate!!.workingCapacity).isEqualTo(1)
+      assertThat(reactivatedCell.inactiveStatus).isNull()
+    }
+
+    @Test
     fun `can request to reactivate a cell and then approve`() {
       val firstCell = leedsWing.findAllLeafLocations().first() as Cell
       deactivateLocation(
@@ -867,6 +909,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         deactivatedReason = DeactivatedReason.MOTHBALLED,
         planetFmReference = "11111",
         reasonForChange = "The wing has been flooded",
+        requiresApproval = true,
+        approveDeactivation = true,
       )
       webTestClient.put().uri("/certification/location/reactivation-request-approval")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
@@ -913,12 +957,12 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locationId).isEqualTo(firstCell.id)
       assertThat(pendingApproval.prisonId).isEqualTo(firstCell.prisonId)
       assertThat(pendingApproval.locationKey).isEqualTo(firstCell.getKey())
-      assertThat(pendingApproval.workingCapacityChange).isEqualTo(0)
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(1)
       assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(0)
       assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
       assertThat(pendingApproval.locations).hasSize(1)
       assertThat(pendingApproval.locations!![0].subLocations).isNull()
-      assertThat(pendingApproval.locations[0].currentWorkingCapacity).isEqualTo(1)
+      assertThat(pendingApproval.locations[0].currentWorkingCapacity).isEqualTo(0)
       assertThat(pendingApproval.locations[0].currentMaxCapacity).isEqualTo(2)
       assertThat(pendingApproval.locations[0].currentCertifiedNormalAccommodation).isEqualTo(1)
       assertThat(pendingApproval.locations[0].workingCapacity).isEqualTo(1)
@@ -1000,6 +1044,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         deactivatedReason = DeactivatedReason.MOTHBALLED,
         planetFmReference = "11111",
         reasonForChange = "The wing has been flooded",
+        requiresApproval = true,
+        approveDeactivation = true,
       )
       webTestClient.put().uri("/certification/location/reactivation-request-approval")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
@@ -1041,9 +1087,9 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
       assertThat(pendingApproval.locations).hasSize(1)
       assertThat(pendingApproval.locations!![0].subLocations).hasSize(2)
-      assertThat(pendingApproval.workingCapacityChange).isEqualTo(0)
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(6)
       assertThat(pendingApproval.locations).hasSize(1)
-      assertThat(pendingApproval.locations[0].currentWorkingCapacity).isEqualTo(6)
+      assertThat(pendingApproval.locations[0].currentWorkingCapacity).isEqualTo(0)
       assertThat(pendingApproval.locations[0].currentMaxCapacity).isEqualTo(12)
       assertThat(pendingApproval.locations[0].currentCertifiedNormalAccommodation).isEqualTo(6)
       assertThat(pendingApproval.locations[0].workingCapacity).isEqualTo(6)
@@ -1110,6 +1156,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         deactivatedReason = DeactivatedReason.MOTHBALLED,
         planetFmReference = "11111",
         reasonForChange = "The wing has been flooded",
+        requiresApproval = true,
+        approveDeactivation = true,
       )
       webTestClient.put().uri("/certification/location/reactivation-request-approval")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
@@ -1174,10 +1222,10 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locationKey).isEqualTo(leedsWing.getKey())
       assertThat(pendingApproval.locations).hasSize(1)
       assertThat(pendingApproval.locations!![0].subLocations).hasSize(2)
-      assertThat(pendingApproval.workingCapacityChange).isEqualTo(6)
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(12)
       assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(6)
       assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
-      assertThat(pendingApproval.locations[0].currentWorkingCapacity).isEqualTo(6)
+      assertThat(pendingApproval.locations[0].currentWorkingCapacity).isEqualTo(0)
       assertThat(pendingApproval.locations[0].currentMaxCapacity).isEqualTo(12)
       assertThat(pendingApproval.locations[0].currentCertifiedNormalAccommodation).isEqualTo(6)
       assertThat(pendingApproval.locations[0].workingCapacity).isEqualTo(12)
@@ -1267,6 +1315,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         deactivatedReason = DeactivatedReason.MOTHBALLED,
         planetFmReference = "11111",
         reasonForChange = "The wing has been flooded",
+        requiresApproval = true,
+        approveDeactivation = true,
       )
       webTestClient.put().uri("/certification/location/reactivation-request-approval")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
@@ -1328,9 +1378,10 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .returnResult().responseBody!!
 
       assertThat(rejectedDeactivatedLocation.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(rejectedDeactivatedLocation.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_MATCHING_CELL_CERT)
       assertThat(rejectedDeactivatedLocation.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
       assertThat(rejectedDeactivatedLocation.pendingApprovalRequestId).isNull()
-      assertThat(rejectedDeactivatedLocation.lastDeactivationReasonForChange).isNull()
+      assertThat(rejectedDeactivatedLocation.lastDeactivationReasonForChange).isEqualTo("The wing has been flooded")
 
       val firstCell = leedsWing.findAllLeafLocations().first()
       val rejectedDeactivatedCell = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
@@ -1345,8 +1396,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(rejectedDeactivatedCell.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
       assertThat(rejectedDeactivatedCell.pendingApprovalRequestId).isNull()
       assertThat(rejectedDeactivatedCell.currentCellCertificate).isNotNull
-      assertThat(rejectedDeactivatedCell.currentCellCertificate!!.workingCapacity).isEqualTo(1)
-      assertThat(rejectedDeactivatedCell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      assertThat(rejectedDeactivatedCell.currentCellCertificate!!.workingCapacity).isEqualTo(0)
+      assertThat(rejectedDeactivatedCell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_MATCHING_CELL_CERT)
     }
   }
 
@@ -1689,12 +1740,21 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     planetFmReference: String? = null,
     requiresApproval: Boolean = false,
     reasonForChange: String? = null,
+    approveDeactivation: Boolean = false,
   ): Location {
     prisonerSearchMockServer.stubSearchByLocations(
       location.prisonId,
       location.findAllLeafLocations().map { it.getPathHierarchy() },
       false,
     )
+
+    val inactiveStatus = webTestClient.get().uri("/locations/${location.id}")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+      .header("Content-Type", "application/json")
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<Location>()
+      .returnResult().responseBody!!.inactiveStatus
 
     webTestClient.put().uri("/locations/${location.id}/deactivate/temporary")
       .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -1713,14 +1773,51 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       .exchange()
       .expectStatus().isOk
 
-    if (!requiresApproval) {
-      val expectedEvents = (listOf(location) + location.findSubLocations())
-        .map { "location.inside.prison.deactivated" to it.getKey() } +
+    val locationsAndSubLocations = listOf(location) + location.findSubLocations()
+    val expectedEvents = if (inactiveStatus == null) {
+      locationsAndSubLocations.map { "location.inside.prison.deactivated" to it.getKey() } +
         location.findParentLocations().map { "location.inside.prison.amended" to it.getKey() }
+    } else {
+      locationsAndSubLocations
+        .map { "location.inside.prison.amended" to it.getKey() }
+    }
 
-      getDomainEvents(expectedEvents.size).let { messages ->
-        assertThat(messages.map { it.eventType to it.additionalInformation?.key })
-          .containsExactlyInAnyOrder(*expectedEvents.toTypedArray())
+    getDomainEvents(expectedEvents.size).let { messages ->
+      assertThat(messages.map { it.eventType to it.additionalInformation?.key })
+        .containsExactlyInAnyOrder(*expectedEvents.toTypedArray())
+    }
+
+    if (requiresApproval && approveDeactivation) {
+      val deactivatedLocation = webTestClient.get().uri("/locations/${location.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      if (deactivatedLocation.pendingApprovalRequestId != null) {
+        webTestClient.put().uri("/certification/location/approve")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ApproveCertificationRequestDto(
+                approvalRequestReference = deactivatedLocation.pendingApprovalRequestId,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        val expectedEvents = locationsAndSubLocations
+          .map { "location.inside.prison.amended" to it.getKey() } +
+          location.findParentLocations().map { "location.inside.prison.amended" to it.getKey() }
+
+        getDomainEvents(expectedEvents.size).let { messages ->
+          assertThat(messages.map { it.eventType to it.additionalInformation?.key })
+            .containsExactlyInAnyOrder(*expectedEvents.toTypedArray())
+        }
       }
     }
 

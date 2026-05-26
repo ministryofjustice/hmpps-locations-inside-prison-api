@@ -52,10 +52,10 @@ BEGIN
         INSERT INTO capacity (max_capacity, working_capacity, certified_normal_accommodation) VALUES (p_max_cap, p_working_cap, p_max_cap) returning id INTO v_capacity_id;
 
         INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status,
-                              capacity_id, in_cell_sanitation, cell_mark, certified_cell,
+                              capacity_id, in_cell_sanitation, cell_mark, certified_cell, temporarily_off_cell_cert,
                               accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
         values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, p_status, v_capacity_id,
-                 true, concat(p_parent_path,p_code), true, p_accommodation_type, map_accommodation_type(p_accommodation_type),
+                 true, concat(p_parent_path,p_code), true, false, p_accommodation_type, map_accommodation_type(p_accommodation_type),
                 now(), now(), p_username) RETURNING id INTO v_location_id;
 
         FOREACH v_used_for IN ARRAY p_used_for
@@ -191,10 +191,10 @@ BEGIN
     ELSE
         SELECT id INTO v_current_parent_id from location l where l.prison_id = p_prison_id and l.path_hierarchy = p_parent_path;
 
-        INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status, converted_cell_type, other_converted_cell_type, certified_cell,
+        INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status, converted_cell_type, other_converted_cell_type, certified_cell, temporarily_off_cell_cert,
                               accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
         values (p_prison_id, concat(p_parent_path,'-',p_code), p_code, 'CELL', 'CELL', v_current_parent_id, 'ACTIVE',
-                p_non_res_cell_type, null, false,
+                p_non_res_cell_type, null, false, false,
                 'NORMAL_ACCOMMODATION', map_accommodation_type('NORMAL_ACCOMMODATION'),
                 now(), now(), p_username) RETURNING id INTO v_location_id;
     END IF;
@@ -269,6 +269,7 @@ BEGIN
             other_converted_cell_type = null,
             capacity_id = null,
             certified_cell = false,
+            temporarily_off_cell_cert = false,
             residential_housing_type = map_accommodation_type('NORMAL_ACCOMMODATION'),
             accommodation_type = 'NORMAL_ACCOMMODATION',
             updated_by = p_username,

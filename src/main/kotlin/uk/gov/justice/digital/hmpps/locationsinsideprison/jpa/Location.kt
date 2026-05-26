@@ -712,6 +712,7 @@ abstract class Location(
           proposedReactivationDate = upsert.proposedReactivationDate,
           userOrSystemInContext = updatedBy,
           linkedTransaction = linkedTransaction,
+          shortTermDeactivation = true,
         )
       } else {
         reactivate(updatedBy, clock, linkedTransaction)
@@ -722,6 +723,7 @@ abstract class Location(
   open fun temporarilyDeactivate(
     deactivatedReason: DeactivatedReason,
     deactivatedDate: LocalDateTime,
+    shortTermDeactivation: Boolean = false,
     linkedTransaction: LinkedTransaction,
     deactivationReasonDescription: String? = null,
     planetFmReference: String? = null,
@@ -729,8 +731,6 @@ abstract class Location(
     userOrSystemInContext: String,
     deactivatedLocations: MutableSet<Location>? = null,
     updatedLocations: MutableSet<Location>? = null,
-    requestApproval: Boolean = false,
-    reasonForChange: String? = null,
   ) {
     var dataChanged = false
 
@@ -798,6 +798,9 @@ abstract class Location(
         this.status = LocationStatus.INACTIVE
         this.deactivatedDate = deactivatedDate
         this.deactivatedBy = userOrSystemInContext
+        if (this is Cell && !isDraft()) {
+          temporarilyOffCellCert = shortTermDeactivation
+        }
         log.info("Temporarily Deactivated Location [${getKey()}]")
         deactivatedLocations?.add(this)
       }
@@ -967,6 +970,7 @@ abstract class Location(
         this.cellLocations().filter { !it.isConvertedCell() }.forEach { cellLocation ->
           cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0, userOrSystemInContext, amendedDate = amendedDate, linkedTransaction)
           cellLocation.deCertifyCell(userOrSystemInContext, clock, linkedTransaction)
+          cellLocation.temporarilyOffCellCert = false
         }
       }
       log.info("Permanently Deactivated Location [${getKey()}]")
@@ -1052,24 +1056,27 @@ abstract class Location(
       this.whenUpdated = linkedTransaction.txStartTime
       this.deactivatedBy = null
 
-      if (this is Cell && !isConvertedCell()) {
-        certifyCell(
-          cellUpdatedBy = userOrSystemInContext,
-          updatedDate = linkedTransaction.txStartTime,
-          linkedTransaction = linkedTransaction,
-        )
-        this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
-      }
+      if (this is Cell) {
+        temporarilyOffCellCert = false
+        if (!isConvertedCell()) {
+          certifyCell(
+            cellUpdatedBy = userOrSystemInContext,
+            updatedDate = linkedTransaction.txStartTime,
+            linkedTransaction = linkedTransaction,
+          )
+          this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
+        }
 
-      if (this is Cell && !capacityAdjusted) {
-        addHistory(
-          LocationAttribute.WORKING_CAPACITY,
-          previousWorkingCapacity.toString(),
-          getWorkingCapacityIgnoreParent().toString(),
-          userOrSystemInContext,
-          LocalDateTime.now(clock),
-          linkedTransaction,
-        )
+        if (!capacityAdjusted) {
+          addHistory(
+            LocationAttribute.WORKING_CAPACITY,
+            previousWorkingCapacity.toString(),
+            getWorkingCapacityIgnoreParent().toString(),
+            userOrSystemInContext,
+            LocalDateTime.now(clock),
+            linkedTransaction,
+          )
+        }
       }
       reactivatedLocations?.add(this)
       amendedLocations?.addAll(this.getParentLocations())

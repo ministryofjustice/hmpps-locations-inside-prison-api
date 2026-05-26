@@ -10,7 +10,6 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.OneToMany
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
-import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.InactiveStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
@@ -55,6 +54,8 @@ class Cell(
   createdBy: String,
   residentialHousingType: ResidentialHousingType = ResidentialHousingType.NORMAL_ACCOMMODATION,
   capacity: Capacity? = null,
+
+  var temporarilyOffCellCert: Boolean = false,
 
   var cellMark: String? = null,
 
@@ -103,6 +104,16 @@ class Cell(
   residentialHousingType = residentialHousingType,
   capacity = capacity,
 ) {
+
+  override fun markAsTemporarilyOffCellCert() {
+    this.temporarilyOffCellCert = true
+  }
+
+  override fun removeTemporarilyOffCellCert() {
+    this.temporarilyOffCellCert = false
+  }
+
+  override fun isShortTermInactive(): Boolean = this.temporarilyOffCellCert
 
   fun getOldWorkingCapacity(): Int? = findPendingLeafLocation(true)?.currentWorkingCapacity ?: capacity?.workingCapacity
 
@@ -249,6 +260,7 @@ class Cell(
     specialistCellTypes.clear()
     capacity = null
     certifiedCell = false
+    temporarilyOffCellCert = false
   }
 
   fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
@@ -640,16 +652,6 @@ class Cell(
     ) as SanitationChangeApprovalRequest
   }
 
-  private fun deriveInactiveStatus(cellCertificateLocation: CellCertificateLocation): InactiveStatus {
-    if (hasPendingCertificationApproval()) {
-      return InactiveStatus.INACTIVE_PEND_CHANGE_REQ
-    }
-    if (cellCertificateLocation.workingCapacity == calcWorkingCapacity()) {
-      return InactiveStatus.INACTIVE_MATCHING_CELL_CERT
-    }
-    return InactiveStatus.INACTIVE_TEMP
-  }
-
   override fun toDto(
     includeChildren: Boolean,
     includeParent: Boolean,
@@ -691,7 +693,6 @@ class Cell(
     otherConvertedCellType = otherConvertedCellType,
     inCellSanitation = getSanitationOfCell(false),
     cellMark = getDoorCellMark(false),
-    inactiveStatus = cellCertificateLocation?.let { deriveInactiveStatus(it) },
   )
 
   override fun toLegacyDto(includeHistory: Boolean): LegacyLocation = super.toLegacyDto(includeHistory = includeHistory).copy(

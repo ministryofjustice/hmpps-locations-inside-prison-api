@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -40,4 +41,14 @@ open class DeactivationApprovalRequest(
   )
 
   override fun getApprovalType() = ApprovalType.DEACTIVATION
+
+  override fun reject(rejectedBy: String, rejectedDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+    super.reject(rejectedBy, rejectedDate, linkedTransaction, comments)
+    location.markAsTemporarilyOffCellCert()
+  }
+
+  open override fun withdraw(withdrawnBy: String, withdrawnDate: LocalDateTime, linkedTransaction: LinkedTransaction, comments: String) {
+    super.withdraw(withdrawnBy, withdrawnDate, linkedTransaction, comments)
+    location.markAsTemporarilyOffCellCert()
+  }
 }

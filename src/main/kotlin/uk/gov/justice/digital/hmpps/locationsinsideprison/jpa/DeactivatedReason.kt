@@ -17,5 +17,6 @@ enum class DeactivatedReason(
   REFURBISHMENT("Refurbishment", 6),
   SECURITY_SEALED("Security sealed", 7),
   STAFF_SHORTAGE("Staff shortage", 8),
+  NEW_BUILD("New build", 9),
   OTHER("Other", 99),
 }
