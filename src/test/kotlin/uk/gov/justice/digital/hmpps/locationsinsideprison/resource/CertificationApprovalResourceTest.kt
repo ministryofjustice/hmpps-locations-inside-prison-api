@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellMarkChangeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellSanitationChangeRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.InactiveStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
@@ -23,10 +24,13 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonData
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationLocationsApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDate
@@ -38,6 +42,140 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
   @BeforeEach
   fun beforeEach() {
     baselinePrison(leedsWing.prisonId)
+  }
+
+  @DisplayName("PUT /certification/location/request-approval")
+  @Nested
+  inner class DraftApprovalTest {
+    @Test
+    fun `can approval a draft wing`() {
+      // Create a new wing in Leeds prison
+      val newWing = resiRepository.saveAndFlush(
+        CreateEntireWingRequest(
+          prisonId = "LEI",
+          wingCode = "Y",
+          numberOfCellsPerSection = 3,
+          numberOfLandings = 2,
+          numberOfSpurs = 0,
+          defaultWorkingCapacity = 1,
+          defaultMaxCapacity = 2,
+          wingDescription = "Wing Y",
+        ).toEntity(
+          createInDraft = true,
+          createdBy = EXPECTED_USERNAME,
+          clock = clock,
+          linkedTransaction = linkedTransactionRepository.saveAndFlush(
+            LinkedTransaction(
+              prisonId = "LEI",
+              transactionType = TransactionType.LOCATION_CREATE,
+              transactionDetail = "New Wing Y in Leeds",
+              transactionInvokedBy = EXPECTED_USERNAME,
+              txStartTime = LocalDateTime.now(clock).minusDays(1),
+            ),
+          ),
+        ),
+      )
+
+      // Request approval for the wing
+      val pendingApproval = webTestClient.put().uri("/certification/location/request-approval")
+        .headers(setAuthorisation(user = EXPECTED_USERNAME, roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            LocationApprovalRequest(
+              locationId = newWing.id!!,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.DRAFT)
+      assertThat(pendingApproval.locationId).isEqualTo(newWing.id!!)
+      assertThat(pendingApproval.prisonId).isEqualTo(newWing.prisonId)
+      assertThat(pendingApproval.locationKey).isEqualTo(newWing.getKey())
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(6)
+      assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(6)
+      assertThat(pendingApproval.maxCapacityChange).isEqualTo(12)
+      assertThat(pendingApproval.locations).isNotNull
+      assertThat(pendingApproval.locations).hasSize(1)
+
+      // Approve the request to generate a cell certificate
+      val approvedRequest = webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(user = EXPECTED_USERNAME, roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            ApproveCertificationRequestDto(
+              approvalRequestReference = pendingApproval.id,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      val locationsAndSubLocations = listOf(newWing) + newWing.findSubLocations()
+      val expectedEvents = locationsAndSubLocations.map { "location.inside.prison.created" to it.getKey() }
+
+      getDomainEvents(expectedEvents.size).let { messages ->
+        assertThat(messages.map { it.eventType to it.additionalInformation?.key })
+          .containsExactlyInAnyOrder(*expectedEvents.toTypedArray())
+      }
+
+      webTestClient.get().uri("/cell-certificates/${approvedRequest.certificateId}")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.id").isEqualTo(approvedRequest.certificateId)
+        .jsonPath("$.prisonId").isEqualTo("LEI")
+        .jsonPath("$.current").isEqualTo(true)
+        .jsonPath("$.locations").isArray()
+        .jsonPath("$.totalMaxCapacity").isEqualTo(24)
+        .jsonPath("$.totalWorkingCapacity").isEqualTo(12)
+        .jsonPath("$.totalCertifiedNormalAccommodation").isEqualTo(12)
+
+      val approvedNewWing = webTestClient.get().uri("/locations/${newWing.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(approvedNewWing.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(approvedNewWing.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      assertThat(approvedNewWing.deactivatedReason).isEqualTo(DeactivatedReason.NEW_BUILD)
+      assertThat(approvedNewWing.planetFmReference).isNull()
+      assertThat(approvedNewWing.proposedReactivationDate).isNull()
+      assertThat(approvedNewWing.pendingApprovalRequestId).isNull()
+      assertThat(approvedNewWing.lastDeactivationReasonForChange).isNull()
+      assertThat(approvedNewWing.pendingApprovalRequestId).isNull()
+      assertThat(approvedNewWing.currentCellCertificate).isNotNull
+
+      // activate the wing
+      webTestClient.put().uri("/locations/${newWing.id}/reactivate?cascade-reactivation=true&force-reactivation=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+
+      val activeApprovedNewWing = webTestClient.get().uri("/locations/${newWing.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(activeApprovedNewWing.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(activeApprovedNewWing.inactiveStatus).isNull()
+      assertThat(activeApprovedNewWing.deactivatedReason).isNull()
+    }
   }
 
   @DisplayName("PUT /locations/{id}/capacity")
@@ -845,6 +983,81 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         "LEI-A-2-003" to InactiveStatus.INACTIVE_TEMP,
       )
     }
+
+    @Test
+    fun `withdrawing a deactivation approval flips the cell back to short term inactive`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      val deactivatedCell = deactivateLocation(
+        firstCell,
+        DeactivatedReason.MOTHBALLED,
+        planetFmReference = "11111",
+        requiresApproval = true,
+        reasonForChange = "The cell has been flooded",
+      )
+
+      assertThat(deactivatedCell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_PEND_CHANGE_REQ)
+      val pendingApprovalRequestId = deactivatedCell.pendingApprovalRequestId!!
+
+      val withdrawnRequest = webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            WithdrawCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+              comments = "Operator changed their mind",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawnRequest.status).isEqualTo(ApprovalRequestStatus.WITHDRAWN)
+      assertThat(withdrawnRequest.certificateId).isNull()
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val withdrawnCell = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawnCell.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(withdrawnCell.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
+      assertThat(withdrawnCell.pendingApprovalRequestId).isNull()
+      assertThat(withdrawnCell.currentCellCertificate).isNotNull
+      assertThat(withdrawnCell.currentCellCertificate!!.workingCapacity).isEqualTo(1)
+      assertThat(withdrawnCell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+    }
+
+    @Test
+    fun `short term inactive cell can be re-deactivated with approval and aligned to cell cert`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+
+      val shortTermDeactivated = deactivateLocation(firstCell, deactivatedReason = DeactivatedReason.DAMAGED)
+      assertThat(shortTermDeactivated.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      assertThat(shortTermDeactivated.currentCellCertificate!!.workingCapacity).isEqualTo(1)
+
+      val alignedDeactivated = deactivateLocation(
+        firstCell,
+        DeactivatedReason.MOTHBALLED,
+        planetFmReference = "PFM-1",
+        requiresApproval = true,
+        reasonForChange = "Aligning with cell certificate",
+        approveDeactivation = true,
+      )
+
+      assertThat(alignedDeactivated.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(alignedDeactivated.deactivatedReason).isEqualTo(DeactivatedReason.MOTHBALLED)
+      assertThat(alignedDeactivated.pendingApprovalRequestId).isNull()
+      assertThat(alignedDeactivated.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_MATCHING_CELL_CERT)
+      assertThat(alignedDeactivated.currentCellCertificate).isNotNull
+      assertThat(alignedDeactivated.currentCellCertificate!!.workingCapacity).isEqualTo(0)
+    }
   }
 
   @DisplayName("PUT /locations/{id}/reactivate")
@@ -899,6 +1112,119 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(reactivatedCell.currentCellCertificate).isNotNull
       assertThat(reactivatedCell.currentCellCertificate!!.workingCapacity).isEqualTo(1)
       assertThat(reactivatedCell.inactiveStatus).isNull()
+    }
+
+    @Test
+    fun `cannot request reactivation approval for a short term inactive cell`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      val shortTermDeactivated = deactivateLocation(firstCell, deactivatedReason = DeactivatedReason.DAMAGED)
+
+      assertThat(shortTermDeactivated.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      assertThat(shortTermDeactivated.pendingApprovalRequestId).isNull()
+
+      val error = webTestClient.put().uri("/certification/location/reactivation-request-approval")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            ReactivationLocationsApprovalRequest(
+              topLevelLocationId = firstCell.id!!,
+              cellReactivationChanges = mapOf(
+                firstCell.id!! to CellReactivationDetail(
+                  capacity = Capacity(workingCapacity = 1, maxCapacity = 2, certifiedNormalAccommodation = 1),
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody<ErrorResponse>()
+        .returnResult().responseBody!!
+
+      assertThat(error.errorCode).isEqualTo(ErrorCode.LocationCannotBeReactivated.errorCode)
+
+      val unchangedCell = webTestClient.get().uri("/locations/${firstCell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(unchangedCell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      assertThat(unchangedCell.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `can directly reactivate a cell after its deactivation approval was rejected`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      val pendingDeactivated = deactivateLocation(
+        firstCell,
+        DeactivatedReason.MOTHBALLED,
+        planetFmReference = "11111",
+        requiresApproval = true,
+        reasonForChange = "Floor damaged",
+      )
+
+      assertThat(pendingDeactivated.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_PEND_CHANGE_REQ)
+      val pendingApprovalRequestId = pendingDeactivated.pendingApprovalRequestId!!
+
+      webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            RejectCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+              comments = "Cell is still serviceable",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      val rejectedCell = webTestClient.get().uri("/locations/${firstCell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedCell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      assertThat(rejectedCell.pendingApprovalRequestId).isNull()
+
+      webTestClient.put().uri("/locations/${firstCell.id}/reactivate")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+
+      val parentResults = firstCell.getParentLocations().associate {
+        it.getKey() to "location.inside.prison.amended"
+      }
+      val results = mapOf(firstCell.getKey() to "location.inside.prison.reactivated") + parentResults
+
+      getDomainEvents(results.size).let { messages ->
+        assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+          *results.map { it.value to it.key }.toTypedArray(),
+        )
+      }
+
+      val reactivatedCell = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(reactivatedCell.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(reactivatedCell.inactiveStatus).isNull()
+      assertThat(reactivatedCell.pendingApprovalRequestId).isNull()
+      assertThat(reactivatedCell.currentCellCertificate).isNotNull
+      assertThat(reactivatedCell.currentCellCertificate!!.workingCapacity).isEqualTo(1)
     }
 
     @Test

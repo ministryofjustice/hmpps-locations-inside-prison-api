@@ -265,7 +265,6 @@ open class ResidentialLocation(
     when (pendingApprovalRequest) {
       is DraftChangeApprovalRequest -> {
         temporarilyDeactivate(
-          deactivationReasonDescription = "New build",
           deactivatedReason = DeactivatedReason.NEW_BUILD,
           deactivatedDate = approvedDate,
           linkedTransaction = linkedTransaction,

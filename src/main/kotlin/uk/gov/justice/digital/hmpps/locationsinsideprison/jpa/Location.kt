@@ -795,13 +795,22 @@ abstract class Location(
       }
 
       if (isActive() || isDraft()) {
-        this.status = LocationStatus.INACTIVE
+        if (isDraft()) {
+          dataChanged = true
+        }
         this.deactivatedDate = deactivatedDate
         this.deactivatedBy = userOrSystemInContext
-        if (this is Cell && !isDraft()) {
-          temporarilyOffCellCert = shortTermDeactivation
+        if (this is ResidentialLocation && shortTermDeactivation) {
+          markAsTemporarilyOffCellCert()
         }
-        log.info("Temporarily Deactivated Location [${getKey()}]")
+        this.status = LocationStatus.INACTIVE
+        log.info(
+          "Temporarily ${if (shortTermDeactivation) {
+            "(Short term)"
+          } else {
+            ""
+          }} Deactivated Location [${getKey()}]",
+        )
         deactivatedLocations?.add(this)
       }
 
