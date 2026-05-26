@@ -266,7 +266,6 @@ enum class InactiveStatus(
   INACTIVE_TEMP("Temporary inactive cell"),
   INACTIVE_PEND_CHANGE_REQ("Inactive cell with certificate change requests"),
   INACTIVE_MATCHING_CELL_CERT("Inactive cell with capacity decreased on cell certificate"),
-  INACTIVE_NOT_MATCHING_CELL_CERT("Inactive cell with capacity not matching cell certificate"),
 }
 
 @Schema(description = "Pending changes")
