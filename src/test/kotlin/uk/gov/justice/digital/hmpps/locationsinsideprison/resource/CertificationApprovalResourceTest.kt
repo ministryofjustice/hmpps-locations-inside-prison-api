@@ -1058,6 +1058,47 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(alignedDeactivated.currentCellCertificate).isNotNull
       assertThat(alignedDeactivated.currentCellCertificate!!.workingCapacity).isEqualTo(0)
     }
+
+    @Test
+    fun `workingCapacityChange in approval request reflects certificate value when deactivating a temporarilyOffCellCert cell to align with the certificate`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+
+      // Short-term deactivate the cell without approval — this sets temporarilyOffCellCert = true.
+      // The cell's effective working capacity becomes 0, but the certificate still records WC = 1.
+      val shortTermDeactivated = deactivateLocation(firstCell, deactivatedReason = DeactivatedReason.DAMAGED)
+      assertThat(shortTermDeactivated.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      assertThat(shortTermDeactivated.currentCellCertificate!!.workingCapacity).isEqualTo(1)
+
+      // Now re-deactivate with requiresApproval = true so the deactivation is aligned to the certificate.
+      // The pending approval should record the change from the certificate value (1) to 0,
+      // not from the effective value (0) to 0.
+      val pendingDeactivated = deactivateLocation(
+        firstCell,
+        DeactivatedReason.MOTHBALLED,
+        planetFmReference = "PFM-1",
+        requiresApproval = true,
+        reasonForChange = "Aligning with cell certificate",
+        approveDeactivation = false,
+      )
+
+      assertThat(pendingDeactivated.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_PEND_CHANGE_REQ)
+      val pendingApprovalRequestId = pendingDeactivated.pendingApprovalRequestId!!
+
+      val pendingApproval = webTestClient.get().uri("/certification/request-approvals/$pendingApprovalRequestId")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.DEACTIVATION)
+      // workingCapacityChange must reflect the delta from the certificate value (1) to 0, i.e. -1
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(-1)
+      assertThat(pendingApproval.locations).hasSize(1)
+      // currentWorkingCapacity must reflect the certificate value (1), not the effective value (0)
+      assertThat(pendingApproval.locations!![0].currentWorkingCapacity).isEqualTo(1)
+      assertThat(pendingApproval.locations!![0].workingCapacity).isEqualTo(0)
+    }
   }
 
   @DisplayName("PUT /locations/{id}/reactivate")
