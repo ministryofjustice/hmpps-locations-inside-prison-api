@@ -1025,12 +1025,12 @@ class LocationService(
           )
 
           val locationHierarchy = approvalRequest.getTopLevelLocation() ?: throw LocationNotFoundException("No top level location")
-          locationHierarchy.findSubLocations().forEach { subLocation ->
-            cellCertificateRepository.findByPrisonIdAndPathHierarchy(locationToDeactivate.prisonId, subLocation.pathHierarchy)?.let { currentCellCert ->
-              subLocation.currentWorkingCapacity = currentCellCert.workingCapacity
-              subLocation.workingCapacity = 0
-              subLocation.currentMaxCapacity = currentCellCert.maxCapacity
-              subLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
+          (listOf(locationHierarchy) + locationHierarchy.findSubLocations()).forEach { location ->
+            cellCertificateRepository.findByPrisonIdAndPathHierarchy(locationToDeactivate.prisonId, location.pathHierarchy)?.let { currentCellCert ->
+              location.currentWorkingCapacity = currentCellCert.workingCapacity
+              location.workingCapacity = 0
+              location.currentMaxCapacity = currentCellCert.maxCapacity
+              location.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
             }
           }
           approvalRequest.refreshCapacities()
