@@ -38,7 +38,6 @@ AS $$
 DECLARE v_location_id UUID;
 DECLARE v_current_parent_id UUID;
 DECLARE v_capacity_id bigint;
-DECLARE v_certification_id bigint;
     DECLARE v_used_for varchar(80);
     DECLARE v_cell_type varchar(80);
 
@@ -87,7 +86,6 @@ CREATE OR REPLACE FUNCTION update_cell(IN p_cell_path varchar,
 AS $$
 DECLARE v_location_id UUID;
     DECLARE v_capacity_id bigint;
-    DECLARE v_certification_id bigint;
     DECLARE v_used_for varchar(80);
     DECLARE v_cell_type varchar(80);
 BEGIN
@@ -287,10 +285,10 @@ BEGIN
         end if;
 
         INSERT INTO location (prison_id, path_hierarchy, code, location_type, location_type_discriminator, parent_id, status, archived_reason,
-                              deactivated_by, deactivated_date, certified_cell,
+                              deactivated_by, deactivated_date, certified_cell, temporarily_off_cell_cert,
                               accommodation_type, residential_housing_type, when_created, when_updated, updated_by)
         values (p_prison_id, v_path_hierarchy, p_code, p_location_type, p_location_type_discriminator, v_current_parent_id, 'ARCHIVED', p_archive_reason,
-                p_username, now(), false,
+                p_username, now(), false, false,
                 'NORMAL_ACCOMMODATION', map_accommodation_type('NORMAL_ACCOMMODATION'),
                 now(), now(), p_username) RETURNING id INTO v_location_id;
     END IF;
