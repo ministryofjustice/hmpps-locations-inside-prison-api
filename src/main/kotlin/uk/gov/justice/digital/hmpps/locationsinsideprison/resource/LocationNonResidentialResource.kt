@@ -710,15 +710,27 @@ class LocationNonResidentialResource(
     )
     @RequestParam(required = false)
     locationType: List<NonResidentialLocationType>? = null,
-    @Schema(description = "Service Type", example = "ACTIVITIES_APPOINTMENTS", required = false)
-    @Parameter(description = "Filter by service family", example = "ACTIVITIES_APPOINTMENTS", required = false)
-    serviceFamilyType: ServiceFamilyType? = null,
+    @Schema(description = "Filter by given service families", example = "[ACTIVITIES_APPOINTMENTS,ADJUDICATIONS]", required = false)
+    @Parameter(
+      description = "Filter by service family",
+      example = "[ACTIVITIES_APPOINTMENTS,ADJUDICATIONS]",
+      array = ArraySchema(
+        schema = Schema(implementation = ServiceFamilyType::class),
+        arraySchema = Schema(
+          requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+          nullable = true,
+          defaultValue = "null",
+        ),
+      ),
+    )
+    @RequestParam(required = false)
+    serviceFamilyType: List<ServiceFamilyType>? = null,
     @ParameterObject
     @PageableDefault(page = 0, size = 100, sort = ["localName"], direction = Sort.Direction.ASC)
     pageable: Pageable,
   ): NonResidentialSummary = nonResidentialService.getNonResidentialLocationSummaryForPrison(
     prisonId = prisonId,
-    serviceFamilyType = serviceFamilyType,
+    serviceFamilyTypes = serviceFamilyType ?: emptyList(),
     pageable = pageable,
     statuses = status,
     locationTypes = locationType ?: emptyList(),
