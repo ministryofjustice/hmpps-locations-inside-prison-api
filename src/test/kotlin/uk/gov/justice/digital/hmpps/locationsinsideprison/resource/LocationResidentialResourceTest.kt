@@ -600,9 +600,8 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
       locationType = ResidentialLocationType.CELL,
       localName = "A New Cell (004)",
       accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
-      capacity = Capacity(maxCapacity = 2, workingCapacity = 2),
+      capacity = Capacity(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
       certified = true,
-      certifiedNormalAccommodation = 2,
       inCellSanitation = true,
     )
 
