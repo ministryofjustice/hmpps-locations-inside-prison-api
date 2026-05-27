@@ -308,7 +308,7 @@ class NonResidentialService(
     return Pair(nonResLocation.toNonResidentialDto(), events)
   }
 
-  private fun activateLocation(location: Location, username: String, linkedTransaction: LinkedTransaction): Boolean {
+  private fun activateLocation(location: NonResidentialLocation, username: String, linkedTransaction: LinkedTransaction): Boolean {
     if (location.isActive()) return false
 
     location.reactivate(
@@ -319,7 +319,7 @@ class NonResidentialService(
     return true
   }
 
-  private fun deactivateLocation(location: Location, username: String, linkedTransaction: LinkedTransaction): Boolean {
+  private fun deactivateLocation(location: NonResidentialLocation, username: String, linkedTransaction: LinkedTransaction): Boolean {
     if (!location.isActive()) return false
 
     location.temporarilyDeactivate(

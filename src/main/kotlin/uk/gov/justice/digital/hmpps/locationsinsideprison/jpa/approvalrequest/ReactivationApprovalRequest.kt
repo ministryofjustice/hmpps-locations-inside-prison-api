@@ -2,7 +2,9 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest
 
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import java.time.Clock
 import java.time.LocalDateTime
 import java.util.SortedSet
 import java.util.UUID
@@ -31,4 +33,14 @@ open class ReactivationApprovalRequest(
   locations = locations,
 ) {
   override fun getApprovalType() = ApprovalType.REACTIVATION
+
+  override fun approve(
+    approvedBy: String,
+    approvedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+    clock: Clock,
+  ) {
+    super.approve(approvedBy, approvedDate, linkedTransaction, clock)
+    location.removeTemporarilyOffCellCert()
+  }
 }
