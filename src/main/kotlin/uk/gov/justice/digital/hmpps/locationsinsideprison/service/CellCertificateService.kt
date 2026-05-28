@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
@@ -70,5 +71,12 @@ class CellCertificateService(
     val cellCertificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(prisonId)
       ?: throw CurrentCellCertificateNotFoundException(prisonId)
     return cellCertificate.toDto(showLocations = true)
+  }
+
+  fun updateSpecialistCellTypesInCurrentCertificate(cell: Cell) {
+    val currentCert = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(cell.prisonId) ?: return
+    currentCert.findLocationInCertificate(cell.getPathHierarchy())?.let { certLocation ->
+      certLocation.specialistCellTypes = cell.getSpecialistCellTypesAsCSV()
+    }
   }
 }

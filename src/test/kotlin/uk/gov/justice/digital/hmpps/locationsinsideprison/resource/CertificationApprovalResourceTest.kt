@@ -32,6 +32,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ap
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationLocationsApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SpecialistCellTypeApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -2195,5 +2196,437 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       .expectStatus().isOk
       .expectBody<Location>()
       .returnResult().responseBody!!
+  }
+
+  @DisplayName("PUT /certification/location/specialist-cell-type-change")
+  @Nested
+  inner class SpecialistCellTypeTest {
+
+    private fun firstLeedsCell(): Cell {
+      val cell = leedsWing.findAllLeafLocations().first() as Cell
+      cell.specialistCellTypes.clear()
+      cellRepository.save(cell)
+      return cell
+    }
+
+    private fun requestSpecialistCellTypeApproval(
+      cell: Cell,
+      specialistCellTypes: Set<SpecialistCellType>,
+      workingCapacity: Int = 0,
+      maxCapacity: Int = 1,
+      certifiedNormalAccommodation: Int = 0,
+    ): CertificationApprovalRequestDto = webTestClient.put().uri("/certification/location/specialist-cell-type-change")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          SpecialistCellTypeApprovalRequest(
+            locationId = cell.id!!,
+            specialistCellTypes = specialistCellTypes,
+            workingCapacity = workingCapacity,
+            maxCapacity = maxCapacity,
+            certifiedNormalAccommodation = certifiedNormalAccommodation,
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CertificationApprovalRequestDto>()
+      .returnResult().responseBody!!
+
+    private fun approveRequest(approvalRequestId: java.util.UUID): CertificationApprovalRequestDto = webTestClient.put().uri("/certification/location/approve")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = approvalRequestId)))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CertificationApprovalRequestDto>()
+      .returnResult().responseBody!!
+
+    @Test
+    fun `when cert approval required, adding a capacity-affecting specialist cell type via direct endpoint is rejected`() {
+      val cell = firstLeedsCell()
+
+      webTestClient.put().uri("/locations/${cell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(135)
+    }
+
+    @Test
+    fun `when cert approval required, removing a capacity-affecting specialist cell type via direct endpoint is rejected`() {
+      val cell = firstLeedsCell()
+
+      // First add the type via the approval flow
+      val pendingApproval = requestSpecialistCellTypeApproval(cell, setOf(SpecialistCellType.CSU))
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.SPECIALIST_CELL_TYPE)
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        false,
+      )
+
+      approveRequest(pendingApproval.id)
+      getDomainEvents(3)
+
+      val freshCell = cellRepository.findById(cell.id!!).get()
+
+      // Now try to remove it via direct endpoint
+      webTestClient.put().uri("/locations/${freshCell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(emptySet<SpecialistCellType>()))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(135)
+    }
+
+    @Test
+    fun `when cert approval required, swapping capacity-affecting types (same count) via direct endpoint is allowed and updates cert`() {
+      val cell = firstLeedsCell()
+
+      // First give cell a capacity-affecting type via approval
+      val pendingApproval = requestSpecialistCellTypeApproval(cell, setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST))
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        false,
+      )
+
+      approveRequest(pendingApproval.id)
+      getDomainEvents(3)
+
+      // Swap to a different capacity-affecting type via direct endpoint
+      val result = webTestClient.put().uri("/locations/${cell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.CSU)))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(result.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.CSU)
+
+      // Verify the current cert was updated in-place
+      val currentCert = webTestClient.get().uri("/cell-certificates/prison/${cell.prisonId}/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CellCertificateDto>()
+        .returnResult().responseBody!!
+
+      val cellInCert = currentCert.findLocationInCertificate(cell.getPathHierarchy())
+      assertThat(cellInCert).isNotNull
+      assertThat(cellInCert?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.CSU)
+
+      getDomainEvents(1)
+    }
+
+    @Test
+    fun `when cert approval required, adding a non-capacity-affecting type via direct endpoint is allowed and updates cert`() {
+      val cell = firstLeedsCell()
+
+      webTestClient.put().uri("/locations/${cell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.ACCESSIBLE_CELL)))
+        .exchange()
+        .expectStatus().isOk
+
+      // Verify cert updated
+      val currentCert = webTestClient.get().uri("/cell-certificates/prison/${cell.prisonId}/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CellCertificateDto>()
+        .returnResult().responseBody!!
+
+      val cellInCert = currentCert.findLocationInCertificate(cell.getPathHierarchy())
+      assertThat(cellInCert?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
+
+      getDomainEvents(1)
+    }
+
+    @Test
+    fun `can request approval to add a capacity-affecting specialist cell type`() {
+      val cell = firstLeedsCell()
+
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST, SpecialistCellType.ACCESSIBLE_CELL),
+        workingCapacity = 0,
+        maxCapacity = 1,
+        certifiedNormalAccommodation = 0,
+      )
+
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.SPECIALIST_CELL_TYPE)
+      assertThat(pendingApproval.status).isEqualTo(ApprovalRequestStatus.PENDING)
+      assertThat(pendingApproval.locationId).isEqualTo(cell.id)
+      assertThat(pendingApproval.prisonId).isEqualTo(cell.prisonId)
+      assertThat(pendingApproval.locationKey).isEqualTo(cell.getKey())
+      assertThat(pendingApproval.workingCapacity).isEqualTo(0)
+      assertThat(pendingApproval.maxCapacity).isEqualTo(1)
+      assertThat(pendingApproval.certifiedNormalAccommodation).isEqualTo(0)
+      assertThat(pendingApproval.specialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+        SpecialistCellType.ACCESSIBLE_CELL,
+      )
+      // currentSpecialistCellTypes reflects the cell's state before this approval
+      assertThat(pendingApproval.currentSpecialistCellTypes).isNull()
+      assertThat(pendingApproval.locations).hasSize(1)
+
+      // The cell should now be locked
+      val lockedCell = webTestClient.get().uri("/locations/${cell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(lockedCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
+      assertThat(lockedCell.pendingApprovalRequestId).isEqualTo(pendingApproval.id)
+    }
+
+    @Test
+    fun `cannot approve a specialist cell type change request when a prisoner is in the cell`() {
+      val cell = firstLeedsCell()
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.DRY),
+        workingCapacity = 0,
+        maxCapacity = 0,
+        certifiedNormalAccommodation = 0,
+      )
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        true,
+      )
+
+      assertThat(
+        webTestClient.put().uri("/certification/location/approve")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingApproval.id)))
+          .exchange()
+          .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST)
+          .expectBody<ErrorResponse>()
+          .returnResult().responseBody!!.errorCode,
+      ).isEqualTo(ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel.errorCode)
+    }
+
+    @Test
+    fun `can approve a specialist cell type change request`() {
+      val cell = firstLeedsCell()
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.DRY),
+        workingCapacity = 0,
+        maxCapacity = 1,
+        certifiedNormalAccommodation = 0,
+      )
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        false,
+      )
+
+      val approved = approveRequest(pendingApproval.id)
+
+      assertThat(approved.approvalType).isEqualTo(ApprovalType.SPECIALIST_CELL_TYPE)
+      assertThat(approved.status).isEqualTo(ApprovalRequestStatus.APPROVED)
+
+      getDomainEvents(3).let {
+        assertThat(it.map { msg -> msg.eventType to msg.additionalInformation?.key }).containsExactlyInAnyOrder(
+          "location.inside.prison.amended" to cell.getKey(),
+          *cell.getParentLocations().map { parent -> "location.inside.prison.amended" to parent.getKey() }.toTypedArray(),
+        )
+      }
+
+      // Verify the cell has been updated
+      val updatedCell = webTestClient.get().uri("/locations/${cell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(updatedCell.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.DRY)
+      assertThat(updatedCell.capacity?.workingCapacity).isEqualTo(0)
+      assertThat(updatedCell.capacity?.maxCapacity).isEqualTo(1)
+      assertThat(updatedCell.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(updatedCell.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `can reject a specialist cell type change request`() {
+      val cell = firstLeedsCell()
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.CONSTANT_SUPERVISION),
+        workingCapacity = 0,
+        maxCapacity = 1,
+        certifiedNormalAccommodation = 0,
+      )
+
+      webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(RejectCertificationRequestDto(approvalRequestReference = pendingApproval.id, comments = "Not approved")))
+        .exchange()
+        .expectStatus().isOk
+
+      // Cell should be unchanged (no specialist types, no capacity change)
+      val cell2 = webTestClient.get().uri("/locations/${cell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(cell2.specialistCellTypes).isNullOrEmpty()
+      assertThat(cell2.capacity?.workingCapacity).isEqualTo(1)
+      assertThat(cell2.capacity?.maxCapacity).isEqualTo(2)
+      assertThat(cell2.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `can withdraw a specialist cell type change request`() {
+      val cell = firstLeedsCell()
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.UNFURNISHED),
+        workingCapacity = 0,
+        maxCapacity = 1,
+        certifiedNormalAccommodation = 0,
+      )
+
+      webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(WithdrawCertificationRequestDto(approvalRequestReference = pendingApproval.id, comments = "No longer needed")))
+        .exchange()
+        .expectStatus().isOk
+
+      val unlockedCell = webTestClient.get().uri("/locations/${cell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(unlockedCell.specialistCellTypes).isNullOrEmpty()
+      assertThat(unlockedCell.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `cannot create a second specialist cell type approval when one is pending`() {
+      val cell = firstLeedsCell()
+      requestSpecialistCellTypeApproval(cell, setOf(SpecialistCellType.CSU))
+
+      webTestClient.put().uri("/certification/location/specialist-cell-type-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            SpecialistCellTypeApprovalRequest(
+              locationId = cell.id!!,
+              specialistCellTypes = setOf(SpecialistCellType.DRY),
+              workingCapacity = 0,
+              maxCapacity = 1,
+              certifiedNormalAccommodation = 0,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isEqualTo(HttpStatus.CONFLICT)
+    }
+
+    @Test
+    fun `approval endpoint rejects change that does not require approval (same capacity-affecting count)`() {
+      val cell = firstLeedsCell()
+
+      // First add CSU via approval
+      val pending = requestSpecialistCellTypeApproval(cell, setOf(SpecialistCellType.CSU))
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        false,
+      )
+
+      approveRequest(pending.id)
+      getDomainEvents(3)
+
+      // Now try to use the approval endpoint to swap CSU → BIOHAZARD (count stays at 1, doesn't need approval)
+      webTestClient.put().uri("/certification/location/specialist-cell-type-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            SpecialistCellTypeApprovalRequest(
+              locationId = cell.id!!,
+              specialistCellTypes = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST),
+              workingCapacity = 0,
+              maxCapacity = 1,
+              certifiedNormalAccommodation = 0,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+    }
+
+    @Test
+    fun `cert approval not required, when adding a non specialist cell type`() {
+      val cell = firstLeedsCell()
+      webTestClient.put().uri("/locations/${cell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.ACCESSIBLE_CELL, SpecialistCellType.CAT_A)))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+        .also { result ->
+          assertThat(result.specialistCellTypes).containsExactlyInAnyOrder(
+            SpecialistCellType.ACCESSIBLE_CELL,
+            SpecialistCellType.CAT_A,
+          )
+        }
+
+      getDomainEvents(1)
+    }
+
+    @Test
+    fun `when cert approval not required, adding capacity-affecting specialist cell types via direct endpoint is allowed`() {
+      // cell1 is in MDI which does not have certificationApprovalRequired=true
+      webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST, SpecialistCellType.ACCESSIBLE_CELL)))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+        .also { result ->
+          assertThat(result.specialistCellTypes).containsExactlyInAnyOrder(
+            SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+            SpecialistCellType.ACCESSIBLE_CELL,
+          )
+        }
+
+      getDomainEvents(1)
+    }
   }
 }

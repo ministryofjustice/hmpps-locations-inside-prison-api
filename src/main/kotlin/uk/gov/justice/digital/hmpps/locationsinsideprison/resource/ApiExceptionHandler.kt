@@ -580,6 +580,36 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(SpecialistCellTypeChangesRequireCertificationApprovalException::class)
+  fun handleSpecialistCellTypeChangesRequireCertificationApprovalException(e: SpecialistCellTypeChangesRequireCertificationApprovalException): ResponseEntity<ErrorResponse> {
+    log.debug("Specialist cell type changes require certification approval: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.SpecialistCellTypeChangesRequireCertificationApproval,
+          userMessage = "Adding or removing specialist cell types that affect capacity requires certification approval: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(SpecialistCellTypeChangesDoNotRequireApprovalException::class)
+  fun handleSpecialistCellTypeChangesDoNotRequireApprovalException(e: SpecialistCellTypeChangesDoNotRequireApprovalException): ResponseEntity<ErrorResponse> {
+    log.debug("Specialist cell type changes do not require approval: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.SpecialistCellTypeChangesRequireCertificationApproval,
+          userMessage = "This specialist cell type change does not require approval: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(ApprovalRequiredAboveThisLevelException::class)
   fun handleApprovalRequiredAboveThisLevelException(e: ApprovalRequiredAboveThisLevelException): ResponseEntity<ErrorResponse> {
     log.debug("Approval request at wrong level: {}", e.message)
@@ -661,3 +691,5 @@ class ApprovalRequiredAboveThisLevelException(key: String, parentKey: String) : 
 class LocationCannotBeCreatedWithPendingApprovalException(key: String) : Exception("Location $key cannot be created")
 class ApprovalRequestRequiresReasonForChangeException(key: String) : Exception("Approval request for $key requires a reason for change")
 class ChangesCannotBeMadeWithoutCertificationApprovalException(key: String) : Exception("Changes cannot be made to $key without certification approval")
+class SpecialistCellTypeChangesRequireCertificationApprovalException(key: String) : Exception("Adding or removing specialist cell types that affect capacity for $key requires certification approval - use the specialist cell type change approval endpoint")
+class SpecialistCellTypeChangesDoNotRequireApprovalException(key: String) : Exception("The specialist cell type change for $key does not require approval - the count of capacity-affecting specialist cell types is not changing")
