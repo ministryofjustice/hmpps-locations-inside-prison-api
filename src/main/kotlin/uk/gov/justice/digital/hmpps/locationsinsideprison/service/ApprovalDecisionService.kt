@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
@@ -21,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ce
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.PrisonBaselineApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.SpecialistCellTypeChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
@@ -134,6 +136,10 @@ class ApprovalDecisionService(
       handleCapacityChange(approvalRequest, linkedTransaction)
     }
 
+    is SpecialistCellTypeChangeApprovalRequest -> {
+      handleSpecialistCellTypeChange(approvalRequest, linkedTransaction)
+    }
+
     else -> {
       null
     }
@@ -165,6 +171,42 @@ class ApprovalDecisionService(
 
     return mapOf(
       InternalLocationDomainEventType.LOCATION_AMENDED to listOf(approvalRequest.location.toDto(includeParent = true)),
+    )
+  }
+
+  private fun handleSpecialistCellTypeChange(
+    approvalRequest: SpecialistCellTypeChangeApprovalRequest,
+    linkedTransaction: LinkedTransaction,
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+    val cell = approvalRequest.location as Cell
+    val prisoners = prisonerLocationService.prisonersInLocations(cell)
+    val newMaxCap = approvalRequest.maxCapacity
+    if (newMaxCap < prisoners.size) {
+      throw CapacityException(
+        cell.getKey(),
+        "Max capacity ($newMaxCap) cannot be decreased below current cell occupancy (${prisoners.size})",
+        ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
+      )
+    }
+
+    cell.updateSpecialistCellTypes(
+      approvalRequest.getSpecialistCellTypesFromPendingList().toSet(),
+      approvalRequest.requestedBy,
+      clock,
+      linkedTransaction,
+    )
+
+    cell.setCapacity(
+      maxCapacity = approvalRequest.maxCapacity,
+      workingCapacity = approvalRequest.workingCapacity,
+      certifiedNormalAccommodation = approvalRequest.certifiedNormalAccommodation,
+      userOrSystemInContext = approvalRequest.requestedBy,
+      amendedDate = linkedTransaction.txStartTime,
+      linkedTransaction = linkedTransaction,
+    )
+
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to listOf(cell.toDto(includeParent = true)),
     )
   }
 

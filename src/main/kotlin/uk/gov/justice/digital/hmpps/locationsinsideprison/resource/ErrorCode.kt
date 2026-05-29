@@ -41,4 +41,5 @@ enum class ErrorCode(val errorCode: Int) {
   DuplicateCellMarkAtSameLevel(132),
   ApprovalRequestRequiresReasonForChange(133),
   ChangesCannotBeMadeWithoutCertificationApproval(134),
+  SpecialistCellTypeChangesRequireCertificationApproval(135),
 }

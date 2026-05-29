@@ -13,6 +13,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonData
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
@@ -39,7 +40,6 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
         numberOfSpurs = 0,
         wingDescription = "Wing G",
       ).toEntity(
-        createInDraft = true,
         createdBy = "TEST_USER",
         clock = clock,
         linkedTransaction = linkedTransactionRepository.saveAndFlush(
@@ -51,6 +51,8 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
             txStartTime = LocalDateTime.now(clock).minusDays(1),
           ),
         ),
+        createInDraft = true,
+        specialistCellType = SpecialistCellType.ESCAPE_LIST,
       ),
     )
     approvalRequestId = getApprovalRequestId("LEI-G")

@@ -22,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SignedOperationCap
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
@@ -58,6 +59,9 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
   lateinit var signedOperationCapacityRepository: SignedOperationCapacityRepository
 
   @Autowired
+  lateinit var cellCertificateRepository: CellCertificateRepository
+
+  @Autowired
   lateinit var linkedTransactionRepository: LinkedTransactionRepository
   lateinit var cell1: Cell
   lateinit var cell2: Cell
@@ -86,7 +90,7 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
     repository.deleteAll()
     configurationRepository.deleteAll()
     signedOperationCapacityRepository.deleteAll()
-
+    cellCertificateRepository.deleteAll()
     signedOperationCapacityRepository.saveAllAndFlush(
       listOf(
         SignedOperationCapacity(prisonId = "MDI", signedOperationCapacity = 200, whenUpdated = LocalDateTime.now(clock), updatedBy = SYSTEM_USERNAME),

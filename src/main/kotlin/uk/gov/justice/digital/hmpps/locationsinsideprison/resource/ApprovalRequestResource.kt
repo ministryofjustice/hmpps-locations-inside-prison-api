@@ -30,6 +30,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocati
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationLocationsApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SpecialistCellTypeApprovalRequest
 import java.util.*
 
 @RestController
@@ -160,6 +161,45 @@ class ApprovalRequestResource(
     signedOpCapApprovalRequest: SignedOpCapApprovalRequest,
   ): CertificationApprovalRequestDto = approvalRequestService.requestSignedOpCapApproval(
     signedOpCapApprovalRequest,
+  )
+
+  @PutMapping("/location/specialist-cell-type-change")
+  @Operation(
+    summary = "Requests approval for a specialist cell type change on a cell, including associated capacity changes",
+    description = "Requires role LOCATION_CERTIFICATION. Use this endpoint when adding or removing specialist cell types that affect capacity (affectsCapacity=true). Changes to non-capacity-affecting types or swaps between capacity-affecting types do not require approval and should use the direct specialist-cell-types endpoint.",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the approval request",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CERTIFICATION role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun requestSpecialistCellTypeChangeApproval(
+    @RequestBody
+    @Validated
+    specialistCellTypeApprovalRequest: SpecialistCellTypeApprovalRequest,
+  ): CertificationApprovalRequestDto = approvalRequestService.requestSpecialistCellTypeChangeApproval(
+    specialistCellTypeApprovalRequest,
   )
 
   @PutMapping("/location/approve")

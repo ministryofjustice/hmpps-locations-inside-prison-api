@@ -18,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationSta
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.InactiveStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
@@ -32,15 +33,19 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ap
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationLocationsApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SpecialistCellTypeApprovalRequest
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.UUID
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class CertificationApprovalResourceTest : CommonDataTestBase() {
 
   @BeforeEach
   fun beforeEach() {
+    super.setUp()
     baselinePrison(leedsWing.prisonId)
   }
 
@@ -61,7 +66,6 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
           defaultMaxCapacity = 2,
           wingDescription = "Wing Y",
         ).toEntity(
-          createInDraft = true,
           createdBy = EXPECTED_USERNAME,
           clock = clock,
           linkedTransaction = linkedTransactionRepository.saveAndFlush(
@@ -73,6 +77,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
               txStartTime = LocalDateTime.now(clock).minusDays(1),
             ),
           ),
+          createInDraft = true,
+          specialistCellType = SpecialistCellType.ESCAPE_LIST,
         ),
       )
 
@@ -367,6 +373,48 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approvedCapacityLocation.pendingApprovalRequestId).isNull()
       assertThat(approvedCapacityLocation.currentCellCertificate).isNotNull
       assertThat(approvedCapacityLocation.currentCellCertificate!!.maxCapacity).isEqualTo(2)
+    }
+
+    @Test
+    fun `can change capacity a location and reject`() {
+      val firstCell = updateCapacity(
+        workingCapacity = 1,
+        maxCapacity = 1,
+        temporaryWorkingCapacityChange = false,
+      )
+
+      val rejectedRequest = webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            RejectCertificationRequestDto(
+              approvalRequestReference = firstCell.pendingApprovalRequestId!!,
+              comments = "Capacity change not authorised.",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedRequest.certificateId).isNull()
+      assertThat(rejectedRequest.status).isEqualTo(ApprovalRequestStatus.REJECTED)
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val rejectedCapacityLocation = webTestClient.get().uri("/locations/${firstCell.id}?includeCurrentCertificate=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedCapacityLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(rejectedCapacityLocation.pendingApprovalRequestId).isNull()
+      assertThat(rejectedCapacityLocation.currentCellCertificate).isNotNull
+      assertThat(rejectedCapacityLocation.currentCellCertificate!!.maxCapacity).isEqualTo(2)
     }
 
     @Test
@@ -1335,9 +1383,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations[0].workingCapacity).isEqualTo(1)
       assertThat(pendingApproval.locations[0].maxCapacity).isEqualTo(2)
       assertThat(pendingApproval.locations[0].certifiedNormalAccommodation).isEqualTo(1)
-      assertThat(pendingApproval.locations[0].currentSpecialistCellTypes).containsExactlyInAnyOrder(
-        SpecialistCellType.ESCAPE_LIST,
-      )
+      assertThat(pendingApproval.locations[0].currentSpecialistCellTypes).isNull()
       assertThat(pendingApproval.locations[0].specialistCellTypes).containsExactlyInAnyOrder(
         SpecialistCellType.SAFE_CELL,
         SpecialistCellType.CONSTANT_SUPERVISION,
@@ -1464,10 +1510,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations[0].certifiedNormalAccommodation).isEqualTo(6)
       assertThat(pendingApproval.locations[0].subLocations).hasSize(2)
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations).hasSize(3)
-      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
-        SpecialistCellType.ESCAPE_LIST,
-      )
-
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).isNull()
       val approvedRequest = webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
         .header("Content-Type", "application/json")
@@ -1513,7 +1556,6 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .jsonPath("$.locations[0].subLocations[0].subLocations[0].maxCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].workingCapacity").isEqualTo(1)
         .jsonPath("$.locations[0].subLocations[1].subLocations[0].maxCapacity").isEqualTo(2)
-        .jsonPath("$.locations[0].subLocations[1].subLocations[0].specialistCellTypes").isEqualTo("ESCAPE_LIST")
     }
 
     @Test
@@ -1598,16 +1640,10 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations[0].workingCapacity).isEqualTo(12)
       assertThat(pendingApproval.locations[0].maxCapacity).isEqualTo(12)
       assertThat(pendingApproval.locations[0].certifiedNormalAccommodation).isEqualTo(12)
-      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
-        SpecialistCellType.ESCAPE_LIST,
-      )
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).isNull()
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.specialistCellTypes).isEmpty()
-      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.currentSpecialistCellTypes).containsExactlyInAnyOrder(
-        SpecialistCellType.ESCAPE_LIST,
-      )
-      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.specialistCellTypes).containsExactlyInAnyOrder(
-        SpecialistCellType.ESCAPE_LIST,
-      )
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.currentSpecialistCellTypes).isNull()
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.specialistCellTypes).isNull()
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(2)?.specialistCellTypes).containsExactlyInAnyOrder(
         SpecialistCellType.SAFE_CELL,
         SpecialistCellType.CONSTANT_SUPERVISION,
@@ -1765,6 +1801,80 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(rejectedDeactivatedCell.currentCellCertificate).isNotNull
       assertThat(rejectedDeactivatedCell.currentCellCertificate!!.workingCapacity).isEqualTo(0)
       assertThat(rejectedDeactivatedCell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_MATCHING_CELL_CERT)
+    }
+
+    @Test
+    fun `can withdraw a reactivation approval request`() {
+      deactivateLocation(
+        leedsWing,
+        deactivatedReason = DeactivatedReason.MOTHBALLED,
+        planetFmReference = "11111",
+        reasonForChange = "The wing has been flooded",
+        requiresApproval = true,
+        approveDeactivation = true,
+      )
+
+      webTestClient.put().uri("/certification/location/reactivation-request-approval")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            ReactivationLocationsApprovalRequest(
+              topLevelLocationId = leedsWing.id!!,
+              cellReactivationChanges = leedsWing.cellLocations().associate {
+                it.id!! to CellReactivationDetail(
+                  capacity = Capacity(
+                    workingCapacity = 2,
+                    maxCapacity = 2,
+                    certifiedNormalAccommodation = 2,
+                  ),
+                )
+              },
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      val pendingApprovalRequestId = webTestClient.get().uri("/locations/${leedsWing.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!.pendingApprovalRequestId!!
+
+      val withdrawnRequest = webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            WithdrawCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+              comments = "Reactivation not needed yet",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawnRequest.certificateId).isNull()
+      assertThat(withdrawnRequest.status).isEqualTo(ApprovalRequestStatus.WITHDRAWN)
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val withdrawnLocation = webTestClient.get().uri("/locations/${leedsWing.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawnLocation.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(withdrawnLocation.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_MATCHING_CELL_CERT)
+      assertThat(withdrawnLocation.pendingApprovalRequestId).isNull()
     }
   }
 
@@ -1947,6 +2057,83 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(rejectedLocation.cellMark).isEqualTo(cellToUpdate.cellMark)
       assertThat(rejectedLocation.pendingChanges).isNull()
       assertThat(rejectedLocation.pendingApprovalRequestId).isNull()
+
+      val currentCertAfterReject = webTestClient.get().uri("/cell-certificates/prison/LEI/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CellCertificateDto>()
+        .returnResult().responseBody!!
+
+      val cellInCertAfterReject = currentCertAfterReject.findLocationInCertificate(cellToUpdate.getPathHierarchy())
+      assertThat(cellInCertAfterReject?.cellMark).isEqualTo(cellToUpdate.cellMark)
+    }
+
+    @Test
+    fun `can change a cell mark on a location and withdraw approval`() {
+      val cellToUpdate = leedsWing.findAllLeafLocations().first() as Cell
+      val pendingCell = webTestClient.put().uri("/locations/residential/${cellToUpdate.id}/cell-mark-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CellMarkChangeRequest(
+              reasonForChange = "The door number is wrong",
+              cellMark = "CM-001",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(pendingCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
+      assertThat(pendingCell.pendingApprovalRequestId).isNotNull
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val withdrawnRequest = webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            WithdrawCertificationRequestDto(
+              approvalRequestReference = pendingCell.pendingApprovalRequestId!!,
+              comments = "Cell mark change no longer needed",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawnRequest.certificateId).isNull()
+      assertThat(withdrawnRequest.status).isEqualTo(ApprovalRequestStatus.WITHDRAWN)
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val withdrawnLocation = webTestClient.get().uri("/locations/${cellToUpdate.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawnLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(withdrawnLocation.cellMark).isEqualTo(cellToUpdate.cellMark)
+      assertThat(withdrawnLocation.pendingChanges).isNull()
+      assertThat(withdrawnLocation.pendingApprovalRequestId).isNull()
+
+      val currentCertAfterWithdraw = webTestClient.get().uri("/cell-certificates/prison/LEI/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CellCertificateDto>()
+        .returnResult().responseBody!!
+
+      val cellInCertAfterWithdraw = currentCertAfterWithdraw.findLocationInCertificate(cellToUpdate.getPathHierarchy())
+      assertThat(cellInCertAfterWithdraw?.cellMark).isEqualTo(cellToUpdate.cellMark)
     }
   }
 
@@ -2097,6 +2284,83 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(rejectedLocation.inCellSanitation).isEqualTo(true)
       assertThat(rejectedLocation.pendingChanges).isNull()
       assertThat(rejectedLocation.pendingApprovalRequestId).isNull()
+
+      val currentCertAfterReject = webTestClient.get().uri("/cell-certificates/prison/LEI/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CellCertificateDto>()
+        .returnResult().responseBody!!
+
+      val cellInCertAfterReject = currentCertAfterReject.findLocationInCertificate(cellToUpdate.getPathHierarchy())
+      assertThat(cellInCertAfterReject?.inCellSanitation).isEqualTo(true)
+    }
+
+    @Test
+    fun `can change a cell sanitation on a location and withdraw approval`() {
+      val cellToUpdate = leedsWing.findAllLeafLocations().first() as Cell
+      val pendingCell = webTestClient.put().uri("/locations/residential/${cellToUpdate.id}/cell-sanitation-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CellSanitationChangeRequest(
+              reasonForChange = "The toilet is old",
+              inCellSanitation = false,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(pendingCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
+      val pendingApprovalRequestId = pendingCell.pendingApprovalRequestId!!
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val withdrawnRequest = webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            WithdrawCertificationRequestDto(
+              approvalRequestReference = pendingApprovalRequestId,
+              comments = "Sanitation change no longer required",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawnRequest.certificateId).isNull()
+      assertThat(withdrawnRequest.status).isEqualTo(ApprovalRequestStatus.WITHDRAWN)
+      assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero
+
+      val withdrawnLocation = webTestClient.get().uri("/locations/${cellToUpdate.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawnLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(withdrawnLocation.inCellSanitation).isEqualTo(true)
+      assertThat(withdrawnLocation.pendingChanges).isNull()
+      assertThat(withdrawnLocation.pendingApprovalRequestId).isNull()
+
+      val currentCertAfterWithdraw = webTestClient.get().uri("/cell-certificates/prison/LEI/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CellCertificateDto>()
+        .returnResult().responseBody!!
+
+      val cellInCertAfterWithdraw = currentCertAfterWithdraw.findLocationInCertificate(cellToUpdate.getPathHierarchy())
+      assertThat(cellInCertAfterWithdraw?.inCellSanitation).isEqualTo(true)
     }
   }
 
@@ -2195,5 +2459,807 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       .expectStatus().isOk
       .expectBody<Location>()
       .returnResult().responseBody!!
+  }
+
+  @DisplayName("PUT /certification/location/specialist-cell-type-change")
+  @Nested
+  inner class SpecialistCellTypeTest {
+
+    private fun firstLeedsCell(): Cell = leedsWing.findAllLeafLocations().first() as Cell
+
+    private fun requestSpecialistCellTypeApproval(
+      cell: Cell,
+      specialistCellTypes: Set<SpecialistCellType>,
+      workingCapacity: Int = 0,
+      maxCapacity: Int = 1,
+      certifiedNormalAccommodation: Int = 0,
+    ): CertificationApprovalRequestDto = webTestClient.put().uri("/certification/location/specialist-cell-type-change")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          SpecialistCellTypeApprovalRequest(
+            locationId = cell.id!!,
+            specialistCellTypes = specialistCellTypes,
+            workingCapacity = workingCapacity,
+            maxCapacity = maxCapacity,
+            certifiedNormalAccommodation = certifiedNormalAccommodation,
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CertificationApprovalRequestDto>()
+      .returnResult().responseBody!!
+
+    private fun approveRequest(approvalRequestId: java.util.UUID): CertificationApprovalRequestDto = webTestClient.put().uri("/certification/location/approve")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = approvalRequestId)))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CertificationApprovalRequestDto>()
+      .returnResult().responseBody!!
+
+    @Test
+    fun `when cert approval required, adding a capacity-affecting specialist cell type via direct endpoint is rejected`() {
+      val cell = firstLeedsCell()
+
+      webTestClient.put().uri("/locations/${cell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST)))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(135)
+    }
+
+    @Test
+    fun `when cert approval required, removing a capacity-affecting specialist cell type via direct endpoint is rejected`() {
+      val cell = firstLeedsCell()
+
+      // First add the type via the approval flow
+      val pendingApproval = requestSpecialistCellTypeApproval(cell, setOf(SpecialistCellType.CSU))
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.SPECIALIST_CELL_TYPE)
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        false,
+      )
+
+      approveRequest(pendingApproval.id)
+      getDomainEvents(3)
+
+      val freshCell = cellRepository.findById(cell.id!!).get()
+
+      // Now try to remove it via direct endpoint
+      webTestClient.put().uri("/locations/${freshCell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(emptySet<SpecialistCellType>()))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(135)
+    }
+
+    @Test
+    fun `when cert approval required, swapping capacity-affecting types (same count) via direct endpoint is allowed and updates cert`() {
+      val cell = firstLeedsCell()
+
+      // First give cell a capacity-affecting type via approval
+      val pendingApproval = requestSpecialistCellTypeApproval(cell, setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST))
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        false,
+      )
+
+      approveRequest(pendingApproval.id)
+      getDomainEvents(3)
+
+      // Swap to a different capacity-affecting type via direct endpoint
+      val result = webTestClient.put().uri("/locations/${cell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.CSU)))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(result.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.CSU)
+
+      // Verify the current cert was updated in-place
+      val currentCert = webTestClient.get().uri("/cell-certificates/prison/${cell.prisonId}/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CellCertificateDto>()
+        .returnResult().responseBody!!
+
+      val cellInCert = currentCert.findLocationInCertificate(cell.getPathHierarchy())
+      assertThat(cellInCert).isNotNull
+      assertThat(cellInCert?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.CSU)
+
+      getDomainEvents(1)
+    }
+
+    @Test
+    fun `when cert approval required, adding a non-capacity-affecting type via direct endpoint is allowed and updates cert`() {
+      val cell = firstLeedsCell()
+
+      webTestClient.put().uri("/locations/${cell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.ACCESSIBLE_CELL)))
+        .exchange()
+        .expectStatus().isOk
+
+      // Verify cert updated
+      val currentCert = webTestClient.get().uri("/cell-certificates/prison/${cell.prisonId}/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CellCertificateDto>()
+        .returnResult().responseBody!!
+
+      val cellInCert = currentCert.findLocationInCertificate(cell.getPathHierarchy())
+      assertThat(cellInCert?.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.ACCESSIBLE_CELL)
+
+      getDomainEvents(1)
+    }
+
+    @Test
+    fun `can request approval to add a capacity-affecting specialist cell type`() {
+      val cell = firstLeedsCell()
+
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST, SpecialistCellType.ACCESSIBLE_CELL),
+        workingCapacity = 0,
+        maxCapacity = 1,
+        certifiedNormalAccommodation = 0,
+      )
+
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.SPECIALIST_CELL_TYPE)
+      assertThat(pendingApproval.status).isEqualTo(ApprovalRequestStatus.PENDING)
+      assertThat(pendingApproval.locationId).isEqualTo(cell.id)
+      assertThat(pendingApproval.prisonId).isEqualTo(cell.prisonId)
+      assertThat(pendingApproval.locationKey).isEqualTo(cell.getKey())
+      assertThat(pendingApproval.workingCapacity).isEqualTo(0)
+      assertThat(pendingApproval.maxCapacity).isEqualTo(1)
+      assertThat(pendingApproval.certifiedNormalAccommodation).isEqualTo(0)
+      assertThat(pendingApproval.specialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+        SpecialistCellType.ACCESSIBLE_CELL,
+      )
+      // currentSpecialistCellTypes reflects the cell's state before this approval
+      assertThat(pendingApproval.currentSpecialistCellTypes).isNull()
+      assertThat(pendingApproval.locations).hasSize(1)
+
+      // The cell should now be locked
+      val lockedCell = webTestClient.get().uri("/locations/${cell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(lockedCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
+      assertThat(lockedCell.pendingApprovalRequestId).isEqualTo(pendingApproval.id)
+    }
+
+    @Test
+    fun `cannot approve a specialist cell type change request when a prisoner is in the cell`() {
+      val cell = firstLeedsCell()
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.DRY),
+        workingCapacity = 0,
+        maxCapacity = 0,
+        certifiedNormalAccommodation = 0,
+      )
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        true,
+      )
+
+      assertThat(
+        webTestClient.put().uri("/certification/location/approve")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingApproval.id)))
+          .exchange()
+          .expectStatus().isEqualTo(HttpStatus.BAD_REQUEST)
+          .expectBody<ErrorResponse>()
+          .returnResult().responseBody!!.errorCode,
+      ).isEqualTo(ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel.errorCode)
+    }
+
+    @Test
+    fun `can approve a specialist cell type change request`() {
+      val cell = firstLeedsCell()
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.DRY),
+        workingCapacity = 0,
+        maxCapacity = 1,
+        certifiedNormalAccommodation = 0,
+      )
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        false,
+      )
+
+      val approved = approveRequest(pendingApproval.id)
+
+      assertThat(approved.approvalType).isEqualTo(ApprovalType.SPECIALIST_CELL_TYPE)
+      assertThat(approved.status).isEqualTo(ApprovalRequestStatus.APPROVED)
+
+      getDomainEvents(3).let {
+        assertThat(it.map { msg -> msg.eventType to msg.additionalInformation?.key }).containsExactlyInAnyOrder(
+          "location.inside.prison.amended" to cell.getKey(),
+          *cell.getParentLocations().map { parent -> "location.inside.prison.amended" to parent.getKey() }.toTypedArray(),
+        )
+      }
+
+      webTestClient.get().uri("/cell-certificates/${approved.certificateId}")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.current").isEqualTo(true)
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].specialistCellTypes").isEqualTo(listOf("DRY"))
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].workingCapacity").isEqualTo(0)
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].maxCapacity").isEqualTo(1)
+
+      // Verify the cell has been updated
+      val updatedCell = webTestClient.get().uri("/locations/${cell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(updatedCell.specialistCellTypes).containsExactlyInAnyOrder(SpecialistCellType.DRY)
+      assertThat(updatedCell.capacity?.workingCapacity).isEqualTo(0)
+      assertThat(updatedCell.capacity?.maxCapacity).isEqualTo(1)
+      assertThat(updatedCell.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+      assertThat(updatedCell.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `can reject a specialist cell type change request`() {
+      val cell = firstLeedsCell()
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.CONSTANT_SUPERVISION),
+        workingCapacity = 0,
+        maxCapacity = 1,
+        certifiedNormalAccommodation = 0,
+      )
+
+      webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(RejectCertificationRequestDto(approvalRequestReference = pendingApproval.id, comments = "Not approved")))
+        .exchange()
+        .expectStatus().isOk
+
+      // Cell should be unchanged (no specialist types, no capacity change)
+      val cell2 = webTestClient.get().uri("/locations/${cell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(cell2.specialistCellTypes).isNullOrEmpty()
+      assertThat(cell2.capacity?.workingCapacity).isEqualTo(1)
+      assertThat(cell2.capacity?.maxCapacity).isEqualTo(2)
+      assertThat(cell2.pendingApprovalRequestId).isNull()
+
+      val currentCertAfterReject = webTestClient.get().uri("/cell-certificates/prison/${cell.prisonId}/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CellCertificateDto>()
+        .returnResult().responseBody!!
+
+      val cellInCertAfterReject = currentCertAfterReject.findLocationInCertificate(cell.getPathHierarchy())
+      assertThat(cellInCertAfterReject).isNotNull
+      assertThat(cellInCertAfterReject?.specialistCellTypes).isNullOrEmpty()
+      assertThat(cellInCertAfterReject?.workingCapacity).isEqualTo(1)
+      assertThat(cellInCertAfterReject?.maxCapacity).isEqualTo(2)
+    }
+
+    @Test
+    fun `can withdraw a specialist cell type change request`() {
+      val cell = firstLeedsCell()
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.UNFURNISHED),
+        workingCapacity = 0,
+        maxCapacity = 1,
+        certifiedNormalAccommodation = 0,
+      )
+
+      webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(WithdrawCertificationRequestDto(approvalRequestReference = pendingApproval.id, comments = "No longer needed")))
+        .exchange()
+        .expectStatus().isOk
+
+      val unlockedCell = webTestClient.get().uri("/locations/${cell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(unlockedCell.specialistCellTypes).isNullOrEmpty()
+      assertThat(unlockedCell.pendingApprovalRequestId).isNull()
+
+      val currentCertAfterWithdraw = webTestClient.get().uri("/cell-certificates/prison/${cell.prisonId}/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CellCertificateDto>()
+        .returnResult().responseBody!!
+
+      val cellInCertAfterWithdraw = currentCertAfterWithdraw.findLocationInCertificate(cell.getPathHierarchy())
+      assertThat(cellInCertAfterWithdraw).isNotNull
+      assertThat(cellInCertAfterWithdraw?.specialistCellTypes).isNullOrEmpty()
+      assertThat(cellInCertAfterWithdraw?.workingCapacity).isEqualTo(1)
+      assertThat(cellInCertAfterWithdraw?.maxCapacity).isEqualTo(2)
+    }
+
+    @Test
+    fun `cannot create a second specialist cell type approval when one is pending`() {
+      val cell = firstLeedsCell()
+      requestSpecialistCellTypeApproval(cell, setOf(SpecialistCellType.CSU))
+
+      webTestClient.put().uri("/certification/location/specialist-cell-type-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            SpecialistCellTypeApprovalRequest(
+              locationId = cell.id!!,
+              specialistCellTypes = setOf(SpecialistCellType.DRY),
+              workingCapacity = 0,
+              maxCapacity = 1,
+              certifiedNormalAccommodation = 0,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isEqualTo(HttpStatus.CONFLICT)
+    }
+
+    @Test
+    fun `approval endpoint rejects change that does not require approval (same capacity-affecting count)`() {
+      val cell = firstLeedsCell()
+
+      // First add CSU via approval
+      val pending = requestSpecialistCellTypeApproval(cell, setOf(SpecialistCellType.CSU))
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        false,
+      )
+
+      approveRequest(pending.id)
+      getDomainEvents(3)
+
+      // Now try to use the approval endpoint to swap CSU → BIOHAZARD (count stays at 1, doesn't need approval)
+      webTestClient.put().uri("/certification/location/specialist-cell-type-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            SpecialistCellTypeApprovalRequest(
+              locationId = cell.id!!,
+              specialistCellTypes = setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST),
+              workingCapacity = 0,
+              maxCapacity = 1,
+              certifiedNormalAccommodation = 0,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+    }
+
+    @Test
+    fun `cert approval not required, when adding a non specialist cell type`() {
+      val cell = firstLeedsCell()
+      webTestClient.put().uri("/locations/${cell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.ACCESSIBLE_CELL, SpecialistCellType.CAT_A)))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+        .also { result ->
+          assertThat(result.specialistCellTypes).containsExactlyInAnyOrder(
+            SpecialistCellType.ACCESSIBLE_CELL,
+            SpecialistCellType.CAT_A,
+          )
+        }
+
+      getDomainEvents(1)
+    }
+
+    @Test
+    fun `when cert approval not required, adding capacity-affecting specialist cell types via direct endpoint is allowed`() {
+      // cell1 is in MDI which does not have certificationApprovalRequired=true
+      webTestClient.put().uri("/locations/${cell1.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST, SpecialistCellType.ACCESSIBLE_CELL)))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+        .also { result ->
+          assertThat(result.specialistCellTypes).containsExactlyInAnyOrder(
+            SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+            SpecialistCellType.ACCESSIBLE_CELL,
+          )
+        }
+
+      getDomainEvents(1)
+    }
+  }
+
+  @DisplayName("PUT /certification/prison/signed-op-cap-change")
+  @Nested
+  inner class SignedOpCapApprovalTest {
+
+    private fun requestSignedOpCapChange(newCapacity: Int = 10): CertificationApprovalRequestDto = webTestClient.put().uri("/certification/prison/signed-op-cap-change")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          SignedOpCapApprovalRequest(
+            prisonId = "LEI",
+            signedOperationalCapacity = newCapacity,
+            reasonForChange = "Prison capacity has increased",
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CertificationApprovalRequestDto>()
+      .returnResult().responseBody!!
+
+    private fun getSignedOpCap(): Int = webTestClient.get().uri("/signed-op-cap/LEI")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<SignedOperationCapacityDto>()
+      .returnResult().responseBody!!.signedOperationCapacity
+
+    @Test
+    fun `can request a signed op cap change approval`() {
+      val pendingApproval = requestSignedOpCapChange(newCapacity = 10)
+
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.SIGNED_OP_CAP)
+      assertThat(pendingApproval.status).isEqualTo(ApprovalRequestStatus.PENDING)
+      assertThat(pendingApproval.prisonId).isEqualTo("LEI")
+      assertThat(pendingApproval.currentSignedOperationCapacity).isEqualTo(12)
+      assertThat(pendingApproval.signedOperationCapacityChange).isEqualTo(-2)
+      assertThat(getSignedOpCap()).isEqualTo(12)
+    }
+
+    @Test
+    fun `can approve a signed op cap change`() {
+      val pendingApproval = requestSignedOpCapChange(newCapacity = 10)
+
+      val approvedRequest = webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            ApproveCertificationRequestDto(
+              approvalRequestReference = pendingApproval.id,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(approvedRequest.status).isEqualTo(ApprovalRequestStatus.APPROVED)
+      assertThat(approvedRequest.approvalType).isEqualTo(ApprovalType.SIGNED_OP_CAP)
+      assertThat(getSignedOpCap()).isEqualTo(10)
+    }
+
+    @Test
+    fun `can reject a signed op cap change`() {
+      val pendingApproval = requestSignedOpCapChange(newCapacity = 10)
+
+      val rejectedRequest = webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            RejectCertificationRequestDto(
+              approvalRequestReference = pendingApproval.id,
+              comments = "Capacity increase not approved",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(rejectedRequest.certificateId).isNull()
+      assertThat(rejectedRequest.status).isEqualTo(ApprovalRequestStatus.REJECTED)
+      assertThat(getSignedOpCap()).isEqualTo(12)
+    }
+
+    @Test
+    fun `can withdraw a signed op cap change`() {
+      val pendingApproval = requestSignedOpCapChange(newCapacity = 10)
+
+      val withdrawnRequest = webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            WithdrawCertificationRequestDto(
+              approvalRequestReference = pendingApproval.id,
+              comments = "Capacity change request withdrawn",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawnRequest.certificateId).isNull()
+      assertThat(withdrawnRequest.status).isEqualTo(ApprovalRequestStatus.WITHDRAWN)
+      assertThat(getSignedOpCap()).isEqualTo(12)
+    }
+  }
+
+  @DisplayName("Decision endpoint error scenarios")
+  @Nested
+  inner class DecisionErrorScenariosTest {
+
+    private fun createPendingCapacityChangeRequest(): UUID {
+      leedsWing.findAllLeafLocations().forEach { cell ->
+        prisonerSearchMockServer.stubSearchByLocations(
+          leedsWing.prisonId,
+          listOf(cell.getPathHierarchy()),
+          true,
+        )
+      }
+      val firstCell = leedsWing.findAllLeafLocations().first()
+      webTestClient.put().uri("/locations/${firstCell.id}/capacity")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            CapacityChangeRequest(
+              workingCapacity = 1,
+              maxCapacity = 1,
+              certifiedNormalAccommodation = 1,
+              temporaryWorkingCapacityChange = false,
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      return webTestClient.get().uri("/locations/${firstCell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!.pendingApprovalRequestId!!
+    }
+
+    @Test
+    fun `approve returns 404 for a non-existent approval request`() {
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = UUID.randomUUID())))
+        .exchange()
+        .expectStatus().isNotFound
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.ApprovalRequestNotFound.errorCode)
+    }
+
+    @Test
+    fun `reject returns 404 for a non-existent approval request`() {
+      webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(RejectCertificationRequestDto(approvalRequestReference = UUID.randomUUID(), comments = "test")))
+        .exchange()
+        .expectStatus().isNotFound
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.ApprovalRequestNotFound.errorCode)
+    }
+
+    @Test
+    fun `withdraw returns 404 for a non-existent approval request`() {
+      webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(WithdrawCertificationRequestDto(approvalRequestReference = UUID.randomUUID(), comments = "test")))
+        .exchange()
+        .expectStatus().isNotFound
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.ApprovalRequestNotFound.errorCode)
+    }
+
+    @Test
+    fun `approve returns 400 when the approval request is already approved`() {
+      val pendingId = createPendingCapacityChangeRequest()
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingId)))
+        .exchange()
+        .expectStatus().isOk
+      getDomainEvents(3)
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingId)))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.ApprovalRequestNotInPendingStatus.errorCode)
+    }
+
+    @Test
+    fun `approve returns 400 when the approval request is already rejected`() {
+      val pendingId = createPendingCapacityChangeRequest()
+
+      webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(RejectCertificationRequestDto(approvalRequestReference = pendingId, comments = "rejected")))
+        .exchange()
+        .expectStatus().isOk
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingId)))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.ApprovalRequestNotInPendingStatus.errorCode)
+    }
+
+    @Test
+    fun `approve returns 400 when the approval request is already withdrawn`() {
+      val pendingId = createPendingCapacityChangeRequest()
+
+      webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(WithdrawCertificationRequestDto(approvalRequestReference = pendingId, comments = "withdrawn")))
+        .exchange()
+        .expectStatus().isOk
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingId)))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.ApprovalRequestNotInPendingStatus.errorCode)
+    }
+
+    @Test
+    fun `reject returns 400 when the approval request is already rejected`() {
+      val pendingId = createPendingCapacityChangeRequest()
+
+      webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(RejectCertificationRequestDto(approvalRequestReference = pendingId, comments = "rejected")))
+        .exchange()
+        .expectStatus().isOk
+
+      webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(RejectCertificationRequestDto(approvalRequestReference = pendingId, comments = "rejected again")))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.ApprovalRequestNotInPendingStatus.errorCode)
+    }
+
+    @Test
+    fun `reject returns 400 when the approval request is already approved`() {
+      val pendingId = createPendingCapacityChangeRequest()
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingId)))
+        .exchange()
+        .expectStatus().isOk
+      getDomainEvents(3)
+
+      webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(RejectCertificationRequestDto(approvalRequestReference = pendingId, comments = "rejected")))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.ApprovalRequestNotInPendingStatus.errorCode)
+    }
+
+    @Test
+    fun `withdraw returns 400 when the approval request is already withdrawn`() {
+      val pendingId = createPendingCapacityChangeRequest()
+
+      webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(WithdrawCertificationRequestDto(approvalRequestReference = pendingId, comments = "withdrawn")))
+        .exchange()
+        .expectStatus().isOk
+
+      webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(WithdrawCertificationRequestDto(approvalRequestReference = pendingId, comments = "withdrawn again")))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.ApprovalRequestNotInPendingStatus.errorCode)
+    }
+
+    @Test
+    fun `withdraw returns 400 when the approval request is already approved`() {
+      val pendingId = createPendingCapacityChangeRequest()
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingId)))
+        .exchange()
+        .expectStatus().isOk
+      getDomainEvents(3)
+
+      webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(WithdrawCertificationRequestDto(approvalRequestReference = pendingId, comments = "withdrawn")))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.ApprovalRequestNotInPendingStatus.errorCode)
+    }
   }
 }

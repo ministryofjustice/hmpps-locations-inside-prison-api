@@ -24,7 +24,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
@@ -40,12 +39,8 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
   private lateinit var mWing: ResidentialLocation
   private lateinit var aCell: Cell
 
-  @Autowired
-  lateinit var cellCertificateRepository: CellCertificateRepository
-
   @BeforeEach
   override fun setUp() {
-    cellCertificateRepository.deleteAll()
     super.setUp()
 
     webTestClient.put().uri("/prison-configuration/${wingZ.prisonId}/certification-approval-required/ACTIVE")
@@ -101,7 +96,6 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
         defaultCNA = 1,
         wingDescription = "Wing M",
       ).toEntity(
-        createInDraft = true,
         createdBy = EXPECTED_USERNAME,
         clock = clock,
         linkedTransaction = linkedTransactionRepository.saveAndFlush(
@@ -113,6 +107,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
             txStartTime = LocalDateTime.now(clock).minusDays(1),
           ),
         ),
+        createInDraft = true,
       ),
     )
   }

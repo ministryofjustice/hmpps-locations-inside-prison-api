@@ -49,7 +49,6 @@ class DraftLocationResourceTest : CommonDataTestBase() {
         numberOfSpurs = 0,
         wingDescription = "Wing G",
       ).toEntity(
-        createInDraft = true,
         createdBy = "TEST_USER",
         clock = clock,
         linkedTransaction = linkedTransactionRepository.saveAndFlush(
@@ -61,6 +60,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             txStartTime = LocalDateTime.now(clock).minusDays(1),
           ),
         ),
+        createInDraft = true,
+        specialistCellType = SpecialistCellType.ESCAPE_LIST,
       ),
     )
 
