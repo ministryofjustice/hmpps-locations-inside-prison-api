@@ -890,9 +890,9 @@ class LocationService(
 
     val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(cell.prisonId)
     if (certificationApprovalRequired) {
-      val currentCapacityCount = cell.getSpecialistCellTypesForCell().count { it.affectsCapacity }
-      val newCapacityCount = specialistCellTypes.count { it.affectsCapacity }
-      if (currentCapacityCount != newCapacityCount) {
+      val currentNumSpecialistTypes = cell.getSpecialistCellTypesForCell().count { it.affectsCapacity }
+      val newNumSpecialistTypes = specialistCellTypes.count { it.affectsCapacity }
+      if (currentNumSpecialistTypes != newNumSpecialistTypes) {
         throw SpecialistCellTypeChangesRequireCertificationApprovalException(cell.getKey())
       }
     }
