@@ -18,5 +18,6 @@ enum class DeactivatedReason(
   SECURITY_SEALED("Security sealed", 7),
   STAFF_SHORTAGE("Staff shortage", 8),
   NEW_BUILD("New build", 9),
+  CONVERT_CELL_TO_ROOM("Convert cell to non-residential room", 10),
   OTHER("Other", 99),
 }

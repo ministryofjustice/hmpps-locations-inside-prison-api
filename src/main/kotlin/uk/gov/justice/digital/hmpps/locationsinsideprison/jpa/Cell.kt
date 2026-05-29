@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CellMarkChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ConvertToNonResidentialCellApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.SanitationChangeApprovalRequest
@@ -179,7 +180,15 @@ class Cell(
     if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
+    applyConversionToNonResidentialCell(convertedCellType, otherConvertedCellType, userOrSystemInContext, clock, linkedTransaction)
+  }
 
+  /**
+   * Applies the conversion to a non-residential room without the pending-approval guard. Used both by the public
+   * [convertToNonResidentialCell] and when applying a previously requested conversion as part of approving a
+   * [ConvertToNonResidentialCellApprovalRequest] (where the request is still PENDING at the point of conversion).
+   */
+  internal fun applyConversionToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.STATUS,
       this.getDerivedStatus().description,
@@ -188,7 +197,7 @@ class Cell(
       LocalDateTime.now(clock),
       linkedTransaction,
     )
-    updateNonResidentialCellType(convertedCellType, otherConvertedCellType, userOrSystemInContext, clock, linkedTransaction)
+    applyNonResidentialCellTypeUpdate(convertedCellType, otherConvertedCellType, userOrSystemInContext, clock, linkedTransaction)
     addHistory(
       LocationAttribute.LOCATION_TYPE,
       locationType.name,
@@ -236,6 +245,10 @@ class Cell(
     if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
+    applyNonResidentialCellTypeUpdate(convertedCellType, otherConvertedCellType, userOrSystemInContext, clock, linkedTransaction)
+  }
+
+  internal fun applyNonResidentialCellTypeUpdate(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.CONVERTED_CELL_TYPE,
       this.getConvertedCellTypeSummary(),
@@ -677,6 +690,56 @@ class Cell(
         certifiedNormalAccommodation = certifiedNormalAccommodation,
       ),
     ) as SpecialistCellTypeChangeApprovalRequest
+  }
+
+  fun requestApprovalForConvertToNonResidentialCell(
+    requestedDate: LocalDateTime,
+    requestedBy: String,
+    convertedCellType: ConvertedCellType,
+    otherConvertedCellType: String?,
+    reasonForChange: String?,
+  ): ConvertToNonResidentialCellApprovalRequest {
+    if (hasPendingCertificationApproval()) {
+      throw PendingApprovalAlreadyExistsException(getKey())
+    }
+    return addApprovalToLocation(
+      ConvertToNonResidentialCellApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        reasonForChange = reasonForChange,
+        convertedCellType = convertedCellType,
+        otherConvertedCellType = otherConvertedCellType,
+        currentInCellSanitation = getSanitationOfCell(false),
+      ),
+    ) as ConvertToNonResidentialCellApprovalRequest
+  }
+
+  /**
+   * Clears a temporary deactivation prior to applying a conversion to a non-residential room. Unlike
+   * [Location.reactivate] this does NOT re-certify the cell or restore capacity, because the conversion that
+   * follows de-certifies the cell and removes its capacity.
+   */
+  fun clearTemporaryDeactivationForConversion(userOrSystemInContext: String, linkedTransaction: LinkedTransaction) {
+    if (!isTemporarilyDeactivated()) return
+    addHistory(
+      LocationAttribute.STATUS,
+      getDerivedStatus().description,
+      LocationStatus.ACTIVE.description,
+      userOrSystemInContext,
+      linkedTransaction.txStartTime,
+      linkedTransaction,
+    )
+    status = LocationStatus.ACTIVE
+    deactivatedReason = null
+    deactivationReasonDescription = null
+    deactivatedDate = null
+    proposedReactivationDate = null
+    planetFmReference = null
+    deactivatedBy = null
+    temporarilyOffCellCert = false
+    updatedBy = userOrSystemInContext
+    whenUpdated = linkedTransaction.txStartTime
   }
 
   override fun toDto(

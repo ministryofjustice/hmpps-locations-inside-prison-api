@@ -302,6 +302,10 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "New build"
                   },
                   {
+                    "key": "CONVERT_CELL_TO_ROOM",
+                    "description": "Convert cell to non-residential room"
+                  },
+                  {
                     "key": "OTHER",
                     "description": "Other"
                   }
