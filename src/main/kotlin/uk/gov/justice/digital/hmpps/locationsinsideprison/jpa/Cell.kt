@@ -23,6 +23,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ce
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.SanitationChangeApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.SpecialistCellTypeChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ChangesCannotBeMadeWithoutCertificationApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
@@ -650,6 +651,32 @@ class Cell(
         currentInCellSanitation = inCellSanitation,
       ),
     ) as SanitationChangeApprovalRequest
+  }
+
+  fun requestApprovalForSpecialistCellTypeChange(
+    requestedDate: LocalDateTime,
+    requestedBy: String,
+    newSpecialistCellTypes: Set<SpecialistCellType>,
+    workingCapacity: Int,
+    maxCapacity: Int,
+    certifiedNormalAccommodation: Int,
+    reasonForChange: String?,
+  ): SpecialistCellTypeChangeApprovalRequest {
+    if (hasPendingCertificationApproval()) {
+      throw PendingApprovalAlreadyExistsException(getKey())
+    }
+    return addApprovalToLocation(
+      SpecialistCellTypeChangeApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        reasonForChange = reasonForChange,
+        specialistCellTypes = newSpecialistCellTypes.joinToString(",") { it.name },
+        workingCapacity = workingCapacity,
+        maxCapacity = maxCapacity,
+        certifiedNormalAccommodation = certifiedNormalAccommodation,
+      ),
+    ) as SpecialistCellTypeChangeApprovalRequest
   }
 
   override fun toDto(

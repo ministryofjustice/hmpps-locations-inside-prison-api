@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
@@ -110,6 +111,12 @@ data class CertificationApprovalRequestDto(
 
   @param:Schema(description = "Planet FM reference number", example = "2323/45M", required = false)
   val planetFmReference: String? = null,
+
+  @param:Schema(description = "Proposed new specialist cell types for this approval", required = false)
+  val specialistCellTypes: Set<SpecialistCellType>? = null,
+
+  @param:Schema(description = "Current specialist cell types before this approval", required = false)
+  val currentSpecialistCellTypes: Set<SpecialistCellType>? = null,
 )
 
 @Schema(description = "Request to approve a certification request")

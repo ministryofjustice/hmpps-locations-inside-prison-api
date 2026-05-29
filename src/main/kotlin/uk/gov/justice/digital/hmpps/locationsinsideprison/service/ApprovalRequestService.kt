@@ -9,11 +9,13 @@ import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.InactiveStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
@@ -23,6 +25,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCanno
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.SpecialistCellTypeChangesDoNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalDecisionService.Companion.log
 import java.time.Clock
 import java.time.LocalDateTime.now
@@ -35,6 +38,7 @@ import kotlin.collections.component2
 class ApprovalRequestService(
   private val certificationApprovalRequestRepository: CertificationApprovalRequestRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
+  private val cellLocationRepository: CellLocationRepository,
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val signedOperationCapacityService: SignedOperationCapacityService,
   private val activePrisonService: ActivePrisonService,
@@ -240,6 +244,58 @@ class ApprovalRequestService(
       linkedTransaction.txEndTime = now(clock)
     }
   }
+
+  fun requestSpecialistCellTypeChangeApproval(request: SpecialistCellTypeApprovalRequest): CertificationApprovalRequestDto {
+    val cell = cellLocationRepository.findById(request.locationId)
+      .orElseThrow { LocationNotFoundException(request.locationId.toString()) }
+
+    val approvalRequired = activePrisonService.isCertificationApprovalRequired(cell.prisonId)
+    if (!approvalRequired) {
+      throw LocationDoesNotRequireApprovalException("Certification approval not required for location ${cell.getKey()}")
+    }
+
+    val currentNumSpecialistTypes = cell.getSpecialistCellTypesForCell().count { it.affectsCapacity }
+    val newNumSpecialistTypes = request.specialistCellTypes.count { it.affectsCapacity }
+    if (currentNumSpecialistTypes == newNumSpecialistTypes) {
+      throw SpecialistCellTypeChangesDoNotRequireApprovalException(cell.getKey())
+    }
+
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      prisonId = cell.prisonId,
+      type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+      detail = "Requesting specialist cell type change approval for location ${cell.getKey()}",
+    )
+    val username = sharedLocationService.getUsername()
+    val now = now(clock)
+
+    val approvalRequest = certificationApprovalRequestRepository.save(
+      cell.requestApprovalForSpecialistCellTypeChange(
+        requestedDate = now,
+        requestedBy = username,
+        newSpecialistCellTypes = request.specialistCellTypes,
+        workingCapacity = request.workingCapacity,
+        maxCapacity = request.maxCapacity,
+        certifiedNormalAccommodation = request.certifiedNormalAccommodation,
+        reasonForChange = request.reasonForChange,
+      ),
+    )
+
+    telemetryClient.trackEvent(
+      "specialist-cell-type-change-approval-requested",
+      mapOf(
+        "id" to approvalRequest.id.toString(),
+        "locationKey" to cell.getKey(),
+        "requestedBy" to username,
+        "approvalRequestId" to approvalRequest.id.toString(),
+      ),
+      null,
+    )
+
+    log.info("Specialist cell type change approval requested (${approvalRequest.id}) for location ${cell.getKey()} by $username")
+    return approvalRequest.toDto(showLocations = true).also {
+      linkedTransaction.txEndTime = now(clock)
+    }
+  }
 }
 
 @Schema(description = "Request to approve a location or set of locations and cells below it")
@@ -295,4 +351,26 @@ data class SignedOpCapApprovalRequest(
 
   @param:Schema(description = "Explanation of why the signed op cap is changing", example = "The size of the prison has changed", required = true)
   val reasonForChange: String,
+)
+
+@Schema(description = "Request to approve a specialist cell type change for a cell, including associated capacity changes")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class SpecialistCellTypeApprovalRequest(
+  @param:Schema(description = "The cell location Id requiring approval for specialist cell type change", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+  val locationId: UUID,
+
+  @param:Schema(description = "The new set of specialist cell types for the cell", example = "[\"BIOHAZARD_DIRTY_PROTEST\"]", required = true)
+  val specialistCellTypes: Set<SpecialistCellType>,
+
+  @param:Schema(description = "New working capacity for the cell (0 is valid for specialist cells)", example = "0", required = true)
+  val workingCapacity: Int,
+
+  @param:Schema(description = "New maximum capacity for the cell", example = "1", required = true)
+  val maxCapacity: Int,
+
+  @param:Schema(description = "New certified normal accommodation value", example = "0", required = true)
+  val certifiedNormalAccommodation: Int,
+
+  @param:Schema(description = "Explanation of why the specialist cell type is changing", required = false)
+  val reasonForChange: String? = null,
 )

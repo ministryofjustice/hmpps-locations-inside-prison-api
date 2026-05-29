@@ -164,7 +164,7 @@ open class CellCertificateLocation(
   @Enumerated(EnumType.STRING)
   private val locationType: LocationType,
 
-  open val specialistCellTypes: String? = null,
+  open var specialistCellTypes: String? = null,
 
   private val usedForTypes: String? = null,
 

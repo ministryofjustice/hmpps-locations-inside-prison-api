@@ -17,8 +17,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_U
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
@@ -34,12 +34,8 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
   private lateinit var cellCertificateId: UUID
   private lateinit var mWing: ResidentialLocation
 
-  @Autowired
-  lateinit var cellCertificateRepository: CellCertificateRepository
-
   @BeforeEach
   override fun setUp() {
-    cellCertificateRepository.deleteAll()
     super.setUp()
 
     // Create a new wing in Leeds prison
@@ -54,7 +50,6 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
         defaultMaxCapacity = 2,
         wingDescription = "Wing M",
       ).toEntity(
-        createInDraft = true,
         createdBy = EXPECTED_USERNAME,
         clock = clock,
         linkedTransaction = linkedTransactionRepository.saveAndFlush(
@@ -66,6 +61,8 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
             txStartTime = LocalDateTime.now(clock).minusDays(1),
           ),
         ),
+        createInDraft = true,
+        specialistCellType = SpecialistCellType.ESCAPE_LIST,
       ),
     )
 
@@ -301,7 +298,6 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
         .jsonPath("$.locations[0].workingCapacity").isEqualTo(6)
         .jsonPath("$.locations[0].accommodationTypes[0]").isEqualTo("NORMAL_ACCOMMODATION")
         .jsonPath("$.locations[0].usedFor[0]").isEqualTo("STANDARD_ACCOMMODATION")
-        .jsonPath("$.locations[0].specialistCellTypes[0]").isEqualTo("ESCAPE_LIST")
         .jsonPath("$.locations[0].subLocations.length()").isEqualTo(2)
         .jsonPath("$.locations[0].subLocations[0].subLocations.length()").isEqualTo(3)
         .jsonPath("$.locations[0].subLocations[0].subLocations[0].workingCapacity").isEqualTo(1)

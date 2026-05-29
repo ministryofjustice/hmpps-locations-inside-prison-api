@@ -58,6 +58,7 @@ class LocationServiceTest {
   private val authenticationHolder: HmppsAuthenticationHolder = mock()
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService = mock()
   private val activePrisonService: ActivePrisonService = mock()
+  private val cellCertificateService: CellCertificateService = mock()
   private val prisonConfigurationRepository: PrisonConfigurationRepository = mock()
   private val groupsProperties: Properties = mock()
 
@@ -76,6 +77,7 @@ class LocationServiceTest {
     telemetryClient,
     locationGroupFromPropertiesService,
     activePrisonService,
+    cellCertificateService,
     groupsProperties,
   )
 

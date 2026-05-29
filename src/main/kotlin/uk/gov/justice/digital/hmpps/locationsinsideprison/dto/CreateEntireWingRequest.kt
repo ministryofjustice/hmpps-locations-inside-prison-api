@@ -66,7 +66,13 @@ data class CreateEntireWingRequest(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
-  fun toEntity(createdBy: String, clock: Clock, linkedTransaction: LinkedTransaction, createInDraft: Boolean = false): ResidentialLocation {
+  fun toEntity(
+    createdBy: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+    createInDraft: Boolean = false,
+    specialistCellType: SpecialistCellType? = null,
+  ): ResidentialLocation {
     val status = if (createInDraft) LocationStatus.DRAFT else LocationStatus.ACTIVE
     val wing = ResidentialLocation(
       prisonId = prisonId,
@@ -175,7 +181,7 @@ data class CreateEntireWingRequest(
           certifiedCell = status != LocationStatus.DRAFT,
         ).apply {
           addUsedFor(UsedForType.STANDARD_ACCOMMODATION, createdBy, clock, linkedTransaction = linkedTransaction)
-          addSpecialistCellType(SpecialistCellType.ESCAPE_LIST, linkedTransaction = linkedTransaction, userOrSystemInContext = createdBy, clock = clock)
+          specialistCellType?.let { addSpecialistCellType(it, linkedTransaction = linkedTransaction, userOrSystemInContext = createdBy, clock = clock) }
           leaf.addChildLocation(this)
 
           addHistory(

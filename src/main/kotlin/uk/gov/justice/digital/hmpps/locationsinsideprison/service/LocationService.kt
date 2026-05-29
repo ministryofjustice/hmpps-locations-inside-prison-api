@@ -78,6 +78,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprov
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.SpecialistCellTypeChangesRequireCertificationApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateCapacityRequest
 import java.lang.Boolean.TRUE
 import java.time.Clock
@@ -105,6 +106,7 @@ class LocationService(
   private val telemetryClient: TelemetryClient,
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
   private val activePrisonService: ActivePrisonService,
+  private val cellCertificateService: CellCertificateService,
   @param:Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
@@ -888,7 +890,11 @@ class LocationService(
 
     val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(cell.prisonId)
     if (certificationApprovalRequired) {
-      throw ChangesCannotBeMadeWithoutCertificationApprovalException(cell.getKey())
+      val currentNumSpecialistTypes = cell.getSpecialistCellTypesForCell().count { it.affectsCapacity }
+      val newNumSpecialistTypes = specialistCellTypes.count { it.affectsCapacity }
+      if (currentNumSpecialistTypes != newNumSpecialistTypes) {
+        throw SpecialistCellTypeChangesRequireCertificationApprovalException(cell.getKey())
+      }
     }
 
     // Check that the workingCapacity is not set to 0 for normal accommodations when removing the specialist cell types
@@ -913,6 +919,10 @@ class LocationService(
       linkedTransaction,
     )
     log.info("Updated specialist cell types = $specialistCellTypes")
+
+    if (certificationApprovalRequired) {
+      cellCertificateService.updateSpecialistCellTypesInCurrentCertificate(cell)
+    }
 
     telemetryClient.trackEvent(
       "Specialist cell types updated",
