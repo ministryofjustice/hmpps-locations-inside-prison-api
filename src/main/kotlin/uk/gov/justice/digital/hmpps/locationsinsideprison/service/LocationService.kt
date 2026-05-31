@@ -1477,6 +1477,7 @@ class LocationService(
     id: UUID,
     accommodationType: AllowedAccommodationTypeForConversion,
     specialistCellTypes: Set<SpecialistCellType>? = null,
+    certifiedNormalAccommodation: Int? = null,
     maxCapacity: Int = 0,
     workingCapacity: Int = 0,
     usedForTypes: List<UsedForType>? = null,
@@ -1490,7 +1491,19 @@ class LocationService(
 
     val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(locationToConvert.prisonId)
     if (certificationApprovalRequired) {
-      throw ChangesCannotBeMadeWithoutCertificationApprovalException(locationToConvert.getKey())
+      val cell = locationToConvert as? Cell
+      if (cell == null || !cell.isConvertedCell()) {
+        throw LocationNotFoundException(id.toString())
+      }
+      return requestConvertToCellApproval(
+        cell = cell,
+        accommodationType = accommodationType,
+        specialistCellTypes = specialistCellTypes,
+        certifiedNormalAccommodation = certifiedNormalAccommodation,
+        maxCapacity = maxCapacity,
+        workingCapacity = workingCapacity,
+        usedForTypes = usedForTypes,
+      )
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -1504,6 +1517,7 @@ class LocationService(
         accommodationType = accommodationType,
         usedForTypes = usedForTypes,
         specialistCellTypes = specialistCellTypes,
+        certifiedNormalAccommodation = certifiedNormalAccommodation,
         maxCapacity = maxCapacity,
         workingCapacity = workingCapacity,
         userOrSystemInContext = sharedLocationService.getUsername(),
@@ -1516,6 +1530,73 @@ class LocationService(
 
     sharedLocationService.trackLocationUpdate(locationToConvert, "Converted non-residential cell to residential cell")
     return locationToConvert.toDto(includeParent = true).also {
+      linkedTransaction.txEndTime = now(clock)
+    }
+  }
+
+  /**
+   * For prisons that require certification approval, converting a non-residential room back to a cell cannot
+   * happen immediately. The room stays as a non-residential room (it is not changed) but becomes locked with a
+   * pending approval request capturing the cell to be re-created. The conversion is applied later if the request
+   * is approved (see [ApprovalDecisionService]). On reject/withdrawal the location remains a non-residential room.
+   */
+  private fun requestConvertToCellApproval(
+    cell: Cell,
+    accommodationType: AllowedAccommodationTypeForConversion,
+    specialistCellTypes: Set<SpecialistCellType>?,
+    certifiedNormalAccommodation: Int?,
+    maxCapacity: Int,
+    workingCapacity: Int,
+    usedForTypes: List<UsedForType>?,
+  ): LocationDTO {
+    // CNA defaults to the working capacity when not supplied, matching Cell.applyConvertToCell.
+    val cna = certifiedNormalAccommodation ?: workingCapacity
+    // Fail fast on invalid capacity rather than letting it surface only when the request is approved.
+    validateCapacity(
+      locationKey = cell.getKey(),
+      certifiedNormalAccommodation = cna,
+      workingCapacity = workingCapacity,
+      maxCapacity = maxCapacity,
+      accommodationType = accommodationType.mapsTo,
+      specialistCellTypes = specialistCellTypes ?: emptySet(),
+    )
+
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      prisonId = cell.prisonId,
+      TransactionType.ROOM_CONVERTION_TO_CELL,
+      "Requesting approval to convert ${cell.getKey()} back to a cell",
+    )
+
+    val username = sharedLocationService.getUsername()
+
+    val approvalRequest = cell.requestApprovalForConvertToCell(
+      requestedDate = linkedTransaction.txStartTime,
+      requestedBy = username,
+      accommodationType = accommodationType.mapsTo,
+      specialistCellTypes = specialistCellTypes,
+      certifiedNormalAccommodation = cna,
+      maxCapacity = maxCapacity,
+      workingCapacity = workingCapacity,
+      usedForTypes = usedForTypes,
+      reasonForChange = null,
+    )
+
+    // A converted room has no current capacity or specialist cell types, so the snapshot shows "None -> new".
+    approvalRequest.getTopLevelLocation()?.let { topLocation ->
+      topLocation.currentWorkingCapacity = 0
+      topLocation.workingCapacity = workingCapacity
+      topLocation.currentMaxCapacity = 0
+      topLocation.maxCapacity = maxCapacity
+      topLocation.currentCertifiedNormalAccommodation = 0
+      topLocation.certifiedNormalAccommodation = cna
+      topLocation.currentSpecialistCellTypes = null
+      topLocation.specialistCellTypes = specialistCellTypes?.joinToString(",") { it.name }
+    }
+    approvalRequest.refreshCapacities()
+
+    locationRepository.saveAndFlush(cell)
+    sharedLocationService.trackLocationUpdate(cell, "Requested approval to convert non-residential room back to a cell")
+    return cell.toDto(includeParent = true).also {
       linkedTransaction.txEndTime = now(clock)
     }
   }
