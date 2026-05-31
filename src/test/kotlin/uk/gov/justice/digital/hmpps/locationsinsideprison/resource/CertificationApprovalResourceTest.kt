@@ -32,6 +32,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PermanentDeactivationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationLocationsApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SpecialistCellTypeApprovalRequest
@@ -1146,6 +1147,181 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       // currentWorkingCapacity must reflect the certificate value (1), not the effective value (0)
       assertThat(pendingApproval.locations!![0].currentWorkingCapacity).isEqualTo(1)
       assertThat(pendingApproval.locations!![0].workingCapacity).isEqualTo(0)
+    }
+  }
+
+  @DisplayName("PUT /certification/location/permanent-deactivation-request-approval")
+  @Nested
+  inner class PermanentDeactivateLocationTest {
+
+    private fun requestPermanentDeactivation(location: ResidentialLocation, reason: String): CertificationApprovalRequestDto = webTestClient.put().uri("/certification/location/permanent-deactivation-request-approval")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(jsonString(PermanentDeactivationApprovalRequestDto(locationId = location.id!!, reason = reason)))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CertificationApprovalRequestDto>()
+      .returnResult().responseBody!!
+
+    private fun getLocation(id: UUID): Location = webTestClient.get().uri("/locations/$id?includeCurrentCertificate=true")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<Location>()
+      .returnResult().responseBody!!
+
+    @Test
+    fun `cannot request permanent deactivation when prison does not require certification approval`() {
+      // cell1 is in MDI which does not have certificationApprovalRequired=true
+      webTestClient.put().uri("/certification/location/permanent-deactivation-request-approval")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(PermanentDeactivationApprovalRequestDto(locationId = cell1.id!!, reason = "Demolished")))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.LocationDoesNotRequireApproval.errorCode)
+    }
+
+    @Test
+    fun `cannot request permanent deactivation on an active location`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      webTestClient.put().uri("/certification/location/permanent-deactivation-request-approval")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(PermanentDeactivationApprovalRequestDto(locationId = firstCell.id!!, reason = "Demolished")))
+        .exchange()
+        .expectStatus().isEqualTo(409)
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.LocationCannotBePermanentlyDeactivated.errorCode)
+    }
+
+    @Test
+    fun `can request and approve permanent deactivation removing the cell from the certificate`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      // Cell must already be temporarily deactivated
+      deactivateLocation(firstCell, DeactivatedReason.DAMAGED)
+
+      val pendingApproval = requestPermanentDeactivation(firstCell, "Cell demolished")
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.PERMANENT_DEACTIVATION)
+      assertThat(pendingApproval.locationId).isEqualTo(firstCell.id)
+      assertThat(pendingApproval.locationKey).isEqualTo(firstCell.getKey())
+      assertThat(pendingApproval.locations).hasSize(1)
+      // preview shows the value the cell currently holds in the certificate
+      assertThat(pendingApproval.locations!![0].currentWorkingCapacity).isEqualTo(1)
+
+      assertThat(getLocation(firstCell.id!!).pendingApprovalRequestId).isEqualTo(pendingApproval.id)
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingApproval.id)))
+        .exchange()
+        .expectStatus().isOk
+
+      getDomainEvents(1).let {
+        assertThat(it.map { message -> message.eventType to message.additionalInformation?.key })
+          .containsExactly("location.inside.prison.deactivated" to firstCell.getKey())
+      }
+
+      val archivedCell = getLocation(firstCell.id!!)
+      assertThat(archivedCell.permanentlyInactive).isTrue()
+      assertThat(archivedCell.pendingApprovalRequestId).isNull()
+      // removed from the cell certificate
+      assertThat(archivedCell.currentCellCertificate).isNull()
+
+      // current certificate no longer contains the archived cell
+      webTestClient.get().uri("/cell-certificates/prison/${leedsWing.prisonId}/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$..pathHierarchy").value<List<String>> { paths ->
+          assertThat(paths).doesNotContain(firstCell.getPathHierarchy())
+        }
+    }
+
+    @Test
+    fun `can request and approve permanent deactivation of a whole wing removing it and its sub-locations from the certificate`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      // The wing (and its sub-locations) must already be temporarily deactivated
+      deactivateLocation(leedsWing, DeactivatedReason.DAMAGED)
+
+      val pendingApproval = requestPermanentDeactivation(leedsWing, "Wing demolished")
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.PERMANENT_DEACTIVATION)
+      assertThat(pendingApproval.locationId).isEqualTo(leedsWing.id)
+      assertThat(pendingApproval.locationKey).isEqualTo(leedsWing.getKey())
+      // preview includes the wing with its sub-location hierarchy
+      assertThat(pendingApproval.locations).hasSize(1)
+      assertThat(pendingApproval.locations!![0].subLocations).isNotEmpty
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingApproval.id)))
+        .exchange()
+        .expectStatus().isOk
+
+      getDomainEvents(1).let {
+        assertThat(it.map { message -> message.eventType to message.additionalInformation?.key })
+          .containsExactly("location.inside.prison.deactivated" to leedsWing.getKey())
+      }
+
+      // the wing and the cells below it are all permanently deactivated
+      assertThat(getLocation(leedsWing.id!!).permanentlyInactive).isTrue()
+      val archivedCell = getLocation(firstCell.id!!)
+      assertThat(archivedCell.permanentlyInactive).isTrue()
+      assertThat(archivedCell.currentCellCertificate).isNull()
+
+      // current certificate no longer contains the wing or any location below it
+      webTestClient.get().uri("/cell-certificates/prison/${leedsWing.prisonId}/current")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$..pathHierarchy").value<List<String>> { paths ->
+          assertThat(paths).noneMatch { it == leedsWing.getPathHierarchy() || it.startsWith("${leedsWing.getPathHierarchy()}-") }
+        }
+    }
+
+    @Test
+    fun `rejecting permanent deactivation leaves the cell in its existing inactive status`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      deactivateLocation(firstCell, DeactivatedReason.DAMAGED)
+
+      val pendingApproval = requestPermanentDeactivation(firstCell, "Cell demolished")
+
+      webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(RejectCertificationRequestDto(approvalRequestReference = pendingApproval.id, comments = "Not demolished after all")))
+        .exchange()
+        .expectStatus().isOk
+
+      val cell = getLocation(firstCell.id!!)
+      assertThat(cell.permanentlyInactive).isFalse()
+      assertThat(cell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      assertThat(cell.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `withdrawing permanent deactivation leaves the cell in its existing inactive status`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      deactivateLocation(firstCell, DeactivatedReason.DAMAGED)
+
+      val pendingApproval = requestPermanentDeactivation(firstCell, "Cell demolished")
+
+      webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(WithdrawCertificationRequestDto(approvalRequestReference = pendingApproval.id, comments = "Changed our mind")))
+        .exchange()
+        .expectStatus().isOk
+
+      val cell = getLocation(firstCell.id!!)
+      assertThat(cell.permanentlyInactive).isFalse()
+      assertThat(cell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      assertThat(cell.pendingApprovalRequestId).isNull()
     }
   }
 
