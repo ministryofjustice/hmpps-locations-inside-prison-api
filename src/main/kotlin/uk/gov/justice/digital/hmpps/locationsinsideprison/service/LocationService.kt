@@ -1437,7 +1437,8 @@ class LocationService(
 
     val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(locationToConvert.prisonId)
     if (certificationApprovalRequired) {
-      throw ChangesCannotBeMadeWithoutCertificationApprovalException(locationToConvert.getKey())
+      val cell = locationToConvert as? Cell ?: throw LocationNotFoundException(id.toString())
+      return requestConversionApproval(cell, convertedCellType, otherConvertedCellType)
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -1475,6 +1476,64 @@ class LocationService(
 
     sharedLocationService.trackLocationUpdate(locationToConvert, "Converted Location to non-residential cell")
     return locationToConvert.toDto(includeParent = true).also {
+      linkedTransaction.txEndTime = now(clock)
+    }
+  }
+
+  /**
+   * For prisons that require certification approval, converting a cell to a non-residential room cannot happen
+   * immediately. Instead the cell is temporarily deactivated (off cell certificate) and an approval request is
+   * raised capturing the current cell state. The conversion itself is applied later if the request is approved
+   * (see [ApprovalDecisionService]). On reject/withdrawal the cell remains temporarily inactive.
+   */
+  private fun requestConversionApproval(
+    cell: Cell,
+    convertedCellType: ConvertedCellType,
+    otherConvertedCellType: String?,
+  ): LocationDTO {
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      prisonId = cell.prisonId,
+      TransactionType.CELL_CONVERTION_TO_ROOM,
+      "Requesting approval to convert ${cell.getKey()} to a non-residential room",
+    )
+
+    // The cell is about to be temporarily deactivated, which is not allowed while prisoners are present.
+    checkForPrisonersInLocation(cell)
+
+    val username = sharedLocationService.getUsername()
+
+    val approvalRequest = cell.requestApprovalForConvertToNonResidentialCell(
+      requestedDate = linkedTransaction.txStartTime,
+      requestedBy = username,
+      convertedCellType = convertedCellType,
+      otherConvertedCellType = otherConvertedCellType,
+      reasonForChange = null,
+    )
+
+    // Reflect the loss of working capacity on the snapshot (current values from the live certificate, new = 0)
+    // so the approval request shows the capacity being removed, exactly as a temporary deactivation does.
+    val locationHierarchy = approvalRequest.getTopLevelLocation() ?: throw LocationNotFoundException("No top level location")
+    (listOf(locationHierarchy) + locationHierarchy.findSubLocations()).forEach { location ->
+      cellCertificateRepository.findByPrisonIdAndPathHierarchy(cell.prisonId, location.pathHierarchy)?.let { currentCellCert ->
+        location.currentWorkingCapacity = currentCellCert.workingCapacity
+        location.workingCapacity = 0
+        location.currentMaxCapacity = currentCellCert.maxCapacity
+        location.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
+      }
+    }
+    approvalRequest.refreshCapacities()
+
+    cell.temporarilyDeactivate(
+      deactivatedReason = DeactivatedReason.CONVERT_CELL_TO_ROOM,
+      deactivatedDate = now(clock),
+      shortTermDeactivation = true,
+      userOrSystemInContext = username,
+      linkedTransaction = linkedTransaction,
+    )
+
+    locationRepository.saveAndFlush(cell)
+    sharedLocationService.trackLocationUpdate(cell, "Requested approval to convert cell to non-residential room")
+    return cell.toDto(includeParent = true).also {
       linkedTransaction.txEndTime = now(clock)
     }
   }
