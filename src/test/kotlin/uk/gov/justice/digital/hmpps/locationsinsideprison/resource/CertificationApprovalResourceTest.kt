@@ -3560,4 +3560,273 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       }
     }
   }
+
+  @DisplayName("PUT /locations/{id}/convert-cell-to-non-res-cell (with certification approval)")
+  @Nested
+  inner class ConvertCellToNonResidentialRoomTest {
+
+    private fun firstLeedsCell(): Cell = leedsWing.findAllLeafLocations().first() as Cell
+
+    private fun stubNoPrisoners(cell: Cell) {
+      prisonerSearchMockServer.stubSearchByLocations(cell.prisonId, listOf(cell.getPathHierarchy()), false)
+    }
+
+    private fun requestConversion(
+      cell: Cell,
+      convertedCellType: ConvertedCellType = ConvertedCellType.OFFICE,
+    ): Location = webTestClient.put().uri("/locations/${cell.id}/convert-cell-to-non-res-cell")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(jsonString(LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(convertedCellType = convertedCellType)))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<Location>()
+      .returnResult().responseBody!!
+
+    private fun getApproval(id: UUID): CertificationApprovalRequestDto = webTestClient.get().uri("/certification/request-approvals/$id")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CertificationApprovalRequestDto>()
+      .returnResult().responseBody!!
+
+    private fun approveRequest(id: UUID): CertificationApprovalRequestDto = webTestClient.put().uri("/certification/location/approve")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .header("Content-Type", "application/json")
+      .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = id)))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CertificationApprovalRequestDto>()
+      .returnResult().responseBody!!
+
+    private fun getLocation(id: UUID): Location = webTestClient.get().uri("/locations/$id?includeCurrentCertificate=true")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<Location>()
+      .returnResult().responseBody!!
+
+    private fun currentCertificate(prisonId: String): CellCertificateDto = webTestClient.get().uri("/cell-certificates/prison/$prisonId/current")
+      .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody<CellCertificateDto>()
+      .returnResult().responseBody!!
+
+    @Test
+    fun `requesting a conversion temporarily deactivates the cell and captures current values as new=None`() {
+      val cell = firstLeedsCell()
+      stubNoPrisoners(cell)
+
+      val updatedLocation = requestConversion(cell)
+
+      // Cell is now temporarily inactive (off cert) with a pending approval.
+      assertThat(updatedLocation.status).isEqualTo(DerivedLocationStatus.LOCKED_INACTIVE)
+      assertThat(updatedLocation.deactivatedReason).isEqualTo(DeactivatedReason.CONVERT_CELL_TO_ROOM)
+      assertThat(updatedLocation.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_PEND_CHANGE_REQ)
+      assertThat(updatedLocation.pendingApprovalRequestId).isNotNull
+      // Not yet converted
+      assertThat(updatedLocation.convertedCellType).isNull()
+
+      // The cell is deactivated; its parents are amended.
+      getDomainEvents(3).let { messages ->
+        assertThat(messages.map { it.eventType to it.additionalInformation?.key }).containsExactlyInAnyOrder(
+          "location.inside.prison.deactivated" to cell.getKey(),
+          *cell.getParentLocations().map { parent -> "location.inside.prison.amended" to parent.getKey() }.toTypedArray(),
+        )
+      }
+
+      val approval = getApproval(updatedLocation.pendingApprovalRequestId!!)
+      assertThat(approval.approvalType).isEqualTo(ApprovalType.CONVERT_CELL_TO_ROOM)
+      assertThat(approval.status).isEqualTo(ApprovalRequestStatus.PENDING)
+      assertThat(approval.locationId).isEqualTo(cell.id)
+      assertThat(approval.locationKey).isEqualTo(cell.getKey())
+
+      // The new (proposed) value is the converted cell type...
+      assertThat(approval.convertedCellType).isEqualTo(ConvertedCellType.OFFICE)
+      assertThat(approval.otherConvertedCellType).isNull()
+
+      // ...everything else is being removed, so the new (pending) values are null => UI shows "current -> None".
+      assertThat(approval.workingCapacity).isNull()
+      assertThat(approval.maxCapacity).isNull()
+      assertThat(approval.certifiedNormalAccommodation).isNull()
+      assertThat(approval.specialistCellTypes).isNull()
+      assertThat(approval.inCellSanitation).isNull()
+
+      // Current values are surfaced.
+      assertThat(approval.currentInCellSanitation).isTrue()
+      assertThat(approval.workingCapacityChange).isEqualTo(-1)
+      assertThat(approval.locations!![0].currentWorkingCapacity).isEqualTo(1)
+      assertThat(approval.locations!![0].currentMaxCapacity).isEqualTo(2)
+      assertThat(approval.locations!![0].currentCertifiedNormalAccommodation).isEqualTo(1)
+    }
+
+    @Test
+    fun `requesting a conversion captures current specialist cell types`() {
+      val cell = firstLeedsCell()
+
+      // Add a non-capacity-affecting specialist type directly (allowed without approval), updating the cert in place.
+      webTestClient.put().uri("/locations/${cell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.ACCESSIBLE_CELL)))
+        .exchange()
+        .expectStatus().isOk
+      getDomainEvents(1)
+
+      stubNoPrisoners(cell)
+      val updatedLocation = requestConversion(cell)
+      getDomainEvents(3)
+
+      val approval = getApproval(updatedLocation.pendingApprovalRequestId!!)
+      assertThat(approval.currentSpecialistCellTypes).containsExactly(SpecialistCellType.ACCESSIBLE_CELL)
+      // New specialist cell types are removed -> None
+      assertThat(approval.specialistCellTypes).isNull()
+    }
+
+    @Test
+    fun `cannot request a conversion when a prisoner is in the cell`() {
+      val cell = firstLeedsCell()
+      prisonerSearchMockServer.stubSearchByLocations(cell.prisonId, listOf(cell.getPathHierarchy()), true)
+
+      assertThat(
+        webTestClient.put().uri("/locations/${cell.id}/convert-cell-to-non-res-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(convertedCellType = ConvertedCellType.OFFICE)))
+          .exchange()
+          .expectStatus().isEqualTo(HttpStatus.CONFLICT)
+          .expectBody<ErrorResponse>()
+          .returnResult().responseBody!!.errorCode,
+      ).isEqualTo(ErrorCode.DeactivationErrorLocationsContainPrisoners.errorCode)
+
+      // No approval raised and the cell remains active.
+      assertThat(getLocation(cell.id!!).status).isEqualTo(DerivedLocationStatus.ACTIVE)
+    }
+
+    @Test
+    fun `approving a conversion converts the cell to an active non-residential room and updates the certificate`() {
+      val cell = firstLeedsCell()
+      stubNoPrisoners(cell)
+      val updatedLocation = requestConversion(cell)
+      getDomainEvents(3)
+
+      val approved = approveRequest(updatedLocation.pendingApprovalRequestId!!)
+      assertThat(approved.approvalType).isEqualTo(ApprovalType.CONVERT_CELL_TO_ROOM)
+      assertThat(approved.status).isEqualTo(ApprovalRequestStatus.APPROVED)
+      assertThat(approved.certificateId).isNotNull
+
+      getDomainEvents(3).let {
+        assertThat(it.map { msg -> msg.eventType to msg.additionalInformation?.key }).containsExactlyInAnyOrder(
+          "location.inside.prison.amended" to cell.getKey(),
+          *cell.getParentLocations().map { parent -> "location.inside.prison.amended" to parent.getKey() }.toTypedArray(),
+        )
+      }
+
+      // The cell is now an active non-residential converted room with no capacity or specialist types.
+      val convertedCell = getLocation(cell.id!!)
+      assertThat(convertedCell.status).isEqualTo(DerivedLocationStatus.NON_RESIDENTIAL)
+      assertThat(convertedCell.convertedCellType).isEqualTo(ConvertedCellType.OFFICE)
+      assertThat(convertedCell.pendingApprovalRequestId).isNull()
+      assertThat(convertedCell.deactivatedReason).isNull()
+      // Capacity has been removed (a converted room reports zero capacity).
+      assertThat(convertedCell.capacity?.workingCapacity ?: 0).isEqualTo(0)
+      assertThat(convertedCell.capacity?.maxCapacity ?: 0).isEqualTo(0)
+      assertThat(convertedCell.specialistCellTypes).isNullOrEmpty()
+
+      // The new certificate no longer counts the converted cell (was wc1/mc2/cna1 of the 6/12/6 baseline).
+      webTestClient.get().uri("/cell-certificates/${approved.certificateId}")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.current").isEqualTo(true)
+        .jsonPath("$.totalWorkingCapacity").isEqualTo(5)
+        .jsonPath("$.totalMaxCapacity").isEqualTo(10)
+        .jsonPath("$.totalCertifiedNormalAccommodation").isEqualTo(5)
+    }
+
+    @Test
+    fun `rejecting a conversion leaves the cell temporarily inactive and the certificate unchanged`() {
+      val cell = firstLeedsCell()
+      stubNoPrisoners(cell)
+      val updatedLocation = requestConversion(cell)
+      getDomainEvents(3)
+
+      val rejected = webTestClient.put().uri("/certification/location/reject")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(RejectCertificationRequestDto(approvalRequestReference = updatedLocation.pendingApprovalRequestId!!, comments = "Not approved")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(rejected.status).isEqualTo(ApprovalRequestStatus.REJECTED)
+      assertThat(rejected.certificateId).isNull()
+
+      // Cell remains temporarily inactive with the conversion reason, and is NOT converted.
+      val rejectedCell = getLocation(cell.id!!)
+      assertThat(rejectedCell.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(rejectedCell.deactivatedReason).isEqualTo(DeactivatedReason.CONVERT_CELL_TO_ROOM)
+      assertThat(rejectedCell.pendingApprovalRequestId).isNull()
+      assertThat(rejectedCell.convertedCellType).isNull()
+
+      // Certificate still has the cell with its original working capacity.
+      val cellInCert = currentCertificate(cell.prisonId).findLocationInCertificate(cell.getPathHierarchy())
+      assertThat(cellInCert!!.workingCapacity).isEqualTo(1)
+    }
+
+    @Test
+    fun `withdrawing a conversion leaves the cell temporarily inactive`() {
+      val cell = firstLeedsCell()
+      stubNoPrisoners(cell)
+      val updatedLocation = requestConversion(cell)
+      getDomainEvents(3)
+
+      val withdrawn = webTestClient.put().uri("/certification/location/withdraw")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(WithdrawCertificationRequestDto(approvalRequestReference = updatedLocation.pendingApprovalRequestId!!, comments = "Changed my mind")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(withdrawn.status).isEqualTo(ApprovalRequestStatus.WITHDRAWN)
+      assertThat(withdrawn.certificateId).isNull()
+
+      val withdrawnCell = getLocation(cell.id!!)
+      assertThat(withdrawnCell.status).isEqualTo(DerivedLocationStatus.INACTIVE)
+      assertThat(withdrawnCell.deactivatedReason).isEqualTo(DeactivatedReason.CONVERT_CELL_TO_ROOM)
+      assertThat(withdrawnCell.pendingApprovalRequestId).isNull()
+      assertThat(withdrawnCell.convertedCellType).isNull()
+    }
+
+    @Test
+    fun `on a prison that does not require certification approval the cell is converted directly`() {
+      // cell1 is in MDI which does not require certification approval.
+      prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy()), false)
+
+      val result = webTestClient.put().uri("/locations/${cell1.id}/convert-cell-to-non-res-cell")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(convertedCellType = ConvertedCellType.STORE)))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(result.status).isEqualTo(DerivedLocationStatus.NON_RESIDENTIAL)
+      assertThat(result.convertedCellType).isEqualTo(ConvertedCellType.STORE)
+      assertThat(result.pendingApprovalRequestId).isNull()
+
+      getDomainEvents(3).let { messages ->
+        assertThat(messages.map { it.eventType to it.additionalInformation?.key }).containsExactlyInAnyOrder(
+          "location.inside.prison.amended" to cell1.getKey(),
+          *cell1.getParentLocations().map { parent -> "location.inside.prison.amended" to parent.getKey() }.toTypedArray(),
+        )
+      }
+    }
+  }
 }

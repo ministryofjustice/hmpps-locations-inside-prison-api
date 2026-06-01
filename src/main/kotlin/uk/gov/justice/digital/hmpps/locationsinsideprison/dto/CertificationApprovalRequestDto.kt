@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
@@ -125,6 +126,12 @@ data class CertificationApprovalRequestDto(
 
   @param:Schema(description = "Proposed used-for types for a convert-to-cell approval", required = false)
   val usedForTypes: List<UsedForType>? = null,
+
+  @param:Schema(description = "Proposed converted (non-residential) cell type for a convert-to-room approval", example = "OFFICE", required = false)
+  val convertedCellType: ConvertedCellType? = null,
+
+  @param:Schema(description = "Free-text description when the converted cell type is OTHER", example = "Swimming pool", required = false)
+  val otherConvertedCellType: String? = null,
 )
 
 @Schema(description = "Request to approve a certification request")

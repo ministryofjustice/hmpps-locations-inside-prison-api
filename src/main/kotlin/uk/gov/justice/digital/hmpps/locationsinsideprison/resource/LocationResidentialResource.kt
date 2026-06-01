@@ -462,12 +462,19 @@ class LocationResidentialResource(
     @RequestBody
     @Validated
     convertCellToNonResidentialLocationRequest: ConvertCellToNonResidentialLocationRequest,
-  ): Location = eventPublishAndAudit(
-    InternalLocationDomainEventType.LOCATION_AMENDED,
-  ) {
-    with(convertCellToNonResidentialLocationRequest) {
+  ): Location {
+    val updatedLocation = with(convertCellToNonResidentialLocationRequest) {
       locationService.convertToNonResidentialCell(id, convertedCellType, otherConvertedCellType)
     }
+    // On a prison that requires certification approval the cell is temporarily deactivated and an approval request
+    // is raised (conversion happens later on approval), so a deactivation event is published. Otherwise the cell is
+    // converted immediately and amended.
+    val event = if (updatedLocation.pendingApprovalRequestId != null) {
+      InternalLocationDomainEventType.LOCATION_DEACTIVATED
+    } else {
+      InternalLocationDomainEventType.LOCATION_AMENDED
+    }
+    return eventPublishAndAudit(event) { updatedLocation }
   }
 
   @PutMapping("/{id}/update-non-res-cell")
