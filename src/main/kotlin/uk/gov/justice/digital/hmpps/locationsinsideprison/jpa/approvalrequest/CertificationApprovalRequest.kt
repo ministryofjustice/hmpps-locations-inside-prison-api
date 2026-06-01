@@ -173,6 +173,7 @@ enum class ApprovalType(
   SIGNED_OP_CAP,
   DRAFT(true),
   DEACTIVATION,
+  PERMANENT_DEACTIVATION,
   CELL_MARK(true),
   CELL_SANITATION(true),
   REACTIVATION,

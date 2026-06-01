@@ -466,6 +466,21 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.DeactivationErrorLocationsContainPrisoners.errorCode)
       }
+
+      @Test
+      fun `cannot permanently deactivate a location directly when prison requires certification approval`() {
+        val firstCell = leedsWing.findAllLeafLocations().first()
+        assertThat(
+          webTestClient.put().uri("/locations/${firstCell.id}/deactivate/permanent")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Demolished")))
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody<ErrorResponse>()
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.PermanentDeactivationRequiresApproval.errorCode)
+      }
     }
 
     @Nested
@@ -2821,6 +2836,21 @@ class LocationResourceIntTest : CommonDataTestBase() {
             .expectBody<ErrorResponse>()
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(105)
+      }
+
+      @Test
+      fun `cannot bulk permanently deactivate locations when prison requires certification approval`() {
+        val firstCell = leedsWing.findAllLeafLocations().first()
+        assertThat(
+          webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(BulkPermanentDeactivationRequest(reason = "Demolished", locations = listOf(firstCell.getKey()))))
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody<ErrorResponse>()
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(ErrorCode.BulkPermanentDeactivationNotAllowed.errorCode)
       }
     }
 

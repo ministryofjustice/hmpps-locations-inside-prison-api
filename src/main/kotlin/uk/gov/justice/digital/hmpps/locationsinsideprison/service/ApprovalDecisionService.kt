@@ -22,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ce
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ConvertToCellApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ConvertToNonResidentialCellApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.PermanentDeactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.PrisonBaselineApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.SpecialistCellTypeChangeApprovalRequest
@@ -146,6 +147,10 @@ class ApprovalDecisionService(
       handleConvertToCell(approvalRequest, linkedTransaction)
     }
 
+    is PermanentDeactivationApprovalRequest -> {
+      handlePermanentDeactivation(approvalRequest, linkedTransaction)
+    }
+
     is ConvertToNonResidentialCellApprovalRequest -> {
       handleConvertToNonResidentialCell(approvalRequest, linkedTransaction)
     }
@@ -176,6 +181,25 @@ class ApprovalDecisionService(
 
     return mapOf(
       InternalLocationDomainEventType.LOCATION_AMENDED to listOf(cell.toDto(includeParent = true)),
+    )
+  }
+
+  private fun handlePermanentDeactivation(
+    approvalRequest: PermanentDeactivationApprovalRequest,
+    linkedTransaction: LinkedTransaction,
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+    val location = approvalRequest.location
+    location.permanentlyDeactivate(
+      reason = approvalRequest.reasonForChange ?: "Permanent deactivation",
+      deactivatedDate = LocalDateTime.now(clock),
+      userOrSystemInContext = approvalRequest.requestedBy,
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+      bypassPendingApprovalCheck = true,
+    )
+    sharedLocationService.trackLocationUpdate(location, "Permanently deactivated location")
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_DEACTIVATED to listOf(location.toDto(includeChildren = true, includeParent = true)),
     )
   }
 

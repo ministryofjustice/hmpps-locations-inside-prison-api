@@ -640,6 +640,36 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(PermanentDeactivationRequiresApprovalException::class)
+  fun handlePermanentDeactivationRequiresApprovalException(e: PermanentDeactivationRequiresApprovalException): ResponseEntity<ErrorResponse> {
+    log.debug("Permanent deactivation requires approval: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.PermanentDeactivationRequiresApproval,
+          userMessage = "Permanent deactivation requires approval: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(BulkPermanentDeactivationNotAllowedException::class)
+  fun handleBulkPermanentDeactivationNotAllowedException(e: BulkPermanentDeactivationNotAllowedException): ResponseEntity<ErrorResponse> {
+    log.debug("Bulk permanent deactivation not allowed: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.BulkPermanentDeactivationNotAllowed,
+          userMessage = "Bulk permanent deactivation not allowed: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(LocationDoesNotRequireApprovalException::class)
   fun handleLocationDoesNotRequireApprovalException(e: LocationDoesNotRequireApprovalException): ResponseEntity<ErrorResponse> {
     log.debug("Location does not require approval: {}", e.message)
@@ -692,4 +722,6 @@ class LocationCannotBeCreatedWithPendingApprovalException(key: String) : Excepti
 class ApprovalRequestRequiresReasonForChangeException(key: String) : Exception("Approval request for $key requires a reason for change")
 class ChangesCannotBeMadeWithoutCertificationApprovalException(key: String) : Exception("Changes cannot be made to $key without certification approval")
 class SpecialistCellTypeChangesRequireCertificationApprovalException(key: String) : Exception("Adding or removing specialist cell types that affect capacity for $key requires certification approval - use the specialist cell type change approval endpoint")
+class PermanentDeactivationRequiresApprovalException(key: String) : Exception("Location $key cannot be permanently deactivated directly while certification approval is active - use the permanent deactivation approval endpoint")
+class BulkPermanentDeactivationNotAllowedException(prisonId: String) : Exception("Bulk permanent deactivation is not allowed for $prisonId while certification approval is active")
 class SpecialistCellTypeChangesDoNotRequireApprovalException(key: String) : Exception("The specialist cell type change for $key does not require approval - the count of capacity-affecting specialist cell types is not changing")

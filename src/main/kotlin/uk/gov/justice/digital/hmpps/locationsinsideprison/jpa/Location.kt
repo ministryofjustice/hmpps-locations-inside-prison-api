@@ -935,6 +935,7 @@ abstract class Location(
     clock: Clock,
     linkedTransaction: LinkedTransaction,
     activeLocationCanBePermDeactivated: Boolean = false,
+    bypassPendingApprovalCheck: Boolean = false,
   ): Boolean {
     if (isPermanentlyDeactivated()) {
       log.warn("Location [${getKey()}] is already permanently deactivated")
@@ -943,7 +944,7 @@ abstract class Location(
       if (isActiveAndAllParentsActive() && !activeLocationCanBePermDeactivated) {
         throw ActiveLocationCannotBePermanentlyDeactivatedException(getKey())
       }
-      if (hasPendingCertificationApproval()) {
+      if (!bypassPendingApprovalCheck && hasPendingCertificationApproval()) {
         throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
       }
       val amendedDate = LocalDateTime.now(clock)

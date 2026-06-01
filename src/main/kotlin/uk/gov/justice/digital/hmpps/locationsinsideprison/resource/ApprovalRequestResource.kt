@@ -28,6 +28,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalDecisi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalRequestService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PermanentDeactivationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ReactivationLocationsApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SignedOpCapApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SpecialistCellTypeApprovalRequest
@@ -200,6 +201,45 @@ class ApprovalRequestResource(
     specialistCellTypeApprovalRequest: SpecialistCellTypeApprovalRequest,
   ): CertificationApprovalRequestDto = approvalRequestService.requestSpecialistCellTypeChangeApproval(
     specialistCellTypeApprovalRequest,
+  )
+
+  @PutMapping("/location/permanent-deactivation-request-approval")
+  @Operation(
+    summary = "Requests approval to permanently deactivate a location (and any sub-locations below it)",
+    description = "Requires role LOCATION_CERTIFICATION. The location must already be temporarily deactivated. On approval the location is permanently deactivated and removed from the cell certificate; on rejection or withdrawal the location stays in its existing inactive status.",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the approval request",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CERTIFICATION role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun requestPermanentDeactivationApproval(
+    @RequestBody
+    @Validated
+    permanentDeactivationApprovalRequest: PermanentDeactivationApprovalRequestDto,
+  ): CertificationApprovalRequestDto = approvalRequestService.requestPermanentDeactivationApproval(
+    permanentDeactivationApprovalRequest,
   )
 
   @PutMapping("/location/approve")
