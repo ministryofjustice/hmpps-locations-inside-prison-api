@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import org.springframework.test.web.reactive.server.expectBody
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationTest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
@@ -447,6 +448,85 @@ class LocationTransformResourceTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "LEI-A",
           )
         }
+      }
+    }
+
+    @Nested
+    inner class AccommodationTypeRestriction {
+
+      @Test
+      fun `cascading from a parent only updates normal accommodation cells`() {
+        val expectedUsedFor = setOf(UsedForType.PERSONALITY_DISORDER)
+
+        val result = webTestClient.put().uri("/locations/${wingZ.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(expectedUsedFor))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<LocationTest>()
+          .returnResult().responseBody!!
+
+        // cell1 (Z-1-001) is normal accommodation and is updated
+        val normalCell = result.findByPathHierarchy("Z-1-001")!!
+        assertThat(normalCell.usedFor).containsExactly(UsedForType.PERSONALITY_DISORDER)
+
+        // cell2 (Z-1-002) is CARE_AND_SEPARATION and must be left untouched (keeps its original value)
+        val careAndSeparationCell = result.findByPathHierarchy("Z-1-002")!!
+        assertThat(careAndSeparationCell.usedFor).containsExactly(UsedForType.STANDARD_ACCOMMODATION)
+      }
+
+      @Test
+      fun `cannot update used-for-type directly on a non normal accommodation cell`() {
+        assertThat(
+          webTestClient.put().uri("/locations/${cell2.id}/used-for-type")
+            .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+            .header("Content-Type", "application/json")
+            .bodyValue(jsonString(setOf(UsedForType.PERSONALITY_DISORDER)))
+            .exchange()
+            .expectStatus().isBadRequest
+            .expectBody<ErrorResponse>()
+            .returnResult().responseBody!!.errorCode,
+        ).isEqualTo(138)
+      }
+
+      @Test
+      fun `can update used-for-type directly on a normal accommodation cell`() {
+        val result = webTestClient.put().uri("/locations/${cell1.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(UsedForType.PERSONALITY_DISORDER)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<LocationTest>()
+          .returnResult().responseBody!!
+
+        assertThat(result.usedFor).containsExactly(UsedForType.PERSONALITY_DISORDER)
+      }
+
+      @Test
+      fun `updating used-for-type updates the current cell certificate for the affected cells`() {
+        baselinePrison(leedsWing.prisonId)
+
+        val leedsCellPath = leedsWing.findAllLeafLocations().first().getPathHierarchy()
+
+        webTestClient.put().uri("/locations/${leedsWing.id}/used-for-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(setOf(UsedForType.PERSONALITY_DISORDER)))
+          .exchange()
+          .expectStatus().isOk
+
+        val currentCert = webTestClient.get().uri("/cell-certificates/prison/${leedsWing.prisonId}/current")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<CellCertificateDto>()
+          .returnResult().responseBody!!
+
+        val cellInCert = currentCert.findLocationInCertificate(leedsCellPath)
+        assertThat(cellInCert).isNotNull
+        assertThat(cellInCert?.usedFor).containsExactly(UsedForType.PERSONALITY_DISORDER)
       }
     }
   }

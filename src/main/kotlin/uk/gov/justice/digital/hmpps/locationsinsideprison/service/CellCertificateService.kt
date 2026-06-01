@@ -79,4 +79,11 @@ class CellCertificateService(
       certLocation.specialistCellTypes = cell.getSpecialistCellTypesAsCSV()
     }
   }
+
+  fun updateUsedForTypesInCurrentCertificate(cell: Cell) {
+    val currentCert = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(cell.prisonId) ?: return
+    currentCert.findLocationInCertificate(cell.getPathHierarchy())?.let { certLocation ->
+      certLocation.usedForTypes = cell.getUsedForValuesAsCSV()
+    }
+  }
 }

@@ -166,7 +166,7 @@ open class CellCertificateLocation(
 
   open var specialistCellTypes: String? = null,
 
-  private val usedForTypes: String? = null,
+  open var usedForTypes: String? = null,
 
   private val accommodationTypes: String? = null,
 
