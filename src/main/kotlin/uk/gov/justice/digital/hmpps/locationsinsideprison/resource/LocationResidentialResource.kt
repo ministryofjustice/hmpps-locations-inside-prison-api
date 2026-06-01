@@ -568,19 +568,25 @@ class LocationResidentialResource(
     @RequestBody
     @Validated
     convertToCellRequest: ConvertToCellRequest,
-  ): Location = eventPublishAndAudit(
-    InternalLocationDomainEventType.LOCATION_AMENDED,
-  ) {
-    with(convertToCellRequest) {
+  ): Location {
+    val updatedLocation = with(convertToCellRequest) {
       locationService.convertToCell(
         id = id,
         accommodationType = accommodationType,
         specialistCellTypes = specialistCellTypes,
+        certifiedNormalAccommodation = certifiedNormalAccommodation,
         maxCapacity = maxCapacity,
         workingCapacity = workingCapacity,
         usedForTypes = usedForTypes,
       )
     }
+    // On a prison that requires certification approval the room is left unchanged but locked with a pending
+    // approval request (the conversion happens later on approval), so no event is published here. Otherwise the
+    // room is converted to a cell immediately and amended.
+    if (updatedLocation.pendingApprovalRequestId == null) {
+      eventPublishAndAudit(InternalLocationDomainEventType.LOCATION_AMENDED) { updatedLocation }
+    }
+    return updatedLocation
   }
 
   @Schema(description = "Request to convert a cell to a non-res location")
@@ -607,6 +613,10 @@ class LocationResidentialResource(
     val accommodationType: AllowedAccommodationTypeForConversion,
     @param:Schema(description = "Specialist cell types", example = "[ \"BIOHAZARD_DIRTY_PROTEST\", \"ACCESSIBLE_CELL\" ]", required = false)
     val specialistCellTypes: Set<SpecialistCellType>? = null,
+    @param:Schema(description = "Baseline CNA", example = "1", required = false)
+    @field:Max(value = 99, message = "Baseline CNA cannot be greater than 99")
+    @field:PositiveOrZero(message = "Baseline CNA cannot be less than 0")
+    val certifiedNormalAccommodation: Int? = null,
     @param:Schema(description = "Maximum capacity", example = "2", required = true)
     @field:Max(value = 99, message = "Max capacity cannot be greater than 99")
     @field:PositiveOrZero(message = "Max capacity cannot be less than 0")
