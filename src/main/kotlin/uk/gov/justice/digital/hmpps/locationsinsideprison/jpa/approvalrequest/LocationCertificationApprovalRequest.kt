@@ -68,7 +68,7 @@ abstract class LocationCertificationApprovalRequest(
 
   fun generateLocationHierarchy(): CertificationApprovalRequestLocation = location.toCertificationApprovalRequestLocation(
     includeDraftOrPending = getApprovalType().hasPendingValues,
-    deactivation = getApprovalType() == ApprovalType.DEACTIVATION,
+    deactivation = getApprovalType() == ApprovalType.DEACTIVATION || getApprovalType() == ApprovalType.PERMANENT_DEACTIVATION,
     reactivation = getApprovalType() == ApprovalType.REACTIVATION,
   )
 

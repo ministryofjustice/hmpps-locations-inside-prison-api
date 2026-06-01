@@ -42,4 +42,6 @@ enum class ErrorCode(val errorCode: Int) {
   ApprovalRequestRequiresReasonForChange(133),
   ChangesCannotBeMadeWithoutCertificationApproval(134),
   SpecialistCellTypeChangesRequireCertificationApproval(135),
+  PermanentDeactivationRequiresApproval(136),
+  BulkPermanentDeactivationNotAllowed(137),
 }

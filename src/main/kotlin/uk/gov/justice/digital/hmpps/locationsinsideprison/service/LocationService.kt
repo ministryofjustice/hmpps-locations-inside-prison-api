@@ -58,6 +58,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Residen
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.validateCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestRequiresReasonForChangeException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanentDeactivationNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.BulkPermanentDeactivationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellWithSpecialistCellTypes
@@ -75,6 +76,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentDeactivationRequiresApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLocationsRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
@@ -1102,9 +1104,10 @@ class LocationService(
       val prisonId = locationRepository.findOneByKey(key)?.prisonId ?: throw LocationNotFoundException(key)
       val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
 
-      if (certificationApprovalRequired && permanentDeactivationRequest.reasonForChange.isNullOrEmpty()) {
-        throw ApprovalRequestRequiresReasonForChangeException(key)
+      if (certificationApprovalRequired) {
+        throw BulkPermanentDeactivationNotAllowedException(prisonId)
       }
+
       prisonId
     } ?: throw LocationNotFoundException("No location found in request")
 
@@ -1191,6 +1194,10 @@ class LocationService(
   ): LocationDTO {
     val locationToArchive = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (activePrisonService.isCertificationApprovalRequired(locationToArchive.prisonId)) {
+      throw PermanentDeactivationRequiresApprovalException(locationToArchive.getKey())
+    }
 
     val wasActiveBefore = locationToArchive.isActiveAndAllParentsActive()
     if (wasActiveBefore) {
