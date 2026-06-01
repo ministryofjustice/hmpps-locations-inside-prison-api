@@ -19,7 +19,9 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLoc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ActiveLocationCannotBePermanentlyDeactivatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestRequiresReasonForChangeException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellReactivationDetail
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
@@ -296,6 +298,67 @@ class ApprovalRequestService(
       linkedTransaction.txEndTime = now(clock)
     }
   }
+
+  fun requestPermanentDeactivationApproval(request: PermanentDeactivationApprovalRequestDto): CertificationApprovalRequestDto {
+    val location = residentialLocationRepository.findById(request.locationId)
+      .orElseThrow { LocationNotFoundException(request.locationId.toString()) }
+
+    val approvalRequired = activePrisonService.isCertificationApprovalRequired(location.prisonId)
+    if (!approvalRequired) {
+      throw LocationDoesNotRequireApprovalException("Certification approval not required for location ${location.getKey()}")
+    }
+
+    if (location.isActiveAndAllParentsActive()) {
+      throw ActiveLocationCannotBePermanentlyDeactivatedException(location.getKey())
+    }
+
+    if (request.reason.isBlank()) {
+      throw ApprovalRequestRequiresReasonForChangeException(location.getKey())
+    }
+
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      prisonId = location.prisonId,
+      type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+      detail = "Requesting permanent deactivation approval for location ${location.getKey()}",
+    )
+    val username = sharedLocationService.getUsername()
+
+    val approvalRequest = location.requestApprovalForPermanentDeactivation(
+      requestedDate = linkedTransaction.txStartTime,
+      requestedBy = username,
+      workingCapacityChange = -location.calcWorkingCapacity(),
+      reasonForChange = request.reason,
+    )
+    certificationApprovalRequestRepository.save(approvalRequest)
+
+    // Snapshot the current certificate values onto the request hierarchy for preview
+    val locationHierarchy = approvalRequest.getTopLevelLocation() ?: throw LocationNotFoundException("No top level location")
+    (listOf(locationHierarchy) + locationHierarchy.findSubLocations()).forEach { approvalLocation ->
+      cellCertificateRepository.findByPrisonIdAndPathHierarchy(location.prisonId, approvalLocation.pathHierarchy)?.let { currentCellCert ->
+        approvalLocation.currentWorkingCapacity = currentCellCert.workingCapacity
+        approvalLocation.workingCapacity = 0
+        approvalLocation.currentMaxCapacity = currentCellCert.maxCapacity
+        approvalLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
+      }
+    }
+    approvalRequest.refreshCapacities()
+
+    telemetryClient.trackEvent(
+      "permanent-deactivation-approval-requested",
+      mapOf(
+        "id" to approvalRequest.id.toString(),
+        "locationKey" to location.getKey(),
+        "requestedBy" to username,
+        "approvalRequestId" to approvalRequest.id.toString(),
+      ),
+      null,
+    )
+
+    log.info("Permanent deactivation approval requested (${approvalRequest.id}) for location ${location.getKey()} by $username")
+    return approvalRequest.toDto(showLocations = true).also {
+      linkedTransaction.txEndTime = now(clock)
+    }
+  }
 }
 
 @Schema(description = "Request to approve a location or set of locations and cells below it")
@@ -373,4 +436,14 @@ data class SpecialistCellTypeApprovalRequest(
 
   @param:Schema(description = "Explanation of why the specialist cell type is changing", required = false)
   val reasonForChange: String? = null,
+)
+
+@Schema(description = "Request to permanently deactivate a location (and any sub-locations) that is already temporarily deactivated")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class PermanentDeactivationApprovalRequestDto(
+  @param:Schema(description = "The location Id to permanently deactivate, must already be temporarily deactivated", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+  val locationId: UUID,
+
+  @param:Schema(description = "Reason for permanent deactivation", example = "Wing demolished", required = true)
+  val reason: String,
 )
