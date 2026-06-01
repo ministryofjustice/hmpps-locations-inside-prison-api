@@ -19,6 +19,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ap
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CapacityChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ConvertToCellApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ConvertToNonResidentialCellApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.PermanentDeactivationApprovalRequest
@@ -142,6 +143,10 @@ class ApprovalDecisionService(
       handleSpecialistCellTypeChange(approvalRequest, linkedTransaction)
     }
 
+    is ConvertToCellApprovalRequest -> {
+      handleConvertToCell(approvalRequest, linkedTransaction)
+    }
+
     is PermanentDeactivationApprovalRequest -> {
       handlePermanentDeactivation(approvalRequest, linkedTransaction)
     }
@@ -153,6 +158,30 @@ class ApprovalDecisionService(
     else -> {
       null
     }
+  }
+
+  private fun handleConvertToCell(
+    approvalRequest: ConvertToCellApprovalRequest,
+    linkedTransaction: LinkedTransaction,
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+    val cell = approvalRequest.location as Cell
+    // No prisoner check is needed: the location is a non-residential room, so it cannot contain prisoners.
+    // Apply the conversion (guard-free, as the request is still PENDING) so the room becomes an active cell again.
+    cell.applyConvertToCell(
+      accommodationType = approvalRequest.accommodationType,
+      usedForTypes = approvalRequest.getUsedForTypesFromPendingList(),
+      specialistCellTypes = approvalRequest.getSpecialistCellTypesFromPendingList().toSet(),
+      certifiedNormalAccommodation = approvalRequest.certifiedNormalAccommodation,
+      maxCapacity = approvalRequest.maxCapacity,
+      workingCapacity = approvalRequest.workingCapacity,
+      userOrSystemInContext = approvalRequest.requestedBy,
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
+
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to listOf(cell.toDto(includeParent = true)),
+    )
   }
 
   private fun handlePermanentDeactivation(

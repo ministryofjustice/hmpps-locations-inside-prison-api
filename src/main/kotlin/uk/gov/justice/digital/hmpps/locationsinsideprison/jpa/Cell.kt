@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CellMarkChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ConvertToCellApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ConvertToNonResidentialCellApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
@@ -277,11 +278,19 @@ class Cell(
     temporarilyOffCellCert = false
   }
 
-  fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+  fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, certifiedNormalAccommodation: Int? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
+    applyConvertToCell(accommodationType.mapsTo, usedForTypes, specialistCellTypes, certifiedNormalAccommodation, maxCapacity, workingCapacity, userOrSystemInContext, clock, linkedTransaction)
+  }
 
+  /**
+   * Converts a non-residential room back to a cell without the pending-approval guard. Used both by the public
+   * [convertToCell] and when applying a previously requested conversion as part of approving a
+   * [ConvertToCellApprovalRequest] (where the request is still PENDING at the point of conversion).
+   */
+  internal fun applyConvertToCell(accommodationType: AccommodationType, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, certifiedNormalAccommodation: Int? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     val amendedDate = LocalDateTime.now(clock)
     addHistory(
       LocationAttribute.STATUS,
@@ -295,7 +304,7 @@ class Cell(
     otherConvertedCellType = null
     certifyCell(userOrSystemInContext, amendedDate, linkedTransaction)
 
-    setAccommodationTypeForCell(accommodationType.mapsTo, userOrSystemInContext, clock, linkedTransaction)
+    setAccommodationTypeForCell(accommodationType, userOrSystemInContext, clock, linkedTransaction)
 
     usedForTypes?.forEach {
       addUsedFor(it, userOrSystemInContext, clock, linkedTransaction)
@@ -303,7 +312,7 @@ class Cell(
 
     specialistCellTypes?.let { updateSpecialistCellTypes(specialistCellTypes = it, clock = clock, userOrSystemInContext = userOrSystemInContext, linkedTransaction = linkedTransaction) }
 
-    setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, certifiedNormalAccommodation = workingCapacity, userOrSystemInContext = userOrSystemInContext, amendedDate = amendedDate, linkedTransaction = linkedTransaction)
+    setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, certifiedNormalAccommodation = certifiedNormalAccommodation ?: workingCapacity, userOrSystemInContext = userOrSystemInContext, amendedDate = amendedDate, linkedTransaction = linkedTransaction)
 
     if (hasDeactivatedParent()) {
       reactivate(userOrSystemInContext, clock, linkedTransaction)
@@ -690,6 +699,36 @@ class Cell(
         certifiedNormalAccommodation = certifiedNormalAccommodation,
       ),
     ) as SpecialistCellTypeChangeApprovalRequest
+  }
+
+  fun requestApprovalForConvertToCell(
+    requestedDate: LocalDateTime,
+    requestedBy: String,
+    accommodationType: AccommodationType,
+    specialistCellTypes: Set<SpecialistCellType>?,
+    certifiedNormalAccommodation: Int,
+    maxCapacity: Int,
+    workingCapacity: Int,
+    usedForTypes: List<UsedForType>?,
+    reasonForChange: String?,
+  ): ConvertToCellApprovalRequest {
+    if (hasPendingCertificationApproval()) {
+      throw PendingApprovalAlreadyExistsException(getKey())
+    }
+    return addApprovalToLocation(
+      ConvertToCellApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        reasonForChange = reasonForChange,
+        accommodationType = accommodationType,
+        specialistCellTypes = specialistCellTypes?.joinToString(",") { it.name },
+        usedForTypes = usedForTypes?.joinToString(",") { it.name },
+        workingCapacity = workingCapacity,
+        maxCapacity = maxCapacity,
+        certifiedNormalAccommodation = certifiedNormalAccommodation,
+      ),
+    ) as ConvertToCellApprovalRequest
   }
 
   fun requestApprovalForConvertToNonResidentialCell(
