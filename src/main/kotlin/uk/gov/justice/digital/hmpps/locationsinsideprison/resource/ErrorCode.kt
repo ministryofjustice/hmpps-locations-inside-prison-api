@@ -44,4 +44,5 @@ enum class ErrorCode(val errorCode: Int) {
   SpecialistCellTypeChangesRequireCertificationApproval(135),
   PermanentDeactivationRequiresApproval(136),
   BulkPermanentDeactivationNotAllowed(137),
+  UsedForTypesOnlyForNormalAccommodation(138),
 }

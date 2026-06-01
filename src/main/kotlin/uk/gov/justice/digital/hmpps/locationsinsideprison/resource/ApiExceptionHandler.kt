@@ -595,6 +595,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(UsedForTypesOnlyForNormalAccommodationException::class)
+  fun handleUsedForTypesOnlyForNormalAccommodationException(e: UsedForTypesOnlyForNormalAccommodationException): ResponseEntity<ErrorResponse> {
+    log.debug("Used for types can only be set on normal accommodation cells: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.UsedForTypesOnlyForNormalAccommodation,
+          userMessage = "Used for types can only be set on normal accommodation cells: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(SpecialistCellTypeChangesDoNotRequireApprovalException::class)
   fun handleSpecialistCellTypeChangesDoNotRequireApprovalException(e: SpecialistCellTypeChangesDoNotRequireApprovalException): ResponseEntity<ErrorResponse> {
     log.debug("Specialist cell type changes do not require approval: {}", e.message)
@@ -725,3 +740,4 @@ class SpecialistCellTypeChangesRequireCertificationApprovalException(key: String
 class PermanentDeactivationRequiresApprovalException(key: String) : Exception("Location $key cannot be permanently deactivated directly while certification approval is active - use the permanent deactivation approval endpoint")
 class BulkPermanentDeactivationNotAllowedException(prisonId: String) : Exception("Bulk permanent deactivation is not allowed for $prisonId while certification approval is active")
 class SpecialistCellTypeChangesDoNotRequireApprovalException(key: String) : Exception("The specialist cell type change for $key does not require approval - the count of capacity-affecting specialist cell types is not changing")
+class UsedForTypesOnlyForNormalAccommodationException(key: String) : Exception("Used for types can only be set on normal accommodation cells - $key is not a normal accommodation cell")

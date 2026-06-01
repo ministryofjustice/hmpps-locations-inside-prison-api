@@ -350,12 +350,32 @@ open class ResidentialLocation(
     userOrSystemInContext: String,
     clock: Clock,
     linkedTransaction: LinkedTransaction,
-  ) {
+  ): List<Cell> {
+    // Used-for values are only meaningful for normal accommodation cells, so only those cells have their
+    // data changed. Parent (wing/landing) locations still record history as before. Returns the cells
+    // actually updated so the caller can keep any current cell certificate in sync.
+    val updatedCells = mutableListOf<Cell>()
+
+    fun ResidentialLocation.applyUsedForUpdate() {
+      if (this is Cell) {
+        if (accommodationType == AccommodationType.NORMAL_ACCOMMODATION) {
+          updateUsedFor(newUsedFor, userOrSystemInContext, clock, linkedTransaction)
+          updatedCells += this
+        }
+      } else {
+        // Parents hold no used-for data themselves - only record history, and base it on the normal
+        // accommodation cells, since those are the only cells that actually change.
+        recordParentUsedForHistory(newUsedFor, userOrSystemInContext, clock, linkedTransaction)
+      }
+    }
+
     if (cellLocations().isNotEmpty()) {
-      updateUsedFor(newUsedFor, userOrSystemInContext, clock, linkedTransaction)
+      applyUsedForUpdate()
     }
     findSubLocations().filterIsInstance<ResidentialLocation>().filter { it.cellLocations().isNotEmpty() }
-      .forEach { it.updateUsedFor(newUsedFor, userOrSystemInContext, clock, linkedTransaction) }
+      .forEach { it.applyUsedForUpdate() }
+
+    return updatedCells
   }
 
   fun removeCell(cell: Cell): Boolean = cell.isDraft() && childLocations.remove(cell)
@@ -389,6 +409,23 @@ open class ResidentialLocation(
         .toSet(),
     )
   }
+
+  // Records used-for history on a parent location without storing any used-for data on it. The history is
+  // based on the parent's normal accommodation cells, which are the only cells a used-for update changes.
+  private fun recordParentUsedForHistory(
+    newUsedFor: Set<UsedForType>,
+    userOrSystemInContext: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    recordRemovedUsedForTypes(getNormalAccommodationUsedForValues(), newUsedFor, userOrSystemInContext, clock, linkedTransaction)
+    newUsedFor.forEach { addUsedFor(it, userOrSystemInContext, clock, linkedTransaction) }
+  }
+
+  private fun getNormalAccommodationUsedForValues(): Set<CellUsedFor> = cellLocations()
+    .filter { isCurrentCellOrNotPermanentlyInactive(it) && it.accommodationType == AccommodationType.NORMAL_ACCOMMODATION }
+    .flatMap { it.usedFor }
+    .toSet()
 
   protected fun recordRemovedUsedForTypes(
     currentUsedFor: Set<CellUsedFor>,
@@ -644,7 +681,7 @@ open class ResidentialLocation(
 
   private fun getAccommodationTypesAsCSV(): String? = getAccommodationTypes().takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name }
 
-  private fun getUsedForValuesAsCSV(): String? = getUsedForValues().map { it.usedFor }.distinct().takeIf { it.isNotEmpty() }
+  fun getUsedForValuesAsCSV(): String? = getUsedForValues().map { it.usedFor }.distinct().takeIf { it.isNotEmpty() }
     ?.joinToString(separator = ",") { it.name }
 
   override fun toDto(
