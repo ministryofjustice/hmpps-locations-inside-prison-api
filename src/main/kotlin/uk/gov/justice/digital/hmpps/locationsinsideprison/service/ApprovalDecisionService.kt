@@ -19,6 +19,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ap
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CapacityChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ConvertToNonResidentialCellApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.PrisonBaselineApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ReactivationApprovalRequest
@@ -140,9 +141,35 @@ class ApprovalDecisionService(
       handleSpecialistCellTypeChange(approvalRequest, linkedTransaction)
     }
 
+    is ConvertToNonResidentialCellApprovalRequest -> {
+      handleConvertToNonResidentialCell(approvalRequest, linkedTransaction)
+    }
+
     else -> {
       null
     }
+  }
+
+  private fun handleConvertToNonResidentialCell(
+    approvalRequest: ConvertToNonResidentialCellApprovalRequest,
+    linkedTransaction: LinkedTransaction,
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
+    val cell = approvalRequest.location as Cell
+    // No prisoner check is needed: the cell was made temporarily inactive when the approval was requested, so it
+    // cannot contain prisoners. Clear that temporary deactivation, then apply the conversion so the cell ends up
+    // as an active non-residential converted cell.
+    cell.clearTemporaryDeactivationForConversion(approvalRequest.requestedBy, linkedTransaction)
+    cell.applyConversionToNonResidentialCell(
+      convertedCellType = approvalRequest.convertedCellType,
+      otherConvertedCellType = approvalRequest.otherConvertedCellType,
+      userOrSystemInContext = approvalRequest.requestedBy,
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
+
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to listOf(cell.toDto(includeParent = true)),
+    )
   }
 
   private fun handleCapacityChange(
