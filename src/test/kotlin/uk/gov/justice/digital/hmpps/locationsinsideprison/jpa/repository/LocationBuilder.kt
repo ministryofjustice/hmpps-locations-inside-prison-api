@@ -107,7 +107,9 @@ fun buildCell(
   cell.addAttributes(residentialAttributeValues)
 
   specialistCellType?.let { cell.updateCellSpecialistCellTypes(setOf(it), EXPECTED_USERNAME, clock, linkedTransaction) }
-  cell.updateCellUsedFor(setOf(UsedForType.STANDARD_ACCOMMODATION), EXPECTED_USERNAME, clock, linkedTransaction)
+  // Set the default used-for directly so non-normal accommodation test cells keep a used-for value
+  // (updateCellUsedFor only applies to normal accommodation cells).
+  cell.updateUsedFor(setOf(UsedForType.STANDARD_ACCOMMODATION), EXPECTED_USERNAME, clock, linkedTransaction)
   if (status == LocationStatus.ARCHIVED) {
     cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), EXPECTED_USERNAME, clock, linkedTransaction)
   }

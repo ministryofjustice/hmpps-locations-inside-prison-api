@@ -82,6 +82,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLoc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.SpecialistCellTypeChangesRequireCertificationApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateCapacityRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UsedForTypesOnlyForNormalAccommodationException
 import java.lang.Boolean.TRUE
 import java.time.Clock
 import java.time.LocalDate
@@ -727,18 +728,29 @@ class LocationService(
       throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
     }
 
+    // Used for types are only applicable to normal accommodation cells. When the endpoint targets a single
+    // cell directly it must be a normal accommodation cell; cascading from a parent silently skips any
+    // non-normal cells below it.
+    if (residentialLocation is Cell && residentialLocation.accommodationType != AccommodationType.NORMAL_ACCOMMODATION) {
+      throw UsedForTypesOnlyForNormalAccommodationException(residentialLocation.getKey())
+    }
+
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = residentialLocation.prisonId,
       TransactionType.LOCATION_UPDATE,
       "Updated Used for types for below location ${residentialLocation.getKey()}",
     )
 
-    residentialLocation.updateCellUsedFor(
+    val updatedCells = residentialLocation.updateCellUsedFor(
       usedFor,
       sharedLocationService.getUsername(),
       clock,
       linkedTransaction,
     )
+
+    if (activePrisonService.isCertificationApprovalRequired(residentialLocation.prisonId)) {
+      updatedCells.forEach { cellCertificateService.updateUsedForTypesInCurrentCertificate(it) }
+    }
 
     log.info("Updated Used for types for below Location [$residentialLocation.getKey()]")
     sharedLocationService.trackLocationUpdate(residentialLocation, "Updated Used For Type below Residential Location")
