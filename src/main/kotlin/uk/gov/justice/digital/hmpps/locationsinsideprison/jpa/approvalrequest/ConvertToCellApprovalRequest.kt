@@ -7,6 +7,7 @@ import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.time.LocalDateTime
@@ -42,6 +43,24 @@ open class ConvertToCellApprovalRequest(
   @Column(nullable = true)
   open var certifiedNormalAccommodation: Int,
 
+  // The current (pre-conversion) values are surfaced so the UI can play back "current -> new".
+  // Reuses the existing converted_cell_type / other_converted_cell_type columns (see
+  // ConvertToNonResidentialCellApprovalRequest) which are otherwise unused for a convert-to-cell.
+  @Column(name = "converted_cell_type", nullable = true)
+  @Enumerated(EnumType.STRING)
+  open var currentConvertedCellType: ConvertedCellType? = null,
+
+  @Column(name = "other_converted_cell_type", nullable = true)
+  open var currentOtherConvertedCellType: String? = null,
+
+  // Populated only when the proposed accommodation type / used-for differ from the parent's current
+  // values (see Cell.requestApprovalForConvertToCell); null means "matches the parent, nothing to show".
+  @Column(name = "current_accommodation_types", nullable = true)
+  open var currentAccommodationTypes: String? = null,
+
+  @Column(name = "current_used_for_types", nullable = true)
+  open var currentUsedForTypes: String? = null,
+
 ) : LocationCertificationApprovalRequest(
   id = id,
   location = location,
@@ -62,6 +81,18 @@ open class ConvertToCellApprovalRequest(
     ?.map { UsedForType.valueOf(it.trim()) }
     ?: emptyList()
 
+  fun getCurrentAccommodationTypesFromList(): List<AccommodationType> = currentAccommodationTypes
+    ?.split(",")
+    ?.filter { it.isNotBlank() }
+    ?.map { AccommodationType.valueOf(it.trim()) }
+    ?: emptyList()
+
+  fun getCurrentUsedForTypesFromList(): List<UsedForType> = currentUsedForTypes
+    ?.split(",")
+    ?.filter { it.isNotBlank() }
+    ?.map { UsedForType.valueOf(it.trim()) }
+    ?: emptyList()
+
   // The non-residential room is being converted back to a cell. The "new" (pending) values are the cell being
   // re-created; the room currently has no capacity or specialist cell types so the UI renders e.g. "None -> 2".
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
@@ -71,6 +102,10 @@ open class ConvertToCellApprovalRequest(
     specialistCellTypes = getSpecialistCellTypesFromPendingList().toSet().takeIf { it.isNotEmpty() },
     accommodationType = accommodationType,
     usedForTypes = getUsedForTypesFromPendingList().takeIf { it.isNotEmpty() },
+    currentConvertedCellType = currentConvertedCellType,
+    currentOtherConvertedCellType = currentOtherConvertedCellType,
+    currentAccommodationTypes = getCurrentAccommodationTypesFromList().takeIf { it.isNotEmpty() },
+    currentUsedForTypes = getCurrentUsedForTypesFromList().takeIf { it.isNotEmpty() },
   )
 
   override fun getApprovalType() = ApprovalType.CONVERT_ROOM_TO_CELL
