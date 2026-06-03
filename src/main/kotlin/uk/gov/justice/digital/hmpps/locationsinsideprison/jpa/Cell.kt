@@ -589,6 +589,15 @@ class Cell(
 
   fun getSpecialistCellTypesForCell(): Set<SpecialistCellType> = specialistCellTypes.map { it.specialistCellType }.toSet()
 
+  fun getSpecialistCellTypesForCell(includePending: Boolean): Set<SpecialistCellType> {
+    val pendingChange = if (includePending) {
+      getPendingApprovalRequest() as? SpecialistCellTypeChangeApprovalRequest
+    } else {
+      null
+    }
+    return pendingChange?.getSpecialistCellTypesFromPendingList()?.toSet() ?: getSpecialistCellTypesForCell()
+  }
+
   override fun processApproval(
     pendingApprovalRequest: CertificationApprovalRequest,
     approvedBy: String,
@@ -837,6 +846,7 @@ class Cell(
         certifiedNormalAccommodation = calcCertifiedNormalAccommodation(true),
         cellMark = getDoorCellMark(true),
         inCellSanitation = getSanitationOfCell(true),
+        specialistCellTypes = getSpecialistCellTypesForCell(true),
       )
     } else {
       null

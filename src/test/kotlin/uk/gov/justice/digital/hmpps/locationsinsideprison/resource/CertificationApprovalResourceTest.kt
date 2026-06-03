@@ -2830,6 +2830,13 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       assertThat(lockedCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
       assertThat(lockedCell.pendingApprovalRequestId).isEqualTo(pendingApproval.id)
+
+      // The pending change surfaces the proposed specialist cell types, while the live value is unchanged.
+      assertThat(lockedCell.pendingChanges?.specialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+        SpecialistCellType.ACCESSIBLE_CELL,
+      )
+      assertThat(lockedCell.specialistCellTypes).isNullOrEmpty()
     }
 
     @Test

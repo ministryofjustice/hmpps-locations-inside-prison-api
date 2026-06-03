@@ -286,6 +286,9 @@ data class PendingChangeDto(
   @param:Schema(description = "Pending in-cell sanitation", required = false, example = "true")
   val inCellSanitation: Boolean? = null,
 
+  @param:Schema(description = "Pending specialist cell types", required = false)
+  val specialistCellTypes: Set<SpecialistCellType>? = null,
+
 )
 
 @Schema(description = "Service that uses a location")
