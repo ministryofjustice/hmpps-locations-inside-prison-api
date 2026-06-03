@@ -2830,6 +2830,13 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       assertThat(lockedCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
       assertThat(lockedCell.pendingApprovalRequestId).isEqualTo(pendingApproval.id)
+
+      // The pending change surfaces the proposed specialist cell types, while the live value is unchanged.
+      assertThat(lockedCell.pendingChanges?.specialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+        SpecialistCellType.ACCESSIBLE_CELL,
+      )
+      assertThat(lockedCell.specialistCellTypes).isNullOrEmpty()
     }
 
     @Test
@@ -3569,12 +3576,88 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approval.accommodationType).isEqualTo(AccommodationType.NORMAL_ACCOMMODATION)
       assertThat(approval.usedForTypes).containsExactly(UsedForType.STANDARD_ACCOMMODATION)
 
+      // The current converted cell type being removed is captured so the UI can play back the change.
+      assertThat(approval.currentConvertedCellType).isEqualTo(ConvertedCellType.OFFICE)
+      assertThat(approval.currentOtherConvertedCellType).isNull()
+
+      // The proposed accommodation type / used-for match the parent's current values, so the current
+      // accommodation / used-for are not surfaced (nothing notable changes relative to the parent).
+      assertThat(approval.currentAccommodationTypes).isNull()
+      assertThat(approval.currentUsedForTypes).isNull()
+
       // A converted room has no current capacity, so the change is "None -> new".
       assertThat(approval.locations!![0].currentWorkingCapacity).isEqualTo(0)
       assertThat(approval.locations!![0].currentMaxCapacity).isEqualTo(0)
       assertThat(approval.workingCapacityChange).isEqualTo(2)
       assertThat(approval.maxCapacityChange).isEqualTo(3)
       assertThat(approval.certifiedNormalAccommodationChange).isEqualTo(2)
+    }
+
+    @Test
+    fun `convert-to-cell surfaces the parent accommodation type when the proposed type differs`() {
+      val cell = convertedRoomOnLeeds()
+
+      // The parent's cells are all NORMAL_ACCOMMODATION, so proposing CARE_AND_SEPARATION differs.
+      val updatedLocation = requestConvertToCell(
+        cell,
+        accommodationType = LocationResidentialResource.AllowedAccommodationTypeForConversion.CARE_AND_SEPARATION,
+        usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION),
+      )
+
+      val approval = getApproval(updatedLocation.pendingApprovalRequestId!!)
+      assertThat(approval.accommodationType).isEqualTo(AccommodationType.CARE_AND_SEPARATION)
+      // The parent's current accommodation type is surfaced because the proposed type is not held by it.
+      assertThat(approval.currentAccommodationTypes).containsExactly(AccommodationType.NORMAL_ACCOMMODATION)
+      // Used-for still matches the parent, so it is not surfaced.
+      assertThat(approval.currentUsedForTypes).isNull()
+    }
+
+    @Test
+    fun `convert-to-cell surfaces the parent used-for when the proposed used-for differs`() {
+      val cell = convertedRoomOnLeeds()
+
+      // The parent's cells are used for STANDARD_ACCOMMODATION only, so proposing an extra used-for differs.
+      val updatedLocation = requestConvertToCell(
+        cell,
+        usedForTypes = listOf(UsedForType.STANDARD_ACCOMMODATION, UsedForType.FIRST_NIGHT_CENTRE),
+      )
+
+      val approval = getApproval(updatedLocation.pendingApprovalRequestId!!)
+      // Accommodation type still matches the parent, so it is not surfaced.
+      assertThat(approval.currentAccommodationTypes).isNull()
+      // The parent's current used-for is surfaced because a proposed used-for is not held by it.
+      assertThat(approval.currentUsedForTypes).containsExactly(UsedForType.STANDARD_ACCOMMODATION)
+    }
+
+    @Test
+    fun `convert-to-cell captures the current OTHER converted cell type and free text`() {
+      val cell = firstLeedsCell()
+      prisonerSearchMockServer.stubSearchByLocations(cell.prisonId, listOf(cell.getPathHierarchy()), false)
+
+      // Convert the cell to an OTHER non-residential room (with free text) directly while approval is off.
+      setCertificationApprovalRequired(cell.prisonId, "INACTIVE")
+      webTestClient.put().uri("/locations/${cell.id}/convert-cell-to-non-res-cell")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(
+              convertedCellType = ConvertedCellType.OTHER,
+              otherConvertedCellType = "Swimming pool",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+      getDomainEvents(cell.getParentLocations().size + 1)
+      cellCertificateRepository.deleteAll()
+      setCertificationApprovalRequired(cell.prisonId, "ACTIVE")
+
+      val updatedLocation = requestConvertToCell(cell)
+
+      val approval = getApproval(updatedLocation.pendingApprovalRequestId!!)
+      assertThat(approval.currentConvertedCellType).isEqualTo(ConvertedCellType.OTHER)
+      assertThat(approval.currentOtherConvertedCellType).isEqualTo("Swimming pool")
     }
 
     @Test

@@ -329,7 +329,7 @@ open class ResidentialLocation(
     .flatMap { it.attributes }
     .toSet()
 
-  private fun getAccommodationTypes(): Set<AccommodationType> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+  fun getAccommodationTypes(): Set<AccommodationType> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .map { it.accommodationType }
     .toSet()
 

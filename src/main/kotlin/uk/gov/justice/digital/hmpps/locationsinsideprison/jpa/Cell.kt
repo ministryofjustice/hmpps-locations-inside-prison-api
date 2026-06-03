@@ -589,6 +589,15 @@ class Cell(
 
   fun getSpecialistCellTypesForCell(): Set<SpecialistCellType> = specialistCellTypes.map { it.specialistCellType }.toSet()
 
+  fun getSpecialistCellTypesForCell(includePending: Boolean): Set<SpecialistCellType> {
+    val pendingChange = if (includePending) {
+      getPendingApprovalRequest() as? SpecialistCellTypeChangeApprovalRequest
+    } else {
+      null
+    }
+    return pendingChange?.getSpecialistCellTypesFromPendingList()?.toSet() ?: getSpecialistCellTypesForCell()
+  }
+
   override fun processApproval(
     pendingApprovalRequest: CertificationApprovalRequest,
     approvedBy: String,
@@ -715,6 +724,25 @@ class Cell(
     if (hasPendingCertificationApproval()) {
       throw PendingApprovalAlreadyExistsException(getKey())
     }
+
+    // Capture the current (pre-conversion) values so the UI can play back "current -> new". The
+    // converted cell type is always captured; the accommodation type / used-for are captured only
+    // when the proposed values are not already present in the parent's current values.
+    val parent = getParent() as? ResidentialLocation
+    val parentAccommodationTypes = parent?.getAccommodationTypes() ?: emptySet()
+    val parentUsedForTypes = parent?.getUsedForValues()?.map { it.usedFor }?.toSet() ?: emptySet()
+
+    val currentAccommodationTypes = if (accommodationType !in parentAccommodationTypes) {
+      parentAccommodationTypes.joinToString(",") { it.name }.takeIf { it.isNotEmpty() }
+    } else {
+      null
+    }
+    val currentUsedForTypes = if (!parentUsedForTypes.containsAll(usedForTypes?.toSet() ?: emptySet())) {
+      parentUsedForTypes.joinToString(",") { it.name }.takeIf { it.isNotEmpty() }
+    } else {
+      null
+    }
+
     return addApprovalToLocation(
       ConvertToCellApprovalRequest(
         location = this,
@@ -727,6 +755,10 @@ class Cell(
         workingCapacity = workingCapacity,
         maxCapacity = maxCapacity,
         certifiedNormalAccommodation = certifiedNormalAccommodation,
+        currentConvertedCellType = convertedCellType,
+        currentOtherConvertedCellType = otherConvertedCellType,
+        currentAccommodationTypes = currentAccommodationTypes,
+        currentUsedForTypes = currentUsedForTypes,
       ),
     ) as ConvertToCellApprovalRequest
   }
@@ -814,6 +846,7 @@ class Cell(
         certifiedNormalAccommodation = calcCertifiedNormalAccommodation(true),
         cellMark = getDoorCellMark(true),
         inCellSanitation = getSanitationOfCell(true),
+        specialistCellTypes = getSpecialistCellTypesForCell(true),
       )
     } else {
       null

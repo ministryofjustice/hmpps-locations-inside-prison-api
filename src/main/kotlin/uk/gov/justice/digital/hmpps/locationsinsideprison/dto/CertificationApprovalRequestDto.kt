@@ -132,6 +132,18 @@ data class CertificationApprovalRequestDto(
 
   @param:Schema(description = "Free-text description when the converted cell type is OTHER", example = "Swimming pool", required = false)
   val otherConvertedCellType: String? = null,
+
+  @param:Schema(description = "Current converted (non-residential) cell type being removed by a convert-to-cell approval", example = "OFFICE", required = false)
+  val currentConvertedCellType: ConvertedCellType? = null,
+
+  @param:Schema(description = "Current free-text description when the current converted cell type is OTHER", example = "Swimming pool", required = false)
+  val currentOtherConvertedCellType: String? = null,
+
+  @param:Schema(description = "Current accommodation types on the parent, surfaced for a convert-to-cell approval only when the proposed accommodation type differs", required = false)
+  val currentAccommodationTypes: List<AccommodationType>? = null,
+
+  @param:Schema(description = "Current used-for types on the parent, surfaced for a convert-to-cell approval only when the proposed used-for types differ", required = false)
+  val currentUsedForTypes: List<UsedForType>? = null,
 )
 
 @Schema(description = "Request to approve a certification request")
