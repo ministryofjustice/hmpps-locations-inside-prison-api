@@ -174,6 +174,8 @@ class ApprovalDecisionService(
       certifiedNormalAccommodation = approvalRequest.certifiedNormalAccommodation,
       maxCapacity = approvalRequest.maxCapacity,
       workingCapacity = approvalRequest.workingCapacity,
+      cellMark = approvalRequest.cellMark,
+      inCellSanitation = approvalRequest.inCellSanitation,
       userOrSystemInContext = approvalRequest.requestedBy,
       clock = clock,
       linkedTransaction = linkedTransaction,

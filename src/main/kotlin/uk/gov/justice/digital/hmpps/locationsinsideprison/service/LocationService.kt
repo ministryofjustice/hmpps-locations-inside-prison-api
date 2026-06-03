@@ -1559,6 +1559,8 @@ class LocationService(
     maxCapacity: Int = 0,
     workingCapacity: Int = 0,
     usedForTypes: List<UsedForType>? = null,
+    cellMark: String? = null,
+    inCellSanitation: Boolean? = null,
   ): LocationDTO {
     val locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -1581,6 +1583,8 @@ class LocationService(
         maxCapacity = maxCapacity,
         workingCapacity = workingCapacity,
         usedForTypes = usedForTypes,
+        cellMark = cellMark,
+        inCellSanitation = inCellSanitation,
       )
     }
 
@@ -1598,6 +1602,8 @@ class LocationService(
         certifiedNormalAccommodation = certifiedNormalAccommodation,
         maxCapacity = maxCapacity,
         workingCapacity = workingCapacity,
+        cellMark = cellMark,
+        inCellSanitation = inCellSanitation,
         userOrSystemInContext = sharedLocationService.getUsername(),
         clock = clock,
         linkedTransaction = linkedTransaction,
@@ -1626,6 +1632,8 @@ class LocationService(
     maxCapacity: Int,
     workingCapacity: Int,
     usedForTypes: List<UsedForType>?,
+    cellMark: String? = null,
+    inCellSanitation: Boolean? = null,
   ): LocationDTO {
     // CNA defaults to the working capacity when not supplied, matching Cell.applyConvertToCell.
     val cna = certifiedNormalAccommodation ?: workingCapacity
@@ -1656,6 +1664,8 @@ class LocationService(
       maxCapacity = maxCapacity,
       workingCapacity = workingCapacity,
       usedForTypes = usedForTypes,
+      cellMark = cellMark,
+      inCellSanitation = inCellSanitation,
       reasonForChange = null,
     )
 
