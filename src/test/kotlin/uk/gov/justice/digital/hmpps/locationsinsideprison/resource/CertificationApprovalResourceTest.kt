@@ -3528,6 +3528,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       certifiedNormalAccommodation: Int = 2,
       specialistCellTypes: Set<SpecialistCellType>? = setOf(SpecialistCellType.ACCESSIBLE_CELL),
       usedForTypes: List<UsedForType>? = listOf(UsedForType.STANDARD_ACCOMMODATION),
+      cellMark: String? = null,
+      inCellSanitation: Boolean? = null,
     ): Location = webTestClient.put().uri("/locations/${cell.id}/convert-to-cell")
       .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
       .header("Content-Type", "application/json")
@@ -3540,6 +3542,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
             maxCapacity = maxCapacity,
             workingCapacity = workingCapacity,
             usedForTypes = usedForTypes,
+            cellMark = cellMark,
+            inCellSanitation = inCellSanitation,
           ),
         ),
       )
@@ -3700,6 +3704,55 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       val cellInCert = currentCertificate(cell.prisonId).findLocationInCertificate(cell.getPathHierarchy())
       assertThat(cellInCert!!.workingCapacity).isEqualTo(2)
+    }
+
+    @Test
+    fun `requesting a convert-to-cell captures the proposed and current cell mark and sanitation`() {
+      val cell = convertedRoomOnLeeds()
+      val room = getLocation(cell.id!!)
+
+      val updatedLocation = requestConvertToCell(cell, cellMark = "A-NEW", inCellSanitation = true)
+
+      val approval = getApproval(updatedLocation.pendingApprovalRequestId!!)
+      // The proposed door number / sanitation for the re-created cell.
+      assertThat(approval.cellMark).isEqualTo("A-NEW")
+      assertThat(approval.inCellSanitation).isTrue()
+      // The room's existing values are snapshotted so the UI can play back "current -> new".
+      assertThat(approval.currentCellMark).isEqualTo(room.cellMark)
+      assertThat(approval.currentInCellSanitation).isEqualTo(room.inCellSanitation)
+    }
+
+    @Test
+    fun `convert-to-cell without cell mark or sanitation leaves those approval values unset`() {
+      val cell = convertedRoomOnLeeds()
+
+      val updatedLocation = requestConvertToCell(cell)
+
+      val approval = getApproval(updatedLocation.pendingApprovalRequestId!!)
+      assertThat(approval.cellMark).isNull()
+      assertThat(approval.currentCellMark).isNull()
+      assertThat(approval.inCellSanitation).isNull()
+      assertThat(approval.currentInCellSanitation).isNull()
+    }
+
+    @Test
+    fun `approving a convert-to-cell applies the requested cell mark and sanitation to the cell and certificate`() {
+      val cell = convertedRoomOnLeeds()
+      val updatedLocation = requestConvertToCell(cell, cellMark = "A-NEW", inCellSanitation = true)
+
+      val approved = approveRequest(updatedLocation.pendingApprovalRequestId!!)
+      assertThat(approved.status).isEqualTo(ApprovalRequestStatus.APPROVED)
+      getDomainEvents(3)
+
+      // The re-created cell carries the requested door number / sanitation.
+      val convertedCell = getLocation(cell.id!!)
+      assertThat(convertedCell.cellMark).isEqualTo("A-NEW")
+      assertThat(convertedCell.inCellSanitation).isTrue()
+
+      // And so does the new certificate entry for the cell.
+      val cellInCert = currentCertificate(cell.prisonId).findLocationInCertificate(cell.getPathHierarchy())
+      assertThat(cellInCert!!.cellMark).isEqualTo("A-NEW")
+      assertThat(cellInCert.inCellSanitation).isTrue()
     }
 
     @Test

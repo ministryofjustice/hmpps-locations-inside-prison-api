@@ -3206,6 +3206,43 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
             .returnResult().responseBody!!.residentialHousingType,
         ).isEqualTo(ResidentialHousingType.NORMAL_ACCOMMODATION)
       }
+
+      @Test
+      fun `can convert non-res cell to res cell applying a new cell mark and sanitation`() {
+        cell1.convertToNonResidentialCell(
+          convertedCellType = ConvertedCellType.OTHER,
+          userOrSystemInContext = "Aleman",
+          clock = clock,
+          linkedTransaction = linkedTransactionRepository.saveAndFlush(
+            LinkedTransaction(
+              prisonId = cell1.prisonId,
+              transactionType = TransactionType.LOCATION_CREATE,
+              transactionDetail = "Convert to Non Res before test runs",
+              transactionInvokedBy = "Aleman",
+              txStartTime = LocalDateTime.now(clock).minusMinutes(5),
+            ),
+          ),
+        )
+        resiRepository.save(cell1)
+
+        val result = webTestClient.put().uri("/locations/${cell1.id}/convert-to-cell")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              convertToCellRequest.copy(cellMark = "NEW-1", inCellSanitation = true),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<LocationTest>()
+          .returnResult().responseBody!!
+
+        // The supplied door number / sanitation are applied directly when no approval is required.
+        val cellZ1001 = result.findByPathHierarchy("Z-1-001") ?: throw LocationNotFoundException("Z-1-001")
+        assertThat(cellZ1001.cellMark).isEqualTo("NEW-1")
+        assertThat(cellZ1001.inCellSanitation).isTrue()
+      }
     }
 
     @Test

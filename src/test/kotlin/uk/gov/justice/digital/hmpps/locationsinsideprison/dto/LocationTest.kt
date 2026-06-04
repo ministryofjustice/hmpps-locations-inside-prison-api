@@ -30,6 +30,8 @@ data class LocationTest(
   val status: DerivedLocationStatus? = null,
   val convertedCellType: ConvertedCellType? = null,
   val otherConvertedCellType: String? = null,
+  val cellMark: String? = null,
+  val inCellSanitation: Boolean? = null,
   val active: Boolean? = true,
   val deactivatedByParent: Boolean? = false,
   val deactivatedDate: LocalDateTime? = null,

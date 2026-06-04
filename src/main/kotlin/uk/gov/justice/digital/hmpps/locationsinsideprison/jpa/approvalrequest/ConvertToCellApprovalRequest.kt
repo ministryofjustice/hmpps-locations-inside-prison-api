@@ -61,6 +61,19 @@ open class ConvertToCellApprovalRequest(
   @Column(name = "current_used_for_types", nullable = true)
   open var currentUsedForTypes: String? = null,
 
+  // The proposed door number (cell mark) / in-cell sanitation for the re-created cell, plus the room's
+  // existing values so the UI can play back "current -> new". These reuse the shared cell_mark /
+  // current_cell_mark / in_cell_sanitation / current_in_cell_sanitation columns (see
+  // CellMarkChangeApprovalRequest / SanitationChangeApprovalRequest); the property names must match those
+  // siblings so Hibernate maps a single logical name onto each shared physical column.
+  open var cellMark: String? = null,
+
+  open var currentCellMark: String? = null,
+
+  open var inCellSanitation: Boolean? = null,
+
+  open var currentInCellSanitation: Boolean? = null,
+
 ) : LocationCertificationApprovalRequest(
   id = id,
   location = location,
@@ -106,6 +119,10 @@ open class ConvertToCellApprovalRequest(
     currentOtherConvertedCellType = currentOtherConvertedCellType,
     currentAccommodationTypes = getCurrentAccommodationTypesFromList().takeIf { it.isNotEmpty() },
     currentUsedForTypes = getCurrentUsedForTypesFromList().takeIf { it.isNotEmpty() },
+    cellMark = cellMark,
+    currentCellMark = currentCellMark,
+    inCellSanitation = inCellSanitation,
+    currentInCellSanitation = currentInCellSanitation,
   )
 
   override fun getApprovalType() = ApprovalType.CONVERT_ROOM_TO_CELL
