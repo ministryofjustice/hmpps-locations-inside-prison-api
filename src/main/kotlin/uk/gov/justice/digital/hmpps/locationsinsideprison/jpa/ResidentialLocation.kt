@@ -666,7 +666,8 @@ open class ResidentialLocation(
       certifiedNormalAccommodation = calcCertifiedNormalAccommodation(includeDraftOrPending),
       usedForTypes = getUsedForValuesAsCSV(),
       accommodationTypes = getAccommodationTypesAsCSV(),
-      specialistCellTypes = getSpecialistCellTypesAsCSV(),
+      currentSpecialistCellTypes = getSpecialistCellTypesAsCSV(),
+      specialistCellTypes = getSpecialistCellTypesAsCSV(includePending = includeDraftOrPending),
       convertedCellType = if (this is Cell && isConvertedCell()) {
         convertedCellType
       } else {
@@ -677,6 +678,13 @@ open class ResidentialLocation(
   }
 
   fun getSpecialistCellTypesAsCSV(): String? = getSpecialistCellTypes().map { it.specialistCellType }.distinct().takeIf { it.isNotEmpty() }
+    ?.joinToString(separator = ",") { it.name }
+
+  fun getSpecialistCellTypesAsCSV(includePending: Boolean): String? = cellLocations()
+    .filter { isCurrentCellOrNotPermanentlyInactive(it) }
+    .flatMap { it.getSpecialistCellTypesForCell(includePending = includePending) }
+    .distinct()
+    .takeIf { it.isNotEmpty() }
     ?.joinToString(separator = ",") { it.name }
 
   private fun getAccommodationTypesAsCSV(): String? = getAccommodationTypes().takeIf { it.isNotEmpty() }?.joinToString(separator = ",") { it.name }

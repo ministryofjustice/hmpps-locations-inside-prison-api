@@ -136,6 +136,10 @@ open class CertificationApprovalRequestLocation(
     types.takeIf { it.isNotEmpty() }?.let { getSpecialistCellTypesFromList(it) } ?: emptyList()
   }
 
+  fun getCurrentSpecialistCellTypesFromList(): List<SpecialistCellType>? = currentSpecialistCellTypes?.let { types ->
+    types.takeIf { it.isNotEmpty() }?.let { getSpecialistCellTypesFromList(it) } ?: emptyList()
+  }
+
   private fun getUsedForTypesFromList(): List<UsedForType>? = usedForTypes?.split(",")?.map { UsedForType.valueOf(it.trim()) }
 
   private fun getAccommodationTypesFromList(): List<AccommodationType>? = accommodationTypes?.split(",")?.map { AccommodationType.valueOf(it.trim()) }
