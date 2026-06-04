@@ -2820,6 +2820,26 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.currentSpecialistCellTypes).isNull()
       assertThat(pendingApproval.locations).hasSize(1)
 
+      // The top-level change totals reflect requested-minus-current (cell defaults: wc=1, mc=2, cna=1).
+      assertThat(pendingApproval.workingCapacityChange).isEqualTo(-1)
+      assertThat(pendingApproval.maxCapacityChange).isEqualTo(-1)
+      assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(-1)
+
+      // The location within the array must surface the proposed (pending) specialist cell types and
+      // the requested capacities, while currentXxx reflects the live cell.
+      val locationInRequest = pendingApproval.locations!![0]
+      assertThat(locationInRequest.specialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+        SpecialistCellType.ACCESSIBLE_CELL,
+      )
+      assertThat(locationInRequest.currentSpecialistCellTypes).isNullOrEmpty()
+      assertThat(locationInRequest.workingCapacity).isEqualTo(0)
+      assertThat(locationInRequest.maxCapacity).isEqualTo(1)
+      assertThat(locationInRequest.certifiedNormalAccommodation).isEqualTo(0)
+      assertThat(locationInRequest.currentWorkingCapacity).isEqualTo(1)
+      assertThat(locationInRequest.currentMaxCapacity).isEqualTo(2)
+      assertThat(locationInRequest.currentCertifiedNormalAccommodation).isEqualTo(1)
+
       // The cell should now be locked
       val lockedCell = webTestClient.get().uri("/locations/${cell.id}")
         .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
