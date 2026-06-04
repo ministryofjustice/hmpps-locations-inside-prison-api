@@ -2840,6 +2840,50 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     }
 
     @Test
+    fun `request approval surfaces existing specialist cell types as currentSpecialistCellTypes on the location`() {
+      val cell = firstLeedsCell()
+
+      // Give the cell an existing (non-capacity-affecting) specialist cell type directly, no approval needed.
+      webTestClient.put().uri("/locations/${cell.id}/specialist-cell-types")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(setOf(SpecialistCellType.ACCESSIBLE_CELL)))
+        .exchange()
+        .expectStatus().isOk
+
+      // Now request approval to add a capacity-affecting type alongside the existing one.
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = setOf(SpecialistCellType.ACCESSIBLE_CELL, SpecialistCellType.BIOHAZARD_DIRTY_PROTEST),
+        workingCapacity = 0,
+        maxCapacity = 1,
+        certifiedNormalAccommodation = 0,
+      )
+
+      assertThat(pendingApproval.locations).hasSize(1)
+      val locationInRequest = pendingApproval.locations!![0]
+
+      // currentSpecialistCellTypes reflects the live cell state (before the change)...
+      assertThat(locationInRequest.currentSpecialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.ACCESSIBLE_CELL,
+      )
+      // ...while specialistCellTypes reflects the proposed (pending) state.
+      assertThat(locationInRequest.specialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.ACCESSIBLE_CELL,
+        SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+      )
+
+      // The top-level object carries the same distinction.
+      assertThat(pendingApproval.currentSpecialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.ACCESSIBLE_CELL,
+      )
+      assertThat(pendingApproval.specialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.ACCESSIBLE_CELL,
+        SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+      )
+    }
+
+    @Test
     fun `cannot approve a specialist cell type change request when a prisoner is in the cell`() {
       val cell = firstLeedsCell()
       val pendingApproval = requestSpecialistCellTypeApproval(

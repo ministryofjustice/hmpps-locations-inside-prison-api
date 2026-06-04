@@ -44,7 +44,7 @@ open class SpecialistCellTypeChangeApprovalRequest(
 
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     specialistCellTypes = getSpecialistCellTypesFromPendingList().toSet(),
-    currentSpecialistCellTypes = getTopLevelLocation()?.getSpecialistCellTypesFromList()?.toSet(),
+    currentSpecialistCellTypes = getTopLevelLocation()?.getCurrentSpecialistCellTypesFromList()?.toSet(),
     workingCapacity = workingCapacity,
     maxCapacity = maxCapacity,
     certifiedNormalAccommodation = certifiedNormalAccommodation,
