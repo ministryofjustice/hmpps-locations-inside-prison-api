@@ -42,7 +42,7 @@ open class ConvertToNonResidentialCellApprovalRequest(
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     convertedCellType = convertedCellType,
     otherConvertedCellType = otherConvertedCellType,
-    currentSpecialistCellTypes = getTopLevelLocation()?.getSpecialistCellTypesFromList()?.toSet(),
+    currentSpecialistCellTypes = getTopLevelLocation()?.getCurrentSpecialistCellTypesFromList()?.toSet(),
     currentInCellSanitation = currentInCellSanitation,
   )
 

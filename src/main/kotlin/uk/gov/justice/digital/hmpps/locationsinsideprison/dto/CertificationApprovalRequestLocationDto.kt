@@ -21,6 +21,9 @@ data class CertificationApprovalRequestLocationDto(
   @param:Schema(description = "Cell mark", example = "Standard", required = false)
   val cellMark: String? = null,
 
+  @param:Schema(description = "Current cell mark before this approval", example = "Standard", required = false)
+  val currentCellMark: String? = null,
+
   @param:Schema(description = "Local name", example = "Cell 1", required = false)
   val localName: String? = null,
 
@@ -50,6 +53,9 @@ data class CertificationApprovalRequestLocationDto(
 
   @param:Schema(description = "In-cell sanitation", example = "true", required = false)
   val inCellSanitation: Boolean? = null,
+
+  @param:Schema(description = "Current in-cell sanitation before this approval", example = "false", required = false)
+  val currentInCellSanitation: Boolean? = null,
 
   @param:Schema(description = "Location type", example = "CELL", required = true)
   val locationType: LocationType,
