@@ -247,8 +247,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .expectBody<CertificationApprovalRequestDto>()
         .returnResult().responseBody!!
 
-      getDomainEvents(3).let {
-        assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+      getDomainEvents(3).let { event ->
+        assertThat(event.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
           "location.inside.prison.amended" to firstCell.getKey(),
           *firstCell.getParentLocations().map { "location.inside.prison.amended" to it.getKey() }.toTypedArray(),
         )
@@ -462,7 +462,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       // change a different cell and request approval
       val cellForApproval = updateCapacity(cellInLeeds = "A-1-002", workingCapacity = 2, maxCapacity = 2, cna = 1, temporaryWorkingCapacityChange = false)
 
-      val approvedRequest = webTestClient.put().uri("/certification/location/approve")
+      webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
         .header("Content-Type", "application/json")
         .bodyValue(
@@ -1149,7 +1149,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations).hasSize(1)
       // currentWorkingCapacity must reflect the certificate value (1), not the effective value (0)
       assertThat(pendingApproval.locations!![0].currentWorkingCapacity).isEqualTo(1)
-      assertThat(pendingApproval.locations!![0].workingCapacity).isEqualTo(0)
+      assertThat(pendingApproval.locations[0].workingCapacity).isEqualTo(0)
     }
   }
 
@@ -2133,6 +2133,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations).isNotEmpty
       assertThat(pendingApproval.locations).hasSize(1)
       assertThat(pendingApproval.locations!![0].cellMark).isEqualTo("CM-001")
+      assertThat(pendingApproval.locations[0].currentCellMark).isEqualTo("A-1")
 
       val approvedRequest = webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -2368,6 +2369,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations).isNotEmpty
       assertThat(pendingApproval.locations).hasSize(1)
       assertThat(pendingApproval.locations!![0].inCellSanitation).isEqualTo(false)
+      assertThat(pendingApproval.locations[0].currentInCellSanitation).isEqualTo(true)
 
       val approvedRequest = webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -2671,7 +2673,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       .expectBody<CertificationApprovalRequestDto>()
       .returnResult().responseBody!!
 
-    private fun approveRequest(approvalRequestId: java.util.UUID): CertificationApprovalRequestDto = webTestClient.put().uri("/certification/location/approve")
+    private fun approveRequest(approvalRequestId: UUID): CertificationApprovalRequestDto = webTestClient.put().uri("/certification/location/approve")
       .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
       .header("Content-Type", "application/json")
       .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = approvalRequestId)))
@@ -3655,7 +3657,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       // A converted room has no current capacity, so the change is "None -> new".
       assertThat(approval.locations!![0].currentWorkingCapacity).isEqualTo(0)
-      assertThat(approval.locations!![0].currentMaxCapacity).isEqualTo(0)
+      assertThat(approval.locations[0].currentMaxCapacity).isEqualTo(0)
       assertThat(approval.workingCapacityChange).isEqualTo(2)
       assertThat(approval.maxCapacityChange).isEqualTo(3)
       assertThat(approval.certifiedNormalAccommodationChange).isEqualTo(2)
@@ -3781,7 +3783,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       // The proposed door number / sanitation for the re-created cell.
       assertThat(approval.cellMark).isEqualTo("A-NEW")
       assertThat(approval.inCellSanitation).isTrue()
-      // The room's existing values are snapshotted so the UI can play back "current -> new".
+      // The room's existing values are 'snap-shotted' so the UI can play back "current -> new".
       assertThat(approval.currentCellMark).isEqualTo(room.cellMark)
       assertThat(approval.currentInCellSanitation).isEqualTo(room.inCellSanitation)
     }
@@ -4033,8 +4035,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approval.currentInCellSanitation).isTrue()
       assertThat(approval.workingCapacityChange).isEqualTo(-1)
       assertThat(approval.locations!![0].currentWorkingCapacity).isEqualTo(1)
-      assertThat(approval.locations!![0].currentMaxCapacity).isEqualTo(2)
-      assertThat(approval.locations!![0].currentCertifiedNormalAccommodation).isEqualTo(1)
+      assertThat(approval.locations[0].currentMaxCapacity).isEqualTo(2)
+      assertThat(approval.locations[0].currentCertifiedNormalAccommodation).isEqualTo(1)
     }
 
     @Test
@@ -4058,6 +4060,9 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approval.currentSpecialistCellTypes).containsExactly(SpecialistCellType.ACCESSIBLE_CELL)
       // New specialist cell types are removed -> None
       assertThat(approval.specialistCellTypes).isNull()
+
+      // The location row carries the same current specialist cell types.
+      assertThat(approval.locations!![0].currentSpecialistCellTypes).containsExactly(SpecialistCellType.ACCESSIBLE_CELL)
     }
 
     @Test

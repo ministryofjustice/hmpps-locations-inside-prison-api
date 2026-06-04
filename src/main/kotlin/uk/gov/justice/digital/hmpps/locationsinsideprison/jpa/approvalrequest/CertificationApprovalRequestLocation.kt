@@ -35,6 +35,9 @@ open class CertificationApprovalRequestLocation(
   private val cellMark: String? = null,
 
   @Column(nullable = true)
+  private val currentCellMark: String? = null,
+
+  @Column(nullable = true)
   private val localName: String? = null,
 
   @Column(nullable = false)
@@ -63,6 +66,9 @@ open class CertificationApprovalRequestLocation(
 
   @Column(nullable = true)
   private val inCellSanitation: Boolean? = null,
+
+  @Column(nullable = true)
+  private val currentInCellSanitation: Boolean? = null,
 
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
@@ -112,6 +118,7 @@ open class CertificationApprovalRequestLocation(
     id = id!!,
     locationCode = locationCode,
     cellMark = cellMark,
+    currentCellMark = currentCellMark,
     localName = localName,
     pathHierarchy = pathHierarchy,
     level = level,
@@ -122,6 +129,7 @@ open class CertificationApprovalRequestLocation(
     currentWorkingCapacity = currentWorkingCapacity,
     currentMaxCapacity = currentMaxCapacity,
     inCellSanitation = inCellSanitation,
+    currentInCellSanitation = currentInCellSanitation,
     locationType = locationType,
     currentSpecialistCellTypes = getSpecialistCellTypesFromList(currentSpecialistCellTypes),
     specialistCellTypes = getSpecialistCellTypesFromList(specialistCellTypes),

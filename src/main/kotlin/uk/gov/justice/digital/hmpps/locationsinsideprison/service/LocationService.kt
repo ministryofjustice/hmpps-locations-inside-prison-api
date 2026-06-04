@@ -844,15 +844,17 @@ class LocationService(
             newCna = cna,
           )
           approvalRequest.locations.forEach { subLocation ->
+            // Current values come from the certificate when present; the requested values are always applied
+            // so the pending capacity is correct even for a location without a certificate row.
             cellCertificateRepository.findByPrisonIdAndPathHierarchy(locCapChange.prisonId, subLocation.pathHierarchy)
               ?.let { currentCellCert ->
                 subLocation.currentWorkingCapacity = currentCellCert.workingCapacity
                 subLocation.currentMaxCapacity = currentCellCert.maxCapacity
                 subLocation.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
-                subLocation.workingCapacity = workingCapacity
-                subLocation.maxCapacity = maxCapacity
-                subLocation.certifiedNormalAccommodation = cna
               }
+            subLocation.workingCapacity = workingCapacity
+            subLocation.maxCapacity = maxCapacity
+            subLocation.certifiedNormalAccommodation = cna
           }
           approvalRequest.refreshCapacities()
           cellLocationRepository.saveAndFlush(locCapChange)
@@ -1052,10 +1054,10 @@ class LocationService(
           (listOf(locationHierarchy) + locationHierarchy.findSubLocations()).forEach { location ->
             cellCertificateRepository.findByPrisonIdAndPathHierarchy(locationToDeactivate.prisonId, location.pathHierarchy)?.let { currentCellCert ->
               location.currentWorkingCapacity = currentCellCert.workingCapacity
-              location.workingCapacity = 0
               location.currentMaxCapacity = currentCellCert.maxCapacity
               location.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
             }
+            location.workingCapacity = 0
           }
           approvalRequest.refreshCapacities()
         }
@@ -1494,7 +1496,7 @@ class LocationService(
 
   /**
    * For prisons that require certification approval, converting a cell to a non-residential room cannot happen
-   * immediately. Instead the cell is temporarily deactivated (off cell certificate) and an approval request is
+   * immediately. Instead, the cell is temporarily deactivated (off cell certificate) and an approval request is
    * raised capturing the current cell state. The conversion itself is applied later if the request is approved
    * (see [ApprovalDecisionService]). On reject/withdrawal the cell remains temporarily inactive.
    */
@@ -1528,10 +1530,10 @@ class LocationService(
     (listOf(locationHierarchy) + locationHierarchy.findSubLocations()).forEach { location ->
       cellCertificateRepository.findByPrisonIdAndPathHierarchy(cell.prisonId, location.pathHierarchy)?.let { currentCellCert ->
         location.currentWorkingCapacity = currentCellCert.workingCapacity
-        location.workingCapacity = 0
         location.currentMaxCapacity = currentCellCert.maxCapacity
         location.currentCertifiedNormalAccommodation = currentCellCert.certifiedNormalAccommodation
       }
+      location.workingCapacity = 0
     }
     approvalRequest.refreshCapacities()
 

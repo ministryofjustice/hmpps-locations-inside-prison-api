@@ -646,9 +646,19 @@ open class ResidentialLocation(
       } else {
         null
       },
+      currentCellMark = if (this is Cell) {
+        getDoorCellMark(includePending = false)
+      } else {
+        null
+      },
       level = getLevel(),
       inCellSanitation = if (this is Cell) {
         getSanitationOfCell(includePending = includeDraftOrPending)
+      } else {
+        null
+      },
+      currentInCellSanitation = if (this is Cell) {
+        getSanitationOfCell(includePending = false)
       } else {
         null
       },
