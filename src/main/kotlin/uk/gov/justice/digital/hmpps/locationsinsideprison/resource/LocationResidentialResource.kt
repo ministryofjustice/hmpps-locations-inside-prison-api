@@ -578,6 +578,8 @@ class LocationResidentialResource(
         maxCapacity = maxCapacity,
         workingCapacity = workingCapacity,
         usedForTypes = usedForTypes,
+        cellMark = cellMark,
+        inCellSanitation = inCellSanitation,
       )
     }
     // On a prison that requires certification approval the room is left unchanged but locked with a pending
@@ -627,6 +629,12 @@ class LocationResidentialResource(
     val workingCapacity: Int = 0,
     @param:Schema(description = "Used For list", example = "[ \"STANDARD_ACCOMMODATION\", \"PERSONALITY_DISORDER\" ]", required = false)
     val usedForTypes: List<UsedForType>? = null,
+    @param:Schema(description = "Cell mark (door number) to apply to the converted cell", example = "A1", required = false, minLength = 1, maxLength = 12)
+    @field:Size(min = 1, message = "Mark cannot be blank")
+    @field:Size(max = 12, message = "Mark can be up to 12 characters")
+    val cellMark: String? = null,
+    @param:Schema(description = "Whether the converted cell supports in-cell sanitation", example = "true", required = false)
+    val inCellSanitation: Boolean? = null,
   )
 
   @Schema(description = "Allowable Accommodation Types")

@@ -278,11 +278,11 @@ class Cell(
     temporarilyOffCellCert = false
   }
 
-  fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, certifiedNormalAccommodation: Int? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+  fun convertToCell(accommodationType: AllowedAccommodationTypeForConversion, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, certifiedNormalAccommodation: Int? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, cellMark: String? = null, inCellSanitation: Boolean? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (hasPendingCertificationApproval()) {
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
-    applyConvertToCell(accommodationType.mapsTo, usedForTypes, specialistCellTypes, certifiedNormalAccommodation, maxCapacity, workingCapacity, userOrSystemInContext, clock, linkedTransaction)
+    applyConvertToCell(accommodationType.mapsTo, usedForTypes, specialistCellTypes, certifiedNormalAccommodation, maxCapacity, workingCapacity, cellMark, inCellSanitation, userOrSystemInContext, clock, linkedTransaction)
   }
 
   /**
@@ -290,7 +290,7 @@ class Cell(
    * [convertToCell] and when applying a previously requested conversion as part of approving a
    * [ConvertToCellApprovalRequest] (where the request is still PENDING at the point of conversion).
    */
-  internal fun applyConvertToCell(accommodationType: AccommodationType, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, certifiedNormalAccommodation: Int? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
+  internal fun applyConvertToCell(accommodationType: AccommodationType, usedForTypes: List<UsedForType>? = null, specialistCellTypes: Set<SpecialistCellType>? = null, certifiedNormalAccommodation: Int? = null, maxCapacity: Int = 0, workingCapacity: Int = 0, cellMark: String? = null, inCellSanitation: Boolean? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     val amendedDate = LocalDateTime.now(clock)
     addHistory(
       LocationAttribute.STATUS,
@@ -313,6 +313,10 @@ class Cell(
     specialistCellTypes?.let { updateSpecialistCellTypes(specialistCellTypes = it, clock = clock, userOrSystemInContext = userOrSystemInContext, linkedTransaction = linkedTransaction) }
 
     setCapacity(maxCapacity = maxCapacity, workingCapacity = workingCapacity, certifiedNormalAccommodation = certifiedNormalAccommodation ?: workingCapacity, userOrSystemInContext = userOrSystemInContext, amendedDate = amendedDate, linkedTransaction = linkedTransaction)
+
+    // Apply the door number / sanitation only when supplied, leaving the existing values untouched otherwise.
+    cellMark?.let { setCellDoorMark(it, userOrSystemInContext, amendedDate, linkedTransaction) }
+    inCellSanitation?.let { setSanitationOfCell(it, userOrSystemInContext, amendedDate, linkedTransaction) }
 
     if (hasDeactivatedParent()) {
       reactivate(userOrSystemInContext, clock, linkedTransaction)
@@ -719,6 +723,8 @@ class Cell(
     maxCapacity: Int,
     workingCapacity: Int,
     usedForTypes: List<UsedForType>?,
+    cellMark: String? = null,
+    inCellSanitation: Boolean? = null,
     reasonForChange: String?,
   ): ConvertToCellApprovalRequest {
     if (hasPendingCertificationApproval()) {
@@ -759,6 +765,11 @@ class Cell(
         currentOtherConvertedCellType = otherConvertedCellType,
         currentAccommodationTypes = currentAccommodationTypes,
         currentUsedForTypes = currentUsedForTypes,
+        cellMark = cellMark,
+        // Only capture the current value when a new one is proposed, so the UI has a "current -> new" to show.
+        currentCellMark = cellMark?.let { this.cellMark },
+        inCellSanitation = inCellSanitation,
+        currentInCellSanitation = inCellSanitation?.let { this.inCellSanitation },
       ),
     ) as ConvertToCellApprovalRequest
   }
