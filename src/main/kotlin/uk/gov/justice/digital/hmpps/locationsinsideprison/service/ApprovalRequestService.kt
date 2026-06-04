@@ -282,6 +282,15 @@ class ApprovalRequestService(
       ),
     )
 
+    // The generated hierarchy captures the live cell capacity; overwrite the top-level location with the
+    // requested values so the request previews "current -> new", then refresh the change totals.
+    approvalRequest.getTopLevelLocation()?.let { topLocation ->
+      topLocation.workingCapacity = request.workingCapacity
+      topLocation.maxCapacity = request.maxCapacity
+      topLocation.certifiedNormalAccommodation = request.certifiedNormalAccommodation
+    }
+    approvalRequest.refreshCapacities()
+
     telemetryClient.trackEvent(
       "specialist-cell-type-change-approval-requested",
       mapOf(
