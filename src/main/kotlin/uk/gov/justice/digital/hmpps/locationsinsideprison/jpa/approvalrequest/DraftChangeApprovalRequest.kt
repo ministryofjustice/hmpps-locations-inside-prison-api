@@ -17,6 +17,8 @@ open class DraftChangeApprovalRequest(
   certifiedNormalAccommodationChange: Int,
   workingCapacityChange: Int,
   maxCapacityChange: Int,
+  topLevelAccommodationTypes: String? = null,
+  topLevelUsedFor: String? = null,
 ) : LocationCertificationApprovalRequest(
   id = id,
   location = location,
@@ -27,6 +29,8 @@ open class DraftChangeApprovalRequest(
   certifiedNormalAccommodationChange = certifiedNormalAccommodationChange,
   workingCapacityChange = workingCapacityChange,
   maxCapacityChange = maxCapacityChange,
+  topLevelAccommodationTypes = topLevelAccommodationTypes,
+  topLevelUsedFor = topLevelUsedFor,
 ) {
 
   override fun getApprovalType() = ApprovalType.DRAFT
