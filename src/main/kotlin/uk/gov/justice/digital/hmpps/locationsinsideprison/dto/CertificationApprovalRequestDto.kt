@@ -144,6 +144,12 @@ data class CertificationApprovalRequestDto(
 
   @param:Schema(description = "Current used-for types on the parent, surfaced for a convert-to-cell approval only when the proposed used-for types differ", required = false)
   val currentUsedForTypes: List<UsedForType>? = null,
+
+  @param:Schema(description = "Resulting (post-change) accommodation types at the top-level location (wing), surfaced only when this change alters the set of accommodation types held above the location being approved", required = false)
+  val topLevelAccommodationTypes: List<AccommodationType>? = null,
+
+  @param:Schema(description = "Resulting (post-change) used-for types at the top-level location (wing), surfaced together with topLevelAccommodationTypes when the change affects the levels above", required = false)
+  val topLevelUsedFor: List<UsedForType>? = null,
 )
 
 @Schema(description = "Request to approve a certification request")

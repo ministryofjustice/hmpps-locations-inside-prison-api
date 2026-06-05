@@ -198,6 +198,13 @@ open class ResidentialLocation(
       throw LocationDoesNotRequireApprovalException(getKey())
     }
 
+    // When the draft sits below the top-level wing and certifying it changes the set of accommodation types held by
+    // the wing, surface the resulting (post-change) top-level accommodation types / used-for so the UI can warn that
+    // levels above are affected. A brand-new draft wing (this == topLevel) has no level above, so nothing is captured.
+    val topLevel = findTopLevelResidentialLocation()
+    val affectsLevelsAbove = this != topLevel &&
+      topLevel.getAccommodationTypes(includeDraftCells = false) != topLevel.getAccommodationTypes(includeDraftCells = true)
+
     return addApprovalToLocation(
       DraftChangeApprovalRequest(
         location = this,
@@ -206,6 +213,8 @@ open class ResidentialLocation(
         maxCapacityChange = calcMaxCapacity(true) - calcMaxCapacity(),
         workingCapacityChange = calcWorkingCapacity(true) - calcWorkingCapacity(),
         certifiedNormalAccommodationChange = calcCertifiedNormalAccommodation(true) - calcCertifiedNormalAccommodation(),
+        topLevelAccommodationTypes = if (affectsLevelsAbove) topLevel.getAccommodationTypes(includeDraftCells = true).toCsvOrNull() else null,
+        topLevelUsedFor = if (affectsLevelsAbove) topLevel.getUsedForTypes(includeDraftCells = true).toCsvOrNull() else null,
       ),
     ) as DraftChangeApprovalRequest
   }
@@ -331,6 +340,20 @@ open class ResidentialLocation(
 
   fun getAccommodationTypes(): Set<AccommodationType> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
     .map { it.accommodationType }
+    .toSet()
+
+  // Variants that can exclude draft cells, used when working out whether a pending change alters the set of
+  // accommodation types / used-for held above the location being approved (the no-arg getAccommodationTypes()
+  // already includes draft cells, so includeDraftCells = true matches its behaviour).
+  fun getAccommodationTypes(includeDraftCells: Boolean): Set<AccommodationType> = cellLocations()
+    .filter { isCurrentCellOrNotPermanentlyInactive(it) && (includeDraftCells || !it.isDraft()) }
+    .map { it.accommodationType }
+    .toSet()
+
+  fun getUsedForTypes(includeDraftCells: Boolean): Set<UsedForType> = cellLocations()
+    .filter { isCurrentCellOrNotPermanentlyInactive(it) && (includeDraftCells || !it.isDraft()) }
+    .flatMap { it.usedFor }
+    .map { it.usedFor }
     .toSet()
 
   open fun getUsedForValues(): MutableSet<CellUsedFor> = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
@@ -944,6 +967,14 @@ fun isCapacityRequired(
   accommodationType: AccommodationType = AccommodationType.NORMAL_ACCOMMODATION,
 ): Boolean = accommodationType == AccommodationType.NORMAL_ACCOMMODATION &&
   (typesToCheck.isEmpty() || typesToCheck.any { !it.affectsCapacity })
+
+// Serialise the top-level accommodation-type / used-for sets captured on a certification approval request,
+// sorted for deterministic output. Returns null for an empty set so the field stays unset.
+@JvmName("accommodationTypesToCsvOrNull")
+fun Collection<AccommodationType>.toCsvOrNull(): String? = sortedBy { it.sequence }.joinToString(",") { it.name }.takeIf { it.isNotEmpty() }
+
+@JvmName("usedForTypesToCsvOrNull")
+fun Collection<UsedForType>.toCsvOrNull(): String? = sortedBy { it.sequence }.joinToString(",") { it.name }.takeIf { it.isNotEmpty() }
 
 enum class ResidentialHousingType(
   val description: String,

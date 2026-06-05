@@ -749,6 +749,24 @@ class Cell(
       null
     }
 
+    // Capture the resulting (post-conversion) accommodation types / used-for at the top-level wing so the UI can warn
+    // that the change affects the levels above. The converting room is not yet a residential cell, so the resulting
+    // set is the wing's current set plus the proposed type; only surfaced when that proposed type is not already held
+    // by the wing (i.e. the wing's set of accommodation types genuinely changes).
+    val topLevel = findTopLevelResidentialLocation()
+    val topLevelAccommodationTypes = topLevel.getAccommodationTypes(includeDraftCells = true)
+    val affectsLevelsAbove = this != topLevel && accommodationType !in topLevelAccommodationTypes
+    val resultingTopLevelAccommodationTypes = if (affectsLevelsAbove) {
+      (topLevelAccommodationTypes + accommodationType).toCsvOrNull()
+    } else {
+      null
+    }
+    val resultingTopLevelUsedFor = if (affectsLevelsAbove) {
+      (topLevel.getUsedForTypes(includeDraftCells = true) + (usedForTypes ?: emptyList())).toCsvOrNull()
+    } else {
+      null
+    }
+
     return addApprovalToLocation(
       ConvertToCellApprovalRequest(
         location = this,
@@ -770,6 +788,8 @@ class Cell(
         currentCellMark = cellMark?.let { this.cellMark },
         inCellSanitation = inCellSanitation,
         currentInCellSanitation = inCellSanitation?.let { this.inCellSanitation },
+        topLevelAccommodationTypes = resultingTopLevelAccommodationTypes,
+        topLevelUsedFor = resultingTopLevelUsedFor,
       ),
     ) as ConvertToCellApprovalRequest
   }

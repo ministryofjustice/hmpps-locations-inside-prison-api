@@ -74,6 +74,10 @@ open class ConvertToCellApprovalRequest(
 
   open var currentInCellSanitation: Boolean? = null,
 
+  topLevelAccommodationTypes: String? = null,
+
+  topLevelUsedFor: String? = null,
+
 ) : LocationCertificationApprovalRequest(
   id = id,
   location = location,
@@ -81,6 +85,8 @@ open class ConvertToCellApprovalRequest(
   requestedBy = requestedBy,
   requestedDate = requestedDate,
   reasonForChange = reasonForChange,
+  topLevelAccommodationTypes = topLevelAccommodationTypes,
+  topLevelUsedFor = topLevelUsedFor,
 ) {
   fun getSpecialistCellTypesFromPendingList(): List<SpecialistCellType> = specialistCellTypes
     ?.split(",")

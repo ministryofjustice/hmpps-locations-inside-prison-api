@@ -112,6 +112,10 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations).isNotNull
       assertThat(pendingApproval.locations).hasSize(1)
 
+      // The draft IS the top-level wing (nothing above it), so no top-level impact is recorded.
+      assertThat(pendingApproval.topLevelAccommodationTypes).isNull()
+      assertThat(pendingApproval.topLevelUsedFor).isNull()
+
       // Approve the request to generate a cell certificate
       val approvedRequest = webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(user = EXPECTED_USERNAME, roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -185,6 +189,45 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(activeApprovedNewWing.status).isEqualTo(DerivedLocationStatus.ACTIVE)
       assertThat(activeApprovedNewWing.inactiveStatus).isNull()
       assertThat(activeApprovedNewWing.deactivatedReason).isNull()
+    }
+
+    @Test
+    fun `draft cell below an existing wing surfaces the resulting top-level accommodation types`() {
+      // Leeds wing A is certified and every cell is NORMAL_ACCOMMODATION. Add a DRAFT CARE_AND_SEPARATION cell beneath
+      // an existing landing so that, once approved, the wing above will span two accommodation types.
+      val landingA1 = leedsWing.findSubLocations().first { it.getKey() == "LEI-A-1" }
+
+      webTestClient.post().uri("/locations/create-cells")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          createCellInitialisationRequest(
+            prisonId = "LEI",
+            parentLocation = landingA1.id,
+            startingCellNumber = 10,
+            accommodationType = AccommodationType.CARE_AND_SEPARATION,
+          ).copy(newLevelAboveCells = null),
+        )
+        .exchange()
+        .expectStatus().isCreated
+
+      val draftCell = repository.findOneByKey("LEI-A-1-010")!!
+
+      val pendingApproval = webTestClient.put().uri("/certification/location/request-approval")
+        .headers(setAuthorisation(user = EXPECTED_USERNAME, roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(LocationApprovalRequest(locationId = draftCell.id!!)))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.DRAFT)
+      // The draft sits below the top-level wing, which currently only holds NORMAL_ACCOMMODATION; certifying the
+      // CARE_AND_SEPARATION cell changes the set of accommodation types held above it, so the resulting (post-change)
+      // top-level accommodation types are surfaced.
+      assertThat(pendingApproval.topLevelAccommodationTypes)
+        .containsExactlyInAnyOrder(AccommodationType.NORMAL_ACCOMMODATION, AccommodationType.CARE_AND_SEPARATION)
     }
   }
 
@@ -3655,6 +3698,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approval.currentAccommodationTypes).isNull()
       assertThat(approval.currentUsedForTypes).isNull()
 
+      // The wing's cells are all NORMAL_ACCOMMODATION and the proposed type matches, so the levels above
+      // are unaffected and no top-level impact is surfaced.
+      assertThat(approval.topLevelAccommodationTypes).isNull()
+      assertThat(approval.topLevelUsedFor).isNull()
+
       // A converted room has no current capacity, so the change is "None -> new".
       assertThat(approval.locations!![0].currentWorkingCapacity).isEqualTo(0)
       assertThat(approval.locations[0].currentMaxCapacity).isEqualTo(0)
@@ -3680,6 +3728,12 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approval.currentAccommodationTypes).containsExactly(AccommodationType.NORMAL_ACCOMMODATION)
       // Used-for still matches the parent, so it is not surfaced.
       assertThat(approval.currentUsedForTypes).isNull()
+
+      // The wing above only holds NORMAL_ACCOMMODATION today, so the proposed CARE_AND_SEPARATION changes the set of
+      // accommodation types held above the cell: the resulting (post-change) top-level values are surfaced.
+      assertThat(approval.topLevelAccommodationTypes)
+        .containsExactlyInAnyOrder(AccommodationType.NORMAL_ACCOMMODATION, AccommodationType.CARE_AND_SEPARATION)
+      assertThat(approval.topLevelUsedFor).contains(UsedForType.STANDARD_ACCOMMODATION)
     }
 
     @Test
@@ -3697,6 +3751,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approval.currentAccommodationTypes).isNull()
       // The parent's current used-for is surfaced because a proposed used-for is not held by it.
       assertThat(approval.currentUsedForTypes).containsExactly(UsedForType.STANDARD_ACCOMMODATION)
+
+      // The proposed accommodation type matches the wing, so the levels above are not flagged even though the
+      // proposed used-for differs (the top-level impact is gated on the accommodation-type set changing).
+      assertThat(approval.topLevelAccommodationTypes).isNull()
+      assertThat(approval.topLevelUsedFor).isNull()
     }
 
     @Test

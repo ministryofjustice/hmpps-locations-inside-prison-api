@@ -8,8 +8,10 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import org.hibernate.annotations.SortNatural
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import java.time.Clock
 import java.time.LocalDateTime
 import java.util.SortedSet
@@ -38,6 +40,16 @@ abstract class LocationCertificationApprovalRequest(
   @Column(nullable = false)
   open var maxCapacityChange: Int = 0,
 
+  // Resulting (post-change) accommodation types / used-for at the top-level location (wing). Populated only when this
+  // change alters the set of accommodation types held above the location being approved (see Cell
+  // .requestApprovalForConvertToCell and ResidentialLocation.requestApprovalForDraftLocation); null means the levels
+  // above are unaffected. Stored as a comma-separated list, mirroring currentAccommodationTypes.
+  @Column(name = "top_level_accommodation_types", nullable = true)
+  open var topLevelAccommodationTypes: String? = null,
+
+  @Column(name = "top_level_used_for_types", nullable = true)
+  open var topLevelUsedFor: String? = null,
+
   @SortNatural
   @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "certification_approval_request_id", nullable = false)
@@ -59,12 +71,26 @@ abstract class LocationCertificationApprovalRequest(
     workingCapacityChange = workingCapacityChange,
     maxCapacityChange = maxCapacityChange,
     certificateId = cellCertificateId,
+    topLevelAccommodationTypes = getTopLevelAccommodationTypesFromList().takeIf { it.isNotEmpty() },
+    topLevelUsedFor = getTopLevelUsedForFromList().takeIf { it.isNotEmpty() },
     locations = if (showLocations) {
       locations.filter { it.pathHierarchy == location.getPathHierarchy() }.map { it.toDto() }
     } else {
       null
     },
   )
+
+  fun getTopLevelAccommodationTypesFromList(): List<AccommodationType> = topLevelAccommodationTypes
+    ?.split(",")
+    ?.filter { it.isNotBlank() }
+    ?.map { AccommodationType.valueOf(it.trim()) }
+    ?: emptyList()
+
+  fun getTopLevelUsedForFromList(): List<UsedForType> = topLevelUsedFor
+    ?.split(",")
+    ?.filter { it.isNotBlank() }
+    ?.map { UsedForType.valueOf(it.trim()) }
+    ?: emptyList()
 
   fun generateLocationHierarchy(): CertificationApprovalRequestLocation = location.toCertificationApprovalRequestLocation(
     includeDraftOrPending = getApprovalType().hasPendingValues,
