@@ -128,6 +128,9 @@ open class ResidentialLocation(
   fun calcWorkingCapacity(includePendingOrDraft: Boolean = false) = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
     .sumOf { it.getWorkingCapacity(includePendingOrDraft) ?: 0 }
 
+  fun calcWorkingCapacityForCertificate(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && !it.isDraft() }
+    .sumOf { it.getWorkingCapacityForCertificate() ?: 0 }
+
   fun calcMaxCapacity(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
     .sumOf { it.getMaxCapacity(includePendingOrDraft) ?: 0 }
 
@@ -626,7 +629,7 @@ open class ResidentialLocation(
         workingCapacity = if (approvalRequest is DraftChangeApprovalRequest) {
           getWorkingCapacityIgnoringInactiveStatus()
         } else {
-          calcWorkingCapacity()
+          calcWorkingCapacityForCertificate()
         },
         certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
         usedForTypes = getUsedForValuesAsCSV(),

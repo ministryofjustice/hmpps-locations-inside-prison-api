@@ -265,6 +265,36 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(CellCertificateUploadNotFoundException::class)
+  fun handleCellCertificateUploadNotFoundException(e: CellCertificateUploadNotFoundException): ResponseEntity<ErrorResponse> {
+    log.debug("Cell certificate upload not found: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.CellCertificateUploadNotFound,
+          userMessage = "Cell certificate upload not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(CellCertificateUploadAlreadyInProgressException::class)
+  fun handleCellCertificateUploadAlreadyInProgressException(e: CellCertificateUploadAlreadyInProgressException): ResponseEntity<ErrorResponse> {
+    log.debug("Cell certificate upload already in progress: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.CellCertificateUploadAlreadyInProgress,
+          userMessage = "Cell certificate upload already in progress: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(PendingApprovalAlreadyExistsException::class)
   fun handlePendingApprovalAlreadyExistsException(e: PendingApprovalAlreadyExistsException): ResponseEntity<ErrorResponse> {
     log.debug("Location already pending an approval: {}", e.message)
@@ -741,3 +771,5 @@ class PermanentDeactivationRequiresApprovalException(key: String) : Exception("L
 class BulkPermanentDeactivationNotAllowedException(prisonId: String) : Exception("Bulk permanent deactivation is not allowed for $prisonId while certification approval is active")
 class SpecialistCellTypeChangesDoNotRequireApprovalException(key: String) : Exception("The specialist cell type change for $key does not require approval - the count of capacity-affecting specialist cell types is not changing")
 class UsedForTypesOnlyForNormalAccommodationException(key: String) : Exception("Used for types can only be set on normal accommodation cells - $key is not a normal accommodation cell")
+class CellCertificateUploadAlreadyInProgressException(prisonId: String) : Exception("A cell certificate upload is already in progress for prison $prisonId")
+class CellCertificateUploadNotFoundException(id: UUID) : Exception("Cell certificate upload with id $id not found")
