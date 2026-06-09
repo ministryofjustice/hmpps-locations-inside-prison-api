@@ -102,6 +102,16 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     assertThat(inactiveCellOnCert?.workingCapacity).isEqualTo(2)
     // total working capacity = cell1 (1) + cell2 (2) + temp-inactive cell (2)
     assertThat(certificate.totalWorkingCapacity).isEqualTo(5)
+
+    // a LOCATION_AMENDED event is raised for the cell whose capacity changed (cell1) and its parents.
+    // cell2 (unchanged) and inactiveCellB3001 (INACTIVE_TEMP flag only, no capacity value change) raise none.
+    getDomainEvents(3).let { events ->
+      assertThat(events.map { it.eventType to it.additionalInformation?.key }).containsExactlyInAnyOrder(
+        "location.inside.prison.amended" to cell1.getKey(),
+        "location.inside.prison.amended" to landingZ1.getKey(),
+        "location.inside.prison.amended" to wingZ.getKey(),
+      )
+    }
   }
 
   @Test

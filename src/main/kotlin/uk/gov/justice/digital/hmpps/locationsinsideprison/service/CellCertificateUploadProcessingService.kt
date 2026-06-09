@@ -38,6 +38,7 @@ class CellCertificateUploadProcessingService(
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val sharedLocationService: SharedLocationService,
   private val cellCertificateService: CellCertificateService,
+  private val snsService: SnsService,
   private val clock: Clock,
   transactionManager: PlatformTransactionManager,
 ) {
@@ -52,11 +53,13 @@ class CellCertificateUploadProcessingService(
   fun process(uploadId: UUID) {
     val context = startProcessing(uploadId) ?: return
 
+    val capacityChangedLocationIds = mutableListOf<UUID>()
     context.pendingLocationIds.forEach { locationId ->
       try {
-        requiresNewTransaction.executeWithoutResult {
+        val changedId = requiresNewTransaction.execute {
           processRow(locationId, context.linkedTransactionId, context.requestedBy)
         }
+        if (changedId != null) capacityChangedLocationIds.add(changedId)
       } catch (e: Exception) {
         // Backstop: the per-row transaction marks the row FAILED, but guard against the orchestrator aborting.
         log.error("Failed to process cell certificate upload row $locationId", e)
@@ -65,6 +68,42 @@ class CellCertificateUploadProcessingService(
 
     newTransaction.executeWithoutResult {
       finish(uploadId, context.linkedTransactionId)
+    }
+
+    // Capacity changes are committed - now raise LOCATION_AMENDED events for each changed location.
+    publishCapacityAmendedEvents(capacityChangedLocationIds)
+  }
+
+  /**
+   * Publishes a LOCATION_AMENDED domain event for every cell whose capacity changed, plus its parent
+   * locations - mirroring the synchronous bulk capacity update. Called after all capacity writes are
+   * committed. Publishes the domain event directly (no audit) because this runs on the SQS listener thread
+   * which has no security context; the capacity changes themselves are already audited via LocationHistory.
+   * Failures are logged rather than propagated so they cannot trigger SQS redelivery.
+   */
+  private fun publishCapacityAmendedEvents(capacityChangedLocationIds: List<UUID>) {
+    if (capacityChangedLocationIds.isEmpty()) return
+    val now = LocalDateTime.now(clock)
+
+    val locationsToAmend: List<Pair<UUID, String>> = newTransaction.execute {
+      val cells = capacityChangedLocationIds.mapNotNull { cellLocationRepository.findById(it).orElse(null) }
+      (cells + cells.flatMap { it.getParentLocations() })
+        .filter { !it.isDraft() }
+        .distinctBy { it.id }
+        .map { it.id!! to it.getKey() }
+    } ?: emptyList()
+
+    locationsToAmend.forEach { (id, key) ->
+      try {
+        snsService.publishDomainEvent(
+          eventType = InternalLocationDomainEventType.LOCATION_AMENDED,
+          description = "$key ${InternalLocationDomainEventType.LOCATION_AMENDED.description}",
+          occurredAt = now,
+          additionalInformation = AdditionalInformation(id = id, key = key, source = InformationSource.DPS),
+        )
+      } catch (e: Exception) {
+        log.error("Failed to publish LOCATION_AMENDED event for $key", e)
+      }
     }
   }
 
@@ -103,9 +142,11 @@ class CellCertificateUploadProcessingService(
     }
   }
 
-  private fun processRow(locationId: UUID, linkedTransactionId: UUID, requestedBy: String) {
-    val row = cellCertificateUploadLocationRepository.findById(locationId).orElse(null) ?: return
+  /** @return the cell's location id when its capacity (max/working/CNA) changed, otherwise null. */
+  private fun processRow(locationId: UUID, linkedTransactionId: UUID, requestedBy: String): UUID? {
+    val row = cellCertificateUploadLocationRepository.findById(locationId).orElse(null) ?: return null
     val now = LocalDateTime.now(clock)
+    var capacityChangedLocationId: UUID? = null
 
     try {
       val cell = cellLocationRepository.findOneByKey(row.locationKey)
@@ -115,22 +156,26 @@ class CellCertificateUploadProcessingService(
         row.markSkipped("Archived location", now)
       } else {
         val linkedTransaction = linkedTransactionRepository.findById(linkedTransactionId).orElseThrow()
-        applyToCell(cell, row, requestedBy, now, linkedTransaction)
+        if (applyToCell(cell, row, requestedBy, now, linkedTransaction)) {
+          capacityChangedLocationId = cell.id
+        }
       }
     } catch (e: Exception) {
       log.warn("Failed to process upload row for ${row.locationKey}: ${e.message}")
       row.markFailed("Update failed: ${e.message}", now)
     }
     cellCertificateUploadLocationRepository.save(row)
+    return capacityChangedLocationId
   }
 
+  /** @return true when the cell's capacity (max/working/CNA) values were changed. */
   private fun applyToCell(
     cell: Cell,
     row: CellCertificateUploadLocation,
     requestedBy: String,
     now: LocalDateTime,
     linkedTransaction: LinkedTransaction,
-  ) {
+  ): Boolean {
     val oldMaxCapacity = cell.getMaxCapacity()
     val oldWorkingCapacity = cell.getCurrentlyHeldWorkingCapacity()
     val oldCertifiedNormalAccommodation = cell.getCertifiedNormalAccommodation()
@@ -140,6 +185,7 @@ class CellCertificateUploadProcessingService(
     val cna = row.certifiedNormalAccommodation ?: oldCertifiedNormalAccommodation ?: 0
 
     var changed = false
+    var capacityChanged = false
 
     if (oldMaxCapacity != row.maxCapacity || oldWorkingCapacity != row.workingCapacity || oldCertifiedNormalAccommodation != cna) {
       cell.setCapacity(
@@ -151,6 +197,7 @@ class CellCertificateUploadProcessingService(
         linkedTransaction = linkedTransaction,
       )
       changed = true
+      capacityChanged = true
     }
 
     if (row.cellMark != null && row.cellMark != oldCellMark) {
@@ -187,6 +234,7 @@ class CellCertificateUploadProcessingService(
     } else {
       row.markSkipped("No changes required", now)
     }
+    return capacityChanged
   }
 
   private fun finish(uploadId: UUID, linkedTransactionId: UUID) {
