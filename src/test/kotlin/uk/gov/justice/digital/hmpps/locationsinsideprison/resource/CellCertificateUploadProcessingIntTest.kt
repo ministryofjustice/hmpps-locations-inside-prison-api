@@ -195,4 +195,71 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     }
     assertThat(cellCertificateRepository.findByPrisonIdOrderByApprovedDateDesc("MDI")).hasSize(1)
   }
+
+  @Test
+  fun `a location that cannot be found is recorded as a failure`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    val body = jsonString(
+      UpdateCapacityRequest(
+        locations = mapOf(
+          // existing cell, working capacity reduced 2 -> 1
+          cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 1, certifiedNormalAccommodation = 2),
+          // non-existent location -> must be recorded as FAILED, not skipped
+          "MDI-Z-9-999" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 1, certifiedNormalAccommodation = 1),
+        ),
+      ),
+    )
+
+    webTestClient.post().uri("/locations/bulk/update-cell-certificate/MDI")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(body)
+      .exchange()
+      .expectStatus().isAccepted
+
+    await untilAsserted {
+      assertThat(cellCertificateUploadRepository.findAll().firstOrNull()?.status).isEqualTo(CellCertificateUploadStatus.FINISHED)
+    }
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      assertThat(upload.processedRecords).isEqualTo(1) // cell1 changed
+      assertThat(upload.skippedRecords).isEqualTo(0)
+      assertThat(upload.failedRecords).isEqualTo(1) // the missing location
+      with(upload.locations.associateBy { it.locationKey }.getValue("MDI-Z-9-999")) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.FAILED)
+        assertThat(message).isEqualTo("Location not found")
+      }
+    }
+  }
+
+  @Test
+  fun `running counts are incremented atomically per row`() {
+    val uploadId = TransactionTemplate(transactionManager).execute {
+      cellCertificateUploadRepository.save(
+        CellCertificateUpload(
+          prisonId = "MDI",
+          requestedBy = "TEST_USER",
+          requestedDate = LocalDateTime.now(),
+          totalRecords = 4,
+        ),
+      ).id!!
+    }!!
+
+    // each increment mirrors what processRow commits as a row completes - visible to a GET refresh mid-upload
+    TransactionTemplate(transactionManager).execute {
+      cellCertificateUploadRepository.incrementProcessedRecords(uploadId)
+      cellCertificateUploadRepository.incrementProcessedRecords(uploadId)
+      cellCertificateUploadRepository.incrementSkippedRecords(uploadId)
+      cellCertificateUploadRepository.incrementFailedRecords(uploadId)
+    }
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findById(uploadId).get()
+      assertThat(upload.processedRecords).isEqualTo(2)
+      assertThat(upload.skippedRecords).isEqualTo(1)
+      assertThat(upload.failedRecords).isEqualTo(1)
+    }
+  }
 }
