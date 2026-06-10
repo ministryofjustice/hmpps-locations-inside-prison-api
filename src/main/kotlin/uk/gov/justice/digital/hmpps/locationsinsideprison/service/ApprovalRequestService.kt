@@ -74,7 +74,7 @@ class ApprovalRequestService(
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = location.prisonId,
-      type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+      type = TransactionType.REQUEST_CERTIFICATION_APPROVAL,
       detail = "Requesting approval for location ${location.getKey()}",
     )
     val now = now(clock)
@@ -105,7 +105,7 @@ class ApprovalRequestService(
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = topLevelLocation.prisonId,
-      type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+      type = TransactionType.REQUEST_CERTIFICATION_APPROVAL,
       detail = "Requesting reactivation approval for location ${topLevelLocation.getKey()}",
     )
 
@@ -223,7 +223,7 @@ class ApprovalRequestService(
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = requestToApprove.prisonId,
       detail = "Requesting approval for signed op cap change for ${requestToApprove.prisonId}",
-      type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+      type = TransactionType.REQUEST_CERTIFICATION_APPROVAL,
     )
     val now = now(clock)
     val username = sharedLocationService.getUsername()
@@ -264,7 +264,7 @@ class ApprovalRequestService(
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = cell.prisonId,
-      type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+      type = TransactionType.REQUEST_CERTIFICATION_APPROVAL,
       detail = "Requesting specialist cell type change approval for location ${cell.getKey()}",
     )
     val username = sharedLocationService.getUsername()
@@ -327,7 +327,7 @@ class ApprovalRequestService(
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = location.prisonId,
-      type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+      type = TransactionType.REQUEST_CERTIFICATION_APPROVAL,
       detail = "Requesting permanent deactivation approval for location ${location.getKey()}",
     )
     val username = sharedLocationService.getUsername()

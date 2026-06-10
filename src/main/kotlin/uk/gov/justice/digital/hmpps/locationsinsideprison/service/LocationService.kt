@@ -833,7 +833,7 @@ class LocationService(
           )
           trackingTx = linkedTransaction ?: sharedLocationService.createLinkedTransaction(
             prisonId = locCapChange.prisonId,
-            type = TransactionType.APPROVE_CERTIFICATION_REQUEST,
+            type = TransactionType.REQUEST_CERTIFICATION_APPROVAL,
             detail = "Capacity request change for ${locCapChange.getKey()} w/c changing from ${locCapChange.calcWorkingCapacity()} to $workingCapacity, max capacity changing from ${locCapChange.capacity?.maxCapacity} to $maxCapacity and CNA changing from ${locCapChange.capacity?.certifiedNormalAccommodation} to $cna",
           )
           val approvalRequest = locCapChange.requestApprovalForCapacityChange(

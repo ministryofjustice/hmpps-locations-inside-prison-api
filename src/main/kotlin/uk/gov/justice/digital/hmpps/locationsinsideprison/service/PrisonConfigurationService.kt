@@ -23,6 +23,7 @@ class PrisonConfigurationService(
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val authenticationHolder: HmppsAuthenticationHolder,
   private val approvalDecisionService: ApprovalDecisionService,
+  private val cellCertificateService: CellCertificateService,
   private val clock: Clock,
   private val telemetryClient: TelemetryClient,
 ) {
@@ -126,7 +127,7 @@ class PrisonConfigurationService(
       )
       log.info("Updated certification approval status [$tx]")
 
-      if (approvalActive) {
+      if (approvalActive && !cellCertificateService.hasCurrentCellCertificate(prisonId)) {
         approvalDecisionService.baselinePrisonCertificate(prisonId)
       }
       tx.txEndTime = LocalDateTime.now(clock)
