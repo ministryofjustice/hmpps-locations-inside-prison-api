@@ -59,7 +59,7 @@ class CellCertificateUploadProcessingService(
     context.pendingLocationIds.forEach { locationId ->
       try {
         val changedId = requiresNewTransaction.execute {
-          processRow(locationId, context.linkedTransactionId, context.requestedBy)
+          processRow(locationId, uploadId, context.linkedTransactionId, context.requestedBy)
         }
         if (changedId != null) capacityChangedLocationIds.add(changedId)
       } catch (e: Exception) {
@@ -156,7 +156,7 @@ class CellCertificateUploadProcessingService(
   }
 
   /** @return the cell's location id when its capacity (max/working/CNA) changed, otherwise null. */
-  private fun processRow(locationId: UUID, linkedTransactionId: UUID, requestedBy: String): UUID? {
+  private fun processRow(locationId: UUID, uploadId: UUID, linkedTransactionId: UUID, requestedBy: String): UUID? {
     val row = cellCertificateUploadLocationRepository.findById(locationId).orElse(null) ?: return null
     val now = LocalDateTime.now(clock)
     var capacityChangedLocationId: UUID? = null
@@ -164,7 +164,7 @@ class CellCertificateUploadProcessingService(
     try {
       val cell = cellLocationRepository.findOneByKey(row.locationKey)
       if (cell == null) {
-        row.markSkipped("Location not found", now)
+        row.markFailed("Location not found", now)
       } else if (cell.isPermanentlyDeactivated()) {
         row.markSkipped("Archived location", now)
       } else {
@@ -178,7 +178,22 @@ class CellCertificateUploadProcessingService(
       row.markFailed("Update failed: ${e.message}", now)
     }
     cellCertificateUploadLocationRepository.save(row)
+    incrementRunningCount(uploadId, row.status)
     return capacityChangedLocationId
+  }
+
+  /**
+   * Bumps the matching running count on the upload master record so the "so far" processed/skipped/failed
+   * totals are visible to a GET refresh while the upload is still being processed. Committed with the row's
+   * own transaction; finish() later recomputes the authoritative totals from the location rows.
+   */
+  private fun incrementRunningCount(uploadId: UUID, status: CellCertificateUploadLocationStatus) {
+    when (status) {
+      CellCertificateUploadLocationStatus.PROCESSED -> cellCertificateUploadRepository.incrementProcessedRecords(uploadId)
+      CellCertificateUploadLocationStatus.SKIPPED -> cellCertificateUploadRepository.incrementSkippedRecords(uploadId)
+      CellCertificateUploadLocationStatus.FAILED -> cellCertificateUploadRepository.incrementFailedRecords(uploadId)
+      CellCertificateUploadLocationStatus.PENDING -> {}
+    }
   }
 
   /** @return true when the cell's capacity (max/working/CNA) values were changed. */
