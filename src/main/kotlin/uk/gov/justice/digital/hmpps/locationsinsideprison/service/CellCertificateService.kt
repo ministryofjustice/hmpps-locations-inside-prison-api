@@ -73,6 +73,8 @@ class CellCertificateService(
     return cellCertificate.toDto(showLocations = true)
   }
 
+  fun hasCurrentCellCertificate(prisonId: String): Boolean = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(prisonId) != null
+
   fun updateSpecialistCellTypesInCurrentCertificate(cell: Cell) {
     val currentCert = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(cell.prisonId) ?: return
     currentCert.findLocationInCertificate(cell.getPathHierarchy())?.let { certLocation ->
