@@ -10,6 +10,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CellCertificateUploadApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUpload
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
@@ -20,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Certifi
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import java.time.Clock
+import java.time.Duration
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -108,7 +110,11 @@ class CellCertificateUploadProcessingService(
   }
 
   private fun startProcessing(uploadId: UUID): ProcessingContext? = newTransaction.execute {
-    val upload = cellCertificateUploadRepository.findById(uploadId).orElse(null)
+    // Pessimistic lock so concurrent consumers (the same SQS message redelivered to multiple pods while a
+    // long upload is still in flight) serialise here: the first claims the upload (PENDING -> STARTED) and
+    // commits; the others then read STARTED and skip, guaranteeing a single run and a single certificate.
+    val upload = cellCertificateUploadRepository.findByIdForUpdate(uploadId)
+    val now = LocalDateTime.now(clock)
     when {
       upload == null -> {
         log.warn("Cell certificate upload $uploadId not found, ignoring")
@@ -118,11 +124,18 @@ class CellCertificateUploadProcessingService(
         log.info("Cell certificate upload $uploadId already FINISHED, ignoring duplicate message")
         null
       }
+      upload.status == CellCertificateUploadStatus.STARTED && !isStaleClaim(upload, now) -> {
+        log.info("Cell certificate upload $uploadId already being processed by another consumer, ignoring duplicate message")
+        null
+      }
       else -> {
-        if (upload.status == CellCertificateUploadStatus.PENDING) {
-          upload.status = CellCertificateUploadStatus.STARTED
-          upload.startTime = LocalDateTime.now(clock)
+        // PENDING, or a STARTED claim that has gone stale (the previous run crashed) - (re)claim it and
+        // process whatever rows are still PENDING.
+        if (upload.status == CellCertificateUploadStatus.STARTED) {
+          log.warn("Cell certificate upload $uploadId STARTED at ${upload.startTime} looks stale, re-claiming")
         }
+        upload.status = CellCertificateUploadStatus.STARTED
+        upload.startTime = now
 
         val linkedTransaction = sharedLocationService.createLinkedTransaction(
           prisonId = upload.prisonId,
@@ -238,7 +251,9 @@ class CellCertificateUploadProcessingService(
   }
 
   private fun finish(uploadId: UUID, linkedTransactionId: UUID) {
-    val upload = cellCertificateUploadRepository.findById(uploadId).orElse(null) ?: return
+    // Lock the row again so the FINISHED check-and-set is atomic - defence in depth against any concurrent
+    // path slipping past the claim guard and double-creating a certificate.
+    val upload = cellCertificateUploadRepository.findByIdForUpdate(uploadId) ?: return
     if (upload.status == CellCertificateUploadStatus.FINISHED) return
 
     upload.processedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.PROCESSED }
@@ -272,6 +287,15 @@ class CellCertificateUploadProcessingService(
     log.info("Finished cell certificate upload ${upload.id}: processed=${upload.processedRecords}, skipped=${upload.skippedRecords}, failed=${upload.failedRecords}, certificate=${cellCertificate.id}")
   }
 
+  /**
+   * A STARTED claim is considered stale (its consumer crashed) once its startTime is older than
+   * [STALE_CLAIM_THRESHOLD], allowing a redelivered message to re-claim and finish the upload.
+   */
+  private fun isStaleClaim(upload: CellCertificateUpload, now: LocalDateTime): Boolean {
+    val startTime = upload.startTime ?: return true
+    return startTime.isBefore(now.minus(STALE_CLAIM_THRESHOLD))
+  }
+
   data class ProcessingContext(
     val pendingLocationIds: List<UUID>,
     val linkedTransactionId: UUID,
@@ -280,5 +304,8 @@ class CellCertificateUploadProcessingService(
 
   companion object {
     private val log: Logger = LoggerFactory.getLogger(this::class.java)
+
+    /** How long a STARTED upload can sit untouched before a redelivery is allowed to re-claim it. */
+    private val STALE_CLAIM_THRESHOLD: Duration = Duration.ofMinutes(30)
   }
 }
