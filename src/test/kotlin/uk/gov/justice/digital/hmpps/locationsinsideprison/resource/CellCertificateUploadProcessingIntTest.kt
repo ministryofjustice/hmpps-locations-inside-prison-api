@@ -10,6 +10,8 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUpload
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateUploadRepository
@@ -17,6 +19,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CellCertificat
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.UPDATE_CELL_CERTIFICATE_QUEUE_CONFIG_KEY
 import uk.gov.justice.hmpps.sqs.HmppsQueue
 import uk.gov.justice.hmpps.sqs.HmppsQueueService
+import java.time.LocalDateTime
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
 
@@ -140,5 +146,53 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     processingService.process(uploadId)
 
     assertThat(cellCertificateRepository.findByPrisonIdOrderByApprovedDateDesc("MDI").filter { it.toDto().current }).hasSize(1)
+  }
+
+  @Test
+  fun `concurrent processing of the same upload creates only one certificate`() {
+    // Build a PENDING upload directly (a single no-change row) without sending an SQS message, so the test
+    // controls when processing is invoked. cell2 already has 2/2/2, so the row is a no-op (SKIPPED); this
+    // isolates the test to the claim/finish concurrency rather than capacity validation.
+    val uploadId = TransactionTemplate(transactionManager).execute {
+      val upload = CellCertificateUpload(
+        prisonId = "MDI",
+        requestedBy = "TEST_USER",
+        requestedDate = LocalDateTime.now(),
+        totalRecords = 1,
+      ).apply {
+        addLocation(
+          CellCertificateUploadLocation(
+            locationKey = cell2.getKey(),
+            maxCapacity = 2,
+            workingCapacity = 2,
+            certifiedNormalAccommodation = 2,
+          ),
+        )
+      }
+      cellCertificateUploadRepository.save(upload).id!!
+    }!!
+
+    // Simulate the same SQS message being redelivered to several pods at once. Without the pessimistic
+    // claim each run would create its own certificate (the bug); the lock must serialise them to one.
+    val threadCount = 3
+    val startLatch = CountDownLatch(1)
+    val executor = Executors.newFixedThreadPool(threadCount)
+    try {
+      val futures = (1..threadCount).map {
+        executor.submit {
+          startLatch.await()
+          processingService.process(uploadId)
+        }
+      }
+      startLatch.countDown()
+      futures.forEach { it.get(30, TimeUnit.SECONDS) }
+    } finally {
+      executor.shutdownNow()
+    }
+
+    TransactionTemplate(transactionManager).execute {
+      assertThat(cellCertificateUploadRepository.findById(uploadId).get().status).isEqualTo(CellCertificateUploadStatus.FINISHED)
+    }
+    assertThat(cellCertificateRepository.findByPrisonIdOrderByApprovedDateDesc("MDI")).hasSize(1)
   }
 }
