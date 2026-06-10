@@ -316,7 +316,8 @@ class LocationServiceTest {
     val specialistCellType: SpecialistCellType = SpecialistCellType.CAT_A
     val mockCell: Cell = mock()
 
-    whenever(mockCell.specialistCellTypes).thenReturn(sortedSetOf(SpecialistCell(1, location, specialistCellType)))
+    val specialistCellTypes = sortedSetOf(SpecialistCell(1, location, specialistCellType))
+    whenever(mockCell.specialistCellTypes).thenReturn(specialistCellTypes)
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(activePrisonService.isActivePrison(any())).thenReturn(false)
 
@@ -330,7 +331,8 @@ class LocationServiceTest {
     val specialistCellType: SpecialistCellType = SpecialistCellType.CAT_A
     val mockCell: Cell = mock()
 
-    whenever(mockCell.specialistCellTypes).thenReturn(sortedSetOf(SpecialistCell(1, location, specialistCellType)))
+    val specialistCellTypes = sortedSetOf(SpecialistCell(1, location, specialistCellType))
+    whenever(mockCell.specialistCellTypes).thenReturn(specialistCellTypes)
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(mockCell.prisonId).thenReturn("MDI")
     whenever(activePrisonService.isActivePrison(any())).thenReturn(true)
@@ -346,12 +348,13 @@ class LocationServiceTest {
     val residentialCellValue: ResidentialAttributeValue = ResidentialAttributeValue.CAT_A_CELL
     val mockCell: Cell = mock()
 
-    whenever(mockCell.attributes).thenReturn(sortedSetOf(ResidentialAttribute(1, location, residentialCellType, residentialCellValue)))
+    val attributes = sortedSetOf(ResidentialAttribute(1, location, residentialCellType, residentialCellValue))
+    whenever(mockCell.attributes).thenReturn(attributes)
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(activePrisonService.isActivePrison(any())).thenReturn(false)
 
-    val attributes = service.getCellAttributes(UUID.randomUUID())
-    Assertions.assertThat(attributes).isEqualTo(mutableListOf(CellAttributes(code = residentialCellValue, description = residentialCellValue.description)))
+    val cellAttributes = service.getCellAttributes(UUID.randomUUID())
+    Assertions.assertThat(cellAttributes).isEqualTo(mutableListOf(CellAttributes(code = residentialCellValue, description = residentialCellValue.description)))
   }
 
   @Test
@@ -362,8 +365,10 @@ class LocationServiceTest {
     val residentialCellValue: ResidentialAttributeValue = ResidentialAttributeValue.CAT_A_CELL
     val mockCell: Cell = mock()
 
-    whenever(mockCell.specialistCellTypes).thenReturn(sortedSetOf(SpecialistCell(1, location, specialistCellType)))
-    whenever(mockCell.attributes).thenReturn(sortedSetOf(ResidentialAttribute(1, location, residentialCellType, residentialCellValue)))
+    val specialistCellTypes = sortedSetOf(SpecialistCell(1, location, specialistCellType))
+    val residentialAttributes = sortedSetOf(ResidentialAttribute(1, location, residentialCellType, residentialCellValue))
+    whenever(mockCell.specialistCellTypes).thenReturn(specialistCellTypes)
+    whenever(mockCell.attributes).thenReturn(residentialAttributes)
     whenever(cellLocationRepository.findById(any())).thenReturn(Optional.of(mockCell))
     whenever(mockCell.prisonId).thenReturn("MDI")
     whenever(activePrisonService.isActivePrison(any())).thenReturn(true)

@@ -61,6 +61,11 @@ class SqsIntegrationTestBase : IntegrationTestBase() {
 
   fun getNumberOfMessagesCurrentlyOnQueue(): Int = testDomainEventQueue.sqsClient.countMessagesOnQueue(testDomainEventQueue.queueUrl).get()
 
+  fun purgeDomainEvents() {
+    testDomainEventQueue.sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(testDomainEventQueue.queueUrl).build())
+    await untilCallTo { getNumberOfMessagesCurrentlyOnQueue() } matches { it == 0 }
+  }
+
   fun getDomainEvents(messageCount: Int = 1): List<HMPPSDomainEvent> {
     val sqsClient = testDomainEventQueue.sqsClient
 

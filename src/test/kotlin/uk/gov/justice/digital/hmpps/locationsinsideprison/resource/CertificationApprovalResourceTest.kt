@@ -1258,6 +1258,9 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       assertThat(getLocation(firstCell.id!!).pendingApprovalRequestId).isEqualTo(pendingApproval.id)
 
+      // drain events published by the set-up steps so we only capture the approve action's events
+      purgeDomainEvents()
+
       webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
         .header("Content-Type", "application/json")
@@ -1300,6 +1303,9 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       // preview includes the wing with its sub-location hierarchy
       assertThat(pendingApproval.locations).hasSize(1)
       assertThat(pendingApproval.locations!![0].subLocations).isNotEmpty
+
+      // drain events published by the set-up steps so we only capture the approve action's events
+      purgeDomainEvents()
 
       webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
