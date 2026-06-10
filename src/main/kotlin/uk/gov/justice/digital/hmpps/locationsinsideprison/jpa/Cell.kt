@@ -126,6 +126,17 @@ class Cell(
     null
   }
 
+  /**
+   * Working capacity to record on a cell certificate. As [getWorkingCapacity] but a cell identified as
+   * temporarily off the cell certificate (INACTIVE_TEMP) keeps its certified working capacity rather than
+   * reporting 0, so the certificate reflects the true certified value while the cell is temporarily reduced.
+   */
+  fun getWorkingCapacityForCertificate(): Int? = findPendingLeafLocation(false)?.workingCapacity ?: if (isActiveAndAllParentsActive() || isShortTermInactive()) {
+    getCurrentlyHeldWorkingCapacity()
+  } else {
+    null
+  }
+
   fun getMaxCapacity(includePending: Boolean = false): Int? = findPendingLeafLocation(includePending)?.maxCapacity ?: capacity?.maxCapacity
 
   fun getCertifiedNormalAccommodation(includePending: Boolean = false): Int? = findPendingLeafLocation(includePending)?.certifiedNormalAccommodation ?: capacity?.certifiedNormalAccommodation

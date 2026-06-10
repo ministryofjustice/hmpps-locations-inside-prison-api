@@ -45,4 +45,6 @@ enum class ErrorCode(val errorCode: Int) {
   PermanentDeactivationRequiresApproval(136),
   BulkPermanentDeactivationNotAllowed(137),
   UsedForTypesOnlyForNormalAccommodation(138),
+  CellCertificateUploadAlreadyInProgress(139),
+  CellCertificateUploadNotFound(140),
 }

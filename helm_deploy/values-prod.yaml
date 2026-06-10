@@ -27,6 +27,10 @@ generic-service:
       HMPPS_SQS_QUEUES_UPDATEFROMEXTERNALSYSTEMEVENTS_QUEUE_NAME: "sqs_queue_name"
     sqs-update-from-external-system-events-dlq-secret:
       HMPPS_SQS_QUEUES_UPDATEFROMEXTERNALSYSTEMEVENTS_DLQ_NAME: "sqs_queue_name"
+    sqs-update-cell-certificate-queue-secret:
+      HMPPS_SQS_QUEUES_UPDATECELLCERTIFICATE_QUEUE_NAME: "sqs_queue_name"
+    sqs-update-cell-certificate-dlq-secret:
+      HMPPS_SQS_QUEUES_UPDATECELLCERTIFICATE_DLQ_NAME: "sqs_queue_name"
 
   postgresDatabaseRestore:
     enabled: true

@@ -80,4 +80,8 @@ tasks {
   withType<KotlinCompile> {
     compilerOptions.jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_25
   }
+
+  test {
+    maxHeapSize = "2g"
+  }
 }
