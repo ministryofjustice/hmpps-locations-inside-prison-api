@@ -28,6 +28,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
@@ -1676,6 +1677,87 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(reactivatedLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
       assertThat(reactivatedLocation.pendingChanges).isNull()
       assertThat(reactivatedLocation.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `reactivating a cell via approval records the working capacity returning to its previous value in history`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      // Cell starts with a stored working capacity of 1 (the leeds wing default).
+      deactivateLocation(
+        firstCell,
+        deactivatedReason = DeactivatedReason.MOTHBALLED,
+        planetFmReference = "11111",
+        reasonForChange = "The wing has been flooded",
+        requiresApproval = true,
+        approveDeactivation = true,
+      )
+
+      // Request reactivation back to the SAME stored capacity (working capacity 1). This reproduces the scenario
+      // where the stored capacity does not technically change, only the active/displayed working capacity does
+      // (0 while inactive -> 1 once active again).
+      webTestClient.put().uri("/certification/location/reactivation-request-approval")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            ReactivationLocationsApprovalRequest(
+              topLevelLocationId = firstCell.id!!,
+              cellReactivationChanges = mapOf(
+                firstCell.id!! to CellReactivationDetail(
+                  capacity = Capacity(
+                    workingCapacity = 1,
+                    maxCapacity = 2,
+                    certifiedNormalAccommodation = 1,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      val pendingApprovalRequestId = webTestClient.get().uri("/locations/${firstCell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!.pendingApprovalRequestId!!
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingApprovalRequestId)))
+        .exchange()
+        .expectStatus().isOk
+
+      val reactivatedCell = webTestClient.get().uri("/locations/${firstCell.id}?includeHistory=true")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      assertThat(reactivatedCell.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+
+      val workingCapacityHistory = reactivatedCell.changeHistory.orEmpty()
+        .filter { it.attribute == LocationAttribute.WORKING_CAPACITY.description }
+
+      // Deactivation should have recorded working capacity dropping to 0...
+      assertThat(workingCapacityHistory)
+        .anySatisfy {
+          assertThat(it.oldValues).isEqualTo(listOf("1"))
+          assertThat(it.newValues).isEqualTo(listOf("0"))
+        }
+      // ...and reactivation should record it returning to 1, even though the stored capacity value did not change.
+      assertThat(workingCapacityHistory)
+        .anySatisfy {
+          assertThat(it.transactionType).isEqualTo(TransactionType.APPROVE_CERTIFICATION_REQUEST)
+          assertThat(it.oldValues).isEqualTo(listOf("0"))
+          assertThat(it.newValues).isEqualTo(listOf("1"))
+        }
     }
 
     @Test

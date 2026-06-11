@@ -1077,16 +1077,18 @@ abstract class Location(
           this.residentialHousingType = this.accommodationType.mapToResidentialHousingType()
         }
 
-        if (!capacityAdjusted) {
-          addHistory(
-            LocationAttribute.WORKING_CAPACITY,
-            previousWorkingCapacity.toString(),
-            getWorkingCapacityIgnoreParent().toString(),
-            userOrSystemInContext,
-            LocalDateTime.now(clock),
-            linkedTransaction,
-          )
-        }
+        // Always record the working capacity returning to its active value. Temporary deactivation records the
+        // working capacity dropping to 0 without changing the stored Capacity, so when a cell is reactivated to the
+        // same stored value (e.g. via an approval that supplies the unchanged capacity) setCapacity is a no-op and
+        // would otherwise leave no history of the working capacity coming back.
+        addHistory(
+          LocationAttribute.WORKING_CAPACITY,
+          previousWorkingCapacity.toString(),
+          getWorkingCapacityIgnoreParent().toString(),
+          userOrSystemInContext,
+          linkedTransaction.txStartTime,
+          linkedTransaction,
+        )
       }
       reactivatedLocations?.add(this)
       amendedLocations?.addAll(this.getParentLocations())
