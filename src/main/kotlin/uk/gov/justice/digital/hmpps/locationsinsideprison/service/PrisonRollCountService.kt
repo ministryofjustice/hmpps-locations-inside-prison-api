@@ -135,6 +135,8 @@ class PrisonRollCountService(
       )
     },
     outOfOrder = locations.sumOf { it.getOutOfOrder() },
+    cellsOvercrowded = locations.sumOf { it.getOvercrowdedCellCount() },
+    totalOvercrowded = locations.sumOf { it.getTotalOvercrowding() },
   )
 
   fun getConsecutiveOutMoveCount(offenderMovements: List<OffenderMovement>): Int {
@@ -184,6 +186,8 @@ data class ResidentialPrisonerLocation(
     localName = localName,
     certified = certified,
     deactivatedReason = deactivatedReason,
+    overcrowded = getTotalOvercrowding() > 0,
+    overcrowdedBy = getTotalOvercrowding(),
     rollCount = getRollCount(filterSeg),
     subLocations = removeLocations(subLocations, includeCells = includeCells, filterSeg = filterSeg),
   )
@@ -195,6 +199,8 @@ data class ResidentialPrisonerLocation(
     workingCapacity = getWorkingCapacity(),
     netVacancies = getNetVacancies(filterSeg),
     outOfOrder = getOutOfOrder(),
+    cellsOvercrowded = getOvercrowdedCellCount(),
+    totalOvercrowded = getTotalOvercrowding(),
   )
 
   fun getWorkingCapacity() = capacity?.workingCapacity ?: 0
@@ -207,6 +213,13 @@ data class ResidentialPrisonerLocation(
   fun getCurrentlyOut(filterSeg: Boolean = false): Int = getCells(filterSeg).sumOf { it.prisoners?.filter { p -> p.inOutStatus == "OUT" }?.size ?: 0 }
 
   fun getOutOfOrder(): Int = getCells().filter { it.status == DerivedLocationStatus.INACTIVE }.size
+
+  // occupants beyond CNA for THIS leaf cell (0 if not a leaf cell or not overcrowded). Null CNA treated as 0.
+  private fun cellOvercrowding(): Int = if (isLeafLevel) ((prisoners?.size ?: 0) - (capacity?.certifiedNormalAccommodation ?: 0)).coerceAtLeast(0) else 0
+
+  fun getOvercrowdedCellCount(): Int = getCells().count { it.cellOvercrowding() > 0 }
+
+  fun getTotalOvercrowding(): Int = getCells().sumOf { it.cellOvercrowding() }
 
   private fun getNetVacancies(filterSeg: Boolean) = getWorkingCapacity() - getNumOfOccupants(filterSeg)
 
@@ -291,6 +304,10 @@ data class LocationRollCount(
   val netVacancies: Int = 0,
   @param:Schema(description = "Out of order", required = true)
   val outOfOrder: Int = 0,
+  @param:Schema(description = "Number of overcrowded cells (cells holding more prisoners than their CNA)", required = true)
+  val cellsOvercrowded: Int = 0,
+  @param:Schema(description = "Total amount of overcrowding (sum of prisoners over CNA across all cells)", required = true)
+  val totalOvercrowded: Int = 0,
 )
 
 @Schema(description = "Residential Prisoner Location Information")
@@ -319,6 +336,12 @@ data class ResidentialLocationRollCount(
 
   @param:Schema(description = "Reason for deactivation", example = "DAMAGED", required = false)
   val deactivatedReason: DeactivatedReason? = null,
+
+  @param:Schema(description = "Indicates this location is overcrowded (for a cell, holds more prisoners than its CNA)", required = false)
+  val overcrowded: Boolean = false,
+
+  @param:Schema(description = "Amount of overcrowding (for a cell, prisoners over CNA; for a parent, the total across its cells)", example = "1", required = false)
+  val overcrowdedBy: Int = 0,
 
   @param:Schema(description = "Roll count details", required = true)
   val rollCount: LocationRollCount,
