@@ -843,6 +843,7 @@ open class ResidentialLocation(
     capacity = CapacityDto(
       maxCapacity = calcMaxCapacity(),
       workingCapacity = calcWorkingCapacity(),
+      certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
     ),
     certified = hasCertifiedCells(),
   )

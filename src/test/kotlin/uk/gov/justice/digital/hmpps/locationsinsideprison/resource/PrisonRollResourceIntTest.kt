@@ -186,7 +186,9 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                   "currentlyOut": 0,
                   "workingCapacity": 4,
                   "netVacancies": 3,
-                  "outOfOrder": 0
+                  "outOfOrder": 0,
+                  "cellsOvercrowded": 0,
+                  "totalOvercrowded": 0
                 },
                 "locations": [
                   {
@@ -196,13 +198,17 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                     "fullLocationPath": "Z-1",
                     "localName": "Landing 1",
                     "certified": true,
+                    "overcrowded": false,
+                    "overcrowdedBy": 0,
                     "rollCount": {
                       "bedsInUse": 2,
                       "currentlyInCell": 2,
                       "currentlyOut": 0,
                       "workingCapacity": 4,
                       "netVacancies": 3,
-                      "outOfOrder": 0
+                      "outOfOrder": 0,
+                      "cellsOvercrowded": 0,
+                      "totalOvercrowded": 0
                     },
                     "subLocations": [
                       {
@@ -212,13 +218,17 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                         "fullLocationPath": "Z-1-001",
                         "localName": "001",
                         "certified": true,
+                        "overcrowded": false,
+                        "overcrowdedBy": 0,
                         "rollCount": {
                           "bedsInUse": 1,
                           "currentlyInCell": 1,
                           "currentlyOut": 0,
                           "workingCapacity": 2,
                           "netVacancies": 1,
-                          "outOfOrder": 0
+                          "outOfOrder": 0,
+                          "cellsOvercrowded": 0,
+                          "totalOvercrowded": 0
                         }
                       },
                       {
@@ -228,13 +238,17 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                         "fullLocationPath": "Z-1-002",
                         "localName": "002",
                         "certified": true,
+                        "overcrowded": false,
+                        "overcrowdedBy": 0,
                         "rollCount": {
                           "bedsInUse": 1,
                           "currentlyInCell": 1,
                           "currentlyOut": 0,
                           "workingCapacity": 2,
                           "netVacancies": 2,
-                          "outOfOrder": 0
+                          "outOfOrder": 0,
+                          "cellsOvercrowded": 0,
+                          "totalOvercrowded": 0
                         }
                       },
                       {
@@ -251,6 +265,82 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
                           "workingCapacity": 0,
                           "netVacancies": 0,
                           "outOfOrder": 0
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            """.trimIndent(),
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `reports overcrowding when cells hold more prisoners than their CNA`() {
+        // Both active cells on Z-1 have a CNA of 2; stub 3 prisoners in each so each is overcrowded by 1
+        prisonerSearchMockServer.stubSearchByLocations(
+          landingZ1.prisonId,
+          landingZ1.cellLocations().map { it.getPathHierarchy() },
+          returnResult = true,
+          numberOfPrisonersInCell = 3,
+        )
+        prisonApiMockServer.stubMovementsToday(landingZ1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+
+        webTestClient.get().uri("/prison/roll-count/${landingZ1.prisonId}/cells-only/${landingZ1.id!!}")
+          .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "totals": {
+                  "cellsOvercrowded": 2,
+                  "totalOvercrowded": 2
+                },
+                "locations": [
+                  {
+                    "key": "MDI-Z-1",
+                    "locationType": "LANDING",
+                    "overcrowded": true,
+                    "overcrowdedBy": 2,
+                    "rollCount": {
+                      "cellsOvercrowded": 2,
+                      "totalOvercrowded": 2
+                    },
+                    "subLocations": [
+                      {
+                        "key": "MDI-Z-1-001",
+                        "locationType": "CELL",
+                        "overcrowded": true,
+                        "overcrowdedBy": 1,
+                        "rollCount": {
+                          "bedsInUse": 3,
+                          "workingCapacity": 2,
+                          "cellsOvercrowded": 1,
+                          "totalOvercrowded": 1
+                        }
+                      },
+                      {
+                        "key": "MDI-Z-1-002",
+                        "locationType": "CELL",
+                        "overcrowded": true,
+                        "overcrowdedBy": 1,
+                        "rollCount": {
+                          "bedsInUse": 3,
+                          "workingCapacity": 2,
+                          "cellsOvercrowded": 1,
+                          "totalOvercrowded": 1
+                        }
+                      },
+                      {
+                        "key": "MDI-Z-1-01S",
+                        "locationType": "STORE",
+                        "overcrowded": false,
+                        "overcrowdedBy": 0,
+                        "rollCount": {
+                          "cellsOvercrowded": 0,
+                          "totalOvercrowded": 0
                         }
                       }
                     ]

@@ -3,11 +3,113 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.Companion.clock
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import java.util.UUID
 
 class PrisonRollCountServiceTest {
 
   private val service = PrisonRollCountService(mock(), mock(), mock(), mock(), clock)
+
+  private fun prisoner(cell: String) = Prisoner(
+    prisonerNumber = "A0000AA",
+    prisonId = "LEI",
+    prisonName = "HMP Leeds",
+    cellLocation = cell,
+    firstName = "Dave",
+    lastName = "Jones",
+    gender = "Male",
+    status = "ACTIVE IN",
+    inOutStatus = "IN",
+  )
+
+  private fun cell(
+    code: String,
+    cna: Int?,
+    occupants: Int,
+  ) = ResidentialPrisonerLocation(
+    locationId = UUID.randomUUID(),
+    key = "LEI-A-1-$code",
+    locationType = LocationType.CELL,
+    locationCode = code,
+    fullLocationPath = "A-1-$code",
+    certified = true,
+    status = DerivedLocationStatus.ACTIVE,
+    subLocations = emptyList(),
+    capacity = Capacity(maxCapacity = 3, workingCapacity = cna ?: 0, certifiedNormalAccommodation = cna),
+    prisoners = (1..occupants).map { prisoner("A-1-$code") },
+    isLeafLevel = true,
+  )
+
+  private fun wing(cells: List<ResidentialPrisonerLocation>) = ResidentialPrisonerLocation(
+    locationId = UUID.randomUUID(),
+    key = "LEI-A",
+    locationType = LocationType.WING,
+    locationCode = "A",
+    fullLocationPath = "A",
+    status = DerivedLocationStatus.ACTIVE,
+    subLocations = cells,
+    isLeafLevel = false,
+  )
+
+  @Test
+  fun `overcrowding totals for the worked example`() {
+    // 5 cells each CNA 1: two hold 2, one holds 3, two hold 1 -> 3 overcrowded cells, total overcrowding 4
+    val wing = wing(
+      listOf(
+        cell("001", cna = 1, occupants = 2),
+        cell("002", cna = 1, occupants = 2),
+        cell("003", cna = 1, occupants = 3),
+        cell("004", cna = 1, occupants = 1),
+        cell("005", cna = 1, occupants = 1),
+      ),
+    )
+
+    assertThat(wing.getOvercrowdedCellCount()).isEqualTo(3)
+    assertThat(wing.getTotalOvercrowding()).isEqualTo(4)
+
+    val dto = wing.toDto(includeCells = true, filterSeg = false)
+    assertThat(dto.overcrowded).isTrue()
+    assertThat(dto.overcrowdedBy).isEqualTo(4)
+    assertThat(dto.rollCount.cellsOvercrowded).isEqualTo(3)
+    assertThat(dto.rollCount.totalOvercrowded).isEqualTo(4)
+  }
+
+  @Test
+  fun `a single overcrowded cell reports its own flag and amount`() {
+    val overcrowded = cell("001", cna = 1, occupants = 2)
+    assertThat(overcrowded.getOvercrowdedCellCount()).isEqualTo(1)
+    assertThat(overcrowded.getTotalOvercrowding()).isEqualTo(1)
+
+    val dto = overcrowded.toDto(includeCells = true, filterSeg = false)
+    assertThat(dto.overcrowded).isTrue()
+    assertThat(dto.overcrowdedBy).isEqualTo(1)
+    assertThat(dto.rollCount.cellsOvercrowded).isEqualTo(1)
+    assertThat(dto.rollCount.totalOvercrowded).isEqualTo(1)
+  }
+
+  @Test
+  fun `a cell at or below its CNA is not overcrowded`() {
+    val atCapacity = cell("001", cna = 2, occupants = 2)
+    val underCapacity = cell("002", cna = 2, occupants = 1)
+
+    assertThat(atCapacity.getOvercrowdedCellCount()).isEqualTo(0)
+    assertThat(atCapacity.getTotalOvercrowding()).isEqualTo(0)
+    assertThat(underCapacity.getTotalOvercrowding()).isEqualTo(0)
+
+    val dto = atCapacity.toDto(includeCells = true, filterSeg = false)
+    assertThat(dto.overcrowded).isFalse()
+    assertThat(dto.overcrowdedBy).isEqualTo(0)
+  }
+
+  @Test
+  fun `a null CNA is treated as zero so any occupant is overcrowding`() {
+    val noCna = cell("001", cna = null, occupants = 2)
+    assertThat(noCna.getOvercrowdedCellCount()).isEqualTo(1)
+    assertThat(noCna.getTotalOvercrowding()).isEqualTo(2)
+  }
 
   @Test
   fun `Get duplicate count`() {
