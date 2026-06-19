@@ -2564,6 +2564,7 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
       LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(
         convertedCellType = ConvertedCellType.OTHER,
         otherConvertedCellType = "Tanning room",
+        reasonForChange = "Converting cell to a tanning room",
       )
 
     var nonResStoreRoomRequest =
