@@ -464,7 +464,7 @@ class LocationResidentialResource(
     convertCellToNonResidentialLocationRequest: ConvertCellToNonResidentialLocationRequest,
   ): Location {
     val updatedLocation = with(convertCellToNonResidentialLocationRequest) {
-      locationService.convertToNonResidentialCell(id, convertedCellType, otherConvertedCellType)
+      locationService.convertToNonResidentialCell(id, convertedCellType, otherConvertedCellType, reasonForChange)
     }
     // On a prison that requires certification approval the cell is temporarily deactivated and an approval request
     // is raised (conversion happens later on approval), so a deactivation event is published. Otherwise the cell is
@@ -598,6 +598,12 @@ class LocationResidentialResource(
     @param:Schema(description = "Other type of converted cell", example = "Swimming pool", required = false, maxLength = 255)
     @field:Size(max = 255, message = "Description of other cell type must be no more than 255 characters")
     val otherConvertedCellType: String? = null,
+    @param:Schema(
+      description = "The reason why the approval was requested, mandatory if the conversion must be approved",
+      example = "Cell converted to an office",
+      required = false,
+    )
+    val reasonForChange: String? = null,
   )
 
   @Schema(description = "Request to update the type of a non-res cell location")
