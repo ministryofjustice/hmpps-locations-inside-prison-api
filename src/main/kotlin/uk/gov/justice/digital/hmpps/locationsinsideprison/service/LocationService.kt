@@ -1441,6 +1441,7 @@ class LocationService(
     id: UUID,
     convertedCellType: ConvertedCellType,
     otherConvertedCellType: String? = null,
+    reasonForChange: String? = null,
   ): LocationDTO {
     var locationToConvert = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -1452,7 +1453,7 @@ class LocationService(
     val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(locationToConvert.prisonId)
     if (certificationApprovalRequired) {
       val cell = locationToConvert as? Cell ?: throw LocationNotFoundException(id.toString())
-      return requestConversionApproval(cell, convertedCellType, otherConvertedCellType)
+      return requestConversionApproval(cell, convertedCellType, otherConvertedCellType, reasonForChange)
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
@@ -1504,7 +1505,12 @@ class LocationService(
     cell: Cell,
     convertedCellType: ConvertedCellType,
     otherConvertedCellType: String?,
+    reasonForChange: String?,
   ): LocationDTO {
+    if (reasonForChange.isNullOrBlank()) {
+      throw ApprovalRequestRequiresReasonForChangeException(cell.getKey())
+    }
+
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = cell.prisonId,
       TransactionType.CELL_CONVERTION_TO_ROOM,
@@ -1521,7 +1527,7 @@ class LocationService(
       requestedBy = username,
       convertedCellType = convertedCellType,
       otherConvertedCellType = otherConvertedCellType,
-      reasonForChange = null,
+      reasonForChange = reasonForChange,
     )
 
     // Reflect the loss of working capacity on the snapshot (current values from the live certificate, new = 0)

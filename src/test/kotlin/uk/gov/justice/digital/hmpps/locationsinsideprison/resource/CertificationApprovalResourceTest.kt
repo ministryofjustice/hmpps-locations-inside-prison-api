@@ -4099,10 +4099,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     private fun requestConversion(
       cell: Cell,
       convertedCellType: ConvertedCellType = ConvertedCellType.OFFICE,
+      reasonForChange: String = "Cell converted to an office",
     ): Location = webTestClient.put().uri("/locations/${cell.id}/convert-cell-to-non-res-cell")
       .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
       .header("Content-Type", "application/json")
-      .bodyValue(jsonString(LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(convertedCellType = convertedCellType)))
+      .bodyValue(jsonString(LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(convertedCellType = convertedCellType, reasonForChange = reasonForChange)))
       .exchange()
       .expectStatus().isOk
       .expectBody<Location>()
@@ -4167,6 +4168,9 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approval.locationId).isEqualTo(cell.id)
       assertThat(approval.locationKey).isEqualTo(cell.getKey())
 
+      // The reason for change supplied on the request is captured on the approval request.
+      assertThat(approval.reasonForChange).isEqualTo("Cell converted to an office")
+
       // The new (proposed) value is the converted cell type...
       assertThat(approval.convertedCellType).isEqualTo(ConvertedCellType.OFFICE)
       assertThat(approval.otherConvertedCellType).isNull()
@@ -4184,6 +4188,26 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(approval.locations!![0].currentWorkingCapacity).isEqualTo(1)
       assertThat(approval.locations[0].currentMaxCapacity).isEqualTo(2)
       assertThat(approval.locations[0].currentCertifiedNormalAccommodation).isEqualTo(1)
+    }
+
+    @Test
+    fun `requesting a conversion without a reason for change is rejected`() {
+      val cell = firstLeedsCell()
+      stubNoPrisoners(cell)
+
+      webTestClient.put().uri("/locations/${cell.id}/convert-cell-to-non-res-cell")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(convertedCellType = ConvertedCellType.OFFICE)))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody<ErrorResponse>()
+        .returnResult().responseBody!!.also {
+        assertThat(it.errorCode).isEqualTo(ErrorCode.ApprovalRequestRequiresReasonForChange.errorCode)
+      }
+
+      // No deactivation or approval request should have been raised.
+      assertThat(getLocation(cell.id!!).pendingApprovalRequestId).isNull()
     }
 
     @Test
@@ -4221,7 +4245,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         webTestClient.put().uri("/locations/${cell.id}/convert-cell-to-non-res-cell")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
           .header("Content-Type", "application/json")
-          .bodyValue(jsonString(LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(convertedCellType = ConvertedCellType.OFFICE)))
+          .bodyValue(jsonString(LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(convertedCellType = ConvertedCellType.OFFICE, reasonForChange = "Cell converted to an office")))
           .exchange()
           .expectStatus().isEqualTo(HttpStatus.CONFLICT)
           .expectBody<ErrorResponse>()
