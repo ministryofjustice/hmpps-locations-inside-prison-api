@@ -2,11 +2,14 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.cache.annotation.Cacheable
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.reactive.function.client.bodyToMono
+import uk.gov.justice.digital.hmpps.locationsinsideprison.config.CacheConfiguration
 
 @Service
 class PrisonService(
@@ -37,6 +40,23 @@ class PrisonService(
       }
       throw ex
     }
+  }
+
+  /**
+   * Lookup all prisons and return a map of prison ID to prison name.
+   * Cached as this is a large, infrequently changing list.
+   */
+  @Cacheable(CacheConfiguration.PRISON_NAMES_CACHE_NAME)
+  fun getPrisonNames(): Map<String, String> {
+    log.debug("Looking up all prison names")
+    val prisons = prisonRegisterWebClient
+      .get()
+      .uri("/prisons")
+      .header("Content-Type", "application/json")
+      .retrieve()
+      .bodyToMono(object : ParameterizedTypeReference<List<PrisonDto>>() {})
+      .block() ?: emptyList()
+    return prisons.associate { it.prisonId to it.prisonName }
   }
 }
 
