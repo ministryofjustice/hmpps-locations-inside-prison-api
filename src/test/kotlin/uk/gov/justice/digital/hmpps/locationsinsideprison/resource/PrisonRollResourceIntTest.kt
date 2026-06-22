@@ -491,20 +491,19 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
         prisonerSearchMockServer.stubPrisonersForOvernightCount(
           prisonId = cell1.prisonId,
           prisoners = listOf(
-            PrisonerOvernightMovement(prisonerNumber = "A1111AA", lastMovementTypeCode = "ADM"),
-            PrisonerOvernightMovement(prisonerNumber = "A2222AA", lastMovementTypeCode = "CRT"),
-            PrisonerOvernightMovement(prisonerNumber = "A3333AA", lastMovementTypeCode = "TAP"),
-            PrisonerOvernightMovement(prisonerNumber = "A4444AA", lastMovementTypeCode = "TRN"),
+            PrisonerOvernightMovement(prisonerNumber = "A1111AA", lastMovementTypeCode = "ADM", inOutStatus = "OUT"),
+            PrisonerOvernightMovement(prisonerNumber = "A2222AA", lastMovementTypeCode = "CRT", inOutStatus = "OUT"),
+            PrisonerOvernightMovement(prisonerNumber = "A3333AA", lastMovementTypeCode = "TAP", inOutStatus = "IN"),
+            PrisonerOvernightMovement(prisonerNumber = "A4444AA", lastMovementTypeCode = "TRN", inOutStatus = "OUT"),
           ),
         )
 
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
         prisonApiMockServer.stubLatestOffenderMovements(
           latestMovements = listOf(
-            LatestOffenderMovement(offenderNo = "A2222AA", directionCode = "OUT"),
-            LatestOffenderMovement(offenderNo = "A3333AA", directionCode = "IN"),
+            LatestOffenderMovement(offenderNo = "A2222AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 4), movementTime = java.time.LocalTime.of(11, 59)),
           ),
-          expectedOffenderNumbers = listOf("A2222AA", "A3333AA"),
+          expectedOffenderNumbers = listOf("A2222AA"),
         )
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,

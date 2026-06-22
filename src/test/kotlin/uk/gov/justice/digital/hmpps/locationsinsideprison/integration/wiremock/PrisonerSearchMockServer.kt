@@ -124,8 +124,8 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
     stubPrisonersForOvernightCount(
       prisonId = prisonId,
       prisoners = listOf(
-        PrisonerOvernightMovement(prisonerNumber = "A1000AA", lastMovementTypeCode = "CRT"),
-        PrisonerOvernightMovement(prisonerNumber = "A1001AA", lastMovementTypeCode = "TAP"),
+        PrisonerOvernightMovement(prisonerNumber = "A1000AA", lastMovementTypeCode = "CRT", inOutStatus = "OUT"),
+        PrisonerOvernightMovement(prisonerNumber = "A1001AA", lastMovementTypeCode = "TAP", inOutStatus = "OUT"),
       ),
     )
   }
@@ -142,7 +142,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
       get(urlPathMatching("/prison/$prisonId/prisoners"))
         .withQueryParam("page", equalTo(page.toString()))
         .withQueryParam("size", equalTo("999"))
-        .withQueryParam("responseFields", equalTo("prisonerNumber,lastMovementTypeCode"))
+        .withQueryParam("responseFields", equalTo("prisonerNumber,lastMovementTypeCode,inOutStatus"))
         .willReturn(
           aResponse()
             .withHeader("Content-Type", "application/json")

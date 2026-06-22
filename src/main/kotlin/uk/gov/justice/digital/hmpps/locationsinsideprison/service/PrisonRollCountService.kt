@@ -21,6 +21,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Residen
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import java.time.Clock
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
 import java.util.*
 import kotlin.collections.count
 import kotlin.jvm.optionals.getOrNull
@@ -132,8 +134,15 @@ class PrisonRollCountService(
     val prisonerNumbers = prisonerLocationService.prisonerNumbersForOvernightCount(prisonId)
     if (prisonerNumbers.isEmpty()) return 0
 
+    val currentDayStart = LocalDate.now(clock).atStartOfDay()
+
     return prisonApiService.getLatestMovementsForOffenders(prisonerNumbers)
-      .count { it.directionCode == "OUT" }
+      .count { movement ->
+        movement.directionCode == "OUT" &&
+          movement.movementDate != null &&
+          movement.movementTime != null &&
+          LocalDateTime.of(movement.movementDate, movement.movementTime) < currentDayStart
+      }
   }
 
   private fun locationRollCount(locations: List<ResidentialPrisonerLocation>, filterSeg: Boolean) = LocationRollCount(

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 import java.time.LocalDate
+import java.time.LocalTime
 
 inline fun <reified T : Any> typeReference() = object : ParameterizedTypeReference<T>() {}
 
@@ -68,4 +69,6 @@ data class OffenderMovement(
 data class LatestOffenderMovement(
   val offenderNo: String,
   val directionCode: String,
+  val movementDate: LocalDate? = null,
+  val movementTime: LocalTime? = null,
 )

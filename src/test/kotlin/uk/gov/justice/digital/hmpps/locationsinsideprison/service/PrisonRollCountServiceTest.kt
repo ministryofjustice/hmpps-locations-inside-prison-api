@@ -12,6 +12,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.C
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
+import java.time.LocalDate
+import java.time.LocalTime
 import java.util.UUID
 
 class PrisonRollCountServiceTest {
@@ -196,9 +198,29 @@ class PrisonRollCountServiceTest {
     whenever(prisonerLocationService.prisonerNumbersForOvernightCount("MDI")).thenReturn(listOf("A1000AA", "A1001AA", "A1002AA"))
     whenever(prisonApiService.getLatestMovementsForOffenders(listOf("A1000AA", "A1001AA", "A1002AA"))).thenReturn(
       listOf(
-        LatestOffenderMovement(offenderNo = "A1000AA", directionCode = "OUT"),
-        LatestOffenderMovement(offenderNo = "A1001AA", directionCode = "IN"),
-        LatestOffenderMovement(offenderNo = "A1002AA", directionCode = "OUT"),
+        LatestOffenderMovement(offenderNo = "A1000AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 4), movementTime = LocalTime.of(11, 59)),
+        LatestOffenderMovement(offenderNo = "A1001AA", directionCode = "IN", movementDate = LocalDate.of(2023, 12, 4), movementTime = LocalTime.of(9, 0)),
+        LatestOffenderMovement(offenderNo = "A1002AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 3), movementTime = LocalTime.of(23, 30)),
+      ),
+    )
+
+    val overnightCount = service.getNumOvernights("MDI")
+
+    assertThat(overnightCount).isEqualTo(2)
+  }
+
+  @Test
+  fun `get overnight count only includes out movements from the previous day or earlier`() {
+    // Test clock is fixed at 2023-12-05, so overnight cutoff is 2023-12-04 23:59:59 or earlier.
+    whenever(prisonerLocationService.prisonerNumbersForOvernightCount("MDI")).thenReturn(listOf("A1000AA", "A1001AA", "A1002AA", "A1003AA", "A1004AA", "A1005AA"))
+    whenever(prisonApiService.getLatestMovementsForOffenders(listOf("A1000AA", "A1001AA", "A1002AA", "A1003AA", "A1004AA", "A1005AA"))).thenReturn(
+      listOf(
+        LatestOffenderMovement(offenderNo = "A1000AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 4), movementTime = LocalTime.of(23, 59, 59)),
+        LatestOffenderMovement(offenderNo = "A1001AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 5), movementTime = LocalTime.MIDNIGHT),
+        LatestOffenderMovement(offenderNo = "A1002AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 5), movementTime = LocalTime.of(9, 0)),
+        LatestOffenderMovement(offenderNo = "A1003AA", directionCode = "OUT", movementDate = null, movementTime = LocalTime.of(8, 0)),
+        LatestOffenderMovement(offenderNo = "A1004AA", directionCode = "IN", movementDate = LocalDate.of(2023, 12, 4), movementTime = LocalTime.of(10, 0)),
+        LatestOffenderMovement(offenderNo = "A1005AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 3), movementTime = LocalTime.of(12, 0)),
       ),
     )
 
