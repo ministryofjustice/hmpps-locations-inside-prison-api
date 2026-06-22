@@ -993,6 +993,10 @@ class LocationService(
       )
     }
 
+    if (activePrisonService.isCertificationApprovalRequired(location.prisonId)) {
+      cellCertificateService.updateLocalNameInCurrentCertificate(location)
+    }
+
     log.info("Location local name updated [${location.getKey()}")
     sharedLocationService.trackLocationUpdate(location, "Location local name updated")
 
