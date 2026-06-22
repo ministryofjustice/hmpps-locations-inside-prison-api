@@ -174,6 +174,9 @@ open class CellCertificateLocation(
   @Enumerated(EnumType.STRING)
   private val convertedCellType: ConvertedCellType? = null,
 
+  @Column(nullable = true)
+  private val otherConvertedCellType: String? = null,
+
   @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "parent_location_id")
   @SortNatural
@@ -214,6 +217,7 @@ open class CellCertificateLocation(
     cellMark = cellMark,
     level = level,
     convertedCellType = convertedCellType,
+    otherConvertedCellType = otherConvertedCellType,
     subLocations = if (traverseDown)subLocations.map { it.toDto() } else null,
   )
 
@@ -237,6 +241,8 @@ open class CellCertificateLocation(
     specialistCellTypes = specialistCellTypes,
     accommodationTypes = accommodationTypes,
     usedForTypes = usedForTypes,
+    convertedCellType = convertedCellType,
+    otherConvertedCellType = otherConvertedCellType,
     subLocations = subLocations,
   )
 }
