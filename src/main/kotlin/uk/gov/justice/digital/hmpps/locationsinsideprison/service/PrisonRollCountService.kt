@@ -22,7 +22,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFo
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.LocalTime
 import java.util.*
 import kotlin.collections.count
 import kotlin.jvm.optionals.getOrNull
