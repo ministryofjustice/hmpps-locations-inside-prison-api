@@ -1681,6 +1681,77 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     }
 
     @Test
+    fun `temporarily deactivating a cell that was previously off-cert deactivated does not show the old explanation (MAPA-133)`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      val previousExplanation = "As discussed, taking P wing offline due to FSI work"
+
+      // Deactivate with a certified working capacity reduction (off-cert), supplying an explanation, then approve it.
+      val offCertDeactivated = deactivateLocation(
+        firstCell,
+        deactivatedReason = DeactivatedReason.MOTHBALLED,
+        planetFmReference = "11111",
+        reasonForChange = previousExplanation,
+        requiresApproval = true,
+        approveDeactivation = true,
+      )
+      assertThat(offCertDeactivated.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_MATCHING_CELL_CERT)
+      assertThat(offCertDeactivated.lastDeactivationReasonForChange).isEqualTo(previousExplanation)
+
+      // Reactivate the cell (requires approval as it returns capacity to the certificate).
+      webTestClient.put().uri("/certification/location/reactivation-request-approval")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            ReactivationLocationsApprovalRequest(
+              topLevelLocationId = firstCell.id!!,
+              cellReactivationChanges = mapOf(
+                firstCell.id!! to CellReactivationDetail(
+                  capacity = Capacity(workingCapacity = 1, maxCapacity = 2, certifiedNormalAccommodation = 1),
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      val pendingReactivation = webTestClient.get().uri("/locations/${firstCell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingReactivation.pendingApprovalRequestId!!)))
+        .exchange()
+        .expectStatus().isOk
+
+      val reactivatedCell = webTestClient.get().uri("/locations/${firstCell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+      assertThat(reactivatedCell.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+
+      // Clear the deactivation/reactivation domain events so the helper below asserts only on the new deactivation.
+      purgeDomainEvents()
+
+      // Now temporarily deactivate again without reducing certified capacity (no approval, no explanation required).
+      val tempDeactivated = deactivateLocation(firstCell, deactivatedReason = DeactivatedReason.DAMAGED)
+
+      assertThat(tempDeactivated.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      // The previously approved off-cert explanation must not be resurfaced on the temp-inactive banner.
+      assertThat(tempDeactivated.lastDeactivationReasonForChange).isNull()
+    }
+
+    @Test
     fun `reactivating a cell via approval records the working capacity returning to its previous value in history`() {
       val firstCell = leedsWing.findAllLeafLocations().first() as Cell
       // Cell starts with a stored working capacity of 1 (the leeds wing default).
