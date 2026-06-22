@@ -27,6 +27,18 @@ class PrisonRegisterMockServer : WireMockServer(WIREMOCK_PORT) {
     )
   }
 
+  fun stubGetAllPrisons(prisons: List<PrisonDto>) {
+    stubFor(
+      get("/prisons")
+        .willReturn(
+          aResponse()
+            .withHeader("Content-Type", "application/json")
+            .withBody(mapper.writeValueAsBytes(prisons))
+            .withStatus(200),
+        ),
+    )
+  }
+
   fun stubLookupPrison(
     prisonId: String,
     female: Boolean = false,

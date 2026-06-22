@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.ArraySchema
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDashboardDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalDecisionService
@@ -34,6 +36,31 @@ class CellCertificateResource(
   private val cellCertificateService: CellCertificateService,
   private val approvalDecisionService: ApprovalDecisionService,
 ) {
+
+  @GetMapping("/dashboard")
+  @Operation(
+    summary = "Get the capacity management dashboard",
+    description = "Returns one summary row per prison that has a current cell certificate, " +
+      "default-sorted by prison name. Used by the capacity management dashboard.",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Dashboard rows returned",
+        content = [Content(mediaType = "application/json", array = ArraySchema(schema = Schema(implementation = CellCertificateDashboardDto::class)))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json")],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Forbidden to access this endpoint",
+        content = [Content(mediaType = "application/json")],
+      ),
+    ],
+  )
+  fun getCellCertificateDashboard(): List<CellCertificateDashboardDto> = cellCertificateService.getCellCertificateDashboard()
 
   @GetMapping("/{id}")
   @Operation(

@@ -6,7 +6,9 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cache.CacheManager
 import org.springframework.test.web.reactive.server.expectBody
+import uk.gov.justice.digital.hmpps.locationsinsideprison.config.CacheConfiguration
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInformation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellInitialisationRequest
@@ -21,13 +23,17 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonDto
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
 import java.util.UUID
 
 @DisplayName("Cell Certificate Resource")
 @WithMockAuthUser(username = EXPECTED_USERNAME)
-class CellCertificateResourceTest(@param:Autowired private val locationService: LocationService) : CommonDataTestBase() {
+class CellCertificateResourceTest(
+  @param:Autowired private val locationService: LocationService,
+  @param:Autowired private val cacheManager: CacheManager,
+) : CommonDataTestBase() {
 
   private lateinit var wingApprovedRequestId: UUID
   private lateinit var cellPendingApprovalRequestId: UUID
@@ -352,6 +358,62 @@ class CellCertificateResourceTest(@param:Autowired private val locationService: 
         .jsonPath("$.locations[1].subLocations.length()").isEqualTo(2)
         .jsonPath("$.locations[1].subLocations[0].subLocations.length()").isEqualTo(4)
         .jsonPath("$.locations[1].subLocations[1].subLocations.length()").isEqualTo(3)
+    }
+  }
+
+  @DisplayName("GET /cell-certificates/dashboard")
+  @Nested
+  inner class GetCellCertificateDashboardTest {
+
+    @DisplayName("is secured")
+    @Nested
+    inner class Security {
+      @DisplayName("by role and scope")
+      @TestFactory
+      fun endpointRequiresAuthorisation() = endpointRequiresAuthorisation(
+        webTestClient.get().uri("/cell-certificates/dashboard"),
+        "ROLE_LOCATION_CERTIFICATION",
+      )
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `returns one row per prison with a current certificate, sorted by prison name`() {
+        cacheManager.getCache(CacheConfiguration.PRISON_NAMES_CACHE_NAME)?.clear()
+        prisonRegisterMockServer.stubGetAllPrisons(
+          listOf(
+            PrisonDto(prisonId = "LEI", prisonName = "Leeds (HMP)", active = true, male = true, female = false, contracted = false, lthse = false),
+          ),
+        )
+
+        webTestClient.get().uri("/cell-certificates/dashboard")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.length()").isEqualTo(1)
+          .jsonPath("$[0].prisonId").isEqualTo("LEI")
+          .jsonPath("$[0].prisonName").isEqualTo("Leeds (HMP)")
+          .jsonPath("$[0].certifiedWorkingCapacity").isEqualTo(12)
+          .jsonPath("$[0].signedOperationCapacity").exists()
+          .jsonPath("$[0].pendingChangeRequests").isEqualTo(1)
+          .jsonPath("$[0].certificateLastUpdated").exists()
+      }
+
+      @Test
+      fun `falls back to prison id when the prison name is not found`() {
+        cacheManager.getCache(CacheConfiguration.PRISON_NAMES_CACHE_NAME)?.clear()
+        prisonRegisterMockServer.stubGetAllPrisons(emptyList())
+
+        webTestClient.get().uri("/cell-certificates/dashboard")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$[0].prisonId").isEqualTo("LEI")
+          .jsonPath("$[0].prisonName").isEqualTo("LEI")
+      }
     }
   }
 }

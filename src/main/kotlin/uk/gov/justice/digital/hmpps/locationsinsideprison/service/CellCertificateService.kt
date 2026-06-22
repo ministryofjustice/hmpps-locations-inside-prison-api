@@ -4,11 +4,14 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDashboardDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificate
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificateNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CurrentCellCertificateNotFoundException
@@ -20,6 +23,8 @@ import java.util.UUID
 class CellCertificateService(
   private val cellCertificateRepository: CellCertificateRepository,
   private val residentialLocationRepository: ResidentialLocationRepository,
+  private val certificationApprovalRequestRepository: CertificationApprovalRequestRepository,
+  private val prisonService: PrisonService,
 ) {
   companion object {
     val log: Logger = LoggerFactory.getLogger(this::class.java)
@@ -74,6 +79,31 @@ class CellCertificateService(
   }
 
   fun hasCurrentCellCertificate(prisonId: String): Boolean = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(prisonId) != null
+
+  @Transactional(readOnly = true)
+  fun getCellCertificateDashboard(): List<CellCertificateDashboardDto> {
+    val summaries = cellCertificateRepository.findCurrentCertificateSummaries()
+    if (summaries.isEmpty()) return emptyList()
+
+    val pendingCounts = certificationApprovalRequestRepository
+      .countByStatusGroupedByPrison(ApprovalRequestStatus.PENDING)
+      .associate { it.prisonId to it.count.toInt() }
+
+    val prisonNames = prisonService.getPrisonNames()
+
+    return summaries
+      .map { summary ->
+        CellCertificateDashboardDto(
+          prisonId = summary.prisonId,
+          prisonName = prisonNames[summary.prisonId] ?: summary.prisonId,
+          certifiedWorkingCapacity = summary.totalWorkingCapacity,
+          signedOperationCapacity = summary.signedOperationCapacity,
+          pendingChangeRequests = pendingCounts[summary.prisonId] ?: 0,
+          certificateLastUpdated = summary.approvedDate,
+        )
+      }
+      .sortedBy { it.prisonName.lowercase() }
+  }
 
   fun updateSpecialistCellTypesInCurrentCertificate(cell: Cell) {
     val currentCert = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(cell.prisonId) ?: return

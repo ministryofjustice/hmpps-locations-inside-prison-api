@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificateLocation
+import java.time.LocalDateTime
 import java.util.Optional
 import java.util.UUID
 
@@ -67,4 +68,23 @@ interface CellCertificateRepository : JpaRepository<CellCertificate, UUID> {
     nativeQuery = true,
   )
   fun findByPrisonIdAndPathHierarchies(prisonId: String, pathHierarchies: List<String>): List<CellCertificateLocation>
+
+  @Query(
+    """
+      select c.prisonId as prisonId,
+             c.totalWorkingCapacity as totalWorkingCapacity,
+             c.signedOperationCapacity as signedOperationCapacity,
+             c.approvedDate as approvedDate
+      from CellCertificate c
+      where c.current = true
+    """,
+  )
+  fun findCurrentCertificateSummaries(): List<CurrentCellCertificateSummary>
+}
+
+interface CurrentCellCertificateSummary {
+  val prisonId: String
+  val totalWorkingCapacity: Int
+  val signedOperationCapacity: Int
+  val approvedDate: LocalDateTime
 }
