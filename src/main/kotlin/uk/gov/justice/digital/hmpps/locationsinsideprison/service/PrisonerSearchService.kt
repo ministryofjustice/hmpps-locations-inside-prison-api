@@ -15,7 +15,7 @@ class PrisonerSearchService(
   objectMapper: ObjectMapper,
 ) {
   private val overnightMovementTypes = setOf("CRT", "TAP")
-  private val overnightResponseFields = "prisonerNumber,lastMovementTypeCode,inOutStatus"
+  private val overnightResponseFields = "prisonerNumber,lastMovementTypeCode,status"
 
   private val responseFields by lazy {
     objectMapper.serializerProviderInstance.findValueSerializer(Prisoner::class.java).properties()
@@ -61,7 +61,7 @@ class PrisonerSearchService(
         .block()!!
 
       prisonerNumbers += response.content
-        .filter { it.lastMovementTypeCode in overnightMovementTypes && it.inOutStatus == "OUT" }
+        .filter { it.lastMovementTypeCode in overnightMovementTypes && it.status == "ACTIVE OUT" }
         .map { it.prisonerNumber }
 
       lastPage = response.last
@@ -124,7 +124,7 @@ data class PrisonersForOvernightSearchResult(
 data class PrisonerOvernightMovement(
   val prisonerNumber: String,
   val lastMovementTypeCode: String? = null,
-  val inOutStatus: String? = null,
+  val status: String? = null,
 )
 
 @Schema(description = "Prisoner Information")

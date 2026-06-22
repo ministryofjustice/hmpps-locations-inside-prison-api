@@ -491,10 +491,10 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
         prisonerSearchMockServer.stubPrisonersForOvernightCount(
           prisonId = cell1.prisonId,
           prisoners = listOf(
-            PrisonerOvernightMovement(prisonerNumber = "A1111AA", lastMovementTypeCode = "ADM", inOutStatus = "OUT"),
-            PrisonerOvernightMovement(prisonerNumber = "A2222AA", lastMovementTypeCode = "CRT", inOutStatus = "OUT"),
-            PrisonerOvernightMovement(prisonerNumber = "A3333AA", lastMovementTypeCode = "TAP", inOutStatus = "IN"),
-            PrisonerOvernightMovement(prisonerNumber = "A4444AA", lastMovementTypeCode = "TRN", inOutStatus = "OUT"),
+            PrisonerOvernightMovement(prisonerNumber = "A1111AA", lastMovementTypeCode = "ADM", status = "ACTIVE OUT"),
+            PrisonerOvernightMovement(prisonerNumber = "A2222AA", lastMovementTypeCode = "CRT", status = "ACTIVE OUT"),
+            PrisonerOvernightMovement(prisonerNumber = "A3333AA", lastMovementTypeCode = "TAP", status = "ACTIVE IN"),
+            PrisonerOvernightMovement(prisonerNumber = "A4444AA", lastMovementTypeCode = "TRN", status = "ACTIVE OUT"),
           ),
         )
 
