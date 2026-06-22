@@ -3,15 +3,30 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.Companion.clock
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import java.util.UUID
 
 class PrisonRollCountServiceTest {
 
-  private val service = PrisonRollCountService(mock(), mock(), mock(), mock(), clock)
+  private val residentialLocationRepository: ResidentialLocationRepository = mock()
+  private val prisonerLocationService: PrisonerLocationService = mock()
+  private val prisonApiService: PrisonApiService = mock()
+  private val prisonConfigurationRepository: PrisonConfigurationRepository = mock()
+  private val service = PrisonRollCountService(
+    residentialLocationRepository,
+    prisonerLocationService,
+    prisonApiService,
+    prisonConfigurationRepository,
+    clock,
+  )
 
   private fun prisoner(cell: String) = Prisoner(
     prisonerNumber = "A0000AA",
@@ -174,5 +189,31 @@ class PrisonRollCountServiceTest {
 
     val doubleMoveCount = service.getConsecutiveOutMoveCount(offenderMovements)
     assertThat(doubleMoveCount).isEqualTo(0)
+  }
+
+  @Test
+  fun `get overnight count returns number of offender movements with OUT direction`() {
+    whenever(prisonerLocationService.prisonerNumbersForOvernightCount("MDI")).thenReturn(listOf("A1000AA", "A1001AA", "A1002AA"))
+    whenever(prisonApiService.getLatestMovementsForOffenders(listOf("A1000AA", "A1001AA", "A1002AA"))).thenReturn(
+      listOf(
+        LatestOffenderMovement(offenderNo = "A1000AA", directionCode = "OUT"),
+        LatestOffenderMovement(offenderNo = "A1001AA", directionCode = "IN"),
+        LatestOffenderMovement(offenderNo = "A1002AA", directionCode = "OUT"),
+      ),
+    )
+
+    val overnightCount = service.getNumOvernights("MDI")
+
+    assertThat(overnightCount).isEqualTo(2)
+  }
+
+  @Test
+  fun `get overnight count does not call prison api when no offenders are eligible`() {
+    whenever(prisonerLocationService.prisonerNumbersForOvernightCount("MDI")).thenReturn(emptyList())
+
+    val overnightCount = service.getNumOvernights("MDI")
+
+    assertThat(overnightCount).isEqualTo(0)
+    verify(prisonApiService, never()).getLatestMovementsForOffenders(org.mockito.kotlin.any())
   }
 }

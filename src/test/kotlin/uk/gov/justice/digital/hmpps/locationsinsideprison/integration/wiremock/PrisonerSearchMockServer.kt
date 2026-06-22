@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.equalTo
 import com.github.tomakehurst.wiremock.client.WireMock.equalToJson
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.post
@@ -13,6 +14,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeQuery
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeSearch
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Matcher
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonerOvernightMovement
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonersForOvernightSearchResult
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SearchResult
 
 class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
@@ -110,6 +113,36 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
 
     stubFor(
       get(urlPathMatching("/prisoner-search/prison/$prisonId"))
+        .willReturn(
+          aResponse()
+            .withHeader("Content-Type", "application/json")
+            .withBody(mapper.writeValueAsBytes(result))
+            .withStatus(200),
+        ),
+    )
+
+    stubPrisonersForOvernightCount(
+      prisonId = prisonId,
+      prisoners = listOf(
+        PrisonerOvernightMovement(prisonerNumber = "A1000AA", lastMovementTypeCode = "CRT"),
+        PrisonerOvernightMovement(prisonerNumber = "A1001AA", lastMovementTypeCode = "TAP"),
+      ),
+    )
+  }
+
+  fun stubPrisonersForOvernightCount(
+    prisonId: String,
+    prisoners: List<PrisonerOvernightMovement>,
+    page: Int = 0,
+    last: Boolean = true,
+  ) {
+    val result = PrisonersForOvernightSearchResult(content = prisoners, last = last)
+
+    stubFor(
+      get(urlPathMatching("/prison/$prisonId/prisoners"))
+        .withQueryParam("page", equalTo(page.toString()))
+        .withQueryParam("size", equalTo("999"))
+        .withQueryParam("responseFields", equalTo("prisonerNumber,lastMovementTypeCode"))
         .willReturn(
           aResponse()
             .withHeader("Content-Type", "application/json")

@@ -7,11 +7,12 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LatestOffenderMovement
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.MovementCount
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.OffenderMovement
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollMovementInfo
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonerOvernightMovement
 import java.time.LocalDate
-import java.util.*
 
 class PrisonRollResourceIntTest : CommonDataTestBase() {
 
@@ -479,6 +480,43 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             """.trimIndent(),
             JsonCompareMode.LENIENT,
           )
+      }
+
+      @Test
+      fun `can obtain a role count for MDI with num overnights`() {
+        prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
+        prisonerSearchMockServer.stubPrisonersForOvernightCount(
+          prisonId = cell1.prisonId,
+          prisoners = listOf(
+            PrisonerOvernightMovement(prisonerNumber = "A1111AA", lastMovementTypeCode = "ADM"),
+            PrisonerOvernightMovement(prisonerNumber = "A2222AA", lastMovementTypeCode = "CRT"),
+            PrisonerOvernightMovement(prisonerNumber = "A3333AA", lastMovementTypeCode = "TAP"),
+            PrisonerOvernightMovement(prisonerNumber = "A4444AA", lastMovementTypeCode = "TRN"),
+          ),
+        )
+
+        prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubOffenderMovementsToday(
+          prisonId = cell1.prisonId,
+          date = LocalDate.now(clock),
+          offenderMovements = listOf(
+            OffenderMovement(offenderNo = "A1001AA", movementType = "CRT", movementSequence = "1"),
+            OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
+          ),
+        )
+        prisonApiMockServer.stubLatestOffenderMovements(
+          latestMovements = listOf(
+            LatestOffenderMovement(offenderNo = "A2222AA", directionCode = "OUT"),
+            LatestOffenderMovement(offenderNo = "A3333AA", directionCode = "IN"),
+          ),
+          expectedOffenderNumbers = listOf("A2222AA", "A3333AA"),
+        )
+
+        webTestClient.get().uri("/prison/roll-count/MDI")
+          .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().jsonPath("$.numOvernights").isEqualTo(1)
       }
 
       @Test

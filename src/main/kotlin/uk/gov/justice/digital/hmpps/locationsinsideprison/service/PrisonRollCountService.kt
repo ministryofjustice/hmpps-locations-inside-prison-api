@@ -41,6 +41,7 @@ class PrisonRollCountService(
 
   fun getPrisonRollCount(prisonId: String, includeCells: Boolean = false): PrisonRollCount {
     val movements = prisonApiService.getMovementTodayInAndOutOfPrison(prisonId)
+    val numOvernights = getNumOvernights(prisonId)
 
     val doubleMoveCount = if (movements.inOutMovementsToday.out > 1) {
       getConsecutiveOutMoveCount(prisonApiService.getOffenderMovementOutOfPrison(prisonId, LocalDate.now(clock)))
@@ -57,6 +58,7 @@ class PrisonRollCountService(
       listOfPrisoners,
       movements,
       doubleMoveCount,
+      numOvernights,
       includeCells,
       residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId),
       segShouldBeFiltered(prisonId),
@@ -94,6 +96,7 @@ class PrisonRollCountService(
     listOfPrisoners: List<Prisoner>,
     movements: PrisonRollMovementInfo,
     doubleMoveCount: Int,
+    numOvernights: Int,
     includeCells: Boolean,
     residentialLocations: List<ResidentialLocation>,
     filterSeg: Boolean,
@@ -118,10 +121,19 @@ class PrisonRollCountService(
       numInReception = numInReception,
       numStillToArrive = movements.enRouteToday,
       numNoCellAllocated = numNoCellAllocated,
+      numOvernights = numOvernights,
       totals = locationRollCount(locations, filterSeg),
       locations = removeLocations(locations, includeCells = includeCells, filterSeg = filterSeg),
     )
     return prisonRollCount
+  }
+
+  internal fun getNumOvernights(prisonId: String): Int {
+    val prisonerNumbers = prisonerLocationService.prisonerNumbersForOvernightCount(prisonId)
+    if (prisonerNumbers.isEmpty()) return 0
+
+    return prisonApiService.getLatestMovementsForOffenders(prisonerNumbers)
+      .count { it.directionCode == "OUT" }
   }
 
   private fun locationRollCount(locations: List<ResidentialPrisonerLocation>, filterSeg: Boolean) = LocationRollCount(
@@ -268,6 +280,8 @@ data class PrisonRollCount(
   val numOutToday: Int,
   @param:Schema(description = "No cell allocated", required = true)
   val numNoCellAllocated: Int,
+  @param:Schema(description = "Prisoners currently on overnight leave", required = true)
+  val numOvernights: Int,
 
   @param:Schema(description = "Totals", required = true)
   val totals: LocationRollCount,
