@@ -77,6 +77,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for NMI`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1N.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1N.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(2, 1), enRouteToday = 1))
+        prisonApiMockServer.stubLatestOffenderMovements()
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1N.prisonId,
           date = LocalDate.now(clock),
@@ -155,6 +156,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for MDI sub-level`() {
         prisonerSearchMockServer.stubSearchByLocations(landingZ1.prisonId, landingZ1.cellLocations().map { it.getPathHierarchy() }, true)
         prisonApiMockServer.stubMovementsToday(landingZ1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubLatestOffenderMovements()
 
         webTestClient.get().uri("/prison/roll-count/${landingZ1.prisonId}/cells-only/${landingZ1.id!!}")
           .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
@@ -357,6 +359,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for MDI`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubLatestOffenderMovements()
         prisonApiMockServer.stubOffenderMovementsToday(prisonId = cell1.prisonId, date = LocalDate.now(clock), offenderMovements = emptyList())
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
@@ -496,6 +499,13 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
         )
 
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubLatestOffenderMovements(
+          latestMovements = listOf(
+            LatestOffenderMovement(offenderNo = "A2222AA", directionCode = "OUT"),
+            LatestOffenderMovement(offenderNo = "A3333AA", directionCode = "IN"),
+          ),
+          expectedOffenderNumbers = listOf("A2222AA", "A3333AA"),
+        )
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
           date = LocalDate.now(clock),
@@ -504,14 +514,6 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
             OffenderMovement(offenderNo = "A1006AA", movementType = "OUT", movementSequence = "1"),
           ),
         )
-        prisonApiMockServer.stubLatestOffenderMovements(
-          latestMovements = listOf(
-            LatestOffenderMovement(offenderNo = "A2222AA", directionCode = "OUT"),
-            LatestOffenderMovement(offenderNo = "A3333AA", directionCode = "IN"),
-          ),
-          expectedOffenderNumbers = listOf("A2222AA", "A3333AA"),
-        )
-
         webTestClient.get().uri("/prison/roll-count/MDI")
           .headers(setAuthorisation(roles = listOf("ESTABLISHMENT_ROLL")))
           .exchange()
@@ -528,6 +530,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
 
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubLatestOffenderMovements()
         prisonApiMockServer.stubOffenderMovementsToday(prisonId = cell1.prisonId, date = LocalDate.now(clock), offenderMovements = emptyList())
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
@@ -657,6 +660,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for MDI with cells`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubLatestOffenderMovements()
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
           date = LocalDate.now(clock),
@@ -835,6 +839,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for MDI with an offender moving to court and then released`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 3), enRouteToday = 2))
+        prisonApiMockServer.stubLatestOffenderMovements()
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
           date = LocalDate.now(clock),
@@ -878,6 +883,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for MDI with two offenders moving to court and then released`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 4), enRouteToday = 2))
+        prisonApiMockServer.stubLatestOffenderMovements()
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
           date = LocalDate.now(clock),
@@ -922,6 +928,7 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
       fun `can obtain a role count for MDI with an offender moving to court and then back and then released`() {
         prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
+        prisonApiMockServer.stubLatestOffenderMovements()
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
           date = LocalDate.now(clock),

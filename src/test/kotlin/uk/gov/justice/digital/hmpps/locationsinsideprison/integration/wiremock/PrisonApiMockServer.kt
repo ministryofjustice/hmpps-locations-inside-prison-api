@@ -50,7 +50,6 @@ class PrisonApiMockServer : WireMockServer(WIREMOCK_PORT) {
         ),
     )
 
-    stubLatestOffenderMovements()
   }
 
   fun stubOffenderMovementsToday(
