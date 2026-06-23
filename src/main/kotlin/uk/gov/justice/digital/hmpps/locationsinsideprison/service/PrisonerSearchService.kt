@@ -14,8 +14,6 @@ class PrisonerSearchService(
   private val prisonerSearchWebClient: WebClient,
   objectMapper: ObjectMapper,
 ) {
-  private val overnightMovementTypes = setOf("CRT", "TAP")
-  private val overnightResponseFields = "prisonerNumber,lastMovementTypeCode,status"
 
   private val responseFields by lazy {
     objectMapper.serializerProviderInstance.findValueSerializer(Prisoner::class.java).properties()
@@ -41,34 +39,6 @@ class PrisonerSearchService(
       .content
 
     return prisonersInPrison
-  }
-
-  fun getPrisonerNumbersForOvernightCount(prisonId: String, pageSize: Int = 999): List<String> {
-    val prisonerNumbers = mutableListOf<String>()
-    var page = 0
-    var lastPage = false
-
-    while (!lastPage) {
-      val response = prisonerSearchWebClient
-        .get()
-        .uri(
-          "/prison/$prisonId/prisoners?size=$pageSize&page=$page&responseFields={responseFields}",
-          mapOf("responseFields" to overnightResponseFields),
-        )
-        .header("Content-Type", "application/json")
-        .retrieve()
-        .bodyToMono<PrisonersForOvernightSearchResult>()
-        .block()!!
-
-      prisonerNumbers += response.content
-        .filter { it.lastMovementTypeCode in overnightMovementTypes && it.status == "ACTIVE OUT" }
-        .map { it.prisonerNumber }
-
-      lastPage = response.last
-      page++
-    }
-
-    return prisonerNumbers
   }
 
   /**
@@ -114,17 +84,6 @@ class PrisonerSearchService(
 
 data class SearchResult(
   val content: List<Prisoner>,
-)
-
-data class PrisonersForOvernightSearchResult(
-  val content: List<PrisonerOvernightMovement>,
-  val last: Boolean = true,
-)
-
-data class PrisonerOvernightMovement(
-  val prisonerNumber: String,
-  val lastMovementTypeCode: String? = null,
-  val status: String? = null,
 )
 
 @Schema(description = "Prisoner Information")

@@ -3,7 +3,6 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
-import com.github.tomakehurst.wiremock.client.WireMock.equalTo
 import com.github.tomakehurst.wiremock.client.WireMock.equalToJson
 import com.github.tomakehurst.wiremock.client.WireMock.get
 import com.github.tomakehurst.wiremock.client.WireMock.post
@@ -14,8 +13,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeQuery
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeSearch
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Matcher
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonerOvernightMovement
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonersForOvernightSearchResult
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SearchResult
 
 class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
@@ -94,6 +91,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
 
   fun stubAllPrisonersInPrison(
     prisonId: String,
+    additionalPrisoners: List<Prisoner> = emptyList(),
   ) {
     val result = SearchResult(
       content = listOf(
@@ -108,7 +106,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
         createPrisoner(prisonId = prisonId, cellLocation = "RECP", prisonerCount = 1008, inOutStatus = "OUT", status = "ACTIVE OUT"),
         createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", prisonerCount = 1009, inOutStatus = "IN", status = "ACTIVE IN"),
         createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", prisonerCount = 1010, inOutStatus = "OUT", status = "ACTIVE OUT"),
-      ),
+      ) + additionalPrisoners,
     )
 
     stubFor(
@@ -120,51 +118,28 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
             .withStatus(200),
         ),
     )
-
-    stubPrisonersForOvernightCount(
-      prisonId = prisonId,
-      prisoners = listOf(
-        PrisonerOvernightMovement(prisonerNumber = "A1000AA", lastMovementTypeCode = "CRT", status = "ACTIVE OUT"),
-        PrisonerOvernightMovement(prisonerNumber = "A1001AA", lastMovementTypeCode = "TAP", status = "ACTIVE OUT"),
-      ),
-    )
   }
 
-  fun stubPrisonersForOvernightCount(
+  fun createPrisoner(
     prisonId: String,
-    prisoners: List<PrisonerOvernightMovement>,
-    page: Int = 0,
-    last: Boolean = true,
-  ) {
-    val result = PrisonersForOvernightSearchResult(content = prisoners, last = last)
-
-    stubFor(
-      get(urlPathMatching("/prison/$prisonId/prisoners"))
-        .withQueryParam("page", equalTo(page.toString()))
-        .withQueryParam("size", equalTo("999"))
-        .withQueryParam("responseFields", equalTo("prisonerNumber,lastMovementTypeCode,status"))
-        .willReturn(
-          aResponse()
-            .withHeader("Content-Type", "application/json")
-            .withBody(mapper.writeValueAsBytes(result))
-            .withStatus(200),
-        ),
-    )
-  }
+    cellLocation: String,
+    prisonerCount: Int,
+    status: String = "ACTIVE IN",
+    inOutStatus: String = "IN",
+    lastMovementTypeCode: String = "ADM",
+  ) = Prisoner(
+    prisonerNumber = "A${prisonerCount.toString().padStart(4, '0')}AA",
+    firstName = "Firstname-$prisonerCount",
+    lastName = "Surname-$prisonerCount",
+    prisonId = prisonId,
+    prisonName = prisonId,
+    cellLocation = cellLocation,
+    gender = "MALE",
+    status = status,
+    lastMovementTypeCode = lastMovementTypeCode,
+    inOutStatus = inOutStatus,
+    csra = "High",
+    category = "C",
+    alerts = emptyList(),
+  )
 }
-
-fun createPrisoner(prisonId: String, cellLocation: String, prisonerCount: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN") = Prisoner(
-  prisonerNumber = "A${prisonerCount.toString().padStart(4, '0')}AA",
-  firstName = "Firstname-$prisonerCount",
-  lastName = "Surname-$prisonerCount",
-  prisonId = prisonId,
-  prisonName = prisonId,
-  cellLocation = cellLocation,
-  gender = "MALE",
-  status = status,
-  lastMovementTypeCode = "ADM",
-  inOutStatus = inOutStatus,
-  csra = "High",
-  category = "C",
-  alerts = emptyList(),
-)

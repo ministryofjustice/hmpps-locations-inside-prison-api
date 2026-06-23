@@ -11,7 +11,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LatestOffender
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.MovementCount
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.OffenderMovement
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollMovementInfo
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonerOvernightMovement
 import java.time.LocalDate
 
 class PrisonRollResourceIntTest : CommonDataTestBase() {
@@ -487,14 +486,10 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
 
       @Test
       fun `can obtain a role count for MDI with num overnights`() {
-        prisonerSearchMockServer.stubAllPrisonersInPrison(cell1.prisonId)
-        prisonerSearchMockServer.stubPrisonersForOvernightCount(
+        prisonerSearchMockServer.stubAllPrisonersInPrison(
           prisonId = cell1.prisonId,
-          prisoners = listOf(
-            PrisonerOvernightMovement(prisonerNumber = "A1111AA", lastMovementTypeCode = "ADM", status = "ACTIVE OUT"),
-            PrisonerOvernightMovement(prisonerNumber = "A2222AA", lastMovementTypeCode = "CRT", status = "ACTIVE OUT"),
-            PrisonerOvernightMovement(prisonerNumber = "A3333AA", lastMovementTypeCode = "TAP", status = "ACTIVE IN"),
-            PrisonerOvernightMovement(prisonerNumber = "A4444AA", lastMovementTypeCode = "TRN", status = "ACTIVE OUT"),
+          additionalPrisoners = listOf(
+            prisonerSearchMockServer.createPrisoner(prisonId = cell1.prisonId, cellLocation = "COURT", prisonerCount = 2222, inOutStatus = "OUT", status = "ACTIVE OUT", lastMovementTypeCode = "CRT"),
           ),
         )
 

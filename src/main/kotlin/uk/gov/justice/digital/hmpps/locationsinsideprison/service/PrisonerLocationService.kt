@@ -32,8 +32,6 @@ class PrisonerLocationService(
 
   fun prisonersInPrisonAllLocations(prisonId: String): List<Prisoner> = prisonerSearchService.getPrisonersInPrison(prisonId)
 
-  fun prisonerNumbersForOvernightCount(prisonId: String): List<String> = prisonerSearchService.getPrisonerNumbersForOvernightCount(prisonId)
-
   fun prisonersInLocations(key: String): List<PrisonerLocation> {
     val location = locationRepository.findOneByKey(key)
       ?: throw LocationNotFoundException("Location $key not found")

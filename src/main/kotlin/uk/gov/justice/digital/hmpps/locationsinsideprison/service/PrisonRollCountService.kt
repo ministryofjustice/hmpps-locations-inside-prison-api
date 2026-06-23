@@ -42,7 +42,6 @@ class PrisonRollCountService(
 
   fun getPrisonRollCount(prisonId: String, includeCells: Boolean = false): PrisonRollCount {
     val movements = prisonApiService.getMovementTodayInAndOutOfPrison(prisonId)
-    val numOvernights = getNumOvernights(prisonId)
 
     val doubleMoveCount = if (movements.inOutMovementsToday.out > 1) {
       getConsecutiveOutMoveCount(prisonApiService.getOffenderMovementOutOfPrison(prisonId, LocalDate.now(clock)))
@@ -52,6 +51,7 @@ class PrisonRollCountService(
 
     val listOfPrisoners = prisonerLocationService.prisonersInPrisonAllLocations(prisonId)
     val mapOfPrisoners = listOfPrisoners.filter { it.cellLocation != null }.groupBy { it.cellLocation!! }
+    val numOvernights = getNumOvernights(listOfPrisoners)
 
     return prisonRollCount(
       prisonId,
@@ -129,8 +129,12 @@ class PrisonRollCountService(
     return prisonRollCount
   }
 
-  internal fun getNumOvernights(prisonId: String): Int {
-    val prisonerNumbers = prisonerLocationService.prisonerNumbersForOvernightCount(prisonId)
+  internal fun getNumOvernights(prisoners: List<Prisoner>): Int {
+    val overnightMovementTypes = setOf("CRT", "TAP")
+    val prisonerNumbers = prisoners
+      .filter { it.lastMovementTypeCode in overnightMovementTypes && it.status == "ACTIVE OUT" }
+      .map { it.prisonerNumber }
+
     if (prisonerNumbers.isEmpty()) return 0
 
     val currentDayStart = LocalDate.now(clock).atStartOfDay()
