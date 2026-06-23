@@ -29,6 +29,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
@@ -1677,6 +1678,77 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(reactivatedLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
       assertThat(reactivatedLocation.pendingChanges).isNull()
       assertThat(reactivatedLocation.pendingApprovalRequestId).isNull()
+    }
+
+    @Test
+    fun `temporarily deactivating a cell that was previously off-cert deactivated does not show the old explanation (MAPA-133)`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      val previousExplanation = "As discussed, taking P wing offline due to FSI work"
+
+      // Deactivate with a certified working capacity reduction (off-cert), supplying an explanation, then approve it.
+      val offCertDeactivated = deactivateLocation(
+        firstCell,
+        deactivatedReason = DeactivatedReason.MOTHBALLED,
+        planetFmReference = "11111",
+        reasonForChange = previousExplanation,
+        requiresApproval = true,
+        approveDeactivation = true,
+      )
+      assertThat(offCertDeactivated.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_MATCHING_CELL_CERT)
+      assertThat(offCertDeactivated.lastDeactivationReasonForChange).isEqualTo(previousExplanation)
+
+      // Reactivate the cell (requires approval as it returns capacity to the certificate).
+      webTestClient.put().uri("/certification/location/reactivation-request-approval")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            ReactivationLocationsApprovalRequest(
+              topLevelLocationId = firstCell.id!!,
+              cellReactivationChanges = mapOf(
+                firstCell.id!! to CellReactivationDetail(
+                  capacity = Capacity(workingCapacity = 1, maxCapacity = 2, certifiedNormalAccommodation = 1),
+                ),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+
+      val pendingReactivation = webTestClient.get().uri("/locations/${firstCell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingReactivation.pendingApprovalRequestId!!)))
+        .exchange()
+        .expectStatus().isOk
+
+      val reactivatedCell = webTestClient.get().uri("/locations/${firstCell.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+        .header("Content-Type", "application/json")
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+      assertThat(reactivatedCell.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+
+      // Clear the deactivation/reactivation domain events so the helper below asserts only on the new deactivation.
+      purgeDomainEvents()
+
+      // Now temporarily deactivate again without reducing certified capacity (no approval, no explanation required).
+      val tempDeactivated = deactivateLocation(firstCell, deactivatedReason = DeactivatedReason.DAMAGED)
+
+      assertThat(tempDeactivated.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
+      // The previously approved off-cert explanation must not be resurfaced on the temp-inactive banner.
+      assertThat(tempDeactivated.lastDeactivationReasonForChange).isNull()
     }
 
     @Test
@@ -4379,6 +4451,64 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
           *cell1.getParentLocations().map { parent -> "location.inside.prison.amended" to parent.getKey() }.toTypedArray(),
         )
       }
+    }
+
+    @Test
+    fun `approving a conversion records the location as a ROOM with its converted cell type and free text in the certificate`() {
+      val cell = firstLeedsCell()
+      stubNoPrisoners(cell)
+
+      val updatedLocation = webTestClient.put().uri("/locations/${cell.id}/convert-cell-to-non-res-cell")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(
+              convertedCellType = ConvertedCellType.OTHER,
+              otherConvertedCellType = "Swimming pool",
+              reasonForChange = "Cell converted to a swimming pool",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      approveRequest(updatedLocation.pendingApprovalRequestId!!)
+
+      // The certificate exposes the converted location as a ROOM (derived) and carries both the converted
+      // cell type and its free-text description for display on the cell schedule.
+      val roomInCert = currentCertificate(cell.prisonId).findLocationInCertificate(cell.getPathHierarchy())!!
+      assertThat(roomInCert.locationType).isEqualTo(LocationType.ROOM)
+      assertThat(roomInCert.convertedCellType).isEqualTo(ConvertedCellType.OTHER)
+      assertThat(roomInCert.otherConvertedCellType).isEqualTo("Swimming pool")
+    }
+
+    @Test
+    fun `a previously converted cell keeps its room type and converted cell type when a later certificate is generated`() {
+      val cells = leedsWing.findAllLeafLocations().filterIsInstance<Cell>()
+      val cellA = cells[0]
+      val cellB = cells[1]
+      stubNoPrisoners(cellA)
+      stubNoPrisoners(cellB)
+
+      // Convert and approve cell A -> generates the first certificate with cell A as a converted room.
+      approveRequest(requestConversion(cellA).pendingApprovalRequestId!!)
+
+      // Convert and approve cell B -> generates a second certificate. Cell A is not part of cell B's
+      // approval hierarchy, so it is cloned from the first certificate. It must retain its converted type.
+      approveRequest(requestConversion(cellB).pendingApprovalRequestId!!)
+
+      val cert = currentCertificate(cellA.prisonId)
+
+      val cellAInCert = cert.findLocationInCertificate(cellA.getPathHierarchy())!!
+      assertThat(cellAInCert.locationType).isEqualTo(LocationType.ROOM)
+      assertThat(cellAInCert.convertedCellType).isEqualTo(ConvertedCellType.OFFICE)
+
+      val cellBInCert = cert.findLocationInCertificate(cellB.getPathHierarchy())!!
+      assertThat(cellBInCert.locationType).isEqualTo(LocationType.ROOM)
+      assertThat(cellBInCert.convertedCellType).isEqualTo(ConvertedCellType.OFFICE)
     }
   }
 }

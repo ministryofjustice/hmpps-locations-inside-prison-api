@@ -610,7 +610,7 @@ open class ResidentialLocation(
     val locationInExistingCertificate = currentCellCertificate?.findLocationInCertificate(getPathHierarchy())
     if (approvalLocationIsPartOfHierarchy(approvalRequest) || locationInExistingCertificate == null) {
       return CellCertificateLocation(
-        locationType = locationType,
+        locationType = getDerivedLocationType(),
         locationCode = getLocationCode(),
         pathHierarchy = getPathHierarchy(),
         localName = localName?.capitalizeWords(),
@@ -637,6 +637,11 @@ open class ResidentialLocation(
         specialistCellTypes = getSpecialistCellTypesAsCSV(),
         convertedCellType = if (this is Cell && isConvertedCell()) {
           convertedCellType
+        } else {
+          null
+        },
+        otherConvertedCellType = if (this is Cell && isConvertedCell()) {
+          getOtherConvertedCellType()
         } else {
           null
         },
@@ -793,8 +798,13 @@ open class ResidentialLocation(
     val pendingApprovalRequest = getPendingApprovalRequest()
     return if (ApprovalType.DEACTIVATION == pendingApprovalRequest?.getApprovalType()) {
       pendingApprovalRequest.reasonForChange
-    } else {
+    } else if (getInactiveStatus() == InactiveStatus.INACTIVE_MATCHING_CELL_CERT) {
+      // Only surface the explanation when the current deactivation is aligned to the cell certificate.
+      // A short-term temporary deactivation requires no explanation, so any previously approved
+      // deactivation reason must not be resurfaced on the temp-inactive banner (MAPA-133).
       getLatestApprovedDeactivationRequest()?.reasonForChange
+    } else {
+      null
     }
   }
 
