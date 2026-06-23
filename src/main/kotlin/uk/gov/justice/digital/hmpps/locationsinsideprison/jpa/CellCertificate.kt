@@ -149,7 +149,7 @@ open class CellCertificateLocation(
   private val cellMark: String? = null,
 
   @Column(nullable = true)
-  private val localName: String? = null,
+  open var localName: String? = null,
 
   @Column(nullable = false)
   val pathHierarchy: String,

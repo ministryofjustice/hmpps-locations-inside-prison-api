@@ -6,8 +6,10 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDashboardDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificate
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
@@ -116,6 +118,13 @@ class CellCertificateService(
     val currentCert = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(cell.prisonId) ?: return
     currentCert.findLocationInCertificate(cell.getPathHierarchy())?.let { certLocation ->
       certLocation.usedForTypes = cell.getUsedForValuesAsCSV()
+    }
+  }
+
+  fun updateLocalNameInCurrentCertificate(location: Location) {
+    val currentCert = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(location.prisonId) ?: return
+    currentCert.findLocationInCertificate(location.getPathHierarchy())?.let { certLocation ->
+      certLocation.localName = location.localName?.capitalizeWords()
     }
   }
 }
