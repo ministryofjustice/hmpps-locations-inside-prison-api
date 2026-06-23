@@ -102,4 +102,13 @@ enum class ServiceType(
   INTERNAL_MOVEMENTS(description = "Internal movements", NonResidentialUsageType.MOVEMENT, ServiceFamilyType.INTERNAL_MOVEMENTS, additionalInformation = "To record the location of unlocked prisoners within this establishment.", sequence = 6),
   OFFICIAL_VISITS(description = "Official visits", NonResidentialUsageType.VISIT, ServiceFamilyType.OFFICIAL_VISITS, additionalInformation = "For example, arranging a face to face visit with a solicitor.", sequence = 7),
   USE_OF_FORCE(description = "Use of force", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.USE_OF_FORCE, additionalInformation = "To report where a use of force incident took place.", sequence = 8),
+  VIDEO_ENABLED(description = "Video enabled", nonResidentialUsageType = null, ServiceFamilyType.VIDEO_LINK_APPOINTMENTS, additionalInformation = "For rooms that can host any type of video meeting.", sequence = 9),
+  ;
+
+  /**
+   * Cross-cutting services are DPS-only labels that are not derived from a NOMIS usage type or
+   * location type, so they must be preserved when a location is re-synced from NOMIS.
+   */
+  val crossCutting: Boolean
+    get() = nonResidentialUsageType == null && nonResidentialLocationType == null
 }

@@ -254,6 +254,9 @@ class NonResidentialLocation(
       }
     }
 
+    // Preserve DPS-only cross-cutting services NOMIS does not manage (e.g. VIDEO_ENABLED)
+    serviceTypeForLocation.addAll(services.map { it.serviceType }.filter { it.crossCutting })
+
     updateServices(serviceTypeForLocation, upsert.lastUpdatedBy, clock, linkedTransaction)
 
     upsert.internalMovementAllowed?.let { internalMovementAllowedUpdate ->
