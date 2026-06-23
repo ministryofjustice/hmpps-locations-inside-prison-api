@@ -1121,4 +1121,38 @@ class LocationTransformResourceTest : CommonDataTestBase() {
       }
     }
   }
+
+  @DisplayName("PUT /locations/{id}/change-local-name")
+  @Nested
+  inner class ChangeLocalNameTest {
+
+    @Nested
+    inner class CurrentCertificateReflection {
+
+      @Test
+      fun `updating local name updates the current cell certificate for the affected location`() {
+        baselinePrison(leedsWing.prisonId)
+
+        val leedsWingPath = leedsWing.getPathHierarchy()
+
+        webTestClient.put().uri("/locations/${leedsWing.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue("""{ "localName": "New Wing Name" }""")
+          .exchange()
+          .expectStatus().isOk
+
+        val currentCert = webTestClient.get().uri("/cell-certificates/prison/${leedsWing.prisonId}/current")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<CellCertificateDto>()
+          .returnResult().responseBody!!
+
+        val locationInCert = currentCert.findLocationInCertificate(leedsWingPath)
+        assertThat(locationInCert).isNotNull
+        assertThat(locationInCert?.localName).isEqualTo("New Wing Name")
+      }
+    }
+  }
 }
