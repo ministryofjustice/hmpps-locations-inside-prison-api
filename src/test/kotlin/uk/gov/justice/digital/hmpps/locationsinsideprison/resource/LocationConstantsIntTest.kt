@@ -1016,6 +1016,16 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                       "editableInParent": false
                     },
                     "additionalInformation": "To report where a use of force incident took place."
+                  },
+                  {
+                    "key": "VIDEO_ENABLED",
+                    "description": "Video enabled",
+                    "attributes": {
+                      "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS",
+                      "serviceFamilyDescription": "Book a video link",
+                      "editableInParent": true
+                    },
+                    "additionalInformation": "For rooms that can host any type of video meeting."
                   }
                 ]
               }
@@ -1093,6 +1103,11 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                       "key": "VIDEO_LINK",
                       "description": "Book a video link",
                       "additionalInformation": "For example, managing a court hearing or probation meeting via video link."
+                    },
+                    {
+                      "key": "VIDEO_ENABLED",
+                      "description": "Video enabled",
+                      "additionalInformation": "For rooms that can host any type of video meeting."
                     }
                   ]
                 },

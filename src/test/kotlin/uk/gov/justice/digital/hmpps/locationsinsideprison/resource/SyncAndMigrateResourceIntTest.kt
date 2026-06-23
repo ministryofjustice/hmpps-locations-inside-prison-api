@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisDeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
@@ -1018,6 +1019,68 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
               "servicesUsingLocation": [
                 {
                   "serviceType": "VIDEO_LINK",
+                  "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS"
+                }
+              ]
+             }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `sync preserves a cross-cutting VIDEO_ENABLED service that NOMIS does not manage`() {
+        // staff manually tag the video link room as video enabled (a DPS-only cross-cutting label)
+        webTestClient.patch().uri("/locations/non-residential/${videoLinkRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              PatchNonResidentialLocationRequest(
+                servicesUsingLocation = setOf(ServiceType.VIDEO_LINK, ServiceType.VIDEO_ENABLED),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        // a subsequent NOMIS sync (which knows nothing about VIDEO_ENABLED) must not strip it
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncNonResRequest.copy(
+                id = videoLinkRoom.id,
+                code = "VIDEO",
+                locationType = LocationType.VIDEO_LINK,
+                localName = "Video Link Room",
+                usage = emptySet(),
+                internalMovementAllowed = false,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.get().uri("/locations/${videoLinkRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "key": "ZZGHI-VIDEO",
+              "locationType": "VIDEO_LINK",
+              "servicesUsingLocation": [
+                {
+                  "serviceType": "VIDEO_LINK",
+                  "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS"
+                },
+                {
+                  "serviceType": "VIDEO_ENABLED",
                   "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS"
                 }
               ]
