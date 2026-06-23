@@ -2018,6 +2018,47 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
       }
+
+      @Test
+      fun `can retrieve locations by the cross-cutting VIDEO_ENABLED service type`() {
+        // tag the visit room as video enabled, in addition to its existing official visits service
+        webTestClient.patch().uri("/locations/non-residential/${visitRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              PatchNonResidentialLocationRequest(
+                servicesUsingLocation = setOf(ServiceType.OFFICIAL_VISITS, ServiceType.VIDEO_ENABLED),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.get().uri("/locations/non-residential/prison/${wingZ.prisonId}/service/VIDEO_ENABLED")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+                [{
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "servicesUsingLocation": [
+                    {
+                      "serviceType": "VIDEO_ENABLED",
+                      "serviceFamilyType": "VIDEO_LINK_APPOINTMENTS"
+                    }
+                  ],
+                  "key": "MDI-Z-VISIT"
+                }]
+                         """,
+            JsonCompareMode.LENIENT,
+          )
+      }
     }
 
     @Nested
