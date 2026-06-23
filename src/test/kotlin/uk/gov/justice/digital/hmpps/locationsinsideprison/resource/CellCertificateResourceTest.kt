@@ -222,6 +222,42 @@ class CellCertificateResourceTest(
       }
 
       @Test
+      fun `history list returns summary rows for every certificate without loading the location tree`() {
+        // Approve the pending cell change to produce a second (now current) certificate, so the
+        // history list contains more than one certificate.
+        webTestClient.put().uri("/certification/location/approve")
+          .headers(setAuthorisation(user = EXPECTED_USERNAME, roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              ApproveCertificationRequestDto(
+                approvalRequestReference = cellPendingApprovalRequestId,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.get().uri("/cell-certificates/prison/LEI")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          // Ordered by approved date desc: newest certificate is current, the previous one is not.
+          // The presence of $[1] confirms the history list holds more than one certificate.
+          .jsonPath("$[0].current").isEqualTo(true)
+          .jsonPath("$[1].current").isEqualTo(false)
+          // Every row exposes summary fields but never the (discarded) location tree.
+          .jsonPath("$[0].id").exists()
+          .jsonPath("$[0].approvedBy").exists()
+          .jsonPath("$[0].totalWorkingCapacity").exists()
+          .jsonPath("$[0].approvedRequest.id").exists()
+          .jsonPath("$[0].locations").doesNotExist()
+          .jsonPath("$[1].approvedRequest.id").exists()
+          .jsonPath("$[1].locations").doesNotExist()
+      }
+
+      @Test
       fun `returns empty list when no cell certificates found for prison`() {
         webTestClient.get().uri("/cell-certificates/prison/MDI")
           .headers(setAuthorisation(user = EXPECTED_USERNAME, roles = listOf("ROLE_LOCATION_CERTIFICATION")))
