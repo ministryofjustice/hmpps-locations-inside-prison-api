@@ -29,6 +29,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
@@ -4450,6 +4451,64 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
           *cell1.getParentLocations().map { parent -> "location.inside.prison.amended" to parent.getKey() }.toTypedArray(),
         )
       }
+    }
+
+    @Test
+    fun `approving a conversion records the location as a ROOM with its converted cell type and free text in the certificate`() {
+      val cell = firstLeedsCell()
+      stubNoPrisoners(cell)
+
+      val updatedLocation = webTestClient.put().uri("/locations/${cell.id}/convert-cell-to-non-res-cell")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            LocationResidentialResource.ConvertCellToNonResidentialLocationRequest(
+              convertedCellType = ConvertedCellType.OTHER,
+              otherConvertedCellType = "Swimming pool",
+              reasonForChange = "Cell converted to a swimming pool",
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      approveRequest(updatedLocation.pendingApprovalRequestId!!)
+
+      // The certificate exposes the converted location as a ROOM (derived) and carries both the converted
+      // cell type and its free-text description for display on the cell schedule.
+      val roomInCert = currentCertificate(cell.prisonId).findLocationInCertificate(cell.getPathHierarchy())!!
+      assertThat(roomInCert.locationType).isEqualTo(LocationType.ROOM)
+      assertThat(roomInCert.convertedCellType).isEqualTo(ConvertedCellType.OTHER)
+      assertThat(roomInCert.otherConvertedCellType).isEqualTo("Swimming pool")
+    }
+
+    @Test
+    fun `a previously converted cell keeps its room type and converted cell type when a later certificate is generated`() {
+      val cells = leedsWing.findAllLeafLocations().filterIsInstance<Cell>()
+      val cellA = cells[0]
+      val cellB = cells[1]
+      stubNoPrisoners(cellA)
+      stubNoPrisoners(cellB)
+
+      // Convert and approve cell A -> generates the first certificate with cell A as a converted room.
+      approveRequest(requestConversion(cellA).pendingApprovalRequestId!!)
+
+      // Convert and approve cell B -> generates a second certificate. Cell A is not part of cell B's
+      // approval hierarchy, so it is cloned from the first certificate. It must retain its converted type.
+      approveRequest(requestConversion(cellB).pendingApprovalRequestId!!)
+
+      val cert = currentCertificate(cellA.prisonId)
+
+      val cellAInCert = cert.findLocationInCertificate(cellA.getPathHierarchy())!!
+      assertThat(cellAInCert.locationType).isEqualTo(LocationType.ROOM)
+      assertThat(cellAInCert.convertedCellType).isEqualTo(ConvertedCellType.OFFICE)
+
+      val cellBInCert = cert.findLocationInCertificate(cellB.getPathHierarchy())!!
+      assertThat(cellBInCert.locationType).isEqualTo(LocationType.ROOM)
+      assertThat(cellBInCert.convertedCellType).isEqualTo(ConvertedCellType.OFFICE)
     }
   }
 }

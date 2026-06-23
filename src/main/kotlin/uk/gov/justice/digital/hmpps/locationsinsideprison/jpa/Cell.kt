@@ -186,6 +186,8 @@ class Cell(
 
   override fun isConvertedCell() = convertedCellType != null
 
+  fun getOtherConvertedCellType(): String? = otherConvertedCellType
+
   private fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {

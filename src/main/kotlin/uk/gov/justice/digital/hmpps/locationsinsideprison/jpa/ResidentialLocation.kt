@@ -610,7 +610,7 @@ open class ResidentialLocation(
     val locationInExistingCertificate = currentCellCertificate?.findLocationInCertificate(getPathHierarchy())
     if (approvalLocationIsPartOfHierarchy(approvalRequest) || locationInExistingCertificate == null) {
       return CellCertificateLocation(
-        locationType = locationType,
+        locationType = getDerivedLocationType(),
         locationCode = getLocationCode(),
         pathHierarchy = getPathHierarchy(),
         localName = localName?.capitalizeWords(),
@@ -637,6 +637,11 @@ open class ResidentialLocation(
         specialistCellTypes = getSpecialistCellTypesAsCSV(),
         convertedCellType = if (this is Cell && isConvertedCell()) {
           convertedCellType
+        } else {
+          null
+        },
+        otherConvertedCellType = if (this is Cell && isConvertedCell()) {
+          getOtherConvertedCellType()
         } else {
           null
         },

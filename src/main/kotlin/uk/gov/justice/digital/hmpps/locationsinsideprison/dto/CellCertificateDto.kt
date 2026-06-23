@@ -115,6 +115,9 @@ data class CellCertificateLocationDto(
   @param:Schema(description = "If converted, the type of cell this location has been converted to")
   val convertedCellType: ConvertedCellType? = null,
 
+  @param:Schema(description = "Free-text description when the converted cell type is OTHER", example = "Yoga room")
+  val otherConvertedCellType: String? = null,
+
   @param:Schema(description = "Sub locations within this cell certificate location")
   val subLocations: List<CellCertificateLocationDto>? = null,
 )
