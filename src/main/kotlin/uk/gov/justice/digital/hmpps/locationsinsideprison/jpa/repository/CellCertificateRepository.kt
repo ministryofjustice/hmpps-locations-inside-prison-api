@@ -12,7 +12,7 @@ import java.util.UUID
 
 @Repository
 interface CellCertificateRepository : JpaRepository<CellCertificate, UUID> {
-  @EntityGraph(value = "cell.certificate.graph", type = EntityGraph.EntityGraphType.LOAD)
+  @EntityGraph(value = "cell.certificate.summary.graph", type = EntityGraph.EntityGraphType.LOAD)
   fun findByPrisonIdOrderByApprovedDateDesc(prisonId: String): List<CellCertificate>
 
   @EntityGraph(value = "cell.certificate.graph", type = EntityGraph.EntityGraphType.LOAD)

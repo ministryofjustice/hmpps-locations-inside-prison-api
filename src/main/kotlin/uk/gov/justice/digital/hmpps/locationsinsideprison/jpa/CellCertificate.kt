@@ -41,6 +41,15 @@ import java.util.UUID
         ),
       ],
     ),
+    // Lightweight graph for the certificate history list: fetch the one-to-one approval
+    // request (to avoid an N+1 across the list) but NOT the location tree, which the list
+    // does not render (showLocations = false).
+    NamedEntityGraph(
+      name = "cell.certificate.summary.graph",
+      attributeNodes = [
+        NamedAttributeNode("certificationApprovalRequest"),
+      ],
+    ),
   ],
 )
 @Entity
@@ -79,7 +88,7 @@ open class CellCertificate(
   private var current: Boolean = true,
 
   @SortNatural
-  @OneToMany(fetch = FetchType.EAGER, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "cell_certificate_id", nullable = false)
   open var locations: SortedSet<CellCertificateLocation> = sortedSetOf(),
 ) {
