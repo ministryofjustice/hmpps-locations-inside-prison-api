@@ -197,7 +197,7 @@ class LocationResidentialResource(
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @ResponseStatus(HttpStatus.OK)
   @Operation(
-    summary = "Updates a list of DRAFT cells below a parent DRAFT location",
+    summary = "Updates a list of DRAFT cells below a parent location",
     description = "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
