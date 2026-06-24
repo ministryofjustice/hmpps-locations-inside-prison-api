@@ -24,6 +24,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocatio
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialSummary
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.time.LocalDateTime
@@ -652,6 +653,25 @@ class DraftLocationResourceTest : CommonDataTestBase() {
             .returnResult().responseBody!!.errorCode,
         ).isEqualTo(ErrorCode.WorkingCapacityExceedsMaxCapacity.errorCode)
       }
+
+      @Test
+      fun `cannot update a cell that is not an editable draft`() {
+        // cell1 is a live (ACTIVE) cell under landingZ1 - it must not be editable via this endpoint
+        val request = createCellDraftUpdateRequest(
+          prisonId = landingZ1.prisonId,
+          parentLocation = landingZ1.id!!,
+          cells = listOf(cell1.toCellInformation(specialistCellTypes = null)),
+        )
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(request)
+          .exchange()
+          .expectStatus().isBadRequest
+          .expectBody()
+          .jsonPath("$.userMessage").value<String> { assertThat(it).contains("not an editable draft") }
+      }
     }
 
     @Nested
@@ -885,6 +905,90 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           )
 
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
+      fun `can edit draft cells under an existing non-draft landing without deleting the live cells`() {
+        // landingZ1 is an existing ACTIVE landing already containing live cells (cell1, cell2).
+        // Add a DRAFT cell to it - the real "create locations in DRAFT from an existing landing" flow.
+        webTestClient.post().uri("/locations/create-cells")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(createCellInitialisationRequest(startingCellNumber = 10, parentLocation = landingZ1.id).copy(newLevelAboveCells = null))
+          .exchange()
+          .expectStatus().isCreated
+
+        val draftCell = repository.findOneByKey("${landingZ1.getKey()}-010") as Cell
+
+        // The request only carries the draft cell - the live cells are not editable here.
+        val request = createCellDraftUpdateRequest(
+          prisonId = landingZ1.prisonId,
+          parentLocation = landingZ1.id!!,
+          cells = listOf(
+            draftCell.toCellInformation(specialistCellTypes = setOf(SpecialistCellType.ACCESSIBLE_CELL))
+              .copy(maxCapacity = 2, workingCapacity = 2),
+          ),
+        )
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(request)
+          .exchange()
+          .expectStatus().isOk
+
+        // the live cells must NOT have been deleted
+        assertThat(cellRepository.findById(cell1.id!!)).isPresent
+        assertThat(cellRepository.findById(cell2.id!!)).isPresent
+        // the draft cell was updated
+        webTestClient.get().uri("/locations/${draftCell.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.pendingChanges.workingCapacity").isEqualTo(2)
+          .jsonPath("$.pendingChanges.maxCapacity").isEqualTo(2)
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
+      fun `does not delete locked-draft sibling cells that are omitted from the request`() {
+        // Add two DRAFT cells (010, 011) to the existing live landingZ1
+        webTestClient.post().uri("/locations/create-cells")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(createCellInitialisationRequest(startingCellNumber = 10, numberOfCells = 2, parentLocation = landingZ1.id).copy(newLevelAboveCells = null))
+          .exchange()
+          .expectStatus().isCreated
+
+        val lockedDraftCell = repository.findOneByKey("${landingZ1.getKey()}-010") as Cell
+        val editableDraftCell = repository.findOneByKey("${landingZ1.getKey()}-011") as Cell
+
+        // Lock one of the draft cells by requesting certification approval for it
+        webTestClient.put().uri("/certification/location/request-approval")
+          .headers(setAuthorisation(user = EXPECTED_USERNAME, roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(LocationApprovalRequest(locationId = lockedDraftCell.id!!)))
+          .exchange()
+          .expectStatus().isOk
+
+        // The request only carries the still-editable draft cell - the locked draft is omitted
+        val request = createCellDraftUpdateRequest(
+          prisonId = landingZ1.prisonId,
+          parentLocation = landingZ1.id!!,
+          cells = listOf(editableDraftCell.toCellInformation(specialistCellTypes = null)),
+        )
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(request)
+          .exchange()
+          .expectStatus().isOk
+
+        // the locked-draft cell must NOT have been deleted
+        assertThat(cellRepository.findById(lockedDraftCell.id!!)).isPresent
       }
     }
   }

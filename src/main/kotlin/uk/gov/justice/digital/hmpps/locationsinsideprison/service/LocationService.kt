@@ -486,10 +486,6 @@ class LocationService(
       residentialLocationRepository.findById(it).getOrNull() ?: throw LocationNotFoundException(it.toString())
     }
 
-    if (!parentLocation.isDraft()) {
-      throw ValidationException("Cannot update cells for a non-draft location")
-    }
-
     if (parentLocation.hasPendingCertificationApproval()) {
       throw LocationCannotBeCreatedWithPendingApprovalException(parentLocation.getKey())
     }
@@ -501,9 +497,13 @@ class LocationService(
     )
     val userOrSystemInContext = sharedLocationService.getUsername()
 
-    // find cells missing from `cellDraftUpdateRequest.cells` that are currently under this parentLocation
+    // find editable-draft cells missing from `cellDraftUpdateRequest.cells` that are currently under this parentLocation.
+    // Live cells and locked-draft cells (draft with a pending certification approval) are never sent in the request
+    // and must not be deleted.
     val listOfIds = cellDraftUpdateRequest.cells.mapNotNull { it.id }
-    val cellsToRemove = parentLocation.cellLocations().filter { cell -> cell.id !in listOfIds }
+    val cellsToRemove = parentLocation.cellLocations().filter { cell ->
+      cell.id !in listOfIds && cell.isDraft() && !cell.hasPendingCertificationApproval()
+    }
     val deletedCells = cellsToRemove.size
     cellsToRemove.forEach { cell ->
       parentLocation.removeCell(cell)
@@ -539,6 +539,11 @@ class LocationService(
     cellDraftUpdateRequest.cells.filter { it.id != null }.forEach { cell ->
       val cellToUpdate = cellLocationRepository.findById(cell.id!!)
         .orElseThrow { LocationNotFoundException(cell.id.toString()) }
+
+      // only editable draft cells can be updated via this endpoint - never live or locked-draft cells
+      if (!cellToUpdate.isDraft() || cellToUpdate.hasPendingCertificationApproval()) {
+        throw ValidationException("Cannot update cell ${cellToUpdate.getKey()} - it is not an editable draft")
+      }
 
       // update the cell
       cellToUpdate.update(
