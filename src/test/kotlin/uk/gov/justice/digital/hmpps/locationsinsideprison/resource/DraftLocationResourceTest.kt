@@ -908,6 +908,50 @@ class DraftLocationResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `can add a new draft cell to an existing non-draft landing via edit-cells`() {
+        // landingZ1 is an existing ACTIVE landing already containing live cells (cell1, cell2).
+        // Send a brand-new cell (no id) directly to the edit-cells endpoint - it should be created as DRAFT.
+        val request = createCellDraftUpdateRequest(
+          prisonId = landingZ1.prisonId,
+          parentLocation = landingZ1.id!!,
+          cells = listOf(
+            CellInformation(
+              code = "010",
+              cellMark = "Z1-010",
+              maxCapacity = 2,
+              workingCapacity = 1,
+              certifiedNormalAccommodation = 1,
+              specialistCellTypes = setOf(SpecialistCellType.ACCESSIBLE_CELL),
+              inCellSanitation = true,
+            ),
+          ),
+        )
+
+        webTestClient.put().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(request)
+          .exchange()
+          .expectStatus().isOk
+
+        // the new cell was created as a DRAFT under the live landing
+        webTestClient.get().uri("/locations/key/${landingZ1.getKey()}-010")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.status").isEqualTo("DRAFT")
+          .jsonPath("$.pendingChanges.maxCapacity").isEqualTo(2)
+          .jsonPath("$.pendingChanges.workingCapacity").isEqualTo(1)
+
+        // the live cells must NOT have been deleted
+        assertThat(cellRepository.findById(cell1.id!!)).isPresent
+        assertThat(cellRepository.findById(cell2.id!!)).isPresent
+
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
       fun `can edit draft cells under an existing non-draft landing without deleting the live cells`() {
         // landingZ1 is an existing ACTIVE landing already containing live cells (cell1, cell2).
         // Add a DRAFT cell to it - the real "create locations in DRAFT from an existing landing" flow.
