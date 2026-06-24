@@ -1613,7 +1613,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations[0].workingCapacity).isEqualTo(1)
       assertThat(pendingApproval.locations[0].maxCapacity).isEqualTo(2)
       assertThat(pendingApproval.locations[0].certifiedNormalAccommodation).isEqualTo(1)
-      assertThat(pendingApproval.locations[0].currentSpecialistCellTypes).isNull()
+      assertThat(pendingApproval.locations[0].currentSpecialistCellTypes).isEmpty()
       assertThat(pendingApproval.locations[0].specialistCellTypes).containsExactlyInAnyOrder(
         SpecialistCellType.SAFE_CELL,
         SpecialistCellType.CONSTANT_SUPERVISION,
@@ -1892,7 +1892,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations[0].certifiedNormalAccommodation).isEqualTo(6)
       assertThat(pendingApproval.locations[0].subLocations).hasSize(2)
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations).hasSize(3)
-      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).isNull()
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).isEmpty()
       val approvedRequest = webTestClient.put().uri("/certification/location/approve")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
         .header("Content-Type", "application/json")
@@ -2022,10 +2022,10 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.locations[0].workingCapacity).isEqualTo(12)
       assertThat(pendingApproval.locations[0].maxCapacity).isEqualTo(12)
       assertThat(pendingApproval.locations[0].certifiedNormalAccommodation).isEqualTo(12)
-      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).isNull()
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.currentSpecialistCellTypes).isEmpty()
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(0)?.specialistCellTypes).isEmpty()
-      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.currentSpecialistCellTypes).isNull()
-      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.specialistCellTypes).isNull()
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.currentSpecialistCellTypes).isEmpty()
+      assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(1)?.specialistCellTypes).isEmpty()
       assertThat(pendingApproval.locations[0].subLocations?.get(0)?.subLocations?.get(2)?.specialistCellTypes).containsExactlyInAnyOrder(
         SpecialistCellType.SAFE_CELL,
         SpecialistCellType.CONSTANT_SUPERVISION,
@@ -3106,6 +3106,50 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         SpecialistCellType.ACCESSIBLE_CELL,
         SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
       )
+    }
+
+    @Test
+    fun `request approval to remove all specialist cell types surfaces an empty array on the location`() {
+      val cell = firstLeedsCell()
+
+      // Give the cell an existing capacity-affecting specialist cell type via the approval flow.
+      val addApproval = requestSpecialistCellTypeApproval(cell, setOf(SpecialistCellType.BIOHAZARD_DIRTY_PROTEST))
+
+      prisonerSearchMockServer.stubSearchByLocations(
+        leedsWing.prisonId,
+        listOf(cell.getPathHierarchy()),
+        false,
+      )
+      approveRequest(addApproval.id)
+      getDomainEvents(3)
+
+      // Now request approval to remove all specialist cell types (restoring the original capacities).
+      val pendingApproval = requestSpecialistCellTypeApproval(
+        cell = cell,
+        specialistCellTypes = emptySet(),
+        workingCapacity = 1,
+        maxCapacity = 2,
+        certifiedNormalAccommodation = 1,
+      )
+
+      // Top-level and location both expose the proposed empty set rather than dropping the field.
+      assertThat(pendingApproval.specialistCellTypes).isEmpty()
+      assertThat(pendingApproval.locations).hasSize(1)
+      val locationInRequest = pendingApproval.locations!![0]
+      assertThat(locationInRequest.specialistCellTypes).isEmpty()
+      assertThat(locationInRequest.currentSpecialistCellTypes).containsExactlyInAnyOrder(
+        SpecialistCellType.BIOHAZARD_DIRTY_PROTEST,
+      )
+
+      // Confirm at the JSON level that the location-level specialistCellTypes is an empty array, not absent.
+      webTestClient.get().uri("/certification/request-approvals/${pendingApproval.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.specialistCellTypes").isEqualTo(emptyList<String>())
+        .jsonPath("$.locations[0].specialistCellTypes").isEqualTo(emptyList<String>())
+        .jsonPath("$.locations[0].currentSpecialistCellTypes").isEqualTo(listOf("BIOHAZARD_DIRTY_PROTEST"))
     }
 
     @Test

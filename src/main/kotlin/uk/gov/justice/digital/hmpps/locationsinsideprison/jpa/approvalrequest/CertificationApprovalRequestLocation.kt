@@ -205,12 +205,11 @@ open class CertificationApprovalRequestLocation(
 
   fun certifiedNormalAccommodationChange(): Int = approvedCertifiedNormalAccommodation() - calcCurrentCertifiedNormalAccommodation()
 
-  fun getSpecialistCellTypesFromList(specialCellTypes: String?): List<SpecialistCellType>? = specialCellTypes?.let { types ->
-    types.takeIf { it.isNotEmpty() }
-      ?.split(",")
-      ?.map { SpecialistCellType.valueOf(it.trim()) }
-      ?: emptyList()
-  }
+  fun getSpecialistCellTypesFromList(specialCellTypes: String?): List<SpecialistCellType> = specialCellTypes
+    ?.takeIf { it.isNotEmpty() }
+    ?.split(",")
+    ?.map { SpecialistCellType.valueOf(it.trim()) }
+    ?: emptyList()
 
   fun refreshCapacities() {
     workingCapacity = approvedWorkingCapacity()
