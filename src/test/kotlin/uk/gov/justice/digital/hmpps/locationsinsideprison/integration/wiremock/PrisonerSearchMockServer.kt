@@ -100,11 +100,12 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
         createPrisoner(prisonId = prisonId, cellLocation = "RECP", prisonerCount = 1003, inOutStatus = "IN", status = "ACTIVE IN"),
         createPrisoner(prisonId = prisonId, cellLocation = "TAP", prisonerCount = 1004, inOutStatus = "IN", status = "ACTIVE IN"),
         createPrisoner(prisonId = prisonId, cellLocation = "COURT", prisonerCount = 1005, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "COURT", prisonerCount = 1006, inOutStatus = "OUT", status = "ACTIVE OUT"),
+        createPrisoner(prisonId = prisonId, cellLocation = "COURT", prisonerCount = 1006, inOutStatus = "OUT", status = "ACTIVE OUT", lastMovementTypeCode = "CRT"),
         createPrisoner(prisonId = prisonId, cellLocation = "RECP", prisonerCount = 1007, inOutStatus = "IN", status = "ACTIVE IN"),
         createPrisoner(prisonId = prisonId, cellLocation = "RECP", prisonerCount = 1008, inOutStatus = "OUT", status = "ACTIVE OUT"),
         createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", prisonerCount = 1009, inOutStatus = "IN", status = "ACTIVE IN"),
         createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", prisonerCount = 1010, inOutStatus = "OUT", status = "ACTIVE OUT"),
+        createPrisoner(prisonId = prisonId, cellLocation = "TAP", prisonerCount = 1011, inOutStatus = "OUT", status = "ACTIVE OUT", lastMovementTypeCode = "TAP"),
       ),
     )
 
@@ -120,7 +121,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
   }
 }
 
-fun createPrisoner(prisonId: String, cellLocation: String, prisonerCount: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN") = Prisoner(
+fun createPrisoner(prisonId: String, cellLocation: String, prisonerCount: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN", lastMovementTypeCode: String = "ADM") = Prisoner(
   prisonerNumber = "A${prisonerCount.toString().padStart(4, '0')}AA",
   firstName = "Firstname-$prisonerCount",
   lastName = "Surname-$prisonerCount",
@@ -129,7 +130,7 @@ fun createPrisoner(prisonId: String, cellLocation: String, prisonerCount: Int, s
   cellLocation = cellLocation,
   gender = "MALE",
   status = status,
-  lastMovementTypeCode = "ADM",
+  lastMovementTypeCode = lastMovementTypeCode,
   inOutStatus = inOutStatus,
   csra = "High",
   category = "C",

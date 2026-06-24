@@ -3,9 +3,14 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.aResponse
+import com.github.tomakehurst.wiremock.client.WireMock.equalTo
+import com.github.tomakehurst.wiremock.client.WireMock.equalToJson
 import com.github.tomakehurst.wiremock.client.WireMock.get
+import com.github.tomakehurst.wiremock.client.WireMock.post
+import com.github.tomakehurst.wiremock.client.WireMock.urlPathEqualTo
 import com.github.tomakehurst.wiremock.http.HttpHeader
 import com.github.tomakehurst.wiremock.http.HttpHeaders
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LatestOffenderMovement
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.MovementCount
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.OffenderMovement
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonRollMovementInfo
@@ -59,6 +64,27 @@ class PrisonApiMockServer : WireMockServer(WIREMOCK_PORT) {
             .withBody(mapper.writeValueAsBytes(offenderMovements))
             .withStatus(200),
         ),
+    )
+  }
+
+  fun stubLatestOffenderMovements(
+    latestMovements: List<LatestOffenderMovement> = emptyList(),
+    expectedOffenderNumbers: List<String>? = null,
+  ) {
+    var mappingBuilder = post(urlPathEqualTo("/api/movements/offenders"))
+      .withQueryParam("latestOnly", equalTo("true"))
+
+    if (expectedOffenderNumbers != null) {
+      mappingBuilder = mappingBuilder.withRequestBody(equalToJson(mapper.writeValueAsString(expectedOffenderNumbers), true, true))
+    }
+
+    stubFor(
+      mappingBuilder.willReturn(
+        aResponse()
+          .withHeader("Content-Type", "application/json")
+          .withBody(mapper.writeValueAsBytes(latestMovements))
+          .withStatus(200),
+      ),
     )
   }
 }

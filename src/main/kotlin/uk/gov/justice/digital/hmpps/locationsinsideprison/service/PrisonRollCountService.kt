@@ -21,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Residen
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import java.time.Clock
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.*
 import kotlin.collections.count
 import kotlin.jvm.optionals.getOrNull
@@ -50,6 +51,7 @@ class PrisonRollCountService(
 
     val listOfPrisoners = prisonerLocationService.prisonersInPrisonAllLocations(prisonId)
     val mapOfPrisoners = listOfPrisoners.filter { it.cellLocation != null }.groupBy { it.cellLocation!! }
+    val numOvernights = getNumOvernights(listOfPrisoners)
 
     return prisonRollCount(
       prisonId,
@@ -57,6 +59,7 @@ class PrisonRollCountService(
       listOfPrisoners,
       movements,
       doubleMoveCount,
+      numOvernights,
       includeCells,
       residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId),
       segShouldBeFiltered(prisonId),
@@ -94,6 +97,7 @@ class PrisonRollCountService(
     listOfPrisoners: List<Prisoner>,
     movements: PrisonRollMovementInfo,
     doubleMoveCount: Int,
+    numOvernights: Int,
     includeCells: Boolean,
     residentialLocations: List<ResidentialLocation>,
     filterSeg: Boolean,
@@ -118,10 +122,30 @@ class PrisonRollCountService(
       numInReception = numInReception,
       numStillToArrive = movements.enRouteToday,
       numNoCellAllocated = numNoCellAllocated,
+      numOvernights = numOvernights,
       totals = locationRollCount(locations, filterSeg),
       locations = removeLocations(locations, includeCells = includeCells, filterSeg = filterSeg),
     )
     return prisonRollCount
+  }
+
+  internal fun getNumOvernights(prisoners: List<Prisoner>): Int {
+    val overnightMovementTypes = setOf("CRT", "TAP")
+    val prisonerNumbers = prisoners
+      .filter { it.lastMovementTypeCode in overnightMovementTypes && it.status == "ACTIVE OUT" }
+      .map { it.prisonerNumber }
+
+    if (prisonerNumbers.isEmpty()) return 0
+
+    val currentDayStart = LocalDate.now(clock).atStartOfDay()
+
+    return prisonApiService.getLatestMovementsForOffenders(prisonerNumbers)
+      .count { movement ->
+        movement.directionCode == "OUT" &&
+          movement.movementDate != null &&
+          movement.movementTime != null &&
+          LocalDateTime.of(movement.movementDate, movement.movementTime) < currentDayStart
+      }
   }
 
   private fun locationRollCount(locations: List<ResidentialPrisonerLocation>, filterSeg: Boolean) = LocationRollCount(
@@ -268,6 +292,8 @@ data class PrisonRollCount(
   val numOutToday: Int,
   @param:Schema(description = "No cell allocated", required = true)
   val numNoCellAllocated: Int,
+  @param:Schema(description = "Prisoners currently on overnight leave", required = true)
+  val numOvernights: Int,
 
   @param:Schema(description = "Totals", required = true)
   val totals: LocationRollCount,
