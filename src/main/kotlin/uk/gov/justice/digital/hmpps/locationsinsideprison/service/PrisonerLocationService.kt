@@ -7,10 +7,13 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
@@ -66,6 +69,34 @@ class PrisonerLocationService(
         prisoners = it.value,
       )
     }.sortedBy { it.cellLocation }
+}
+
+/**
+ * Enforces that a capacity change does not drop a cell's certified capacity below the number of prisoners
+ * currently held there. Max capacity is always checked. Working capacity is additionally checked for NORMAL
+ * ACCOMMODATION cells only - segregation/healthcare/other cells may legitimately have a working capacity of 0
+ * even while occupied, so only their max capacity is constrained.
+ *
+ * Deliberately a plain function (not a method on the @Transactional [PrisonerLocationService]) so that throwing
+ * does not mark a participating transaction rollback-only: callers obtain [currentOccupancy] via the read-only
+ * service and then call this, which lets the cell certificate upload mark an individual row as failed without
+ * rolling back its per-row transaction, while the synchronous paths still roll back as intended.
+ */
+fun validateCapacityNotBelowOccupancy(location: Location, currentOccupancy: Int, newMaxCapacity: Int, newWorkingCapacity: Int) {
+  if (newMaxCapacity < currentOccupancy) {
+    throw CapacityException(
+      location.getKey(),
+      "Max capacity ($newMaxCapacity) cannot be decreased below current cell occupancy ($currentOccupancy)",
+      ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
+    )
+  }
+  if (location is Cell && location.accommodationType == AccommodationType.NORMAL_ACCOMMODATION && newWorkingCapacity < currentOccupancy) {
+    throw CapacityException(
+      location.getKey(),
+      "Working capacity ($newWorkingCapacity) cannot be decreased below current cell occupancy ($currentOccupancy)",
+      ErrorCode.WorkingCapacityCannotBeBelowOccupancyLevel,
+    )
+  }
 }
 
 @Schema(description = "Prisoner Location Information")

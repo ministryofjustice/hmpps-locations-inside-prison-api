@@ -809,15 +809,13 @@ class LocationService(
         prisonRequiresApprovalForChanges && temporaryWorkingCapacityChange && workingCapacityChange != 0 && maxCapacityChange == 0 && cnaChange == 0
       val changeMustBeApproved = prisonRequiresApprovalForChanges && !wcTempChangeAllowed && !locCapChange.isDraft()
 
-      if (!locCapChange.isDraft() && maxCapacityChange != 0) {
-        val prisoners = prisonerLocationService.prisonersInLocations(locCapChange)
-        if (maxCapacity < prisoners.size) {
-          throw CapacityException(
-            locCapChange.getKey(),
-            "Max capacity ($maxCapacity) cannot be decreased below current cell occupancy (${prisoners.size})",
-            ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
-          )
-        }
+      if (!locCapChange.isDraft()) {
+        validateCapacityNotBelowOccupancy(
+          locCapChange,
+          prisonerLocationService.prisonersInLocations(locCapChange).size,
+          maxCapacity,
+          workingCapacity,
+        )
       }
 
       trackingTx = linkedTransaction ?: sharedLocationService.createLinkedTransaction(

@@ -235,6 +235,78 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
   }
 
   @Test
+  fun `a second upload regenerates the certificate from the updated capacities`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    // first ingestion: reduce cell1 working capacity 2 -> 1, creating the current certificate
+    postCellCertificateUpdate(
+      mapOf(cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 1, certifiedNormalAccommodation = 2)),
+    )
+    await untilAsserted {
+      assertThat(cellCertificateUploadRepository.findAll().count { it.status == CellCertificateUploadStatus.FINISHED }).isEqualTo(1)
+    }
+    assertThat(
+      cellCertificateRepository.findByPrisonIdAndCurrentIsTrue("MDI")!!
+        .findLocationInCertificate(cell1.getPathHierarchy())?.workingCapacity,
+    ).isEqualTo(1)
+
+    // second ingestion: raise cell1 working capacity 1 -> 2. The regenerated certificate must reflect this,
+    // not clone the stale value from the previous certificate.
+    postCellCertificateUpdate(
+      mapOf(cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2)),
+    )
+    await untilAsserted {
+      assertThat(cellCertificateUploadRepository.findAll().count { it.status == CellCertificateUploadStatus.FINISHED }).isEqualTo(2)
+    }
+
+    val certificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue("MDI")
+    assertThat(certificate).isNotNull
+    val cell1OnCert = certificate!!.findLocationInCertificate(cell1.getPathHierarchy())
+    assertThat(cell1OnCert?.workingCapacity).isEqualTo(2)
+    assertThat(cell1OnCert?.maxCapacity).isEqualTo(2)
+  }
+
+  @Test
+  fun `working capacity cannot be set below occupancy for a normal accommodation cell but is allowed for non-normal`() {
+    // cell1 (NORMAL_ACCOMMODATION) and cell2 (CARE_AND_SEPARATION) each hold 2 prisoners
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), true, numberOfPrisonersInCell = 2)
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell2.getPathHierarchy()), true, numberOfPrisonersInCell = 2)
+
+    postCellCertificateUpdate(
+      mapOf(
+        // normal cell: working capacity 1 < occupancy 2 -> must FAIL (max 2 is still >= occupancy)
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 1, certifiedNormalAccommodation = 2),
+        // care & separation cell: working capacity 0 with occupancy 2 -> allowed (only max capacity is checked)
+        cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 0, certifiedNormalAccommodation = 0),
+      ),
+    )
+
+    await untilAsserted {
+      assertThat(cellCertificateUploadRepository.findAll().firstOrNull()?.status).isEqualTo(CellCertificateUploadStatus.FINISHED)
+    }
+
+    TransactionTemplate(transactionManager).execute {
+      val rows = cellCertificateUploadRepository.findAll().first().locations.associateBy { it.locationKey }
+      with(rows.getValue(cell1.getKey())) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.FAILED)
+        assertThat(message).contains("Working capacity (1) cannot be decreased below current cell occupancy (2)")
+      }
+      with(rows.getValue(cell2.getKey())) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+      }
+    }
+  }
+
+  private fun postCellCertificateUpdate(locations: Map<String, CellCapacityUpdateDetail>) {
+    webTestClient.post().uri("/locations/bulk/update-cell-certificate/MDI")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(jsonString(UpdateCapacityRequest(locations = locations)))
+      .exchange()
+      .expectStatus().isAccepted
+  }
+
+  @Test
   fun `running counts are incremented atomically per row`() {
     val uploadId = TransactionTemplate(transactionManager).execute {
       cellCertificateUploadRepository.save(
