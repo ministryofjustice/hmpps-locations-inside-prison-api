@@ -14,7 +14,6 @@ class PrisonerSearchService(
   private val prisonerSearchWebClient: WebClient,
   objectMapper: ObjectMapper,
 ) {
-
   private val responseFields by lazy {
     objectMapper.serializerProviderInstance.findValueSerializer(Prisoner::class.java).properties()
       .asSequence()

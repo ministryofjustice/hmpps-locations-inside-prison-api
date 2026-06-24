@@ -486,19 +486,14 @@ class PrisonRollResourceIntTest : CommonDataTestBase() {
 
       @Test
       fun `can obtain a role count for MDI with num overnights`() {
-        prisonerSearchMockServer.stubAllPrisonersInPrison(
-          prisonId = cell1.prisonId,
-          additionalPrisoners = listOf(
-            prisonerSearchMockServer.createPrisoner(prisonId = cell1.prisonId, cellLocation = "COURT", prisonerCount = 2222, inOutStatus = "OUT", status = "ACTIVE OUT", lastMovementTypeCode = "CRT"),
-          ),
-        )
+        prisonerSearchMockServer.stubAllPrisonersInPrison(prisonId = cell1.prisonId)
 
         prisonApiMockServer.stubMovementsToday(cell1.prisonId, PrisonRollMovementInfo(inOutMovementsToday = MovementCount(1, 2), enRouteToday = 2))
         prisonApiMockServer.stubLatestOffenderMovements(
           latestMovements = listOf(
-            LatestOffenderMovement(offenderNo = "A2222AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 4), movementTime = java.time.LocalTime.of(11, 59)),
+            LatestOffenderMovement(offenderNo = "A1006AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 4), movementTime = java.time.LocalTime.of(11, 59)),
           ),
-          expectedOffenderNumbers = listOf("A2222AA"),
+          expectedOffenderNumbers = listOf("A1006AA", "A1011AA"),
         )
         prisonApiMockServer.stubOffenderMovementsToday(
           prisonId = cell1.prisonId,
