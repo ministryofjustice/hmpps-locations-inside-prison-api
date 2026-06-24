@@ -93,6 +93,10 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
   inner class HappyPath {
     @Test
     fun `stores the upload, returns 202 with PENDING status and queues processing`() {
+      // the bulk processing checks occupancy before changing capacities - both cells are empty
+      prisonerSearchMockServer.stubSearchByLocations("MDI", listOf("Z-1-001"), false)
+      prisonerSearchMockServer.stubSearchByLocations("MDI", listOf("Z-1-002"), false)
+
       val response = webTestClient.post().uri("/locations/bulk/update-cell-certificate/MDI")
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
         .header("Content-Type", "application/json")

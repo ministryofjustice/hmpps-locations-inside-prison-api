@@ -47,4 +47,5 @@ enum class ErrorCode(val errorCode: Int) {
   UsedForTypesOnlyForNormalAccommodation(138),
   CellCertificateUploadAlreadyInProgress(139),
   CellCertificateUploadNotFound(140),
+  WorkingCapacityCannotBeBelowOccupancyLevel(141),
 }
