@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CellCertificateUploadApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequestLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DeactivationApprovalRequest
@@ -608,7 +609,9 @@ open class ResidentialLocation(
       .map { it.toCellCertificateLocation(approvalRequest, currentCellCertificate) }
 
     val locationInExistingCertificate = currentCellCertificate?.findLocationInCertificate(getPathHierarchy())
-    if (approvalLocationIsPartOfHierarchy(approvalRequest) || locationInExistingCertificate == null) {
+    // A cell certificate upload re-certifies every location directly from current state, so always build
+    // fresh rows rather than cloning the previous certificate (which would keep stale capacities).
+    if (approvalRequest is CellCertificateUploadApprovalRequest || approvalLocationIsPartOfHierarchy(approvalRequest) || locationInExistingCertificate == null) {
       return CellCertificateLocation(
         locationType = getDerivedLocationType(),
         locationCode = getLocationCode(),

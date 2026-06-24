@@ -31,8 +31,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.Residen
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestNotInPendingStatusException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
-import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivationDetail
@@ -231,16 +229,13 @@ class ApprovalDecisionService(
     approvalRequest: CapacityChangeApprovalRequest,
     linkedTransaction: LinkedTransaction,
   ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
-    // need to check that the new max cap value is not exceeding the number of prisoners in the cell at this time.
-    val prisoners = prisonerLocationService.prisonersInLocations(approvalRequest.location)
-    val newMaxCap = approvalRequest.maxCapacity
-    if (newMaxCap < prisoners.size) {
-      throw CapacityException(
-        approvalRequest.location.getKey(),
-        "Max capacity ($newMaxCap) cannot be decreased below current cell occupancy (${prisoners.size})",
-        ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
-      )
-    }
+    // need to check that the new capacity values are not below the number of prisoners in the cell at this time.
+    validateCapacityNotBelowOccupancy(
+      approvalRequest.location,
+      prisonerLocationService.prisonersInLocations(approvalRequest.location).size,
+      approvalRequest.maxCapacity,
+      approvalRequest.workingCapacity,
+    )
 
     approvalRequest.location.setCapacity(
       maxCapacity = approvalRequest.maxCapacity,
@@ -261,15 +256,12 @@ class ApprovalDecisionService(
     linkedTransaction: LinkedTransaction,
   ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val cell = approvalRequest.location as Cell
-    val prisoners = prisonerLocationService.prisonersInLocations(cell)
-    val newMaxCap = approvalRequest.maxCapacity
-    if (newMaxCap < prisoners.size) {
-      throw CapacityException(
-        cell.getKey(),
-        "Max capacity ($newMaxCap) cannot be decreased below current cell occupancy (${prisoners.size})",
-        ErrorCode.MaxCapacityCannotBeBelowOccupancyLevel,
-      )
-    }
+    validateCapacityNotBelowOccupancy(
+      cell,
+      prisonerLocationService.prisonersInLocations(cell).size,
+      approvalRequest.maxCapacity,
+      approvalRequest.workingCapacity,
+    )
 
     cell.updateSpecialistCellTypes(
       approvalRequest.getSpecialistCellTypesFromPendingList().toSet(),

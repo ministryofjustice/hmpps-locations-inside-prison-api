@@ -40,6 +40,7 @@ class CellCertificateUploadProcessingService(
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val sharedLocationService: SharedLocationService,
   private val cellCertificateService: CellCertificateService,
+  private val prisonerSearchService: PrisonerSearchService,
   private val snsService: SnsService,
   private val clock: Clock,
   transactionManager: PlatformTransactionManager,
@@ -216,6 +217,10 @@ class CellCertificateUploadProcessingService(
     var capacityChanged = false
 
     if (oldMaxCapacity != row.maxCapacity || oldWorkingCapacity != row.workingCapacity || oldCertifiedNormalAccommodation != cna) {
+      // Look up occupancy via the non-transactional search service directly: a failure here must mark just this
+      // row FAILED (caught below), not roll back the per-row transaction the way a throwing @Transactional bean would.
+      val occupancy = prisonerSearchService.findPrisonersInLocations(cell.prisonId, listOf(cell.getPathHierarchy())).size
+      validateCapacityNotBelowOccupancy(cell, occupancy, row.maxCapacity, row.workingCapacity)
       cell.setCapacity(
         maxCapacity = row.maxCapacity,
         workingCapacity = row.workingCapacity,
