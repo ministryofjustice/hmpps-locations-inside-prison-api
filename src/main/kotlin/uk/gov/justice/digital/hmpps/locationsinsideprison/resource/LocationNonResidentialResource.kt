@@ -90,6 +90,41 @@ class LocationNonResidentialResource(
   ) = nonResidentialService.getById(id = id)
     ?: throw LocationNotFoundException(id.toString())
 
+  @PostMapping("/non-residential/batch", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Returns non-residential location information for the supplied ids in one call",
+    description = "Resolves several locations at once. Only ids that are non-residential locations are " +
+      "returned; residential or unknown ids are silently omitted. Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the matching non-residential locations",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getNonResidentialLocationsByIds(
+    @RequestBody
+    @Validated
+    ids: List<UUID>,
+  ): List<NonResidentialLocationDTO> = nonResidentialService.getByIds(ids)
+
   @PostMapping("/non-residential", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @ResponseStatus(HttpStatus.CREATED)
