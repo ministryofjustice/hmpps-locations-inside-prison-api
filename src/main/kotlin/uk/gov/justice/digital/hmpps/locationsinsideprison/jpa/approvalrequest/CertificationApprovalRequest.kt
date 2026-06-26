@@ -168,19 +168,20 @@ enum class ApprovalRequestStatus {
 }
 
 enum class ApprovalType(
+  val description: String,
   val hasPendingValues: Boolean = false,
 ) {
-  SIGNED_OP_CAP,
-  DRAFT(true),
-  DEACTIVATION,
-  PERMANENT_DEACTIVATION,
-  CELL_MARK(true),
-  CELL_SANITATION(true),
-  REACTIVATION,
-  CAPACITY_CHANGE(true),
-  SPECIALIST_CELL_TYPE(true),
-  CONVERT_ROOM_TO_CELL,
-  CONVERT_CELL_TO_ROOM,
-  PRISON_BASELINE,
-  CELL_CERTIFICATE_UPLOAD,
+  SIGNED_OP_CAP("Change signed operational capacity"),
+  DRAFT("Add new locations to certificate", true),
+  DEACTIVATION("Deactivation"),
+  PERMANENT_DEACTIVATION("Archived"),
+  CELL_MARK("Change cell door number", true),
+  CELL_SANITATION("Change cell sanitation", true),
+  REACTIVATION("Activation"),
+  CAPACITY_CHANGE("Cell capacity", true),
+  SPECIALIST_CELL_TYPE("Set special cell type", true),
+  CONVERT_ROOM_TO_CELL("Convert to cell"),
+  CONVERT_CELL_TO_ROOM("Convert cell to non-residential room"),
+  PRISON_BASELINE("Initial certificate generation"),
+  CELL_CERTIFICATE_UPLOAD("Initial cell certificate import"),
 }
