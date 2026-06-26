@@ -23,6 +23,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.generateNonResidentialCode
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
+import java.util.UUID
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class LocationNonResidentialResourceTest : CommonDataTestBase() {
@@ -2070,6 +2071,105 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           .header("Content-Type", "application/json")
           .exchange()
           .expectStatus().is4xxClientError
+      }
+    }
+  }
+
+  @DisplayName("POST /locations/non-residential/batch")
+  @Nested
+  inner class GetNonResidentialLocationsByIdsTest {
+
+    @Nested
+    inner class Security {
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.post().uri("/locations/non-residential/batch")
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf(visitRoom.id))
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.post().uri("/locations/non-residential/batch")
+          .headers(setAuthorisation(roles = listOf()))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf(visitRoom.id))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.post().uri("/locations/non-residential/batch")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf(visitRoom.id))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `returns the requested non-residential locations`() {
+        webTestClient.post().uri("/locations/non-residential/batch")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf(visitRoom.id, adjRoom.id))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+              [
+                {
+                  "id": "${adjRoom.id}",
+                  "prisonId": "MDI",
+                  "code": "ADJUDICATION",
+                  "pathHierarchy": "Z-ADJUDICATION",
+                  "locationType": "ADJUDICATION_ROOM",
+                  "status": "ACTIVE"
+                },
+                {
+                  "id": "${visitRoom.id}",
+                  "prisonId": "MDI",
+                  "code": "VISIT",
+                  "pathHierarchy": "Z-VISIT",
+                  "locationType": "VISITS",
+                  "status": "ACTIVE"
+                }
+              ]
+            """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `only returns ids that are non-residential locations, ignoring residential and unknown ids`() {
+        webTestClient.post().uri("/locations/non-residential/batch")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf(visitRoom.id, cell1.id, UUID.randomUUID()))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.length()").isEqualTo(1)
+          .jsonPath("$[0].id").isEqualTo(visitRoom.id.toString())
+      }
+
+      @Test
+      fun `returns an empty list when no ids match a non-residential location`() {
+        webTestClient.post().uri("/locations/non-residential/batch")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .bodyValue(listOf(cell1.id, UUID.randomUUID()))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.length()").isEqualTo(0)
       }
     }
   }
