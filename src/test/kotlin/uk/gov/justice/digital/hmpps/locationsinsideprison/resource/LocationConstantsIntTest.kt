@@ -318,6 +318,110 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("GET /constants/approval-type")
+  @Nested
+  inner class ViewApprovalTypeConstantsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/constants/approval-type")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/constants/approval-type")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/constants/approval-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+      @Test
+      fun `can retrieve approval-type constants`() {
+        webTestClient.get().uri("/constants/approval-type")
+          .headers(setAuthorisation(roles = listOf("ROLE_READ_LOCATION_REFERENCE_DATA")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "approvalTypes": [
+                  {
+                    "key": "SIGNED_OP_CAP",
+                    "description": "Change signed operational capacity"
+                  },
+                  {
+                    "key": "DRAFT",
+                    "description": "Add new locations to certificate"
+                  },
+                  {
+                    "key": "DEACTIVATION",
+                    "description": "Deactivation"
+                  },
+                  {
+                    "key": "PERMANENT_DEACTIVATION",
+                    "description": "Archived"
+                  },
+                  {
+                    "key": "CELL_MARK",
+                    "description": "Change cell door number"
+                  },
+                  {
+                    "key": "CELL_SANITATION",
+                    "description": "Change cell sanitation"
+                  },
+                  {
+                    "key": "REACTIVATION",
+                    "description": "Activation"
+                  },
+                  {
+                    "key": "CAPACITY_CHANGE",
+                    "description": "Cell capacity"
+                  },
+                  {
+                    "key": "SPECIALIST_CELL_TYPE",
+                    "description": "Set special cell type"
+                  },
+                  {
+                    "key": "CONVERT_ROOM_TO_CELL",
+                    "description": "Convert to cell"
+                  },
+                  {
+                    "key": "CONVERT_CELL_TO_ROOM",
+                    "description": "Convert cell to non-residential room"
+                  },
+                  {
+                    "key": "PRISON_BASELINE",
+                    "description": "Initial certificate generation"
+                  },
+                  {
+                    "key": "CELL_CERTIFICATE_UPLOAD",
+                    "description": "Initial cell certificate import"
+                  }
+                ]
+              }
+            """.trimIndent(),
+            JsonCompareMode.STRICT,
+          )
+      }
+    }
+  }
+
   @DisplayName("GET /constants/residential-housing-type")
   @Nested
   inner class ViewResidentialHousingTypeConstantsTest {

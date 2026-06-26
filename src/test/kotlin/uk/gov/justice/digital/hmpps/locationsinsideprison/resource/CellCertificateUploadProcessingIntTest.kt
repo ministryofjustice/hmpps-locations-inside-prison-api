@@ -229,7 +229,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
       assertThat(upload.failedRecords).isEqualTo(1) // the missing location
       with(upload.locations.associateBy { it.locationKey }.getValue("MDI-Z-9-999")) {
         assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.FAILED)
-        assertThat(message).isEqualTo("Location not found")
+        assertThat(message).isEqualTo("Location not found on Residential locations")
       }
     }
   }
