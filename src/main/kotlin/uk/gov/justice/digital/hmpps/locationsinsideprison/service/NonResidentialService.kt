@@ -60,6 +60,14 @@ class NonResidentialService(
 
   fun getById(id: UUID): NonResidentialLocationDTO? = nonResidentialLocationRepository.findById(id).getOrNull()?.toNonResidentialDto()
 
+  /**
+   * Resolve several non-residential locations by id in one call. The repository only returns
+   * non-residential entities, so ids that are residential or unknown are simply absent from the result.
+   */
+  fun getByIds(ids: List<UUID>): List<NonResidentialLocationDTO> = nonResidentialLocationRepository.findAllById(ids)
+    .map { it.toNonResidentialDto() }
+    .sortedBy { it.pathHierarchy }
+
   fun getByPrisonAndServiceType(
     prisonId: String,
     serviceType: ServiceType? = null,

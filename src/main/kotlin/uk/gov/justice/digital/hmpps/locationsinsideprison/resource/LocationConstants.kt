@@ -31,6 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import kotlin.collections.sortedBy
 
@@ -99,6 +100,34 @@ class LocationConstants(
   @ResponseBody
   fun deactivatedReasonsConstants(): Map<String, List<Constant>> = mapOf(
     "deactivatedReasons" to DeactivatedReason.entries.sortedBy { it.sequence }.map { Constant(it.name, it.description) },
+  )
+
+  @GetMapping("/approval-type")
+  @PreAuthorize("hasRole('ROLE_READ_LOCATION_REFERENCE_DATA')")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Get approval type reference data",
+    description = "Requires the READ_LOCATION_REFERENCE_DATA role.",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns location reference data",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the READ_LOCATION_REFERENCE_DATA role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @ResponseBody
+  fun approvalTypeConstants(): Map<String, List<Constant>> = mapOf(
+    "approvalTypes" to ApprovalType.entries.map { Constant(it.name, it.description) },
   )
 
   @GetMapping("/residential-housing-type")
