@@ -3,9 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
-import org.mockito.kotlin.never
-import org.mockito.kotlin.verify
-import org.mockito.kotlin.whenever
+import org.mockito.kotlin.verifyNoInteractions
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase.Companion.clock
@@ -13,7 +11,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.ResidentialLocationRepository
 import java.time.LocalDate
-import java.time.LocalTime
 import java.util.UUID
 
 class PrisonRollCountServiceTest {
@@ -193,7 +190,7 @@ class PrisonRollCountServiceTest {
     assertThat(doubleMoveCount).isEqualTo(0)
   }
 
-  private fun overnightPrisoner(number: String, lastMovementType: String) = Prisoner(
+  private fun overnightPrisoner(number: String, lastMovementType: String, lastMovementDate: LocalDate?) = Prisoner(
     prisonerNumber = number,
     prisonId = "MDI",
     prisonName = "HMP Moorland",
@@ -203,21 +200,16 @@ class PrisonRollCountServiceTest {
     status = "ACTIVE OUT",
     inOutStatus = "OUT",
     lastMovementTypeCode = lastMovementType,
+    lastMovementDate = lastMovementDate,
   )
 
   @Test
-  fun `get overnight count returns number of offender movements with OUT direction`() {
-    // Test clock is fixed at 2023-12-05, so overnight cutoff is strictly before 2023-12-05 00:00:00.
+  fun `get overnight count returns number of CRT and TAP prisoners last moved before today`() {
+    // Test clock is fixed at 2023-12-05, so overnight cutoff is any movement date before 2023-12-05.
     val prisoners = listOf(
-      overnightPrisoner("A1000AA", "CRT"),
-      overnightPrisoner("A1001AA", "ADM"), // ADM — not an overnight candidate
-      overnightPrisoner("A1002AA", "TAP"),
-    )
-    whenever(prisonApiService.getLatestMovementsForOffenders(listOf("A1000AA", "A1002AA"))).thenReturn(
-      listOf(
-        LatestOffenderMovement(offenderNo = "A1000AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 4), movementTime = LocalTime.of(11, 59)),
-        LatestOffenderMovement(offenderNo = "A1002AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 3), movementTime = LocalTime.of(23, 30)),
-      ),
+      overnightPrisoner("A1000AA", "CRT", LocalDate.of(2023, 12, 4)),
+      overnightPrisoner("A1001AA", "ADM", LocalDate.of(2023, 12, 4)), // ADM — not an overnight candidate
+      overnightPrisoner("A1002AA", "TAP", LocalDate.of(2023, 12, 3)),
     )
 
     val overnightCount = service.getNumOvernights(prisoners)
@@ -226,19 +218,15 @@ class PrisonRollCountServiceTest {
   }
 
   @Test
-  fun `get overnight count only includes out movements from the previous day or earlier`() {
-    // Test clock is fixed at 2023-12-05, so overnight cutoff is strictly before 2023-12-05 00:00:00.
-    // 2023-12-04 23:59:59 → counts; 2023-12-05 00:00:00 or later → does not count.
-    val prisoners = (0..5).map { overnightPrisoner("A100${it}AA", "CRT") }
-    whenever(prisonApiService.getLatestMovementsForOffenders(prisoners.map { it.prisonerNumber })).thenReturn(
-      listOf(
-        LatestOffenderMovement(offenderNo = "A1000AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 4), movementTime = LocalTime.of(23, 59, 59)),
-        LatestOffenderMovement(offenderNo = "A1001AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 5), movementTime = LocalTime.MIDNIGHT),
-        LatestOffenderMovement(offenderNo = "A1002AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 5), movementTime = LocalTime.of(9, 0)),
-        LatestOffenderMovement(offenderNo = "A1003AA", directionCode = "OUT", movementDate = null, movementTime = LocalTime.of(8, 0)),
-        LatestOffenderMovement(offenderNo = "A1004AA", directionCode = "IN", movementDate = LocalDate.of(2023, 12, 4), movementTime = LocalTime.of(10, 0)),
-        LatestOffenderMovement(offenderNo = "A1005AA", directionCode = "OUT", movementDate = LocalDate.of(2023, 12, 3), movementTime = LocalTime.of(12, 0)),
-      ),
+  fun `get overnight count only includes movements from the previous day or earlier`() {
+    // Test clock is fixed at 2023-12-05, so a movement date before 2023-12-05 counts; 2023-12-05 or a
+    // missing date does not.
+    val prisoners = listOf(
+      overnightPrisoner("A1000AA", "CRT", LocalDate.of(2023, 12, 4)), // yesterday — counts
+      overnightPrisoner("A1001AA", "CRT", LocalDate.of(2023, 12, 5)), // today — does not count
+      overnightPrisoner("A1002AA", "TAP", LocalDate.of(2023, 12, 5)), // today — does not count
+      overnightPrisoner("A1003AA", "CRT", null), // no movement date — does not count
+      overnightPrisoner("A1004AA", "TAP", LocalDate.of(2023, 12, 3)), // earlier — counts
     )
 
     val overnightCount = service.getNumOvernights(prisoners)
@@ -247,10 +235,12 @@ class PrisonRollCountServiceTest {
   }
 
   @Test
-  fun `get overnight count does not call prison api when no eligible CRT or TAP ACTIVE OUT prisoners`() {
-    val overnightCount = service.getNumOvernights(emptyList())
+  fun `get overnight count does not call prison api`() {
+    val prisoners = listOf(overnightPrisoner("A1000AA", "CRT", LocalDate.of(2023, 12, 4)))
 
-    assertThat(overnightCount).isEqualTo(0)
-    verify(prisonApiService, never()).getLatestMovementsForOffenders(org.mockito.kotlin.any())
+    val overnightCount = service.getNumOvernights(prisoners)
+
+    assertThat(overnightCount).isEqualTo(1)
+    verifyNoInteractions(prisonApiService)
   }
 }
