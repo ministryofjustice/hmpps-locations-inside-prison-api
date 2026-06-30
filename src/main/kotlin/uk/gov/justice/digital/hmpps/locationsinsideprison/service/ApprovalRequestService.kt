@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.InactiveStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PendingApprovalLocationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PendingApprovalsBelowDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
@@ -27,6 +29,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCanno
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationDoesNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalAlreadyExistsException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalBelowLocationException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.SpecialistCellTypeChangesDoNotRequireApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ApprovalDecisionService.Companion.log
 import java.time.Clock
@@ -58,6 +61,34 @@ class ApprovalRequestService(
     }
 
     return requests.map { it.toDto() }
+  }
+
+  @Transactional(readOnly = true)
+  fun getPendingApprovalsBelow(id: UUID): PendingApprovalsBelowDto {
+    val location = residentialLocationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    val pendingLocations = location.findPendingApprovalRequestsBelowThisLevel()
+      .map { it.location }
+      .distinctBy { it.id }
+      .map { pendingLocation ->
+        val parent = pendingLocation.getParent()
+        PendingApprovalLocationDto(
+          id = pendingLocation.id!!,
+          key = pendingLocation.getKey(),
+          localName = pendingLocation.localName,
+          locationType = pendingLocation.locationType,
+          parentId = parent?.id,
+          parentKey = parent?.getKey(),
+          parentLocalName = parent?.localName,
+          parentLocationType = parent?.locationType,
+        )
+      }
+
+    return PendingApprovalsBelowDto(
+      hasPendingBelow = pendingLocations.isNotEmpty(),
+      pendingLocations = pendingLocations,
+    )
   }
 
   @Transactional(readOnly = true)
@@ -323,6 +354,10 @@ class ApprovalRequestService(
 
     if (request.reason.isBlank()) {
       throw ApprovalRequestRequiresReasonForChangeException(location.getKey())
+    }
+
+    location.findPendingApprovalRequestsBelowThisLevel().firstOrNull()?.let { pending ->
+      throw PendingApprovalBelowLocationException(location.getKey(), pending.location.getKey())
     }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(

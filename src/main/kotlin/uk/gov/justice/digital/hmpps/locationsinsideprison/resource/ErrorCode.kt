@@ -48,4 +48,5 @@ enum class ErrorCode(val errorCode: Int) {
   CellCertificateUploadAlreadyInProgress(139),
   CellCertificateUploadNotFound(140),
   WorkingCapacityCannotBeBelowOccupancyLevel(141),
+  PendingApprovalExistsBelowLocation(142),
 }

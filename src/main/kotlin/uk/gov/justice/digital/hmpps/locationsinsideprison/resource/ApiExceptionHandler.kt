@@ -310,6 +310,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(PendingApprovalBelowLocationException::class)
+  fun handlePendingApprovalBelowLocationException(e: PendingApprovalBelowLocationException): ResponseEntity<ErrorResponse> {
+    log.debug("Location has a pending approval below it: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.PendingApprovalExistsBelowLocation,
+          userMessage = "Location cannot be archived as a location below it has a pending approval request: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(TransactionNotFoundException::class)
   fun handleTransactionNotFound(e: TransactionNotFoundException): ResponseEntity<ErrorResponse> {
     log.debug("Transaction not found exception caught: {}", e.message)
@@ -755,6 +770,7 @@ class LocationIsNotACellException(key: String) : Exception("$key: Location must 
 class ApprovalRequestNotFoundException(approvalRequestId: UUID) : Exception("Approval request $approvalRequestId not found")
 class PendingApprovalOnLocationCannotBeUpdatedException(key: String) : Exception("Location $key cannot be updated as it has a pending approval request")
 class PendingApprovalAlreadyExistsException(key: String) : Exception("Location $key already has a pending approval request")
+class PendingApprovalBelowLocationException(key: String, pendingKey: String) : Exception("Location $key cannot be archived because $pendingKey below it has a pending approval request")
 class LocationCannotBeDeletedWhenNotDraftException(key: String) : Exception("Location $key cannot be deleted when not DRAFT")
 class ApprovalRequestNotInPendingStatusException(approvalRequestId: UUID) : Exception("Approval request $approvalRequestId is not in PENDING status")
 class LocationDoesNotRequireApprovalException(key: String) : Exception("Location $key does not need to be approved")

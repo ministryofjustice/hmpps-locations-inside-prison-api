@@ -1377,6 +1377,96 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(cell.inactiveStatus).isEqualTo(InactiveStatus.INACTIVE_TEMP)
       assertThat(cell.pendingApprovalRequestId).isNull()
     }
+
+    @Test
+    fun `cannot request permanent deactivation when a location below has a pending approval`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      // The whole wing is temporarily inactive so it is eligible to archive
+      deactivateLocation(leedsWing, DeactivatedReason.DAMAGED)
+      // ...but a cell below it has an in-flight pending change request
+      deactivateLocation(
+        firstCell,
+        DeactivatedReason.MOTHBALLED,
+        requiresApproval = true,
+        reasonForChange = "Cell flooded",
+      )
+
+      webTestClient.put().uri("/certification/location/permanent-deactivation-request-approval")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(PermanentDeactivationApprovalRequestDto(locationId = leedsWing.id!!, reason = "Wing demolished")))
+        .exchange()
+        .expectStatus().isEqualTo(409)
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.PendingApprovalExistsBelowLocation.errorCode)
+
+      // no permanent deactivation approval request was created - only the child's pending deactivation remains
+      webTestClient.get().uri("/certification/request-approvals/prison/${leedsWing.prisonId}")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$[?(@.approvalType == 'PERMANENT_DEACTIVATION')]").doesNotExist()
+    }
+  }
+
+  @DisplayName("GET /certification/location/{id}/pending-approvals-below")
+  @Nested
+  inner class PendingApprovalsBelowTest {
+
+    @DisplayName("is secured")
+    @Nested
+    inner class Security {
+      @org.junit.jupiter.api.TestFactory
+      fun endpointRequiresAuthorisation() = endpointRequiresAuthorisation(
+        webTestClient.get().uri("/certification/location/${UUID.randomUUID()}/pending-approvals-below"),
+        "ROLE_LOCATION_CERTIFICATION",
+      )
+    }
+
+    @Test
+    fun `returns 404 when the location is not found`() {
+      webTestClient.get().uri("/certification/location/${UUID.randomUUID()}/pending-approvals-below")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isNotFound
+    }
+
+    @Test
+    fun `returns no pending approvals when nothing below is pending`() {
+      webTestClient.get().uri("/certification/location/${leedsWing.id}/pending-approvals-below")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.hasPendingBelow").isEqualTo(false)
+        .jsonPath("$.pendingLocations").isEmpty
+    }
+
+    @Test
+    fun `returns the pending location and its parent when a location below is pending`() {
+      val firstCell = leedsWing.findAllLeafLocations().first() as Cell
+      val parent = firstCell.getParent()!!
+      deactivateLocation(
+        firstCell,
+        DeactivatedReason.MOTHBALLED,
+        requiresApproval = true,
+        reasonForChange = "Cell flooded",
+      )
+
+      webTestClient.get().uri("/certification/location/${leedsWing.id}/pending-approvals-below")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.hasPendingBelow").isEqualTo(true)
+        .jsonPath("$.pendingLocations.length()").isEqualTo(1)
+        .jsonPath("$.pendingLocations[0].id").isEqualTo(firstCell.id.toString())
+        .jsonPath("$.pendingLocations[0].key").isEqualTo(firstCell.getKey())
+        .jsonPath("$.pendingLocations[0].locationType").isEqualTo("CELL")
+        .jsonPath("$.pendingLocations[0].parentId").isEqualTo(parent.id.toString())
+        .jsonPath("$.pendingLocations[0].parentKey").isEqualTo(parent.getKey())
+    }
   }
 
   @DisplayName("PUT /locations/{id}/reactivate")

@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PendingApprovalsBelowDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
@@ -459,4 +460,37 @@ class ApprovalRequestResource(
     @PathVariable
     id: UUID,
   ): CertificationApprovalRequestDto = approvalRequestService.getApprovalRequest(id)
+
+  @GetMapping("/location/{id}/pending-approvals-below")
+  @PreAuthorize("hasRole('ROLE_LOCATION_CERTIFICATION')")
+  @Operation(
+    summary = "Check whether any location below the given location has a pending certification approval request",
+    description = "Used to block archiving a location while a child location has an in-flight change request. Requires role LOCATION_CERTIFICATION",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns whether a pending approval exists below the location, with the pending location and its parent",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CERTIFICATION role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getPendingApprovalsBelow(
+    @Parameter(description = "Location ID being archived", example = "2475f250-434a-4257-afe7-b911f1773a4d", required = true)
+    @PathVariable
+    id: UUID,
+  ): PendingApprovalsBelowDto = approvalRequestService.getPendingApprovalsBelow(id)
 }

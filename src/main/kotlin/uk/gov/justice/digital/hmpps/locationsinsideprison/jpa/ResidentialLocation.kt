@@ -145,6 +145,15 @@ open class ResidentialLocation(
 
   private fun hasPendingChangesBelowThisLevel() = childLocations.filterIsInstance<Cell>().any { it.hasPendingCertificationApproval() || it.isDraft() }
 
+  /**
+   * Returns every PENDING approval request attached to a location anywhere below this one (recursively).
+   * Each returned request exposes its own `location` (where the change is pending) and that location's parent.
+   * Intended to guard changes (e.g. archiving) made at a level above an in-flight pending approval.
+   */
+  fun findPendingApprovalRequestsBelowThisLevel(): List<LocationCertificationApprovalRequest> = findSubLocations()
+    .filterIsInstance<ResidentialLocation>()
+    .flatMap { location -> location.approvalRequests.filter { it.isPending() } }
+
   fun getPendingApprovalRequest(): LocationCertificationApprovalRequest? = findHighestLevelPending()?.approvalRequests?.firstOrNull { it.isPending() }
 
   fun getLatestApprovedDeactivationRequest(): LocationCertificationApprovalRequest? = findHighestLevelForStatus(
