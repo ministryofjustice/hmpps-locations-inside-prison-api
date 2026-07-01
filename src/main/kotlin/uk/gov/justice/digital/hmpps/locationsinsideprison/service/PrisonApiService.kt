@@ -7,7 +7,6 @@ import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
 import java.time.LocalDate
-import java.time.LocalTime
 
 inline fun <reified T : Any> typeReference() = object : ParameterizedTypeReference<T>() {}
 
@@ -35,19 +34,6 @@ class PrisonApiService(
     .retrieve()
     .bodyToMono(typeReference<List<OffenderMovement>>())
     .block() ?: emptyList()
-
-  fun getLatestMovementsForOffenders(offenderNumbers: List<String>): List<LatestOffenderMovement> {
-    if (offenderNumbers.isEmpty()) return emptyList()
-
-    return prisonApiWebClient
-      .post()
-      .uri("/api/movements/offenders?latestOnly=true")
-      .header("Content-Type", "application/json")
-      .bodyValue(offenderNumbers)
-      .retrieve()
-      .bodyToMono(typeReference<List<LatestOffenderMovement>>())
-      .block() ?: emptyList()
-  }
 }
 
 data class MovementCount(
@@ -64,11 +50,4 @@ data class OffenderMovement(
   val offenderNo: String,
   val movementSequence: String?,
   val movementType: String,
-)
-
-data class LatestOffenderMovement(
-  val offenderNo: String,
-  val directionCode: String,
-  val movementDate: LocalDate? = null,
-  val movementTime: LocalTime? = null,
 )

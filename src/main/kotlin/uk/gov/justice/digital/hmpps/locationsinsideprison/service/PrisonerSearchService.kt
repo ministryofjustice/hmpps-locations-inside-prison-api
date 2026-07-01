@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.bodyToMono
+import java.time.LocalDate
 
 @Service
 class PrisonerSearchService(
@@ -114,6 +115,8 @@ data class Prisoner(
   val alerts: List<Alert>? = null,
   @param:Schema(description = "Last Movement Type Code of prisoner", example = "CRT", required = false)
   val lastMovementTypeCode: String? = null,
+  @param:Schema(description = "Date of the last movement of the prisoner", example = "2023-05-01", required = false)
+  val lastMovementDate: LocalDate? = null,
 )
 
 data class Alert(

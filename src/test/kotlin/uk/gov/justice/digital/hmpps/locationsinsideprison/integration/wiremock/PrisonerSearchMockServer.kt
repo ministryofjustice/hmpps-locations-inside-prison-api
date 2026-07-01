@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AttributeSearc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Matcher
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.SearchResult
+import java.time.LocalDate
 
 class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
   companion object {
@@ -100,7 +101,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
         createPrisoner(prisonId = prisonId, cellLocation = "RECP", prisonerCount = 1003, inOutStatus = "IN", status = "ACTIVE IN"),
         createPrisoner(prisonId = prisonId, cellLocation = "TAP", prisonerCount = 1004, inOutStatus = "IN", status = "ACTIVE IN"),
         createPrisoner(prisonId = prisonId, cellLocation = "COURT", prisonerCount = 1005, inOutStatus = "IN", status = "ACTIVE IN"),
-        createPrisoner(prisonId = prisonId, cellLocation = "COURT", prisonerCount = 1006, inOutStatus = "OUT", status = "ACTIVE OUT", lastMovementTypeCode = "CRT"),
+        createPrisoner(prisonId = prisonId, cellLocation = "COURT", prisonerCount = 1006, inOutStatus = "OUT", status = "ACTIVE OUT", lastMovementTypeCode = "CRT", lastMovementDate = LocalDate.of(2023, 12, 4)),
         createPrisoner(prisonId = prisonId, cellLocation = "RECP", prisonerCount = 1007, inOutStatus = "IN", status = "ACTIVE IN"),
         createPrisoner(prisonId = prisonId, cellLocation = "RECP", prisonerCount = 1008, inOutStatus = "OUT", status = "ACTIVE OUT"),
         createPrisoner(prisonId = prisonId, cellLocation = "CSWAP", prisonerCount = 1009, inOutStatus = "IN", status = "ACTIVE IN"),
@@ -121,7 +122,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
   }
 }
 
-fun createPrisoner(prisonId: String, cellLocation: String, prisonerCount: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN", lastMovementTypeCode: String = "ADM") = Prisoner(
+fun createPrisoner(prisonId: String, cellLocation: String, prisonerCount: Int, status: String = "ACTIVE IN", inOutStatus: String = "IN", lastMovementTypeCode: String = "ADM", lastMovementDate: LocalDate? = null) = Prisoner(
   prisonerNumber = "A${prisonerCount.toString().padStart(4, '0')}AA",
   firstName = "Firstname-$prisonerCount",
   lastName = "Surname-$prisonerCount",
@@ -131,6 +132,7 @@ fun createPrisoner(prisonId: String, cellLocation: String, prisonerCount: Int, s
   gender = "MALE",
   status = status,
   lastMovementTypeCode = lastMovementTypeCode,
+  lastMovementDate = lastMovementDate,
   inOutStatus = inOutStatus,
   csra = "High",
   category = "C",
