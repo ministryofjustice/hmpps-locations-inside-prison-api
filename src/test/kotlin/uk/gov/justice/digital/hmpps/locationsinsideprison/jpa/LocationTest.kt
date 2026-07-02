@@ -6,6 +6,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DeactivationApprovalRequest
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDateTime
@@ -111,6 +113,47 @@ class LocationTest {
     assertThat(prisonHierarchyDto.subLocations.orEmpty().size).isEqualTo(2)
     assertThat(prisonHierarchyDto.subLocations?.get(0)?.subLocations.orEmpty().size).isEqualTo(2)
   }
+
+  @Test
+  fun `findPendingApprovalRequestsBelowThisLevel returns pending requests on descendants and ignores non-pending`() {
+    val wing = generateWingLocation("Wing A")
+    val landing = generateLandingLocation("Landing 1")
+    wing.addChildLocation(landing)
+    val pendingCell = generateCellLocation()
+    landing.addChildLocation(pendingCell)
+    val approvedCell = generateCellLocation()
+    landing.addChildLocation(approvedCell)
+
+    pendingCell.approvalRequests.add(deactivationApprovalRequest(pendingCell))
+    approvedCell.approvalRequests.add(
+      deactivationApprovalRequest(approvedCell).also { it.status = ApprovalRequestStatus.APPROVED },
+    )
+
+    val pending = wing.findPendingApprovalRequestsBelowThisLevel()
+    assertThat(pending).hasSize(1)
+    assertThat(pending.first().location).isEqualTo(pendingCell)
+  }
+
+  @Test
+  fun `findPendingApprovalRequestsBelowThisLevel only looks below the location, not at the location itself`() {
+    val wing = generateWingLocation("Wing A")
+    val cell = generateCellLocation()
+    wing.addChildLocation(cell)
+    cell.approvalRequests.add(deactivationApprovalRequest(cell))
+
+    // the cell has the pending request, so nothing is pending *below* it
+    assertThat(cell.findPendingApprovalRequestsBelowThisLevel()).isEmpty()
+    // but it is pending below the wing
+    assertThat(wing.findPendingApprovalRequestsBelowThisLevel()).hasSize(1)
+  }
+
+  private fun deactivationApprovalRequest(location: ResidentialLocation) = DeactivationApprovalRequest(
+    location = location,
+    requestedBy = "user",
+    requestedDate = LocalDateTime.now(clock),
+    workingCapacityChange = -1,
+    deactivatedReason = DeactivatedReason.DAMAGED,
+  )
 }
 
 fun generateWingLocation(localName: String?) = ResidentialLocation(
