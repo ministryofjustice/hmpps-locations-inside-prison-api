@@ -174,7 +174,7 @@ enum class ApprovalType(
   SIGNED_OP_CAP("Change signed operational capacity"),
   DRAFT("Add new locations to certificate", true),
   DEACTIVATION("Deactivation"),
-  PERMANENT_DEACTIVATION("Archived"),
+  PERMANENT_DEACTIVATION("Archive location"),
   CELL_MARK("Change cell door number", true),
   CELL_SANITATION("Change cell sanitation", true),
   REACTIVATION("Activation"),
