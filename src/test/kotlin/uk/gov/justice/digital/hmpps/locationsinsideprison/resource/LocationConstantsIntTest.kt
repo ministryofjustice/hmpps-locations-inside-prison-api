@@ -375,7 +375,7 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                   },
                   {
                     "key": "PERMANENT_DEACTIVATION",
-                    "description": "Archived"
+                    "description": "Archive location"
                   },
                   {
                     "key": "CELL_MARK",
