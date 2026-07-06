@@ -30,7 +30,7 @@ dependencies {
 
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
   implementation("com.zaxxer:HikariCP:7.1.0")
-  runtimeOnly("org.postgresql:postgresql:42.7.12")
+  runtimeOnly("org.postgresql:postgresql:42.7.13")
   implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
