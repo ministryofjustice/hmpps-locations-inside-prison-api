@@ -28,7 +28,7 @@ class UnarchiveLocationResourceTest : CommonDataTestBase() {
   @Nested
   inner class Security {
     @Test
-    fun `access forbidden when no authority`() {
+    fun `access unauthorized when no authority`() {
       webTestClient.put().uri("/locations/${cell1.id}/unarchive")
         .exchange()
         .expectStatus().isUnauthorized
