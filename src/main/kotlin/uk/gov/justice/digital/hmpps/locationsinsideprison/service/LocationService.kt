@@ -1227,6 +1227,10 @@ class LocationService(
       throw LocationCannotBeUnarchivedException(location.getKey())
     }
 
+    if (request.deactivationReason == DeactivatedReason.OTHER && request.deactivationReasonDescription.isNullOrBlank()) {
+      throw ReasonForDeactivationMustBeProvidedException(location.getKey())
+    }
+
     if (location is ResidentialLocation && activePrisonService.isCertificationApprovalRequired(location.prisonId)) {
       approvalDecisionService.unarchiveWithApproval(location, request)
     } else {
