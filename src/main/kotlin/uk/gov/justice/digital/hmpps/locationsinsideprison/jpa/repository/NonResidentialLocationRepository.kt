@@ -5,7 +5,6 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor
 import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import java.util.*
 
@@ -13,9 +12,6 @@ import java.util.*
 interface NonResidentialLocationRepository :
   JpaRepository<NonResidentialLocation, UUID>,
   JpaSpecificationExecutor<NonResidentialLocation> {
-  @Query("select nrl from NonResidentialLocation nrl join fetch nrl.nonResidentialUsages u where u.usageType = :usageType and nrl.prisonId = :prisonId")
-  fun findAllByPrisonIdAndNonResidentialUsages(prisonId: String, usageType: NonResidentialUsageType): List<NonResidentialLocation>
-
   @Query("select nrl from NonResidentialLocation nrl left join fetch nrl.nonResidentialUsages u where nrl.prisonId = :prisonId")
   fun findAllByPrisonId(prisonId: String): List<NonResidentialLocation>
 

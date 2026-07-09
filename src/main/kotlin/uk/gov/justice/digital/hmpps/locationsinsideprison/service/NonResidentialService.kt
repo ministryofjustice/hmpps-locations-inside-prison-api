@@ -22,7 +22,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
@@ -122,14 +121,11 @@ class NonResidentialService(
 
   fun getByPrisonAndUsageType(
     prisonId: String,
-    usageType: NonResidentialUsageType? = null,
     sortByLocalName: Boolean = false,
     formatLocalName: Boolean = false,
     filterParents: Boolean = true,
   ): List<LocationDTO> {
-    val filteredByUsage = usageType?.let {
-      nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
-    } ?: nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialUsages(prisonId)
+    val filteredByUsage = nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialUsages(prisonId)
 
     val filteredResults = filteredByUsage
       .filter { it.getLocationCode() != "RTU" }
