@@ -438,6 +438,28 @@ class CellCertificateResourceTest(
       }
 
       @Test
+      fun `excludes prisons that have a current certificate but certification disabled`() {
+        cacheManager.getCache(CacheConfiguration.PRISON_NAMES_CACHE_NAME)?.clear()
+        prisonRegisterMockServer.stubGetAllPrisons(
+          listOf(
+            PrisonDto(prisonId = "LEI", prisonName = "Leeds (HMP)", active = true, male = true, female = false, contracted = false, lthse = false),
+          ),
+        )
+
+        // Switch certification off for LEI even though it still has a current certificate
+        val config = configurationRepository.findById("LEI").get()
+        config.certificationApprovalRequired = false
+        configurationRepository.saveAndFlush(config)
+
+        webTestClient.get().uri("/cell-certificates/dashboard")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.length()").isEqualTo(0)
+      }
+
+      @Test
       fun `falls back to prison id when the prison name is not found`() {
         cacheManager.getCache(CacheConfiguration.PRISON_NAMES_CACHE_NAME)?.clear()
         prisonRegisterMockServer.stubGetAllPrisons(emptyList())
