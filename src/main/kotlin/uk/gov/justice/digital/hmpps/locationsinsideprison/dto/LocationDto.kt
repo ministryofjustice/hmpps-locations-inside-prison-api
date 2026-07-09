@@ -808,6 +808,27 @@ data class PermanentDeactivationLocationRequest(
   val reason: String,
 )
 
+/**
+ * Request format for un-archiving (restoring) a permanently deactivated location. The location is restored to a
+ * temporarily inactive state; it is not made available for use.
+ */
+@Schema(description = "Request to un-archive (restore) a permanently deactivated location back to a temporarily inactive state")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class UnArchiveLocationRequest(
+  @param:Schema(description = "Reason the restored location will be temporarily inactive for", example = "MOTHBALLED", required = true)
+  val deactivationReason: DeactivatedReason,
+  @param:Schema(
+    description = "Additional information on the deactivation, for OTHER DeactivatedReason must be provided",
+    example = "Archived in error",
+    required = false,
+  )
+  @field:Size(max = 255, message = "Other deactivation reason cannot be more than 255 characters")
+  val deactivationReasonDescription: String? = null,
+  @param:Schema(description = "Explanation of why the location is being un-archived, recorded for audit", example = "Wing was archived in error", required = false)
+  @field:Size(max = 200, message = "Reason for un-archiving cannot be more than 200 characters")
+  val reason: String? = null,
+)
+
 fun String.capitalizeWords(delimiter: String = " ") = split(delimiter).joinToString(delimiter) { word ->
 
   val smallCaseWord = word.lowercase()

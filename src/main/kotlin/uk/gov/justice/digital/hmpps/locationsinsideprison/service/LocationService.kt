@@ -32,6 +32,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructuralType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UnArchiveLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.addCellToParent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
@@ -71,6 +72,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationAlrea
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeCreatedWithPendingApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeDeletedWhenNotDraftException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeReactivatedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeUnarchivedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationContainsPrisonersException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
@@ -110,6 +112,7 @@ class LocationService(
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService,
   private val activePrisonService: ActivePrisonService,
   private val cellCertificateService: CellCertificateService,
+  private val approvalDecisionService: ApprovalDecisionService,
   @param:Qualifier("residentialGroups") private val groupsProperties: Properties,
 ) {
   companion object {
@@ -1206,6 +1209,44 @@ class LocationService(
     return locationToUpdate.toDto().also {
       linkedTransaction.txEndTime = now(clock)
     }
+  }
+
+  /**
+   * Un-archives (restores) a permanently deactivated location back to a temporarily inactive state - visible again but
+   * not available for use. Where certification approval is active for the prison the restore is routed through an
+   * auto-approved approval request that also regenerates the cell certificate (see
+   * [ApprovalDecisionService.unarchiveWithApproval]); otherwise the location is restored directly. The location itself
+   * must be archived (not merely a descendant of an archived location).
+   */
+  @Transactional
+  fun unarchiveLocation(id: UUID, request: UnArchiveLocationRequest): LocationDTO {
+    val location = locationRepository.findById(id)
+      .orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (!location.isArchived()) {
+      throw LocationCannotBeUnarchivedException(location.getKey())
+    }
+
+    if (location is ResidentialLocation && activePrisonService.isCertificationApprovalRequired(location.prisonId)) {
+      approvalDecisionService.unarchiveWithApproval(location, request)
+    } else {
+      val linkedTransaction = sharedLocationService.createLinkedTransaction(
+        prisonId = location.prisonId,
+        type = TransactionType.REACTIVATION,
+        detail = "Un-archiving location ${location.getKey()}",
+      )
+      location.unarchive(
+        deactivatedReason = request.deactivationReason,
+        deactivationReasonDescription = request.deactivationReasonDescription,
+        userOrSystemInContext = sharedLocationService.getUsername(),
+        clock = clock,
+        linkedTransaction = linkedTransaction,
+      )
+      sharedLocationService.trackLocationUpdate(location, "Un-archived location")
+      linkedTransaction.txEndTime = now(clock)
+    }
+
+    return location.toDto(includeChildren = true, includeParent = true)
   }
 
   @Transactional

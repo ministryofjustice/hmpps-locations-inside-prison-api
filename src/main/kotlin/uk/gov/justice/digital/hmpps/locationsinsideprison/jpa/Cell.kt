@@ -405,6 +405,35 @@ class Cell(
     this.whenUpdated = LocalDateTime.now(clock)
   }
 
+  /**
+   * Reverses the effect of an archive on a single cell (see [Location.unarchive]): restores the pre-archive
+   * max / working / certified capacity - sourced from the cell's own [LocationHistory] (archive zeroed each, capturing
+   * the prior value as the history entry's old value) - and re-certifies the cell. No-ops the capacity restore if the
+   * cell has no usable capacity history.
+   */
+  fun restoreCapacityAndCertifyAfterUnarchive(userOrSystemInContext: String, amendedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
+    val preArchiveMaxCapacity = latestCapacityHistoryValue(LocationAttribute.MAX_CAPACITY)
+    if (preArchiveMaxCapacity != null && preArchiveMaxCapacity > 0) {
+      setCapacity(
+        maxCapacity = preArchiveMaxCapacity,
+        workingCapacity = latestCapacityHistoryValue(LocationAttribute.WORKING_CAPACITY) ?: 0,
+        certifiedNormalAccommodation = latestCapacityHistoryValue(LocationAttribute.CERTIFIED_CAPACITY) ?: 0,
+        userOrSystemInContext = userOrSystemInContext,
+        amendedDate = amendedDate,
+        linkedTransaction = linkedTransaction,
+      )
+    }
+    certifyCell(userOrSystemInContext, amendedDate, linkedTransaction)
+  }
+
+  // The most recent history entry's old value for a capacity attribute - i.e. the value it held immediately before the
+  // archive zeroed it. Nothing changes a cell's capacity after it is archived, so the latest entry is the archive.
+  private fun latestCapacityHistoryValue(attribute: LocationAttribute): Int? = getHistoryAsList()
+    .filter { it.attributeName == attribute }
+    .maxByOrNull { it.amendedDate }
+    ?.oldValue
+    ?.toIntOrNull()
+
   fun setCellDoorMark(newCellMark: String, amendedBy: String, amendedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
     addHistory(
       LocationAttribute.CELL_MARK,

@@ -59,6 +59,7 @@ class LocationServiceTest {
   private val locationGroupFromPropertiesService: LocationGroupFromPropertiesService = mock()
   private val activePrisonService: ActivePrisonService = mock()
   private val cellCertificateService: CellCertificateService = mock()
+  private val approvalDecisionService: ApprovalDecisionService = mock()
   private val prisonConfigurationRepository: PrisonConfigurationRepository = mock()
   private val groupsProperties: Properties = mock()
 
@@ -78,6 +79,7 @@ class LocationServiceTest {
     locationGroupFromPropertiesService,
     activePrisonService,
     cellCertificateService,
+    approvalDecisionService,
     groupsProperties,
   )
 
