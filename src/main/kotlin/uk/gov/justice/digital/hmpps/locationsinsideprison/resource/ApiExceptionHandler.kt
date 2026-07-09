@@ -415,6 +415,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(LocationCannotBeUnarchivedException::class)
+  fun handleLocationCannotBeUnarchived(e: LocationCannotBeUnarchivedException): ResponseEntity<ErrorResponse> {
+    log.debug("Location cannot be un-archived: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.LocationCannotBeUnarchived,
+          userMessage = "Location cannot be un-archived as it is not archived: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(ReasonForDeactivationMustBeProvidedException::class)
   fun handleReasonForDeactivationMustBeProvided(e: ReasonForDeactivationMustBeProvidedException): ResponseEntity<ErrorResponse> {
     log.debug("De-activating location requires a reason when using OTHER reason type: {}", e.message)
@@ -757,6 +772,7 @@ class SignedOperationCapacityNotFoundException(prisonId: String) : Exception("Th
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class ReasonForDeactivationMustBeProvidedException(key: String) : Exception("De-activating location $key requires a reason when using OTHER reason type")
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
+class LocationCannotBeUnarchivedException(key: String) : Exception("Location is not archived so cannot be un-archived = $key")
 class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")
 class CapacityException(val key: String, override val message: String, val errorCode: ErrorCode) : ValidationException("$key: [Error Code: $errorCode] - Capacity Exception: $message")
 class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationException("Location $key cannot be updated as has been permanently deactivated")

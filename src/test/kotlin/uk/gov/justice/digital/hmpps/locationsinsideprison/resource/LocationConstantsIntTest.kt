@@ -378,6 +378,10 @@ class LocationConstantsIntTest : SqsIntegrationTestBase() {
                     "description": "Archive location"
                   },
                   {
+                    "key": "UN_ARCHIVE",
+                    "description": "Restore archived location"
+                  },
+                  {
                     "key": "CELL_MARK",
                     "description": "Change cell door number"
                   },

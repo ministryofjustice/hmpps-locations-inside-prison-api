@@ -988,6 +988,70 @@ abstract class Location(
     }
   }
 
+  /**
+   * Reverses [permanentlyDeactivate] (an archive), restoring the location to a temporarily inactive
+   * ([LocationStatus.INACTIVE]) state - visible again but not available for use until separately reactivated.
+   * For residential locations the pre-archive capacity and certification of each cell (which archiving zeroed and
+   * de-certified) are restored from the cell's [LocationHistory]. Returns false if the location is not archived.
+   */
+  open fun unarchive(
+    deactivatedReason: DeactivatedReason,
+    deactivationReasonDescription: String? = null,
+    userOrSystemInContext: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+  ): Boolean {
+    if (!isArchived()) {
+      log.warn("Location [${getKey()}] is not archived")
+      return false
+    }
+    val amendedDate = LocalDateTime.now(clock)
+    addHistory(
+      LocationAttribute.STATUS,
+      LocationStatus.ARCHIVED.description,
+      LocationStatus.INACTIVE.description,
+      userOrSystemInContext,
+      amendedDate,
+      linkedTransaction,
+    )
+    addHistory(
+      LocationAttribute.PERMANENT_DEACTIVATION,
+      archivedReason,
+      null,
+      userOrSystemInContext,
+      amendedDate,
+      linkedTransaction,
+    )
+    addHistory(
+      LocationAttribute.DEACTIVATION_REASON,
+      null,
+      listOfNotBlank(deactivatedReason.description, deactivationReasonDescription).joinToString(" - "),
+      userOrSystemInContext,
+      amendedDate,
+      linkedTransaction,
+    )
+
+    this.status = LocationStatus.INACTIVE
+    this.archivedReason = null
+    this.deactivatedReason = deactivatedReason
+    this.deactivationReasonDescription = deactivationReasonDescription
+    this.deactivatedDate = amendedDate
+    this.deactivatedBy = userOrSystemInContext
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = amendedDate
+
+    // Now that this location is no longer archived its descendant cells are temporarily deactivated again, so restore
+    // the capacity + certification that archiving stripped from them (converted cells were left untouched by archive).
+    if (this is ResidentialLocation) {
+      findAllLeafLocations().filterIsInstance<Cell>()
+        .filter { !it.isConvertedCell() }
+        .forEach { cell -> cell.restoreCapacityAndCertifyAfterUnarchive(userOrSystemInContext, amendedDate, linkedTransaction) }
+    }
+
+    log.info("Un-archived Location [${getKey()}]")
+    return true
+  }
+
   open fun reactivate(
     userOrSystemInContext: String,
     clock: Clock,

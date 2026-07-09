@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UnArchiveLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
@@ -419,6 +420,53 @@ class LocationResource(
       id,
       reasonForPermanentDeactivation = permanentDeactivationLocationRequest.reason,
     )
+  }
+
+  @PutMapping("/{id}/unarchive")
+  @PreAuthorize("hasRole('ROLE_UNARCHIVE_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Un-archive (restore) a permanently deactivated location",
+    description = "Restores an archived location back to a temporarily inactive state - visible again but not " +
+      "available for use. Where certification is active for the prison the cell certificate is regenerated via an " +
+      "auto-approved approval step. Requires role UNARCHIVE_LOCATIONS and write scope.",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the restored, temporarily inactive location",
+      ),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request, e.g. the location is not archived",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the UNARCHIVE_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun unarchiveLocation(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody
+    @Validated
+    unArchiveLocationRequest: UnArchiveLocationRequest,
+  ): LocationDTO = eventPublishAndAudit(
+    InternalLocationDomainEventType.LOCATION_REACTIVATED,
+  ) {
+    locationService.unarchiveLocation(id, unArchiveLocationRequest)
   }
 
   @PutMapping("/{id}/reactivate")

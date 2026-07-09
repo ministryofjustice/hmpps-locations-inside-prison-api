@@ -10,10 +10,12 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificati
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CertificationApprovalRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.RejectCertificationRequestDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UnArchiveLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.WithdrawCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CapacityChangeApprovalRequest
@@ -439,6 +441,42 @@ class ApprovalDecisionService(
       newLocation = newLocation,
       prisonId = approvalRequest.prisonId,
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
+  }
+
+  /**
+   * Un-archives (restores) a residential location in a prison where certification approval is active. The restore
+   * needs no human decision, but for audit it is recorded as an auto-approved [UnArchiveApprovalRequest] and the cell
+   * certificate is regenerated (via [approveCertificationRequest]) so it once again shows the now-inactive location.
+   * The location must already be moved out of ARCHIVED before the certificate is generated, since
+   * [CellCertificateService.createCellCertificate] excludes permanently deactivated locations.
+   */
+  @Transactional
+  fun unarchiveWithApproval(location: ResidentialLocation, request: UnArchiveLocationRequest) {
+    val username = sharedLocationService.getUsername()
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      type = TransactionType.REQUEST_CERTIFICATION_APPROVAL,
+      prisonId = location.prisonId,
+      detail = "Auto-approved un-archive of location ${location.getKey()}",
+    )
+
+    location.unarchive(
+      deactivatedReason = request.deactivationReason,
+      deactivationReasonDescription = request.deactivationReasonDescription,
+      userOrSystemInContext = username,
+      clock = clock,
+      linkedTransaction = linkedTransaction,
+    )
+
+    val approvalRequest = certificationApprovalRequestRepository.save(
+      location.requestApprovalForUnArchive(
+        requestedBy = username,
+        requestedDate = linkedTransaction.txStartTime,
+        reasonForChange = request.reason,
+      ),
+    )
+
+    approveCertificationRequest(ApproveCertificationRequestDto(approvalRequest.id!!))
+      .also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
 
   @Transactional
