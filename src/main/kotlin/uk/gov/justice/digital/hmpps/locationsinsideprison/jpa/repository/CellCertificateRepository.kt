@@ -76,7 +76,9 @@ interface CellCertificateRepository : JpaRepository<CellCertificate, UUID> {
              c.signedOperationCapacity as signedOperationCapacity,
              c.approvedDate as approvedDate
       from CellCertificate c
+      join PrisonConfiguration pc on pc.id = c.prisonId
       where c.current = true
+        and pc.certificationApprovalRequired = true
     """,
   )
   fun findCurrentCertificateSummaries(): List<CurrentCellCertificateSummary>
