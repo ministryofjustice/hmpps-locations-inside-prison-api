@@ -12,6 +12,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NonResidentialUsageDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PropertyLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialLocationDTO
 import java.time.Clock
@@ -70,6 +71,19 @@ class NonResidentialLocation(
 ) {
 
   fun toUsageTypes() = nonResidentialUsages.map { it.usageType }
+
+  /** Capacity of this location's PROPERTY usage (how many property containers it can hold), or null if it has no PROPERTY usage. */
+  fun getPropertyCapacity(): Int? = nonResidentialUsages.find { it.usageType == NonResidentialUsageType.PROPERTY }?.capacity
+
+  fun toPropertyLocationDto() = PropertyLocationDto(
+    id = id!!,
+    prisonId = prisonId,
+    code = getLocationCode(),
+    pathHierarchy = getPathHierarchy(),
+    localName = localName?.let { formatLocation(it) },
+    locationType = locationType,
+    capacity = getPropertyCapacity(),
+  )
 
   override fun isNonResidential() = true
 
