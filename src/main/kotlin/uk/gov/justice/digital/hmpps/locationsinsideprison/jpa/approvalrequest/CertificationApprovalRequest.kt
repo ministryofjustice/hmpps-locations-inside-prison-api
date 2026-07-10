@@ -175,6 +175,7 @@ enum class ApprovalType(
   DRAFT("Add new locations to certificate", true),
   DEACTIVATION("Deactivation"),
   PERMANENT_DEACTIVATION("Archive location"),
+  UN_ARCHIVE("Restore archived location"),
   CELL_MARK("Change cell door number", true),
   CELL_SANITATION("Change cell sanitation", true),
   REACTIVATION("Activation"),

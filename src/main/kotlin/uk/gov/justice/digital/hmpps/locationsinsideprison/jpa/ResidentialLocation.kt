@@ -27,6 +27,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.De
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DraftChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.LocationCertificationApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.PermanentDeactivationApprovalRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.UnArchiveApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequiredAboveThisLevelException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
@@ -280,6 +281,25 @@ open class ResidentialLocation(
         workingCapacityChange = workingCapacityChange,
       ),
     ) as PermanentDeactivationApprovalRequest
+  }
+
+  fun requestApprovalForUnArchive(
+    requestedDate: LocalDateTime,
+    requestedBy: String,
+    reasonForChange: String? = null,
+  ): UnArchiveApprovalRequest {
+    if (hasPendingCertificationApproval()) {
+      throw PendingApprovalAlreadyExistsException(getKey())
+    }
+
+    return addApprovalToLocation(
+      UnArchiveApprovalRequest(
+        location = this,
+        requestedBy = requestedBy,
+        requestedDate = requestedDate,
+        reasonForChange = reasonForChange,
+      ),
+    ) as UnArchiveApprovalRequest
   }
 
   open fun processApproval(
