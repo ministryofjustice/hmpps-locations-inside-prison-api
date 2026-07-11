@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PropertyLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -142,6 +143,22 @@ class NonResidentialService(
     } else {
       filteredResults
     }
+  }
+
+  /**
+   * The leaf locations in a prison that can hold property, each with its PROPERTY-usage capacity.
+   * A location can hold property iff it has a non-residential usage of type PROPERTY (any location type).
+   * Parents are dropped when a sub-location is also a property location (leaf-only), so capacity is not
+   * double-counted; inactive locations and the RTU code are excluded.
+   */
+  fun getPropertyLocations(prisonId: String): List<PropertyLocationDto> {
+    val propertyLocations = nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, NonResidentialUsageType.PROPERTY)
+    return propertyLocations
+      .filter { it.getLocationCode() != "RTU" }
+      .filter { it.isActiveAndAllParentsActive() }
+      .filter { it.findSubLocations().intersect(propertyLocations.toSet()).isEmpty() }
+      .map { it.toPropertyLocationDto() }
+      .sortedBy { it.localName ?: it.pathHierarchy }
   }
 
   @Transactional
