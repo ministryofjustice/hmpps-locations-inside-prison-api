@@ -96,6 +96,79 @@ class NonResidentialLocation(
     return null
   }
 
+  /**
+   * Add or update this location's PROPERTY usage capacity (how many property containers it can hold),
+   * recording history for the usage and any capacity change. Used by the property-location management
+   * endpoints; the capacity stays on the PROPERTY [NonResidentialUsage] so it still syncs to NOMIS.
+   */
+  fun setPropertyCapacity(
+    capacity: Int,
+    userOrSystemInContext: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    val existing = nonResidentialUsages.find { it.usageType == NonResidentialUsageType.PROPERTY }
+    val oldCapacity = existing?.capacity
+    if (existing == null) {
+      addHistory(
+        LocationAttribute.USAGE,
+        null,
+        NonResidentialUsageType.PROPERTY.description,
+        userOrSystemInContext,
+        LocalDateTime.now(clock),
+        linkedTransaction,
+      )
+    }
+    addUsage(NonResidentialUsageType.PROPERTY, capacity)
+    if (oldCapacity != capacity) {
+      addHistory(
+        LocationAttribute.NON_RESIDENTIAL_CAPACITY,
+        oldCapacity?.toString(),
+        capacity.toString(),
+        userOrSystemInContext,
+        LocalDateTime.now(clock),
+        linkedTransaction,
+      )
+    }
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = LocalDateTime.now(clock)
+  }
+
+  /**
+   * Remove the PROPERTY designation from this location (drop its PROPERTY usage) so it can no longer
+   * store property. Returns false if it was not a property location. Recorded in history and reflected
+   * to NOMIS as a removed usage.
+   */
+  fun removePropertyUsage(
+    userOrSystemInContext: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+  ): Boolean {
+    val existing = nonResidentialUsages.find { it.usageType == NonResidentialUsageType.PROPERTY } ?: return false
+    existing.capacity?.let { capacity ->
+      addHistory(
+        LocationAttribute.NON_RESIDENTIAL_CAPACITY,
+        capacity.toString(),
+        null,
+        userOrSystemInContext,
+        LocalDateTime.now(clock),
+        linkedTransaction,
+      )
+    }
+    addHistory(
+      LocationAttribute.USAGE,
+      NonResidentialUsageType.PROPERTY.description,
+      null,
+      userOrSystemInContext,
+      LocalDateTime.now(clock),
+      linkedTransaction,
+    )
+    nonResidentialUsages.remove(existing)
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = LocalDateTime.now(clock)
+    return true
+  }
+
   fun addUsage(usageType: NonResidentialUsageType, capacity: Int? = null, sequence: Int = 99): NonResidentialUsage {
     val existingUsage = nonResidentialUsages.find { it.usageType == usageType }
     if (existingUsage != null) {
