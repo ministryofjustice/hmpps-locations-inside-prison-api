@@ -165,6 +165,17 @@ class NonResidentialService(
   }
 
   /**
+   * A single property storage location by id, with its PROPERTY-usage capacity, or null if the id is
+   * unknown or the location cannot hold property (no PROPERTY non-residential usage). Callers use this to
+   * confirm a location can store property without needing to know how that is modelled here.
+   */
+  fun getPropertyLocation(id: UUID): PropertyLocationDto? {
+    val location = nonResidentialLocationRepository.findById(id).getOrNull() ?: return null
+    if (NonResidentialUsageType.PROPERTY !in location.toUsageTypes()) return null
+    return location.toPropertyLocationDto()
+  }
+
+  /**
    * Create a new top-level BOX property storage location with a generated code and a PROPERTY usage
    * carrying the given capacity. Returns the slim property DTO for the caller plus the full
    * non-residential DTO for the domain event (so NOMIS is notified of the new usage/capacity).

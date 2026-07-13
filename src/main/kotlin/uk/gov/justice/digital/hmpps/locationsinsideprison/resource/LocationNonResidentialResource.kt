@@ -553,6 +553,40 @@ class LocationNonResidentialResource(
     prisonId: String,
   ): List<PropertyLocationDto> = nonResidentialService.getPropertyLocations(prisonId)
 
+  @GetMapping("/property/{id}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @Operation(
+    summary = "Return a single property storage location, with capacity, by id",
+    description = "Returns the property location if it can hold property (has a PROPERTY non-residential usage), " +
+      "otherwise 404. Lets callers confirm a location can store property without knowing how that is modelled " +
+      "here. Requires role VIEW_LOCATIONS",
+    responses = [
+      ApiResponse(responseCode = "200", description = "Returns the property location"),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Not found, or the location cannot store property",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getPropertyLocation(
+    @Schema(description = "The location id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+  ): PropertyLocationDto = nonResidentialService.getPropertyLocation(id)
+    ?: throw LocationNotFoundException(id.toString())
+
   @PostMapping("/prison/{prisonId}/property", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MANAGE_PROPERTY_LOCATIONS') and hasAuthority('SCOPE_write')")
   @ResponseStatus(HttpStatus.CREATED)
