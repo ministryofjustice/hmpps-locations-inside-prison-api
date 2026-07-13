@@ -12,9 +12,12 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreatePropertyLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PropertyLocationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdatePropertyLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -143,6 +146,141 @@ class NonResidentialService(
     } else {
       filteredResults
     }
+  }
+
+  /**
+   * The leaf locations in a prison that can hold property, each with its PROPERTY-usage capacity.
+   * A location can hold property iff it has a non-residential usage of type PROPERTY (any location type).
+   * Parents are dropped when a sub-location is also a property location (leaf-only), so capacity is not
+   * double-counted; inactive locations and the RTU code are excluded.
+   */
+  fun getPropertyLocations(prisonId: String): List<PropertyLocationDto> {
+    val propertyLocations = nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, NonResidentialUsageType.PROPERTY)
+    return propertyLocations
+      .filter { it.getLocationCode() != "RTU" }
+      .filter { it.isActiveAndAllParentsActive() }
+      .filter { it.findSubLocations().intersect(propertyLocations.toSet()).isEmpty() }
+      .map { it.toPropertyLocationDto() }
+      .sortedBy { it.localName ?: it.pathHierarchy }
+  }
+
+  /**
+   * Create a new top-level BOX property storage location with a generated code and a PROPERTY usage
+   * carrying the given capacity. Returns the slim property DTO for the caller plus the full
+   * non-residential DTO for the domain event (so NOMIS is notified of the new usage/capacity).
+   */
+  @Transactional
+  fun createPropertyLocation(
+    prisonId: String,
+    request: CreatePropertyLocationRequest,
+  ): Pair<PropertyLocationDto, NonResidentialLocationDTO> {
+    validateLocalNameNotDuplicated(prisonId, request.localName)
+
+    val code = generateUniqueNonResidentialCode(prisonId, request.localName)
+    val username = commonLocationService.getUsername()
+
+    val linkedTransaction = commonLocationService.createLinkedTransaction(
+      prisonId = prisonId,
+      TransactionType.LOCATION_CREATE_NON_RESI,
+      "Create property location $code in prison $prisonId",
+    )
+
+    val locationToCreate = NonResidentialLocation(
+      code = code,
+      pathHierarchy = code,
+      locationType = LocationType.BOX,
+      prisonId = prisonId,
+      status = LocationStatus.ACTIVE,
+      localName = request.localName,
+      childLocations = sortedSetOf(),
+      whenCreated = LocalDateTime.now(clock),
+      createdBy = username,
+    ).apply {
+      addHistory(
+        attributeName = LocationAttribute.LOCATION_CREATED,
+        oldValue = null,
+        newValue = getKey(),
+        amendedBy = username,
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+      setPropertyCapacity(request.capacity, username, clock, linkedTransaction)
+    }
+
+    val created = nonResidentialLocationRepository.save(locationToCreate)
+    log.info("Property location ${created.id} created in $prisonId")
+    commonLocationService.trackLocationUpdate(created, "Created Property Location")
+    linkedTransaction.txEndTime = LocalDateTime.now(clock)
+
+    return created.toPropertyLocationDto() to created.toNonResidentialDto()
+  }
+
+  /**
+   * Update a property location's name and/or capacity. Capacity stays on the PROPERTY usage so it
+   * continues to sync to NOMIS. Returns the property DTO plus the full non-residential DTO for the event.
+   */
+  @Transactional
+  fun updatePropertyLocation(
+    id: UUID,
+    request: UpdatePropertyLocationRequest,
+  ): Pair<PropertyLocationDto, NonResidentialLocationDTO> {
+    val location = findPropertyLocationForUpdate(id)
+    val username = commonLocationService.getUsername()
+
+    request.localName?.let { localName ->
+      if (localName.lowercase() != location.localName?.lowercase()) {
+        validateLocalNameNotDuplicated(location.prisonId, localName, location.id!!)
+      }
+    }
+
+    val linkedTransaction = commonLocationService.createLinkedTransaction(
+      prisonId = location.prisonId,
+      TransactionType.LOCATION_UPDATE_NON_RESI,
+      "Update property location ${location.getKey()}",
+    )
+
+    request.localName?.let { location.updateLocalName(it, username, clock, linkedTransaction) }
+    request.capacity?.let { location.setPropertyCapacity(it, username, clock, linkedTransaction) }
+
+    commonLocationService.trackLocationUpdate(location, "Updated Property Location")
+    linkedTransaction.txEndTime = LocalDateTime.now(clock)
+
+    return location.toPropertyLocationDto() to location.toNonResidentialDto()
+  }
+
+  /**
+   * Remove the PROPERTY designation from a location so it can no longer store property (drops the PROPERTY
+   * usage; the location itself is not deleted). Reflected to NOMIS as a removed usage.
+   */
+  @Transactional
+  fun removePropertyLocation(id: UUID): Pair<PropertyLocationDto, NonResidentialLocationDTO> {
+    val location = findPropertyLocationForUpdate(id)
+    val username = commonLocationService.getUsername()
+
+    if (location.getPropertyCapacity() == null && NonResidentialUsageType.PROPERTY !in location.toUsageTypes()) {
+      throw ValidationException("Location ${location.getKey()} is not a property storage location")
+    }
+
+    val linkedTransaction = commonLocationService.createLinkedTransaction(
+      prisonId = location.prisonId,
+      TransactionType.LOCATION_UPDATE_NON_RESI,
+      "Remove property designation from ${location.getKey()}",
+    )
+
+    location.removePropertyUsage(username, clock, linkedTransaction)
+
+    commonLocationService.trackLocationUpdate(location, "Removed Property Location designation")
+    linkedTransaction.txEndTime = LocalDateTime.now(clock)
+
+    return location.toPropertyLocationDto() to location.toNonResidentialDto()
+  }
+
+  private fun findPropertyLocationForUpdate(id: UUID): NonResidentialLocation {
+    val location = nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
+    if (location.isPermanentlyDeactivated()) {
+      throw PermanentlyDeactivatedUpdateNotAllowedException(location.getKey())
+    }
+    return location
   }
 
   @Transactional
