@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -30,10 +31,12 @@ import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreatePropertyLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PropertyLocationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdatePropertyLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
@@ -549,6 +552,138 @@ class LocationNonResidentialResource(
     @PathVariable
     prisonId: String,
   ): List<PropertyLocationDto> = nonResidentialService.getPropertyLocations(prisonId)
+
+  @PostMapping("/prison/{prisonId}/property", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasRole('ROLE_MANAGE_PROPERTY_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @ResponseStatus(HttpStatus.CREATED)
+  @Operation(
+    summary = "Create a new property storage location for a prison",
+    description = "Creates a top-level BOX location with an auto-generated code and a PROPERTY usage carrying the " +
+      "given capacity. Requires role MANAGE_PROPERTY_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(responseCode = "201", description = "Returns the created property location"),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MANAGE_PROPERTY_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "A location with this name already exists in the prison",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun createPropertyLocation(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
+    @NotBlank(message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
+    @PathVariable
+    prisonId: String,
+    @RequestBody @Validated request: CreatePropertyLocationRequest,
+  ): PropertyLocationDto {
+    val (propertyLocation, location) = nonResidentialService.createPropertyLocation(prisonId, request)
+    eventPublishNonResiAndAudit(InternalLocationDomainEventType.LOCATION_CREATED) { location }
+    return propertyLocation
+  }
+
+  @PutMapping("/property/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasRole('ROLE_MANAGE_PROPERTY_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Update a property storage location's name and/or capacity",
+    description = "Capacity stays on the PROPERTY usage so it continues to sync to NOMIS. " +
+      "Requires role MANAGE_PROPERTY_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(responseCode = "200", description = "Returns the updated property location"),
+      ApiResponse(
+        responseCode = "400",
+        description = "Invalid Request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MANAGE_PROPERTY_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "A location with this name already exists in the prison",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun updatePropertyLocation(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+    @RequestBody @Validated request: UpdatePropertyLocationRequest,
+  ): PropertyLocationDto {
+    val (propertyLocation, location) = nonResidentialService.updatePropertyLocation(id, request)
+    eventPublishNonResiAndAudit(InternalLocationDomainEventType.LOCATION_AMENDED) { location }
+    return propertyLocation
+  }
+
+  @DeleteMapping("/property/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasRole('ROLE_MANAGE_PROPERTY_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Remove the property designation from a location",
+    description = "Drops the location's PROPERTY usage so it can no longer store property (the location itself is " +
+      "not deleted). Reflected to NOMIS as a removed usage. Requires role MANAGE_PROPERTY_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(responseCode = "200", description = "Returns the location the designation was removed from"),
+      ApiResponse(
+        responseCode = "400",
+        description = "The location is not a property storage location",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MANAGE_PROPERTY_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Location not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun removePropertyLocation(
+    @Schema(description = "The location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+  ): PropertyLocationDto {
+    val (propertyLocation, location) = nonResidentialService.removePropertyLocation(id)
+    eventPublishNonResiAndAudit(InternalLocationDomainEventType.LOCATION_AMENDED) { location }
+    return propertyLocation
+  }
 
   @GetMapping("/prison/{prisonId}/non-residential-usage-type")
   @ResponseStatus(HttpStatus.OK)
