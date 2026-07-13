@@ -22,6 +22,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
@@ -680,6 +681,9 @@ data class NonResidentialLocationDTO(
 
   @param:Schema(description = "Parent Location Id", example = "57718979-573c-433a-9e51-2d83f887c11c", required = false)
   val parentId: UUID?,
+
+  @param:Schema(description = "Location hierarchy (ancestors and self), top to bottom", required = false)
+  val locationHierarchy: List<LocationSummary>? = null,
 ) {
   @Schema(description = "Key for a location", example = "MDI-ADJU", required = true)
   fun getKey(): String = "$prisonId-$pathHierarchy"

@@ -212,6 +212,7 @@ class NonResidentialLocation(
       isLeafLevel = isLeafLevel(),
       prisonId = prisonId,
       parentId = getParent()?.id,
+      locationHierarchy = getHierarchy().map { it.copy(localName = it.localName?.let(::formatLocation)) },
       level = getLevel(),
       permanentlyInactive = isPermanentlyDeactivated(),
       deactivatedDate = deactivatedLocation?.deactivatedDate,

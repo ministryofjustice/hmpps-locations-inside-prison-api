@@ -1694,7 +1694,11 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                         "HEARING_LOCATION"
                       ],
                       "status": "ACTIVE",
-                      "level": 2
+                      "level": 2,
+                      "locationHierarchy": [
+                        { "code": "Z", "pathHierarchy": "Z", "level": 1, "type": "WING" },
+                        { "localName": "Adjudication Room", "code": "ADJUDICATION", "pathHierarchy": "Z-ADJUDICATION", "level": 2, "type": "ADJUDICATION_ROOM" }
+                      ]
                     },
                     {
                       "localName": "Visit Room",
@@ -1709,7 +1713,11 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                         "OFFICIAL_VISITS"
                       ],
                       "status": "ACTIVE",
-                      "level": 2
+                      "level": 2,
+                      "locationHierarchy": [
+                        { "code": "Z", "pathHierarchy": "Z", "level": 1, "type": "WING" },
+                        { "localName": "Visit Room", "code": "VISIT", "pathHierarchy": "Z-VISIT", "level": 2, "type": "VISITS" }
+                      ]
                     }
                   ]
                 }
@@ -1746,7 +1754,11 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                         "HEARING_LOCATION"
                       ],
                       "status": "ACTIVE",
-                      "level": 2
+                      "level": 2,
+                      "locationHierarchy": [
+                        { "code": "Z", "pathHierarchy": "Z", "level": 1, "type": "WING" },
+                        { "localName": "Adjudication Room", "code": "ADJUDICATION", "pathHierarchy": "Z-ADJUDICATION", "level": 2, "type": "ADJUDICATION_ROOM" }
+                      ]
                     },
                     {
                       "localName": "Visit Room",
@@ -1761,7 +1773,11 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                         "OFFICIAL_VISITS"
                       ],
                       "status": "ACTIVE",
-                      "level": 2
+                      "level": 2,
+                      "locationHierarchy": [
+                        { "code": "Z", "pathHierarchy": "Z", "level": 1, "type": "WING" },
+                        { "localName": "Visit Room", "code": "VISIT", "pathHierarchy": "Z-VISIT", "level": 2, "type": "VISITS" }
+                      ]
                     }
                   ]
                 }
