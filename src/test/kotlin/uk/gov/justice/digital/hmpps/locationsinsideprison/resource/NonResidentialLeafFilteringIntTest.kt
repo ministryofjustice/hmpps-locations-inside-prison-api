@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 
@@ -43,32 +44,76 @@ class NonResidentialLeafFilteringIntTest : CommonDataTestBase() {
   }
 
   @Test
-  fun `can retrieve box locations locations`() {
-    val box = repository.save(
+  fun `property-only locations are excluded unless includeProperty is set`() {
+    // Solely used for property storage (its only usage is PROPERTY).
+    repository.save(
       buildNonResidentialLocation(
         prisonId = "MDI",
-        pathHierarchy = "BOX",
-        localName = "Box 1",
+        pathHierarchy = "PROPBOX",
+        localName = "Property Box",
         locationType = LocationType.BOX,
+        usageTypes = setOf(NonResidentialUsageType.PROPERTY),
       ),
     )
-    repository.save(box)
 
-    // The Box should be returned
-    webTestClient.get().uri("/locations/non-residential/summary/MDI?includeBoxes=true")
-      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-      .exchange()
-      .expectStatus().isOk
-      .expectBody()
-      .jsonPath("$.locations.content[?(@.localName == 'Box 1')]").exists()
-
-    // The Box should NOT be returned
+    // Property storage is excluded by default...
     webTestClient.get().uri("/locations/non-residential/summary/MDI")
       .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
       .exchange()
       .expectStatus().isOk
       .expectBody()
-      .jsonPath("$.locations.content[?(@.localName == 'Box 1')]").doesNotExist()
+      .jsonPath("$.locations.content[?(@.localName == 'Property Box')]").doesNotExist()
+
+    // ...but returned when includeProperty=true.
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?includeProperty=true")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Property Box')]").exists()
+  }
+
+  @Test
+  fun `locations used for property and another service are always returned`() {
+    // Used for property AND appointments - should not be filtered out.
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "MIXED",
+        localName = "Mixed Use",
+        locationType = LocationType.LOCATION,
+        serviceTypes = setOf(ServiceType.APPOINTMENT),
+        usageTypes = setOf(NonResidentialUsageType.PROPERTY),
+      ),
+    )
+
+    webTestClient.get().uri("/locations/non-residential/summary/MDI")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Mixed Use')]").exists()
+  }
+
+  @Test
+  fun `box locations without a property usage are still returned`() {
+    // A BOX with no PROPERTY usage is not property storage, so location type alone must not exclude it.
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PLAINBOX",
+        localName = "Plain Box",
+        locationType = LocationType.BOX,
+        serviceTypes = setOf(ServiceType.APPOINTMENT),
+      ),
+    )
+
+    webTestClient.get().uri("/locations/non-residential/summary/MDI")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Plain Box')]").exists()
   }
 
   @Test
