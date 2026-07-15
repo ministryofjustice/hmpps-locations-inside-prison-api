@@ -10,6 +10,9 @@ Date: 2024-01-23
 
 Accepted
 
+This ADR records the architecture decision taken on 2024-01-23 and is kept as a historical record.
+For the current architecture, which now spans two UIs, see the [High Level Design](high-level-design.md).
+
 ## Context
 
 This document illustrates where the **locations inside prison service** fits into the wider architecture.
