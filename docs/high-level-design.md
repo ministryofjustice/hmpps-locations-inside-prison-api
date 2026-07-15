@@ -33,14 +33,14 @@ flowchart TB
     subgraph locationManagementService[Location Management Service]
         subgraph resiUi[Residential Locations UI]
             direction LR
-            h2[Container: Node / Typescript]:::type
+            h2[Container: Node / TypeScript]:::type
             d2[Cells, wings, capacity \n and certification]:::description
         end
         resiUi:::internalContainer
 
         subgraph nonResiUi[Non-Residential Locations UI]
             direction LR
-            h3[Container: Node / Typescript]:::type
+            h3[Container: Node / TypeScript]:::type
             d3[Gyms, chapels, workshops \n and property]:::description
         end
         nonResiUi:::internalContainer
@@ -259,7 +259,7 @@ Six domain event types are published to the `domainevents` SNS topic:
 
 Events carry the location id, key and source (`DPS` or `NOMIS`) — no prisoner data. A single API call can fan out to many events, as the API publishes for each sub-location and then walks up the parent chain publishing `amended`. Draft locations are skipped. The contract is documented in [`async-api.yml`](../async-api.yml).
 
-Three queues are consumed:
+Three queues are used:
 
 | Queue | Source | Purpose |
 | --- | --- | --- |
