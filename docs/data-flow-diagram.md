@@ -81,7 +81,7 @@ flowchart LR
 
   nomis -->|"C13. POST /sync/upsert"| api
   events -->|"C14. location events"| nomis
-  planetfm -->|"C15. deactivations via SQS"| events
+  planetfm -->|"C15. cell deactivations via SQS<br/>send only, does not consume events"| events
   dps -->|"C16. PRISONER PII returned"| api
 
   classDef boundary fill:none,stroke:#333,stroke-width:2px,stroke-dasharray: 6 4
@@ -124,7 +124,7 @@ flowchart LR
 
     subgraph nsNonResi["namespace: hmpps-non-residential-locations-ui"]
       direction TB
-      ingressNonResi{{"Ingress<br/>TLS, IP allowlist<br/>no ModSecurity"}}
+      ingressNonResi{{"Ingress<br/>TLS, IP allowlist<br/>ModSecurity On"}}
       nonResiUi["Non-Residential Locations UI<br/>Node/Express, 4 pods"]
       ingressNonResi --> nonResiUi
     end
@@ -192,7 +192,6 @@ flowchart LR
 | --- | --- | --- |
 | Product ID | `DPS038` | `DPS120` |
 | Prod hostname | `locations-inside-prison.hmpps.service.justice.gov.uk` | `non-residential-locations.hmpps.service.justice.gov.uk` |
-| ModSecurity | `On`, CRS rule `949110` disabled for POST | not configured |
 | Session cookie | `hmpps-locations-inside-prison.session` | `hmpps-non-residential-locations-ui.session` |
 | Extra downstreams | Prison API, GOV.UK Notify | none |
 | File upload | Cell certificate CSV | none |
@@ -207,7 +206,7 @@ flowchart LR
   subgraph tb6["TB6 — Out of scope"]
     direction TB
     syscon["Syscon sync service"]
-    planetfm["Planet FM<br/>facilities management"]
+    planetfm["Planet FM<br/>facilities management<br/>send only, no event subscription"]
     dps["Other DPS services<br/>establishment roll, etc."]
     subscribers["Domain event subscribers"]
   end
@@ -292,7 +291,7 @@ Each crossing answers: *who is on the other side*, *what checks are in place*, a
 
 | Flows | Crossing | Who is on the other side | Checks in place | Data crossing |
 | --- | --- | --- | --- | --- |
-| `U1`, `U2` | TB1 → TB2 | Prison staff on a browser | TLS; ingress IP allowlist; ModSecurity on the residential UI only; session cookie is `httpOnly`, `sameSite=lax`, `secure` in production; CSRF synchroniser token; 120 min rolling session | Session cookie, form submissions, location data, prisoner names and cell locations rendered to the page |
+| `U1`, `U2` | TB1 → TB2 | Prison staff on a browser | TLS; ingress IP allowlist; ModSecurity `On` at both UI ingresses; session cookie is `httpOnly`, `sameSite=lax`, `secure` in production; CSRF synchroniser token; 120 min rolling session | Session cookie, form submissions, location data, prisoner names and cell locations rendered to the page |
 | `U3`, `U8` | TB2 → TB4 | HMPPS Auth | OAuth2 authorization code grant with `state`; client secret; user JWT verified by the Token Verification API on every request | Authorization code, user JWT containing the staff username and roles |
 | `U8` | TB2 → TB4 | HMPPS Auth | OAuth2 client credentials grant, using a separate client to the auth-code client | System JWT carrying a `user_name` claim for attribution |
 | `U6`, `U7` | TB2 → TB3 | ElastiCache Redis | TLS (`rediss://`) plus auth token, both from namespace secrets | Session data, **user and system OAuth tokens**, cached API responses, in-flight cell certificate CSV content |
@@ -304,7 +303,7 @@ Each crossing answers: *who is on the other side*, *what checks are in place*, a
 | `A10`–`A12` | TB2 → TB3 → TB6 | SNS `domainevents` and its subscribers | IRSA | Location ID, key and source. No prisoner data |
 | `A13` | TB2 → TB3 | HMPPS Audit service | IRSA | Audit events including the actor username and the serialised change payload |
 | `A2` | TB6 → TB2 | Syscon sync service | `ROLE_SYNC_LOCATIONS` plus `SCOPE_write` | NOMIS location changes written into the service |
-| `A14`, `A15` | TB6 → TB3 → TB2 | Planet FM, via the shared "update from external system" queue | SQS queue policy; message schema validation; unrecognised event types are rejected to the DLQ | Cell deactivation instructions. The actor identity is taken from the message's `who` field — asserted by the sender rather than authenticated by this service |
+| `A14`, `A15` | TB6 → TB3 → TB2 | Planet FM, via the shared "update from external system" queue. Send only — Planet FM does not subscribe to or consume any events from this service | SQS queue policy; message schema validation; only `LocationTemporarilyDeactivated` and `TestEvent` are accepted, and the target must be a `CELL`; any other event type is rejected to the DLQ | Cell deactivation instructions, carrying a Planet FM work-order reference. The actor identity is taken from the message's `who` field — asserted by the sender rather than authenticated by this service |
 | `A3` | TB6 → TB2 | Other DPS services | `VIEW_PRISONER_LOCATIONS` or `ESTABLISHMENT_ROLL` role | **Prisoner PII returned**, as `A7` |
 | `U4`, `U13` | TB2 → TB5 | GOV.UK Notify, Google Analytics, Azure | API key / connection string over TLS | Staff email addresses to Notify; page analytics; application telemetry |
 
@@ -312,7 +311,7 @@ Each crossing answers: *who is on the other side*, *what checks are in place*, a
 
 This determines how every API call is authorised, but is not visible on the diagrams above, so it is drawn separately.
 
-Both UIs sign the user in with an **authorization code grant**, then call the Locations API with a **client credentials system token** minted with the username as its subject. The user's own token is used only for Manage Users, Token Verification and Frontend Components.
+Both UIs sign the user in with an **authorization code grant**, then call the Locations API with a **client credentials system token** minted with the username as its subject. This is the intended design and the standard HMPPS pattern: **UIs always call APIs with the system token, carrying the username in context for attribution.** The user's own token is used only for Manage Users, Token Verification and Frontend Components.
 
 ```mermaid
 sequenceDiagram
@@ -352,21 +351,28 @@ sequenceDiagram
   API-->>UI: 200
 ```
 
-### What this means
+### How responsibility is divided
 
-- The API authorises against the **system client's** roles — `ROLE_VIEW_LOCATIONS`, `ROLE_MAINTAIN_LOCATIONS`, `ROLE_MANAGE_PROPERTY_LOCATIONS`, `ROLE_LOCATION_CERTIFICATION` and so on.
-- The **user's** roles — `MANAGE_RES_LOCATIONS_OP_CAP`, `NONRESI__MAINTAIN_LOCATION` and the rest — are enforced in the UI layer, by `protectRoute` / `canAccess`.
-- The `user_name` claim on the system token is what the API records in `updated_by`, `amended_by`, `requested_by` and the audit events. It is used for attribution, not authorisation.
-- There are therefore **two distinct role vocabularies** in the service, and the API cannot independently see the role of the user on whose behalf a UI is acting.
+By design, authentication and authorisation responsibilities are split between the layers:
+
+| Layer | Responsibility |
+| --- | --- |
+| HMPPS Auth | Authenticates the staff member and issues their roles |
+| UI | Enforces the **user's** roles (`protectRoute` / `canAccess`) and validates caseload |
+| API | Enforces the **system client's** roles via `@PreAuthorize`, and records the `user_name` claim for attribution |
+
+Consequences of this split, which the threat model should reason about:
+
+- The API authorises against the **system client's** roles — `ROLE_VIEW_LOCATIONS`, `ROLE_MAINTAIN_LOCATIONS`, `ROLE_MANAGE_PROPERTY_LOCATIONS`, `ROLE_LOCATION_CERTIFICATION` and so on. The two role vocabularies (API and UI) are deliberately distinct and are not mapped to one another.
+- The `user_name` claim is what the API records in `updated_by`, `amended_by`, `requested_by` and the audit events. It is the basis of the audit trail.
 - The end user's identity is not carried beyond the API: calls to Prisoner Search and Prison API are always made with the API's own client credentials.
-- The API applies no per-prison or per-caseload check of its own. Caseload is validated in the UI layer.
+- Caseload is a UI-layer concept. The API applies no per-prison or per-caseload check of its own.
 
 ## Notes
 
 - **No prisoner data is persisted.** Prisoner PII is fetched from Prisoner Search per request and mapped straight to the HTTP response. It is not written to the database.
 - **Staff usernames are persisted** across the `location`, `location_history`, `linked_transaction`, `certification_approval_request`, `cell_certificate`, `cell_certificate_upload` and signed operational capacity tables.
 - **HMPPS Audit is disabled on both UIs** in every environment (`AUDIT_ENABLED: "false"`). The API audits independently via its own SQS queue.
-- ModSecurity runs in **`DetectionOnly`** mode on the API, is **`On`** for the residential UI with CRS rule `949110` disabled for POST requests, and is **not configured** for the non-residential UI.
+- ModSecurity is **`On`** at both UI ingresses, with identical rule configuration, and runs in **`DetectionOnly`** mode on the API.
 - Neither UI nor the API applies application-level rate limiting.
-- A `locationsinsideprison` prisoner-event SQS queue and DLQ are provisioned and alerted on in all three environments, but no listener consumes them.
 - The `train` environment differs materially: Prisoner Search and, for the residential UI, Manage Users and Prison API are served by an in-cluster WireMock sidecar that clones its stubs from GitHub at runtime, and SNS/SQS is served by LocalStack.

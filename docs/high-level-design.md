@@ -150,14 +150,22 @@ flowchart TB
     subgraph externalSystems[External Systems]
         subgraph planetFm[Planet FM]
             direction LR
-            h71[Container: Facilities Management]:::type
-            d71[Requests cell deactivations \n via the shared external-system queue]:::description
+            h71[System: Facilities Management]:::type
+            d71[Raises cell deactivation requests. \n Send only - does not subscribe to \n or consume any events]:::description
         end
         planetFm:::legacyContainer
+
+        subgraph externalSystemQueue[External System Events Queue]
+            direction LR
+            h72[Container: SQS]:::type
+            d72[Shared HMPPS update-from-external-system \n integration queue]:::description
+        end
+        externalSystemQueue:::internalContainer
     end
     externalSystems:::legacySystem
 
-    planetFm--Requests cell \n deactivations -->domainEvents
+    planetFm--Raises cell \n deactivation requests -->externalSystemQueue
+    externalSystemQueue--Temporarily \n deactivates cells -->locationManagementApi
 
     prisonApi--Reads from and \n writes to -->nomisDb
 
@@ -225,7 +233,7 @@ The residential UI additionally handles the **cell certificate CSV ingest**: the
 
 ## Authentication and authorisation
 
-Both UIs sign the user in against HMPPS Auth using the **authorization code grant**, then call the API using a **client credentials system token** minted with the username as its subject. Consequently:
+Both UIs sign the user in against HMPPS Auth using the **authorization code grant**, then call the API using a **client credentials system token** minted with the username as its subject. This is the intended design and the standard HMPPS pattern — UIs always call APIs with the system token, carrying the username in context. Responsibilities divide as follows:
 
 - The **API** authorises against the roles held by the system client.
 - The **UIs** enforce the user's own roles, in `protectRoute` / `canAccess`, and validate caseload.
@@ -263,7 +271,7 @@ Three queues are consumed:
 
 | Queue | Source | Purpose |
 | --- | --- | --- |
-| `updatefromexternalsystemevents` | Planet FM, via the shared HMPPS external-system integration | Temporary cell deactivations |
+| `updatefromexternalsystemevents` | Planet FM, via the shared HMPPS external-system integration. Inbound only — Planet FM does not consume events from this service | Temporary cell deactivations, carrying a Planet FM work-order reference |
 | `updatecellcertificate` | The API itself | Asynchronous cell certificate upload processing |
 | `audit` (send only) | — | HMPPS Audit events |
 
