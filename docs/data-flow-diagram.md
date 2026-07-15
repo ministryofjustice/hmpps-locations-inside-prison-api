@@ -60,8 +60,12 @@ flowchart LR
   subgraph tb6["TB6 — Out of scope"]
     direction TB
     nomis["NOMIS / Syscon"]
-    extSystem["External system<br/>publisher not yet identified"]
     dps["Other DPS services"]
+    integrationApi["HMPPS Integration API<br/>via AWS API Gateway"]
+  end
+
+  subgraph tb7["TB7 — External consumers, public internet"]
+    extClients(["External clients<br/>e.g. private prison operators"])
   end
 
   staff -->|"C1. HTTPS, session cookie"| resiUi
@@ -81,8 +85,11 @@ flowchart LR
 
   nomis -->|"C13. POST /sync/upsert"| api
   events -->|"C14. location events"| nomis
-  extSystem -->|"C15. cell deactivations via SQS<br/>inbound only"| events
   dps -->|"C16. PRISONER PII returned"| api
+
+  extClients -->|"C17. mTLS client cert + x-api-key<br/>POST .../location/{key}/deactivate"| integrationApi
+  integrationApi -->|"C15. cell deactivation via SQS"| events
+  integrationApi -->|"C18. client creds<br/>GET /locations/key/{key}"| api
 
   classDef boundary fill:none,stroke:#333,stroke-width:2px,stroke-dasharray: 6 4
   classDef outOfScope fill:#e8e8e8,stroke:#999,color:#555
@@ -91,12 +98,12 @@ flowchart LR
   classDef external fill:#d5e8d4,stroke:#82b366,color:#000
   classDef actor fill:#90BD90,stroke:#333,color:#000
 
-  class tb1,tb2,tb3,tb4,tb6 boundary
-  class nomis,extSystem,dps,shared outOfScope
+  class tb1,tb2,tb3,tb4,tb6,tb7 boundary
+  class nomis,dps,shared,integrationApi outOfScope
   class redis,rds,events store
   class resiUi,nonResiUi,api process
   class auth external
-  class staff actor
+  class staff,extClients actor
 ```
 
 ## UI layer
@@ -206,9 +213,11 @@ flowchart LR
   subgraph tb6["TB6 — Out of scope"]
     direction TB
     syscon["Syscon sync service"]
-    extSystem["External system<br/>publisher not yet identified"]
     dps["Other DPS services<br/>establishment roll, etc."]
     subscribers["Domain event subscribers"]
+    integrationApi["HMPPS Integration API<br/>mTLS + x-api-key at AWS API Gateway<br/>consumer identity = certificate CN"]
+    extClients(["External clients<br/>e.g. private prison operators"])
+    extClients -->|"A18. POST /v1/prison/{prisonId}<br/>/location/{key}/deactivate"| integrationApi
   end
 
   subgraph tb2["TB2 — MoJ Cloud Platform"]
@@ -256,7 +265,8 @@ flowchart LR
   sns -->|"A11. location events"| subscribers
   sns -->|"A12. location events"| syscon
   api -->|"A13. audit events, actor username"| sqsAudit
-  extSystem -->|"A14. identity asserted in payload"| sqsExt
+  integrationApi -->|"A14. LocationTemporarilyDeactivated<br/>who = certificate CN"| sqsExt
+  integrationApi -->|"A19. client creds, GET /locations/key/{key}<br/>validation read"| ingressApi
   sqsExt -->|"A15. deactivate cell"| api
   api -->|"A16. self-published"| sqsCert
   sqsCert -->|"A17. certificate processing"| api
@@ -268,10 +278,11 @@ flowchart LR
   classDef external fill:#d5e8d4,stroke:#82b366,color:#000
 
   class tb2,tb3,tb4,tb6,nsApi boundary
-  class syscon,extSystem,dps,subscribers,prisonerSearch,prisonRegister,prisonApi outOfScope
+  class syscon,dps,subscribers,prisonerSearch,prisonRegister,prisonApi,integrationApi outOfScope
   class rds,sns,sqsAudit,sqsExt,sqsCert store
   class api,ingressApi,uis process
   class auth external
+  class extClients actor
 ```
 
 ## Trust boundaries
@@ -283,7 +294,8 @@ flowchart LR
 | **TB3** | AWS managed services | RDS, ElastiCache and SNS/SQS, reached over IRSA web identity rather than static credentials. |
 | **TB4** | HMPPS shared services | Services owned by other HMPPS teams, reached over TLS with OAuth2 tokens. |
 | **TB5** | Third party | Non-HMPPS SaaS. Data leaves the MoJ estate at this boundary. |
-| **TB6** | NOMIS and external systems | Legacy and third-party systems that write to, or read from, the service. Out of scope, but shown because data crosses into scope from them. |
+| **TB6** | NOMIS and other HMPPS services | Legacy systems and other HMPPS services that write to, or read from, the service — including the HMPPS Integration API. Out of scope, but shown because data crosses into scope from them. |
+| **TB7** | External consumers | Third-party organisations on the **public internet**, such as private prison operators. They never reach this service directly: they go through AWS API Gateway and the HMPPS Integration API, which authenticate them by mutual TLS client certificate and API key. This is the only path into the service that originates outside the MoJ estate. |
 
 ## Boundary crossings
 
@@ -303,7 +315,8 @@ Each crossing answers: *who is on the other side*, *what checks are in place*, a
 | `A10`–`A12` | TB2 → TB3 → TB6 | SNS `domainevents` and its subscribers | IRSA | Location ID, key and source. No prisoner data |
 | `A13` | TB2 → TB3 | HMPPS Audit service | IRSA | Audit events including the actor username and the serialised change payload |
 | `A2` | TB6 → TB2 | Syscon sync service | `ROLE_SYNC_LOCATIONS` plus `SCOPE_write` | NOMIS location changes written into the service |
-| `A14`, `A15` | TB6 → TB3 → TB2 | An external system, via the shared HMPPS "update from external system" queue. **The publisher is not identified anywhere in this repo** — the queue is provisioned in `cloud-platform-environments`. Inbound only | SQS queue policy; message schema validation; only `LocationTemporarilyDeactivated` and `TestEvent` are accepted, and the target must be a `CELL`; any other event type is rejected to the DLQ | Cell deactivation instructions. The payload carries a `planetFmReference` field, which is recorded against the location as a work-order reference. The actor identity is taken from the message's `who` field — asserted by the sender rather than authenticated by this service |
+| `A17`, `C17` | TB7 → TB6 | An external consumer on the public internet, e.g. a private prison operator | **AWS API Gateway mutual TLS** (client certificate) plus an **`x-api-key`** Usage Plan; nginx ingress client-cert verification; ModSecurity `SecRuleEngine On`; rate limit 100 rps; certificate revocation list. The Integration API's `AuthorisationFilter` then maps the certificate CN to a consumer config and checks the requested path against that consumer's roles | `POST /v1/prison/{prisonId}/location/{key}/deactivate` — deactivation reason, description, proposed reactivation date |
+| `A14`, `A15`, `A19` | TB6 → TB3 → TB2 | **HMPPS Integration API**, the single point of entry for external consumers. It validates the request, reads back the location over HTTP (`A19`), then publishes to the queue (`A14`) | SQS queue policy; message schema validation; only `LocationTemporarilyDeactivated` and `TestEvent` are accepted, and the target must be a `CELL`; any other event type is rejected to the DLQ. The Integration API additionally checks the location is a cell, is not already inactive, and has no occupants before publishing | Cell deactivation instructions. `who` is the **certificate CN of the authenticated consumer** (e.g. a private prison operator) — a system identity, not a named person. Its integrity depends on API Gateway injecting `subject-distinguished-name` and stripping any client-supplied copy |
 | `A3` | TB6 → TB2 | Other DPS services | `VIEW_PRISONER_LOCATIONS` or `ESTABLISHMENT_ROLL` role | **Prisoner PII returned**, as `A7` |
 | `U4`, `U13` | TB2 → TB5 | GOV.UK Notify, Google Analytics, Azure | API key / connection string over TLS | Staff email addresses to Notify; page analytics; application telemetry |
 

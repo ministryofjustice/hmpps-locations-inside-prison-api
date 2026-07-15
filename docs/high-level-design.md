@@ -147,16 +147,37 @@ flowchart TB
     end
     auditSystem:::internalSystem
 
-    subgraph externalSystems[External Systems]
+    subgraph externalConsumers[External Consumers]
+        subgraph extClient[External client]
+            direction LR
+            h70[-Organisation-]:::type
+            d70[e.g. a private prison operator, \n on the public internet]:::description
+        end
+        extClient:::person
+    end
+    externalConsumers:::legacySystem
+
+    extClient--Deactivates a cell. \n mTLS client certificate \n plus x-api-key -->integrationApi
+
+    subgraph integrationSystem[HMPPS External Integration]
+        subgraph integrationApi[HMPPS Integration API]
+            direction LR
+            h71[Container: Kotlin / Spring Boot]:::type
+            d71[Single point of entry for external \n consumers, behind AWS API Gateway. \n Authenticates by certificate CN]:::description
+        end
+        integrationApi:::internalContainer
+
         subgraph externalSystemQueue[External System Events Queue]
             direction LR
             h72[Container: SQS]:::type
-            d72[Shared HMPPS update-from-external-system \n integration queue. Inbound only. \n Publisher not yet identified]:::description
+            d72[Shared HMPPS update-from-external-system \n integration queue. Inbound only]:::description
         end
         externalSystemQueue:::internalContainer
     end
-    externalSystems:::internalSystem
+    integrationSystem:::internalSystem
 
+    integrationApi--Validates the location \n is an empty cell -->locationManagementApi
+    integrationApi--Publishes cell \n deactivation requests -->externalSystemQueue
     externalSystemQueue--Temporarily \n deactivates cells -->locationManagementApi
 
     prisonApi--Reads from and \n writes to -->nomisDb
@@ -243,6 +264,23 @@ The full handshake is drawn in the [Data Flow Diagram](data-flow-diagram.md#auth
 
 The UI and API role vocabularies are distinct and are not mapped to one another.
 
+## External consumers
+
+Every other route into this service starts inside the MoJ estate. One does not: an external organisation — for example a private prison operator — can temporarily deactivate a cell via the **[HMPPS Integration API](https://github.com/ministryofjustice/hmpps-integration-api)**, which is the single point of entry for third-party consumers of HMPPS data.
+
+The path is:
+
+1. The consumer calls `POST /v1/prison/{prisonId}/location/{key}/deactivate` on AWS API Gateway, authenticating with a **mutual TLS client certificate** and an **`x-api-key`**.
+2. API Gateway terminates the certificate and injects the certificate's distinguished name as a `subject-distinguished-name` header. The Integration API extracts the **CN** from it as the consumer identity, checks it against a certificate revocation list and a per-consumer configuration, and checks the requested path against the roles granted to that consumer. The deactivate path is granted only by the `private-prison` role.
+3. The Integration API calls **this** API over HTTP (`GET /locations/key/{key}`, client credentials) to validate that the location exists, is a `CELL`, is not already inactive, and has no prisoners in it.
+4. It then publishes a `LocationTemporarilyDeactivated` message to the `updatefromexternalsystemevents` queue, with `who` set to the consumer's certificate CN.
+5. `UpdateFromExternalSystemListenerService` consumes the message and deactivates the cell, recording `who` as the actor.
+
+Two points worth holding in mind:
+
+- **`who` is a system identity, not a person.** It identifies the consuming organisation, not an individual member of their staff. Attribution for these deactivations is therefore organisation-level.
+- **As of writing, no production consumer holds the `private-prison` role.** The endpoint and the production queue are wired up, but the role is assigned only in `dev`. The path exists but is not live in production — worth re-checking before relying on this statement.
+
 ## Data
 
 **Stored in Postgres**: the location hierarchy and its history, capacity, certification and cell certificates, approval requests, signed operational capacity, prison configuration, reference data, and the **staff usernames** attached to every change.
@@ -263,7 +301,7 @@ Three queues are used:
 
 | Queue | Source | Purpose |
 | --- | --- | --- |
-| `updatefromexternalsystemevents` | An external system, via the shared HMPPS update-from-external-system integration. Inbound only. The publisher is not identified in this repo — the queue is provisioned in `cloud-platform-environments` | Temporary cell deactivations. The payload carries a `planetFmReference` work-order reference, recorded against the location |
+| `updatefromexternalsystemevents` | **HMPPS Integration API**, on behalf of an authenticated external consumer. Inbound only. The queue lives in this service's namespace; the Integration API holds the secret and publishes across the namespace boundary | Temporary cell deactivations. `who` is the consumer's certificate CN. The payload carries an optional `planetFmReference` work-order reference, recorded against the location |
 | `updatecellcertificate` | The API itself | Asynchronous cell certificate upload processing |
 | `audit` (send only) | — | HMPPS Audit events |
 
