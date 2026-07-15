@@ -267,7 +267,7 @@ Six domain event types are published to the `domainevents` SNS topic:
 
 Events carry the location id, key and source (`DPS` or `NOMIS`) — no prisoner data. A single API call can fan out to many events, as the API publishes for each sub-location and then walks up the parent chain publishing `amended`. Draft locations are skipped. The contract is documented in [`async-api.yml`](../async-api.yml).
 
-Three queues are consumed:
+Three queues are used:
 
 | Queue | Source | Purpose |
 | --- | --- | --- |
