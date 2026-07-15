@@ -54,7 +54,7 @@ flowchart LR
   subgraph tb4["TB4 — HMPPS shared services"]
     direction TB
     auth["HMPPS Auth<br/>+ Token Verification"]
-    shared["Prisoner Search, Prison API,<br/>Prison Register, Manage Users"]
+    shared["Prisoner Search, Prison API,<br/>Prison Register"]
   end
 
   subgraph tb6["TB6 — Out of scope"]
