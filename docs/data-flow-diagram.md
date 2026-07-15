@@ -60,7 +60,7 @@ flowchart LR
   subgraph tb6["TB6 — Out of scope"]
     direction TB
     nomis["NOMIS / Syscon"]
-    planetfm["Planet FM"]
+    extSystem["External system<br/>publisher not yet identified"]
     dps["Other DPS services"]
   end
 
@@ -81,7 +81,7 @@ flowchart LR
 
   nomis -->|"C13. POST /sync/upsert"| api
   events -->|"C14. location events"| nomis
-  planetfm -->|"C15. cell deactivations via SQS<br/>send only, does not consume events"| events
+  extSystem -->|"C15. cell deactivations via SQS<br/>inbound only"| events
   dps -->|"C16. PRISONER PII returned"| api
 
   classDef boundary fill:none,stroke:#333,stroke-width:2px,stroke-dasharray: 6 4
@@ -92,7 +92,7 @@ flowchart LR
   classDef actor fill:#90BD90,stroke:#333,color:#000
 
   class tb1,tb2,tb3,tb4,tb6 boundary
-  class nomis,planetfm,dps,shared outOfScope
+  class nomis,extSystem,dps,shared outOfScope
   class redis,rds,events store
   class resiUi,nonResiUi,api process
   class auth external
@@ -206,7 +206,7 @@ flowchart LR
   subgraph tb6["TB6 — Out of scope"]
     direction TB
     syscon["Syscon sync service"]
-    planetfm["Planet FM<br/>facilities management<br/>send only, no event subscription"]
+    extSystem["External system<br/>publisher not yet identified"]
     dps["Other DPS services<br/>establishment roll, etc."]
     subscribers["Domain event subscribers"]
   end
@@ -256,7 +256,7 @@ flowchart LR
   sns -->|"A11. location events"| subscribers
   sns -->|"A12. location events"| syscon
   api -->|"A13. audit events, actor username"| sqsAudit
-  planetfm -->|"A14. identity asserted in payload"| sqsExt
+  extSystem -->|"A14. identity asserted in payload"| sqsExt
   sqsExt -->|"A15. deactivate cell"| api
   api -->|"A16. self-published"| sqsCert
   sqsCert -->|"A17. certificate processing"| api
@@ -268,7 +268,7 @@ flowchart LR
   classDef external fill:#d5e8d4,stroke:#82b366,color:#000
 
   class tb2,tb3,tb4,tb6,nsApi boundary
-  class syscon,planetfm,dps,subscribers,prisonerSearch,prisonRegister,prisonApi outOfScope
+  class syscon,extSystem,dps,subscribers,prisonerSearch,prisonRegister,prisonApi outOfScope
   class rds,sns,sqsAudit,sqsExt,sqsCert store
   class api,ingressApi,uis process
   class auth external
@@ -303,7 +303,7 @@ Each crossing answers: *who is on the other side*, *what checks are in place*, a
 | `A10`–`A12` | TB2 → TB3 → TB6 | SNS `domainevents` and its subscribers | IRSA | Location ID, key and source. No prisoner data |
 | `A13` | TB2 → TB3 | HMPPS Audit service | IRSA | Audit events including the actor username and the serialised change payload |
 | `A2` | TB6 → TB2 | Syscon sync service | `ROLE_SYNC_LOCATIONS` plus `SCOPE_write` | NOMIS location changes written into the service |
-| `A14`, `A15` | TB6 → TB3 → TB2 | Planet FM, via the shared "update from external system" queue. Send only — Planet FM does not subscribe to or consume any events from this service | SQS queue policy; message schema validation; only `LocationTemporarilyDeactivated` and `TestEvent` are accepted, and the target must be a `CELL`; any other event type is rejected to the DLQ | Cell deactivation instructions, carrying a Planet FM work-order reference. The actor identity is taken from the message's `who` field — asserted by the sender rather than authenticated by this service |
+| `A14`, `A15` | TB6 → TB3 → TB2 | An external system, via the shared HMPPS "update from external system" queue. **The publisher is not identified anywhere in this repo** — the queue is provisioned in `cloud-platform-environments`. Inbound only | SQS queue policy; message schema validation; only `LocationTemporarilyDeactivated` and `TestEvent` are accepted, and the target must be a `CELL`; any other event type is rejected to the DLQ | Cell deactivation instructions. The payload carries a `planetFmReference` field, which is recorded against the location as a work-order reference. The actor identity is taken from the message's `who` field — asserted by the sender rather than authenticated by this service |
 | `A3` | TB6 → TB2 | Other DPS services | `VIEW_PRISONER_LOCATIONS` or `ESTABLISHMENT_ROLL` role | **Prisoner PII returned**, as `A7` |
 | `U4`, `U13` | TB2 → TB5 | GOV.UK Notify, Google Analytics, Azure | API key / connection string over TLS | Staff email addresses to Notify; page analytics; application telemetry |
 

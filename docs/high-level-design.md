@@ -148,23 +148,15 @@ flowchart TB
     auditSystem:::internalSystem
 
     subgraph externalSystems[External Systems]
-        subgraph planetFm[Planet FM]
-            direction LR
-            h71[System: Facilities Management]:::type
-            d71[Raises cell deactivation requests. \n Send only - does not subscribe to \n or consume any events]:::description
-        end
-        planetFm:::legacyContainer
-
         subgraph externalSystemQueue[External System Events Queue]
             direction LR
             h72[Container: SQS]:::type
-            d72[Shared HMPPS update-from-external-system \n integration queue]:::description
+            d72[Shared HMPPS update-from-external-system \n integration queue. Inbound only. \n Publisher not yet identified]:::description
         end
         externalSystemQueue:::internalContainer
     end
-    externalSystems:::legacySystem
+    externalSystems:::internalSystem
 
-    planetFm--Raises cell \n deactivation requests -->externalSystemQueue
     externalSystemQueue--Temporarily \n deactivates cells -->locationManagementApi
 
     prisonApi--Reads from and \n writes to -->nomisDb
@@ -271,7 +263,7 @@ Three queues are consumed:
 
 | Queue | Source | Purpose |
 | --- | --- | --- |
-| `updatefromexternalsystemevents` | Planet FM, via the shared HMPPS external-system integration. Inbound only — Planet FM does not consume events from this service | Temporary cell deactivations, carrying a Planet FM work-order reference |
+| `updatefromexternalsystemevents` | An external system, via the shared HMPPS update-from-external-system integration. Inbound only. The publisher is not identified in this repo — the queue is provisioned in `cloud-platform-environments` | Temporary cell deactivations. The payload carries a `planetFmReference` work-order reference, recorded against the location |
 | `updatecellcertificate` | The API itself | Asynchronous cell certificate upload processing |
 | `audit` (send only) | — | HMPPS Audit events |
 
