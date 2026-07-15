@@ -9,7 +9,9 @@
 Provides and API to manage the locations inside a prison.
 
 - [Guidelines](./guidelines.md)
-- [Architecture Overview](./architecture-overview.md)
+- [High Level Design](./docs/high-level-design.md) — the current architecture across the API and both UIs
+- [Data Flow Diagram](./docs/data-flow-diagram.md) — data flows and trust boundaries, maintained for threat modelling
+- [Architecture Decision Records](./docs/0001-use-adr.md)
 
 
 ## Getting Started
