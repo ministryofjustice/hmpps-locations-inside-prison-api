@@ -33,7 +33,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludeByCode
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludeByLocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludePropertyOnlyLocations
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByIsLeaf
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByPrisonId
@@ -162,6 +162,17 @@ class NonResidentialService(
       .filter { it.findSubLocations().intersect(propertyLocations.toSet()).isEmpty() }
       .map { it.toPropertyLocationDto() }
       .sortedBy { it.localName ?: it.pathHierarchy }
+  }
+
+  /**
+   * A single property storage location by id, with its PROPERTY-usage capacity, or null if the id is
+   * unknown or the location cannot hold property (no PROPERTY non-residential usage). Callers use this to
+   * confirm a location can store property without needing to know how that is modelled here.
+   */
+  fun getPropertyLocation(id: UUID): PropertyLocationDto? {
+    val location = nonResidentialLocationRepository.findById(id).getOrNull() ?: return null
+    if (NonResidentialUsageType.PROPERTY !in location.toUsageTypes()) return null
+    return location.toPropertyLocationDto()
   }
 
   /**
@@ -566,7 +577,7 @@ class NonResidentialService(
     serviceFamilyTypes: List<ServiceFamilyType> = emptyList(),
     searchByLocalName: String? = null,
     filterParents: Boolean = false,
-    includeBoxes: Boolean = false,
+    includeProperty: Boolean = false,
     locationTypes: List<NonResidentialLocationType> = emptyList(),
     pageable: Pageable = PageRequest.of(0, 100, Sort.by("localName").ascending()),
   ): NonResidentialSummary {
@@ -577,8 +588,8 @@ class NonResidentialService(
           add(filterByIsLeaf())
         }
         add(excludeByCode("RTU"))
-        if (!includeBoxes) {
-          add(excludeByLocationType(LocationType.BOX))
+        if (!includeProperty) {
+          add(excludePropertyOnlyLocations())
         }
 
         searchByLocalName?.let {
