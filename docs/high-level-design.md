@@ -40,7 +40,7 @@ flowchart TB
 
         subgraph nonResiUi[Non-Residential Locations UI]
             direction LR
-            h3[Container: Node / Typescript]:::type
+            h3[Container: Node / TypeScript]:::type
             d3[Gyms, chapels, workshops \n and property]:::description
         end
         nonResiUi:::internalContainer
