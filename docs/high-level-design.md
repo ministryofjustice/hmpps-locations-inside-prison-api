@@ -33,7 +33,7 @@ flowchart TB
     subgraph locationManagementService[Location Management Service]
         subgraph resiUi[Residential Locations UI]
             direction LR
-            h2[Container: Node / Typescript]:::type
+            h2[Container: Node / TypeScript]:::type
             d2[Cells, wings, capacity \n and certification]:::description
         end
         resiUi:::internalContainer
