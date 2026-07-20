@@ -34,7 +34,7 @@ dependencies {
   implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
 
-  testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:2.5.0")
+  testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:3.0.0")
   testImplementation("org.springframework.boot:spring-boot-starter-webclient-test")
   testImplementation("org.springframework.boot:spring-boot-starter-webflux-test")
   testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
