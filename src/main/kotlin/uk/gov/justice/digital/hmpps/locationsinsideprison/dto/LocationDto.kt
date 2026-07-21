@@ -9,6 +9,7 @@ import jakarta.validation.constraints.PositiveOrZero
 import jakarta.validation.constraints.Size
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DEFAULT_NON_RESIDENTIAL_LOCATION_TYPE
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
@@ -646,7 +647,7 @@ data class CreateOrUpdateNonResidentialLocationRequest(
     id = null,
     prisonId = prisonId,
     code = code,
-    locationType = identifyNonResidentialLocationType(servicesUsingLocation).baseType,
+    locationType = (identifyNonResidentialLocationType(servicesUsingLocation) ?: DEFAULT_NON_RESIDENTIAL_LOCATION_TYPE).baseType,
     pathHierarchy = code,
     status = if (FALSE == active) LocationStatus.INACTIVE else LocationStatus.ACTIVE,
     localName = localName,
