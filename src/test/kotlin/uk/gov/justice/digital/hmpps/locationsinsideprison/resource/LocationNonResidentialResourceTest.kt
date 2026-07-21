@@ -333,6 +333,36 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
     inner class HappyPath {
 
       @Test
+      fun `re-saving a hearing location that was flattened to LOCATION restores the adjudication room type`() {
+        // a room left as LOCATION by the previous defaulting behaviour, still used for hearings
+        val flattenedRoom = repository.save(
+          buildNonResidentialLocation(
+            localName = "Flattened Adj Room",
+            locationType = LocationType.LOCATION,
+            serviceTypes = setOf(ServiceType.HEARING_LOCATION),
+          ),
+        )
+
+        webTestClient.put().uri("/locations/non-residential/${flattenedRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(localName = null, servicesUsingLocation = setOf(ServiceType.HEARING_LOCATION)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """{ "locationType": "ADJUDICATION_ROOM" }""",
+            JsonCompareMode.LENIENT,
+          )
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to flattenedRoom.getKey(),
+          )
+        }
+      }
+
+      @Test
       fun `updating a hearing location keeps the adjudication room location type`() {
         val adjRoom = repository.save(
           buildNonResidentialLocation(
