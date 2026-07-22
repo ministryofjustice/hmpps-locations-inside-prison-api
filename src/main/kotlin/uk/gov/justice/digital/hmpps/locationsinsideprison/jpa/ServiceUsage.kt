@@ -93,11 +93,17 @@ enum class ServiceType(
   val additionalInformation: String,
   val sequence: Int = 99,
   val nonResidentialLocationType: NonResidentialLocationType? = null,
+  /**
+   * Which [nonResidentialLocationType] wins when a location is used by more than one service that maps
+   * to a location type. Lowest wins. Adjudications takes precedence because NOMIS looks up adjudication
+   * hearing rooms by the ADJU location type and fails outright without one.
+   */
+  val locationTypePrecedence: Int = 99,
 ) {
   APPOINTMENT(description = "Appointments", NonResidentialUsageType.APPOINTMENT, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, additionalInformation = "For example, a counselling session.", sequence = 1),
   PROGRAMMES_AND_ACTIVITIES(description = "Programmes and activities", NonResidentialUsageType.PROGRAMMES_ACTIVITIES, ServiceFamilyType.ACTIVITIES_APPOINTMENTS, additionalInformation = "For example, a workshop or lesson.", sequence = 2),
-  VIDEO_LINK(description = "Book a video link", nonResidentialUsageType = null, ServiceFamilyType.VIDEO_LINK_APPOINTMENTS, additionalInformation = "For example, managing a court hearing or probation meeting via video link.", sequence = 3, nonResidentialLocationType = NonResidentialLocationType.VIDEO_LINK),
-  HEARING_LOCATION(description = "Adjudications - hearing location", NonResidentialUsageType.ADJUDICATION_HEARING, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For adjudication hearings.", sequence = 4),
+  VIDEO_LINK(description = "Book a video link", nonResidentialUsageType = null, ServiceFamilyType.VIDEO_LINK_APPOINTMENTS, additionalInformation = "For example, managing a court hearing or probation meeting via video link.", sequence = 3, nonResidentialLocationType = NonResidentialLocationType.VIDEO_LINK, locationTypePrecedence = 2),
+  HEARING_LOCATION(description = "Adjudications - hearing location", NonResidentialUsageType.ADJUDICATION_HEARING, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For adjudication hearings.", sequence = 4, nonResidentialLocationType = NonResidentialLocationType.ADJUDICATION_ROOM, locationTypePrecedence = 1),
   LOCATION_OF_INCIDENT(description = "Adjudications - location of incident", NonResidentialUsageType.OCCURRENCE, ServiceFamilyType.ADJUDICATIONS, additionalInformation = "For example, a location where an occurrence led to an adjudication hearing.", sequence = 5),
   INTERNAL_MOVEMENTS(description = "Internal movements", NonResidentialUsageType.MOVEMENT, ServiceFamilyType.INTERNAL_MOVEMENTS, additionalInformation = "To record the location of unlocked prisoners within this establishment.", sequence = 6),
   OFFICIAL_VISITS(description = "Official visits", NonResidentialUsageType.VISIT, ServiceFamilyType.OFFICIAL_VISITS, additionalInformation = "For example, arranging a face to face visit with a solicitor.", sequence = 7),

@@ -1089,6 +1089,144 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
             JsonCompareMode.LENIENT,
           )
       }
+
+      @Test
+      fun `can sync a new non res location and add mapped service from adjudication room location type`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncNonResRequest.copy(
+                code = "ADJ-ROOM",
+                locationType = LocationType.ADJUDICATION_ROOM,
+                localName = "Adjudication Room",
+                internalMovementAllowed = false,
+                usage = emptySet(),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isCreated
+
+        webTestClient.get().uri("/locations/key/ZZGHI-ADJ-ROOM")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "key": "ZZGHI-ADJ-ROOM",
+              "locationType": "ADJUDICATION_ROOM",
+              "localName": "Adjudication Room",
+              "servicesUsingLocation": [
+                {
+                  "serviceType": "HEARING_LOCATION",
+                  "serviceFamilyType": "ADJUDICATIONS"
+                }
+              ]
+             }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `can sync an existing non res location and add mapped service when location type changes to adjudication room`() {
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncNonResRequest.copy(
+                id = nonRes.id,
+                code = "VISIT",
+                locationType = LocationType.ADJUDICATION_ROOM,
+                localName = "Visit Hall converted to an adjudication room",
+                internalMovementAllowed = false,
+                usage = emptySet(),
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.get().uri("/locations/${nonRes.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "key": "ZZGHI-B-1-VISIT",
+              "locationType": "ADJUDICATION_ROOM",
+              "servicesUsingLocation": [
+                {
+                  "serviceType": "HEARING_LOCATION",
+                  "serviceFamilyType": "ADJUDICATIONS"
+                }
+              ]
+             }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `sync keeps the hearing location service when the usage still says so but the location type changes`() {
+        val adjudicationRoom = repository.save(
+          buildNonResidentialLocation(
+            localName = "Hearing Room",
+            prisonId = "ZZGHI",
+            pathHierarchy = "B-1-HEARING",
+            locationType = LocationType.ADJUDICATION_ROOM,
+            serviceTypes = setOf(ServiceType.HEARING_LOCATION),
+          ),
+        )
+
+        webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(
+            jsonString(
+              syncNonResRequest.copy(
+                id = adjudicationRoom.id,
+                code = "HEARING",
+                locationType = LocationType.LOCATION,
+                localName = "Hearing Room",
+                usage = setOf(NonResidentialUsageDto(NonResidentialUsageType.ADJUDICATION_HEARING, 10, 1)),
+                internalMovementAllowed = false,
+              ),
+            ),
+          )
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.get().uri("/locations/${adjudicationRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "locationType": "LOCATION",
+              "servicesUsingLocation": [
+                {
+                  "serviceType": "HEARING_LOCATION",
+                  "serviceFamilyType": "ADJUDICATIONS"
+                }
+              ]
+             }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
     }
   }
 
