@@ -420,6 +420,52 @@ class LocationNonResidentialResource(
     return results.location
   }
 
+  @PutMapping("/non-residential/{id}/hide")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Removes a parent non-residential location from the non-residential locations list",
+    description = "Hides the location from the list shown to users maintaining non-residential locations. " +
+      "This is not a deactivation: the location keeps its status, its child locations are unaffected and it " +
+      "remains available to anything that looks it up directly. Only permitted for a parent location that no " +
+      "service uses - archive a leaf location instead. Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the hidden location",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location is a leaf location, is still used by a service, or is already hidden",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun hideNonResidentialLocationFromList(
+    @Schema(description = "The non-residential location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+  ): NonResidentialLocationDTO = eventPublishNonResiAndAudit(
+    // Amended rather than deactivated - nothing about the location's availability has changed
+    InternalLocationDomainEventType.LOCATION_AMENDED,
+  ) {
+    nonResidentialService.hideFromList(id)
+  }
+
   @GetMapping("/non-residential/prison/{prisonId}/local-name/{localName}")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @ResponseStatus(HttpStatus.OK)

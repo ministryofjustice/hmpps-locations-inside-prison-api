@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsag
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeHiddenFromListException
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
 import java.time.LocalDateTime
@@ -153,6 +154,58 @@ class NonResidentialServiceTest {
     verify(nonResidentialLocationRepository, times(1)).save(captor.capture())
     val savedLocation = captor.firstValue
     Assertions.assertThat(savedLocation.services.map { it.serviceType }).containsExactlyInAnyOrder(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
+  }
+
+  @Test
+  fun `hideFromList hides a parent that has no services`() {
+    val parent = buildLocation("Parent")
+    val child = buildLocation("Child")
+    parent.addChildLocation(child)
+
+    whenever(nonResidentialLocationRepository.findById(parent.id!!)).thenReturn(Optional.of(parent))
+    whenever(sharedLocationService.getUsername()).thenReturn("test-user")
+    whenever(sharedLocationService.createLinkedTransaction(any(), any(), any(), anyOrNull())).thenReturn(mock())
+
+    val result = service.hideFromList(parent.id!!)
+
+    Assertions.assertThat(result.hiddenFromList).isTrue()
+    Assertions.assertThat(parent.isHiddenFromList()).isTrue()
+    // Not a deactivation
+    Assertions.assertThat(parent.status).isEqualTo(LocationStatus.ACTIVE)
+  }
+
+  @Test
+  fun `hideFromList rejects a leaf location`() {
+    val leaf = buildLocation("Leaf")
+    whenever(nonResidentialLocationRepository.findById(leaf.id!!)).thenReturn(Optional.of(leaf))
+
+    Assertions.assertThatThrownBy { service.hideFromList(leaf.id!!) }
+      .isInstanceOf(LocationCannotBeHiddenFromListException::class.java)
+      .hasMessageContaining("not a parent location")
+  }
+
+  @Test
+  fun `hideFromList rejects a parent still used by a service`() {
+    val parent = buildLocation("Parent")
+    parent.addChildLocation(buildLocation("Child"))
+    parent.addService(ServiceType.APPOINTMENT)
+    whenever(nonResidentialLocationRepository.findById(parent.id!!)).thenReturn(Optional.of(parent))
+
+    Assertions.assertThatThrownBy { service.hideFromList(parent.id!!) }
+      .isInstanceOf(LocationCannotBeHiddenFromListException::class.java)
+      .hasMessageContaining("still used by")
+  }
+
+  @Test
+  fun `hideFromList rejects a parent that is already hidden`() {
+    val parent = buildLocation("Parent")
+    parent.addChildLocation(buildLocation("Child"))
+    parent.hideFromList("someone", clock, mock())
+    whenever(nonResidentialLocationRepository.findById(parent.id!!)).thenReturn(Optional.of(parent))
+
+    Assertions.assertThatThrownBy { service.hideFromList(parent.id!!) }
+      .isInstanceOf(LocationCannotBeHiddenFromListException::class.java)
+      .hasMessageContaining("already hidden")
   }
 
   private fun buildLocation(localName: String): NonResidentialLocation = NonResidentialLocation(
