@@ -803,7 +803,7 @@ class LocationNonResidentialResource(
     @RequestParam(name = "sortByLocalName", required = false, defaultValue = "false") sortByLocalName: Boolean = false,
     @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
     @RequestParam(name = "filterParents", required = false, defaultValue = "true") filterParents: Boolean = true,
-  ): List<Location> = nonResidentialService.getByPrisonAndUsageType(prisonId = prisonId, sortByLocalName = sortByLocalName, formatLocalName = formatLocalName, filterParents = filterParents)
+  ): List<Location> = nonResidentialService.getByPrisonWithUsageTypes(prisonId = prisonId, sortByLocalName = sortByLocalName, formatLocalName = formatLocalName, filterParents = filterParents)
 
   @GetMapping("/prison/{prisonId}/non-residential")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")

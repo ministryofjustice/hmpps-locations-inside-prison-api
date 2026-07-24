@@ -61,7 +61,7 @@ class NonResidentialServiceTest {
     )
 
     val nonResLoc =
-      service.getByPrisonAndUsageType(
+      service.getByPrisonWithUsageTypes(
         "prisonId",
         sortByLocalName = false,
         formatLocalName = true,
@@ -82,7 +82,7 @@ class NonResidentialServiceTest {
     )
 
     val nonResLoc =
-      service.getByPrisonAndUsageType(
+      service.getByPrisonWithUsageTypes(
         "prisonId",
         sortByLocalName = true,
         formatLocalName = false,
@@ -101,7 +101,7 @@ class NonResidentialServiceTest {
     )
 
     val nonResLoc =
-      service.getByPrisonAndUsageType("prisonId")
+      service.getByPrisonWithUsageTypes("prisonId")
     Assertions.assertThat(nonResLoc[0].localName).isEqualTo("CC")
     Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
     Assertions.assertThat(nonResLoc[2].localName).isEqualTo("A")
@@ -116,7 +116,7 @@ class NonResidentialServiceTest {
     )
 
     val nonResLoc =
-      service.getByPrisonAndUsageType(
+      service.getByPrisonWithUsageTypes(
         "prisonId",
         sortByLocalName = true,
         formatLocalName = true,

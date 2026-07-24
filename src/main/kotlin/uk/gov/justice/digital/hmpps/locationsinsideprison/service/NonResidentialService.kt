@@ -26,6 +26,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
@@ -124,7 +125,7 @@ class NonResidentialService(
     return activeLocations
   }
 
-  fun getByPrisonAndUsageType(
+  fun getByPrisonWithUsageTypes(
     prisonId: String,
     sortByLocalName: Boolean = false,
     formatLocalName: Boolean = false,
