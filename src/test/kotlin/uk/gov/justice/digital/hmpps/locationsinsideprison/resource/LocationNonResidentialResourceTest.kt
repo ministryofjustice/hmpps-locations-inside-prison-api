@@ -165,6 +165,60 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `creating a hearing location sets the adjudication room location type`() {
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createReq.copy(localName = "Adj Room 2")))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """
+             {
+              "localName": "Adj Room 2",
+              "locationType": "ADJUDICATION_ROOM",
+              "usedByServices": [
+                "HEARING_LOCATION",
+                "INTERNAL_MOVEMENTS"
+              ]
+            }
+          """,
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `adjudications takes precedence over video link when both services are used`() {
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createReq.copy(localName = "Adj Bvl Room", servicesUsingLocation = setOf(ServiceType.VIDEO_LINK, ServiceType.HEARING_LOCATION))))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """{ "locationType": "ADJUDICATION_ROOM" }""",
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `creating a location with no type mapped services defaults to the location type`() {
+        webTestClient.post().uri("/locations/non-residential/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(createReq.copy(localName = "Visits Room 9", servicesUsingLocation = setOf(ServiceType.OFFICIAL_VISITS))))
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().json(
+            // language=json
+            """{ "locationType": "LOCATION" }""",
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
       fun `can create details of a location with old archived name`() {
         webTestClient.post().uri("/locations/non-residential/MDI")
           .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
@@ -277,6 +331,82 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
 
     @Nested
     inner class HappyPath {
+
+      @Test
+      fun `re-saving a hearing location that was flattened to LOCATION restores the adjudication room type`() {
+        // a room left as LOCATION by the previous defaulting behaviour, still used for hearings
+        val flattenedRoom = repository.save(
+          buildNonResidentialLocation(
+            localName = "Flattened Adj Room",
+            locationType = LocationType.LOCATION,
+            serviceTypes = setOf(ServiceType.HEARING_LOCATION),
+          ),
+        )
+
+        webTestClient.put().uri("/locations/non-residential/${flattenedRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(localName = null, servicesUsingLocation = setOf(ServiceType.HEARING_LOCATION)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """{ "locationType": "ADJUDICATION_ROOM" }""",
+            JsonCompareMode.LENIENT,
+          )
+
+        getDomainEvents(1).let {
+          assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.amended" to flattenedRoom.getKey(),
+          )
+        }
+      }
+
+      @Test
+      fun `updating a hearing location keeps the adjudication room location type`() {
+        val adjRoom = repository.save(
+          buildNonResidentialLocation(
+            localName = "Adj Room Four",
+            locationType = LocationType.ADJUDICATION_ROOM,
+            serviceTypes = setOf(ServiceType.HEARING_LOCATION),
+          ),
+        )
+
+        webTestClient.put().uri("/locations/non-residential/${adjRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(localName = "Adj Room Four Renamed", servicesUsingLocation = setOf(ServiceType.HEARING_LOCATION, ServiceType.INTERNAL_MOVEMENTS)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """{ "locationType": "ADJUDICATION_ROOM" }""",
+            JsonCompareMode.LENIENT,
+          )
+      }
+
+      @Test
+      fun `updating a location does not overwrite a location type no service maps to`() {
+        val visitsRoom = repository.save(
+          buildNonResidentialLocation(
+            localName = "Visits Room Four",
+            locationType = LocationType.VISITS,
+            serviceTypes = setOf(ServiceType.OFFICIAL_VISITS),
+          ),
+        )
+
+        webTestClient.put().uri("/locations/non-residential/${visitsRoom.id}")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(updateReq.copy(localName = "Visits Room Four Renamed", servicesUsingLocation = setOf(ServiceType.OFFICIAL_VISITS, ServiceType.INTERNAL_MOVEMENTS)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            // language=json
+            """{ "locationType": "VISITS" }""",
+            JsonCompareMode.LENIENT,
+          )
+      }
 
       @Test
       fun `can deactivate a location`() {
@@ -392,7 +522,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
           "localName": "Visit Room 2",
           "code": "VISIT",
           "pathHierarchy": "Z-VISIT",
-          "locationType": "LOCATION",
+          "locationType": "VISITS",
           "permanentlyInactive": false,
           "usedByGroupedServices": [
             "OFFICIAL_VISITS"
@@ -426,7 +556,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "localName": "Visit Room 2",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "LOCATION",
+              "locationType": "VISITS",
               "permanentlyInactive": false,
               "usedByGroupedServices": [
                 "OFFICIAL_VISITS"
@@ -459,7 +589,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "localName": "Visit Room",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "LOCATION",
+              "locationType": "VISITS",
               "permanentlyInactive": false,
               "usedByGroupedServices": [],
               "usedByServices": [],
@@ -491,7 +621,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "localName": "Visit Room",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "LOCATION",
+              "locationType": "VISITS",
               "permanentlyInactive": false,
               "usedByGroupedServices": [],
               "usedByServices": [],
@@ -633,7 +763,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
             "localName": "Visit Room",
             "code": "VISIT",
             "pathHierarchy": "Z-VISIT",
-            "locationType": "LOCATION",
+            "locationType": "VISITS",
             "permanentlyInactive": false,
             "usedByGroupedServices": [
               "INTERNAL_MOVEMENTS"
@@ -669,7 +799,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
                 "localName": "Visit Room",
                 "code": "VISIT",
                 "pathHierarchy": "Z-VISIT",
-                "locationType": "LOCATION",
+                "locationType": "VISITS",
                 "permanentlyInactive": false,
                 "usedByGroupedServices": [
                   "INTERNAL_MOVEMENTS"
@@ -1076,7 +1206,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "LOCATION",
+              "locationType": "VISITS",
               "active": true,
               "key": "MDI-Z-VISIT",
               "servicesUsingLocation": [],
@@ -1098,7 +1228,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "LOCATION",
+              "locationType": "VISITS",
               "active": true,
               "key": "MDI-Z-VISIT",
               "usage": [
@@ -1148,7 +1278,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "LOCATION",
+              "locationType": "VISITS",
               "active": true,
               "key": "MDI-Z-VISIT",
               "servicesUsingLocation": [
@@ -1175,7 +1305,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "LOCATION",
+              "locationType": "VISITS",
               "active": true,
               "key": "MDI-Z-VISIT",
               "usage": [
@@ -1446,7 +1576,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "LOCATION",
+              "locationType": "VISITS",
               "active": true,
               "key": "MDI-Z-VISIT",
               "usage": [
@@ -1479,7 +1609,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
               "prisonId": "MDI",
               "code": "VISIT",
               "pathHierarchy": "Z-VISIT",
-              "locationType": "LOCATION",
+              "locationType": "VISITS",
               "active": true,
               "key": "MDI-Z-VISIT",
               "usage": [
