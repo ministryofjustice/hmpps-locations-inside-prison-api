@@ -50,4 +50,5 @@ enum class ErrorCode(val errorCode: Int) {
   WorkingCapacityCannotBeBelowOccupancyLevel(141),
   PendingApprovalExistsBelowLocation(142),
   LocationCannotBeUnarchived(143),
+  LocationCannotBeHiddenFromList(144),
 }

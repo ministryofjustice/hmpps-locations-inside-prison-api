@@ -38,9 +38,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filt
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByPrisonId
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByServiceTypes
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByStatuses
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByStatusesTreatingHiddenAsArchived
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByTypes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DuplicateNonResidentialLocalNameInPrisonException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationCannotBeHiddenFromListException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService.Companion.log
@@ -566,6 +567,46 @@ class NonResidentialService(
     }
   }
 
+  /**
+   * Removes a parent location from the non-residential locations list.
+   *
+   * Presented to users as archiving, but nothing is deactivated: the location keeps its status, its
+   * children are untouched and every service-facing endpoint carries on as before. Only permitted
+   * for a parent location that no service uses - a leaf location should be archived properly
+   * instead, and a location a service still uses has to stay visible so it can be maintained.
+   */
+  @Transactional
+  fun hideFromList(id: UUID): NonResidentialLocationDTO {
+    val location = nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
+
+    if (location.isLeafLevel()) {
+      throw LocationCannotBeHiddenFromListException(location.getKey(), "it is not a parent location, archive it instead")
+    }
+    if (location.isHiddenFromList()) {
+      throw LocationCannotBeHiddenFromListException(location.getKey(), "it is already hidden from the list")
+    }
+    if (location.services.isNotEmpty()) {
+      throw LocationCannotBeHiddenFromListException(
+        location.getKey(),
+        "it is still used by ${location.services.joinToString(", ") { it.serviceType.description }}",
+      )
+    }
+
+    val linkedTransaction = commonLocationService.createLinkedTransaction(
+      prisonId = location.prisonId,
+      TransactionType.LOCATION_UPDATE_NON_RESI,
+      "Hiding non-residential location ${location.getKey()} from the list",
+    )
+
+    location.hideFromList(commonLocationService.getUsername(), clock, linkedTransaction)
+
+    log.info("Non-residential location ${location.getKey()} hidden from the list")
+    commonLocationService.trackLocationUpdate(location, "Hid Non-Residential Location from the list")
+    linkedTransaction.txEndTime = LocalDateTime.now(clock)
+
+    return location.toNonResidentialDto()
+  }
+
   private fun getParentLocation(parentId: UUID?): Location? = parentId?.let {
     locationRepository.findById(parentId).getOrNull()
       ?: throw LocationNotFoundException(it.toString())
@@ -602,7 +643,7 @@ class NonResidentialService(
           }
         }
         if (statuses.isNotEmpty()) {
-          add(filterByStatuses(statuses))
+          add(filterByStatusesTreatingHiddenAsArchived(statuses))
         }
         if (locationTypes.isNotEmpty()) {
           add(filterByTypes(locationTypes.map { it.baseType }))
@@ -695,6 +736,22 @@ data class NonResidentialLocationDTO(
 
   @param:Schema(description = "Location hierarchy (ancestors and self), top to bottom", required = false)
   val locationHierarchy: List<LocationSummary>? = null,
+
+  @param:Schema(
+    description = "Indicates a user has removed this location from the non-residential locations list. " +
+      "Display only - the location is not deactivated and remains available to any service using it.",
+    example = "false",
+    required = true,
+  )
+  val hiddenFromList: Boolean = false,
+
+  @param:Schema(
+    description = "Indicates this location can be removed from the non-residential locations list, " +
+      "i.e. it is a parent location that no service uses",
+    example = "false",
+    required = true,
+  )
+  val canBeHiddenFromList: Boolean = false,
 ) {
   @Schema(description = "Key for a location", example = "MDI-ADJU", required = true)
   fun getKey(): String = "$prisonId-$pathHierarchy"

@@ -50,6 +50,14 @@ class NonResidentialLocation(
   val services: SortedSet<ServiceUsage> = sortedSetOf(),
 
   private var internalMovementAllowed: Boolean? = false,
+
+  /**
+   * Whether this location has been removed from the non-residential locations list by a user.
+   * Purely a display concern for that service - see [hideFromList]. Non-null: the column is shared
+   * across the single location table, so it is nullable at DB level for non-non-residential rows,
+   * but a CHECK constraint keeps it populated for non-residential ones (see migration V1_98).
+   */
+  private var hiddenFromList: Boolean = false,
 ) : Location(
   id = id,
   code = code,
@@ -88,6 +96,44 @@ class NonResidentialLocation(
   override fun isNonResidential() = true
 
   override fun hasDeactivatedParent() = false
+
+  fun isHiddenFromList() = hiddenFromList
+
+  /**
+   * Whether a user may remove this location from the non-residential locations list. Only parent
+   * locations qualify, and only once nothing uses them: a leaf location that is genuinely finished
+   * with should be archived instead, and a location still used by a service must keep appearing in
+   * the list so it can be found and maintained.
+   */
+  fun canBeHiddenFromList() = !isLeafLevel() && services.isEmpty() && !isHiddenFromList()
+
+  /**
+   * Removes this location from the list shown in the non-residential locations UI.
+   *
+   * This is not a deactivation and must not be confused with one. Nothing about the location
+   * changes beyond the flag: its status is untouched, its children carry on exactly as before, and
+   * every service-facing endpoint keeps behaving the same way. Parent locations accumulate as
+   * services are migrated off them onto their children, and this lets a user finally put one out of
+   * sight once it has no services left.
+   */
+  fun hideFromList(
+    userOrSystemInContext: String,
+    clock: Clock,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    val amendedDate = LocalDateTime.now(clock)
+    addHistory(
+      attributeName = LocationAttribute.HIDDEN_FROM_LIST,
+      oldValue = isHiddenFromList().toString(),
+      newValue = true.toString(),
+      amendedBy = userOrSystemInContext,
+      amendedDate = amendedDate,
+      linkedTransaction = linkedTransaction,
+    )
+    this.hiddenFromList = true
+    this.updatedBy = userOrSystemInContext
+    this.whenUpdated = amendedDate
+  }
 
   override fun findDeactivatedLocationInHierarchy(): Location? {
     if (isActive()) {
@@ -221,6 +267,8 @@ class NonResidentialLocation(
       deactivatedBy = deactivatedBy,
       usedByGroupedServices = serviceTypes.map { it.serviceFamily }.distinct().sortedBy { it.sequence },
       usedByServices = serviceTypes.sortedBy { it.sequence },
+      hiddenFromList = isHiddenFromList(),
+      canBeHiddenFromList = canBeHiddenFromList(),
     )
   }
 
