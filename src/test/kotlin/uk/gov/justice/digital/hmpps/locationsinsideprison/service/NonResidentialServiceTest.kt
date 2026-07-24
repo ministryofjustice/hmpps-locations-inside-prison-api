@@ -16,7 +16,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
@@ -53,18 +52,17 @@ class NonResidentialServiceTest {
     }
   }
 
-  // findAllByPrisonIdAndNonResidentialUsages
+  // findAllByPrisonIdWithNonResidentialUsages
   @Test
   fun `should format local name`() {
     val prisonLocation = buildLocation("BULLINGDON (HMP)")
-    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
+    whenever(nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialUsages(any())).thenReturn(
       listOf(prisonLocation),
     )
 
     val nonResLoc =
-      service.getByPrisonAndUsageType(
+      service.getByPrisonWithUsageTypes(
         "prisonId",
-        NonResidentialUsageType.OCCURRENCE,
         sortByLocalName = false,
         formatLocalName = true,
       )
@@ -79,14 +77,13 @@ class NonResidentialServiceTest {
   fun `should sort by localName`() {
     val locations = listOf(location3, location1, location2)
 
-    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
+    whenever(nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialUsages(any())).thenReturn(
       locations,
     )
 
     val nonResLoc =
-      service.getByPrisonAndUsageType(
+      service.getByPrisonWithUsageTypes(
         "prisonId",
-        NonResidentialUsageType.OCCURRENCE,
         sortByLocalName = true,
         formatLocalName = false,
       )
@@ -99,12 +96,12 @@ class NonResidentialServiceTest {
   fun `should not sort by localName`() {
     val locations = listOf(location3, location2, location1)
 
-    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
+    whenever(nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialUsages(any())).thenReturn(
       locations,
     )
 
     val nonResLoc =
-      service.getByPrisonAndUsageType("prisonId", NonResidentialUsageType.OCCURRENCE)
+      service.getByPrisonWithUsageTypes("prisonId")
     Assertions.assertThat(nonResLoc[0].localName).isEqualTo("CC")
     Assertions.assertThat(nonResLoc[1].localName).isEqualTo("B")
     Assertions.assertThat(nonResLoc[2].localName).isEqualTo("A")
@@ -114,14 +111,13 @@ class NonResidentialServiceTest {
   fun `should sort by localName and format localName`() {
     val locations = listOf(location3, location2, location1)
 
-    whenever(nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(any(), any())).thenReturn(
+    whenever(nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialUsages(any())).thenReturn(
       locations,
     )
 
     val nonResLoc =
-      service.getByPrisonAndUsageType(
+      service.getByPrisonWithUsageTypes(
         "prisonId",
-        NonResidentialUsageType.OCCURRENCE,
         sortByLocalName = true,
         formatLocalName = true,
       )

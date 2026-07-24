@@ -125,16 +125,13 @@ class NonResidentialService(
     return activeLocations
   }
 
-  fun getByPrisonAndUsageType(
+  fun getByPrisonWithUsageTypes(
     prisonId: String,
-    usageType: NonResidentialUsageType? = null,
     sortByLocalName: Boolean = false,
     formatLocalName: Boolean = false,
     filterParents: Boolean = true,
   ): List<LocationDTO> {
-    val filteredByUsage = usageType?.let {
-      nonResidentialLocationRepository.findAllByPrisonIdAndNonResidentialUsages(prisonId, usageType)
-    } ?: nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialUsages(prisonId)
+    val filteredByUsage = nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialUsages(prisonId)
 
     val filteredResults = filteredByUsage
       .filter { it.getLocationCode() != "RTU" }
