@@ -275,7 +275,10 @@ class NonResidentialLocation(
             linkedTransaction,
           )
         }
-        locationType = identifyNonResidentialLocationType(it).baseType
+        // only when a service maps to a type - otherwise keep the type NOMIS holds for this location
+        identifyNonResidentialLocationType(it)?.let { mappedType ->
+          locationType = mappedType.baseType
+        }
       }
       val internalMovementAllowedUpdate = services.find { it.serviceType == ServiceType.INTERNAL_MOVEMENTS } != null
       if (internalMovementAllowed != internalMovementAllowedUpdate) {
@@ -333,12 +336,15 @@ class NonResidentialLocation(
     upsert.toServiceTypes()?.let { serviceTypeForLocation.addAll(it) }
     serviceTypeForLocation.addAll(upsert.locationType.toMappedServiceTypes())
 
-    // if the oldLocationType is different to the upsert locationType, and it was a type that had a service type mapped then check if it needs to be removed
+    // if the oldLocationType is different to the upsert locationType, and it was a type that had a service type mapped then check if it needs to be removed.
+    // Only services derived solely from the location type are dropped - one that also has a usage type (e.g. HEARING_LOCATION)
+    // is still evidenced by the usage NOMIS sent, so it is kept.
     if (oldLocationType != upsert.locationType && oldLocationType.toMappedServiceTypes().isNotEmpty()) {
       serviceTypeForLocation.removeAll { serviceType ->
-        serviceType.nonResidentialLocationType?.baseType?.let { mappedLocationType ->
-          mappedLocationType != upsert.locationType
-        } ?: false
+        serviceType.nonResidentialUsageType == null &&
+          serviceType.nonResidentialLocationType?.baseType?.let { mappedLocationType ->
+            mappedLocationType != upsert.locationType
+          } ?: false
       }
     }
 
@@ -439,7 +445,13 @@ class NonResidentialLocation(
   }
 }
 
-private val DEFAULT_NON_RESIDENTIAL_LOCATION_TYPE = NonResidentialLocationType.LOCATION
+val DEFAULT_NON_RESIDENTIAL_LOCATION_TYPE = NonResidentialLocationType.LOCATION
 
-fun identifyNonResidentialLocationType(serviceTypes: Set<ServiceType>): NonResidentialLocationType = serviceTypes.firstNotNullOfOrNull(ServiceType::nonResidentialLocationType)
-  ?: DEFAULT_NON_RESIDENTIAL_LOCATION_TYPE
+/**
+ * The location type implied by the services using a location, or null when none of them map to one.
+ * Callers updating an existing location must leave its type alone when this is null, otherwise a type
+ * NOMIS owns (e.g. VISI, CLAS, ADJU) would be flattened to the default on every edit.
+ */
+fun identifyNonResidentialLocationType(serviceTypes: Set<ServiceType>): NonResidentialLocationType? = serviceTypes
+  .sortedBy { it.locationTypePrecedence }
+  .firstNotNullOfOrNull(ServiceType::nonResidentialLocationType)
