@@ -77,6 +77,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationConta
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationPrefixNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationResidentialResource.AllowedAccommodationTypeForConversion
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.NonResidentialParentCannotBeArchivedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentDeactivationRequiresApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PermanentlyDeactivatedUpdateNotAllowedException
@@ -1124,16 +1125,24 @@ class LocationService(
   ): List<LocationDTO> {
     val deactivatedLocations = mutableSetOf<Location>()
 
-    val prisonId = permanentDeactivationRequest.locations.firstOrNull()?.let { key ->
-      val prisonId = locationRepository.findOneByKey(key)?.prisonId ?: throw LocationNotFoundException(key)
-      val certificationApprovalRequired = activePrisonService.isCertificationApprovalRequired(prisonId)
+    // Resolve and validate the whole request up-front, before opening a transaction, so a bad key
+    // anywhere in the batch fails cleanly rather than after partial work.
+    val locations = permanentDeactivationRequest.locations
+      .ifEmpty { throw LocationNotFoundException("No location found in request") }
+      .map { key -> locationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key) }
 
-      if (certificationApprovalRequired) {
-        throw BulkPermanentDeactivationNotAllowedException(prisonId)
-      }
+    // A non-residential parent must be hidden, not archived (MAPB-670) - reject if any key is one.
+    locations.firstOrNull { it.isNonResidential() && !it.isLeafLevel() }?.let {
+      throw NonResidentialParentCannotBeArchivedException(it.getKey())
+    }
 
-      prisonId
-    } ?: throw LocationNotFoundException("No location found in request")
+    val prisonId = locations.first().prisonId
+
+    // Certification approval is a residential-only concern, so it only blocks the batch when it
+    // contains a residential location; a purely non-residential batch is never gated by it.
+    if (locations.any { !it.isNonResidential() } && activePrisonService.isCertificationApprovalRequired(prisonId)) {
+      throw BulkPermanentDeactivationNotAllowedException(prisonId)
+    }
 
     val linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = prisonId,
@@ -1141,9 +1150,7 @@ class LocationService(
       "Permanently deactivating locations",
     )
 
-    permanentDeactivationRequest.locations.forEach { key ->
-      val locationToPermanentlyDeactivate = locationRepository.findOneByKey(key) ?: throw LocationNotFoundException(key)
-
+    locations.forEach { locationToPermanentlyDeactivate ->
       if (locationToPermanentlyDeactivate.permanentlyDeactivate(
           reason = permanentDeactivationRequest.reason,
           deactivatedDate = now(clock),
@@ -1261,7 +1268,14 @@ class LocationService(
     val locationToArchive = locationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
 
-    if (activePrisonService.isCertificationApprovalRequired(locationToArchive.prisonId)) {
+    // A non-residential parent must be removed from the list (hidden), not archived - archiving is
+    // for leaf locations only (see MAPB-670).
+    if (locationToArchive.isNonResidential() && !locationToArchive.isLeafLevel()) {
+      throw NonResidentialParentCannotBeArchivedException(locationToArchive.getKey())
+    }
+
+    // Certification approval is a residential-only concern; non-residential archiving is never gated by it.
+    if (!locationToArchive.isNonResidential() && activePrisonService.isCertificationApprovalRequired(locationToArchive.prisonId)) {
       throw PermanentDeactivationRequiresApprovalException(locationToArchive.getKey())
     }
 
