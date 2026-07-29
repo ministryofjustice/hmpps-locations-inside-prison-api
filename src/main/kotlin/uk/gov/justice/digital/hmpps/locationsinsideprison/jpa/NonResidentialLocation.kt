@@ -114,6 +114,23 @@ class NonResidentialLocation(
   fun canBeHiddenFromList() = !isLeafLevel() && services.isEmpty() && !isHiddenFromList()
 
   /**
+   * Whether this location may have a property designation put back on it (see
+   * NonResidentialService.createPropertyLocation). Removing a property location only drops its PROPERTY
+   * usage - the location itself lives on - so a user who removes one and then adds it again by the same
+   * name should get the original location back rather than a name clash.
+   *
+   * Deliberately narrow: only something that looks like a property location whose designation was removed
+   * qualifies - a BOX with no usages and no services left on it. That keeps an unrelated location which
+   * merely shares the name (a visit room, or a store a service still owns) from being quietly turned into
+   * property storage. Archived locations are excluded: they are genuinely finished with, and unarchiving is
+   * the deliberate route back.
+   */
+  fun canBeReinstatedAsPropertyLocation() = locationType == LocationType.BOX &&
+    toUsageTypes().isEmpty() &&
+    services.isEmpty() &&
+    !isArchived()
+
+  /**
    * Removes this location from the list shown in the non-residential locations UI.
    *
    * This is not a deactivation and must not be confused with one. Nothing about the location

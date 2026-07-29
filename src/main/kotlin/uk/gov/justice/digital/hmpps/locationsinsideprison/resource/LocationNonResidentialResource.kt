@@ -16,6 +16,7 @@ import org.springframework.data.domain.Sort
 import org.springframework.data.web.PageableDefault
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.validation.annotation.Validated
 import org.springframework.web.bind.annotation.DeleteMapping
@@ -634,12 +635,15 @@ class LocationNonResidentialResource(
 
   @PostMapping("/prison/{prisonId}/property", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MANAGE_PROPERTY_LOCATIONS') and hasAuthority('SCOPE_write')")
-  @ResponseStatus(HttpStatus.CREATED)
   @Operation(
-    summary = "Create a new property storage location for a prison",
+    summary = "Create a property storage location for a prison, or reinstate one that was removed",
     description = "Creates a top-level BOX location with an auto-generated code and a PROPERTY usage carrying the " +
-      "given capacity. Requires role MANAGE_PROPERTY_LOCATIONS and write scope",
+      "given capacity. Removing a property location only drops its PROPERTY usage, so where a location of this " +
+      "name had its designation removed it is reinstated with the given capacity - keeping its id, code and " +
+      "history - and 200 is returned instead of 201. " +
+      "Requires role MANAGE_PROPERTY_LOCATIONS and write scope",
     responses = [
+      ApiResponse(responseCode = "200", description = "Returns the property location that was reinstated"),
       ApiResponse(responseCode = "201", description = "Returns the created property location"),
       ApiResponse(
         responseCode = "400",
@@ -672,10 +676,18 @@ class LocationNonResidentialResource(
     @PathVariable
     prisonId: String,
     @RequestBody @Validated request: CreatePropertyLocationRequest,
-  ): PropertyLocationDto {
-    val (propertyLocation, location) = nonResidentialService.createPropertyLocation(prisonId, request)
-    eventPublishNonResiAndAudit(InternalLocationDomainEventType.LOCATION_CREATED) { location }
-    return propertyLocation
+  ): ResponseEntity<PropertyLocationDto> {
+    val result = nonResidentialService.createPropertyLocation(prisonId, request)
+    // A reinstated location already exists downstream, so it is amended rather than created - announcing a
+    // creation would have NOMIS try to add a location it already holds.
+    val event = if (result.reinstated) {
+      InternalLocationDomainEventType.LOCATION_AMENDED
+    } else {
+      InternalLocationDomainEventType.LOCATION_CREATED
+    }
+    eventPublishNonResiAndAudit(event) { result.location }
+    val status = if (result.reinstated) HttpStatus.OK else HttpStatus.CREATED
+    return ResponseEntity.status(status).body(result.propertyLocation)
   }
 
   @PutMapping("/property/{id}", produces = [MediaType.APPLICATION_JSON_VALUE])
