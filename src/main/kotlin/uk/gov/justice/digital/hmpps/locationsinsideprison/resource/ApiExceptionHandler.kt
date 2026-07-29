@@ -445,6 +445,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(NonResidentialParentCannotBeArchivedException::class)
+  fun handleNonResidentialParentCannotBeArchived(e: NonResidentialParentCannotBeArchivedException): ResponseEntity<ErrorResponse> {
+    log.debug("Attempt to archive a non-residential parent: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.NonResidentialParentCannotBeArchived,
+          userMessage = "Non-residential parent cannot be archived: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(ReasonForDeactivationMustBeProvidedException::class)
   fun handleReasonForDeactivationMustBeProvided(e: ReasonForDeactivationMustBeProvidedException): ResponseEntity<ErrorResponse> {
     log.debug("De-activating location requires a reason when using OTHER reason type: {}", e.message)
@@ -789,6 +804,7 @@ class ReasonForDeactivationMustBeProvidedException(key: String) : Exception("De-
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
 class LocationCannotBeUnarchivedException(key: String) : Exception("Location is not archived so cannot be un-archived = $key")
 class LocationCannotBeHiddenFromListException(key: String, reason: String) : Exception("Location $key cannot be hidden from the non-residential list: $reason")
+class NonResidentialParentCannotBeArchivedException(key: String) : Exception("Non-residential parent $key cannot be archived - remove it from the list (hide) instead")
 class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")
 class CapacityException(val key: String, override val message: String, val errorCode: ErrorCode) : ValidationException("$key: [Error Code: $errorCode] - Capacity Exception: $message")
 class PermanentlyDeactivatedUpdateNotAllowedException(key: String) : ValidationException("Location $key cannot be updated as has been permanently deactivated")
