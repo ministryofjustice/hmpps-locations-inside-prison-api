@@ -38,7 +38,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentia
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PropertyLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdatePropertyLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
@@ -420,6 +419,52 @@ class LocationNonResidentialResource(
     return results.location
   }
 
+  @PutMapping("/non-residential/{id}/hide")
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Removes a parent non-residential location from the non-residential locations list",
+    description = "Hides the location from the list shown to users maintaining non-residential locations. " +
+      "This is not a deactivation: the location keeps its status, its child locations are unaffected and it " +
+      "remains available to anything that looks it up directly. Only permitted for a parent location that no " +
+      "service uses - archive a leaf location instead. Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns the hidden location",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "Data not found",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "409",
+        description = "Location is a leaf location, is still used by a service, or is already hidden",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun hideNonResidentialLocationFromList(
+    @Schema(description = "The non-residential location Id", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = true)
+    @PathVariable
+    id: UUID,
+  ): NonResidentialLocationDTO = eventPublishNonResiAndAudit(
+    // Amended rather than deactivated - nothing about the location's availability has changed
+    InternalLocationDomainEventType.LOCATION_AMENDED,
+  ) {
+    nonResidentialService.hideFromList(id)
+  }
+
   @GetMapping("/non-residential/prison/{prisonId}/local-name/{localName}")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @ResponseStatus(HttpStatus.OK)
@@ -758,58 +803,7 @@ class LocationNonResidentialResource(
     @RequestParam(name = "sortByLocalName", required = false, defaultValue = "false") sortByLocalName: Boolean = false,
     @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
     @RequestParam(name = "filterParents", required = false, defaultValue = "true") filterParents: Boolean = true,
-  ): List<Location> = nonResidentialService.getByPrisonAndUsageType(prisonId = prisonId, sortByLocalName = sortByLocalName, formatLocalName = formatLocalName, filterParents = filterParents)
-
-  @GetMapping("/prison/{prisonId}/non-residential-usage-type/{usageType}")
-  @ResponseStatus(HttpStatus.OK)
-  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
-  @Deprecated("Use /non-residential/prison/{prisonId}/service/{serviceType} instead")
-  @Operation(
-    summary = "Return non-residential locations by usage for this prison",
-    description = "Requires role VIEW_LOCATIONS",
-    responses = [
-      ApiResponse(
-        responseCode = "200",
-        description = "Returns non-residential locations",
-      ),
-      ApiResponse(
-        responseCode = "400",
-        description = "Invalid Request",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "401",
-        description = "Unauthorized to access this endpoint",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-      ApiResponse(
-        responseCode = "403",
-        description = "Missing required role. Requires the VIEW_LOCATIONS role",
-        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
-      ),
-    ],
-  )
-  fun getLocationsByPrisonAndNonResidentialUsageType(
-    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
-    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
-    @NotBlank(message = "Prison ID cannot be blank")
-    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
-    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
-    @PathVariable
-    prisonId: String,
-    @Schema(description = "Usage type", example = "APPOINTMENTS", required = true)
-    @PathVariable
-    usageType: NonResidentialUsageType,
-    @RequestParam(name = "sortByLocalName", required = false, defaultValue = "false") sortByLocalName: Boolean = false,
-    @RequestParam(name = "formatLocalName", required = false, defaultValue = "false") formatLocalName: Boolean = false,
-    @RequestParam(name = "filterParents", required = false, defaultValue = "true") filterParents: Boolean = true,
-  ): List<Location> = nonResidentialService.getByPrisonAndUsageType(
-    prisonId = prisonId,
-    usageType = usageType,
-    sortByLocalName = sortByLocalName,
-    formatLocalName = formatLocalName,
-    filterParents = filterParents,
-  )
+  ): List<Location> = nonResidentialService.getByPrisonWithUsageTypes(prisonId = prisonId, sortByLocalName = sortByLocalName, formatLocalName = formatLocalName, filterParents = filterParents)
 
   @GetMapping("/prison/{prisonId}/non-residential")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
@@ -975,12 +969,29 @@ class LocationNonResidentialResource(
     )
     @RequestParam(required = false)
     serviceFamilyType: List<ServiceFamilyType>? = null,
+    @Schema(description = "Filter by given service types", example = "[HEARING_LOCATION,APPOINTMENT]", required = false)
+    @Parameter(
+      description = "Filter by service type. More granular than serviceFamilyType - filters to individual services. " +
+        "If both serviceType and serviceFamilyType are supplied, the two are combined (union).",
+      example = "[HEARING_LOCATION,APPOINTMENT]",
+      array = ArraySchema(
+        schema = Schema(implementation = ServiceType::class),
+        arraySchema = Schema(
+          requiredMode = Schema.RequiredMode.NOT_REQUIRED,
+          nullable = true,
+          defaultValue = "null",
+        ),
+      ),
+    )
+    @RequestParam(required = false)
+    serviceType: List<ServiceType>? = null,
     @ParameterObject
     @PageableDefault(page = 0, size = 100, sort = ["localName"], direction = Sort.Direction.ASC)
     pageable: Pageable,
   ): NonResidentialSummary = nonResidentialService.getNonResidentialLocationSummaryForPrison(
     prisonId = prisonId,
     serviceFamilyTypes = serviceFamilyType ?: emptyList(),
+    serviceTypes = serviceType ?: emptyList(),
     pageable = pageable,
     statuses = status,
     locationTypes = locationType ?: emptyList(),

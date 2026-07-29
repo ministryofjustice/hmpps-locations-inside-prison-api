@@ -1,0 +1,13 @@
+-- Lets a non-residential parent location be removed from the list shown in the
+-- non-residential locations UI once it has no services left using it.
+--
+-- This is deliberately NOT a deactivation. The location keeps its status, its children are
+-- untouched, and every service-facing endpoint behaves exactly as before - the flag only
+-- controls whether the location is offered in the non-residential summary listing.
+--
+-- NOT NULL DEFAULT FALSE: the column lives on the shared single-table-inheritance location table and
+-- is only mapped by non-residential locations. Defaulting it for every row - not just the
+-- non-residential ones - keeps it populated when a location is converted between types in place: the
+-- sync conversion issues a native UPDATE of the discriminator that does not touch this column, so it
+-- never ends up null on a row that has just become non-residential.
+ALTER TABLE location ADD COLUMN hidden_from_list BOOLEAN NOT NULL DEFAULT FALSE;

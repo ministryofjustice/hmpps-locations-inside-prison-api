@@ -45,6 +45,21 @@ fun excludePropertyOnlyLocations(): Specification<NonResidentialLocation> = Spec
 fun filterByStatuses(statuses: Collection<LocationStatus>) = NonResidentialLocation::status.buildSpecForIn(statuses)
 fun filterByStatuses(vararg statuses: LocationStatus) = filterByStatuses(statuses.toList())
 
+/**
+ * Matches locations on their status, treating a location a user has hidden from the list as though
+ * it were archived: it is returned only when [LocationStatus.ARCHIVED] is asked for, and never
+ * under its own status. The location itself is untouched - this only governs where it shows up in
+ * the non-residential list.
+ */
+fun filterByStatusesTreatingHiddenAsArchived(statuses: Collection<LocationStatus>): Specification<NonResidentialLocation> = Specification { root, _, cb ->
+  val hiddenFromList = root.get<Boolean>("hiddenFromList")
+  val hidden = cb.isTrue(hiddenFromList)
+  val notHidden = cb.or(cb.isNull(hiddenFromList), cb.isFalse(hiddenFromList))
+  val matchesOwnStatus = cb.and(notHidden, root.get<LocationStatus>("status").`in`(statuses))
+
+  if (LocationStatus.ARCHIVED in statuses) cb.or(hidden, matchesOwnStatus) else matchesOwnStatus
+}
+
 fun filterByTypes(locationType: Collection<LocationType>) = NonResidentialLocation::locationType.buildSpecForIn(locationType)
 fun filterByTypes(vararg locationType: LocationType) = filterByTypes(locationType.toList())
 
