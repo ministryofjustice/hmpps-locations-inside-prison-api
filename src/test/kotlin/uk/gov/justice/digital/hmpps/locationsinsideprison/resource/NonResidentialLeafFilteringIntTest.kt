@@ -285,4 +285,131 @@ class NonResidentialLeafFilteringIntTest : CommonDataTestBase() {
       .jsonPath("$.locations.content[?(@.localName == 'Parent Location')]").exists()
       .jsonPath("$.locations.content[?(@.localName == 'Child Location')]").exists()
   }
+
+  @Test
+  fun `can filter by a single service type within a family`() {
+    // Both are in the ADJUDICATIONS family, but only the hearing room is used for hearings.
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "HEAR",
+        localName = "Hearing Room",
+        locationType = LocationType.ADJUDICATION_ROOM,
+        serviceTypes = setOf(ServiceType.HEARING_LOCATION),
+      ),
+    )
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "INCID",
+        localName = "Incident Yard",
+        locationType = LocationType.LOCATION,
+        serviceTypes = setOf(ServiceType.LOCATION_OF_INCIDENT),
+      ),
+    )
+
+    // Filtering by the specific service type isolates the hearing room...
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?serviceType=HEARING_LOCATION")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Hearing Room')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Incident Yard')]").doesNotExist()
+
+    // ...whereas the family filter returns both, which is the limitation this filter removes.
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?serviceFamilyType=ADJUDICATIONS")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Hearing Room')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Incident Yard')]").exists()
+  }
+
+  @Test
+  fun `can filter by multiple service types`() {
+    repository.save(
+      buildNonResidentialLocation(prisonId = "MDI", pathHierarchy = "APPT", localName = "Interview Room", serviceTypes = setOf(ServiceType.APPOINTMENT)),
+    )
+    repository.save(
+      buildNonResidentialLocation(prisonId = "MDI", pathHierarchy = "VISIT", localName = "Visits Hall", serviceTypes = setOf(ServiceType.OFFICIAL_VISITS)),
+    )
+    repository.save(
+      buildNonResidentialLocation(prisonId = "MDI", pathHierarchy = "UOF", localName = "Segregation Unit", serviceTypes = setOf(ServiceType.USE_OF_FORCE)),
+    )
+
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?serviceType=APPOINTMENT&serviceType=OFFICIAL_VISITS")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Interview Room')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Visits Hall')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Segregation Unit')]").doesNotExist()
+  }
+
+  @Test
+  fun `parent not returned when filtering by a service type whose family does not show parents`() {
+    val parentNonRes = repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PARENT",
+        localName = "Parent Location",
+        locationType = LocationType.AREA,
+        serviceTypes = setOf(ServiceType.USE_OF_FORCE),
+      ),
+    )
+    val childNonRes = repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PARENT-CHILD",
+        localName = "Child Location",
+        locationType = LocationType.LOCATION,
+        serviceTypes = setOf(ServiceType.USE_OF_FORCE),
+      ),
+    )
+    parentNonRes.addChildLocation(childNonRes)
+    repository.save(parentNonRes)
+
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?serviceType=USE_OF_FORCE")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Parent Location')]").doesNotExist()
+      .jsonPath("$.locations.content[?(@.localName == 'Child Location')]").exists()
+  }
+
+  @Test
+  fun `parent returned when filtering by a parent-editable service type`() {
+    val parentNonRes = repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PARENT",
+        localName = "Parent Location",
+        locationType = LocationType.AREA,
+        serviceTypes = setOf(ServiceType.VIDEO_LINK),
+      ),
+    )
+    val childNonRes = repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PARENT-CHILD",
+        localName = "Child Location",
+        locationType = LocationType.LOCATION,
+        serviceTypes = setOf(ServiceType.VIDEO_LINK),
+      ),
+    )
+    parentNonRes.addChildLocation(childNonRes)
+    repository.save(parentNonRes)
+
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?serviceType=VIDEO_LINK")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Parent Location')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Child Location')]").exists()
+  }
 }

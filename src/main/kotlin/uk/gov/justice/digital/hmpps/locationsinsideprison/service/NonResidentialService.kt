@@ -613,12 +613,18 @@ class NonResidentialService(
     prisonId: String,
     statuses: List<LocationStatus> = emptyList(),
     serviceFamilyTypes: List<ServiceFamilyType> = emptyList(),
+    serviceTypes: List<ServiceType> = emptyList(),
     searchByLocalName: String? = null,
     filterParents: Boolean = false,
     includeProperty: Boolean = false,
     locationTypes: List<NonResidentialLocationType> = emptyList(),
     pageable: Pageable = PageRequest.of(0, 100, Sort.by("localName").ascending()),
   ): NonResidentialSummary {
+    // The requested service families and service types, resolved to a single set of service types:
+    // families expand to their member service types and are combined (unioned) with any service
+    // types requested directly. In practice the UI sends one or the other, but both may be supplied.
+    val allServiceTypes = (serviceFamilyTypes.flatMap { it.getServiceTypes() } + serviceTypes).distinct()
+
     val specification = Specification.allOf(
       buildList {
         add(filterByPrisonId(prisonId))
@@ -633,9 +639,13 @@ class NonResidentialService(
         searchByLocalName?.let {
           add(filterByLocalName(it))
         }
-        if (serviceFamilyTypes.isNotEmpty()) {
-          add(filterByServiceTypes(serviceFamilyTypes.flatMap { it.getServiceTypes() }.distinct()))
-          if (!filterParents && serviceFamilyTypes.all { !it.editableInParent }) {
+        if (allServiceTypes.isNotEmpty()) {
+          add(filterByServiceTypes(allServiceTypes))
+          // A parent only exposes the services that are editable at parent level; a
+          // non-parent-editable service it is associated with is not shown on the parent. So when
+          // none of the requested services are parent-editable, restrict to leaf locations rather
+          // than returning parents that would appear to use nothing.
+          if (!filterParents && allServiceTypes.all { !it.serviceFamily.editableInParent }) {
             add(filterByIsLeaf())
           }
         }

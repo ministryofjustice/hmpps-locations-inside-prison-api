@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocation
@@ -209,6 +210,143 @@ class NonResidentialHideFromListIntTest : CommonDataTestBase() {
 
       summary("?status=ACTIVE").jsonPath("$.locations.content[?(@.localName == 'Child Location')]").doesNotExist()
       summary("?status=ARCHIVED").jsonPath("$.locations.content[?(@.localName == 'Child Location')]").exists()
+    }
+  }
+
+  @Nested
+  inner class Archiving {
+    private fun archive(id: Any) = webTestClient.put().uri("/locations/$id/deactivate/permanent")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("read", "write")))
+      .bodyValue(mapOf("reason" to "Demolished"))
+      .exchange()
+
+    @Test
+    fun `can archive a non-residential leaf in a prison that requires certification approval`() {
+      // LEI has certificationApprovalRequired = true. Certification is residential-only, so it must
+      // not block non-residential archiving (previously returned 400, errorCode 136).
+      val leaf = repository.save(
+        buildNonResidentialLocation(
+          prisonId = "LEI",
+          pathHierarchy = "GYM",
+          localName = "Gym",
+          serviceTypes = setOf(ServiceType.APPOINTMENT),
+        ),
+      )
+
+      archive(leaf.id!!).expectStatus().isOk
+    }
+
+    @Test
+    fun `cannot archive a non-residential parent - it must be hidden instead`() {
+      val (parent, _) = parentWithChild()
+
+      archive(parent.id!!)
+        .expectStatus().isEqualTo(409)
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(145)
+    }
+
+    @Test
+    fun `a non-residential leaf can still be archived`() {
+      val (_, child) = parentWithChild()
+
+      archive(child.id!!).expectStatus().isOk
+    }
+
+    private fun bulkArchive(vararg keys: String) = webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("read", "write")))
+      .bodyValue(mapOf("reason" to "Demolished", "locations" to keys.toList()))
+      .exchange()
+
+    @Test
+    fun `cannot bulk-archive a non-residential parent`() {
+      val (parent, _) = parentWithChild()
+
+      bulkArchive(parent.getKey())
+        .expectStatus().isEqualTo(409)
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(145)
+    }
+
+    @Test
+    fun `a certification prison still blocks a bulk that includes a residential location, even behind a non-residential key`() {
+      // LEI requires certification approval. A non-residential key first must not let a residential
+      // location slip through the gate - the whole batch is validated, not just the first key.
+      val nonResiLeaf = repository.save(
+        buildNonResidentialLocation(
+          prisonId = "LEI",
+          pathHierarchy = "GYM",
+          localName = "Gym",
+          serviceTypes = setOf(ServiceType.APPOINTMENT),
+        ),
+      )
+      val residentialCell = leedsWing.findAllLeafLocations().first()
+
+      bulkArchive(nonResiLeaf.getKey(), residentialCell.getKey())
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(137)
+    }
+  }
+
+  @Nested
+  inner class ChildOfArchivedParentUsesOwnStatus {
+    private fun summary(query: String) = webTestClient.get().uri("/locations/non-residential/summary/MDI$query")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+
+    // Build the archived-parent state directly (the archive endpoint now refuses to archive a
+    // parent), so we can pin down how its still-active child is reported.
+    private fun archivedParentWithActiveChild(): NonResidentialLocation {
+      val parent = repository.save(
+        buildNonResidentialLocation(
+          prisonId = "MDI",
+          pathHierarchy = "PARENT",
+          localName = "Archived Parent",
+          locationType = LocationType.LOCATION,
+          status = LocationStatus.ARCHIVED,
+        ),
+      )
+      val child = repository.save(
+        buildNonResidentialLocation(
+          prisonId = "MDI",
+          pathHierarchy = "PARENT-CHILD",
+          localName = "Active Child",
+          locationType = LocationType.LOCATION,
+          status = LocationStatus.ACTIVE,
+          serviceTypes = setOf(ServiceType.APPOINTMENT),
+        ),
+      )
+      parent.addChildLocation(child)
+      repository.save(parent)
+      return child
+    }
+
+    @Test
+    fun `a child of an archived parent reports its own active status`() {
+      archivedParentWithActiveChild()
+
+      summary("?status=ACTIVE")
+        .jsonPath("$.locations.content[?(@.localName == 'Active Child')]").exists()
+        .jsonPath("$.locations.content[?(@.localName == 'Active Child')].status").isEqualTo("ACTIVE")
+        .jsonPath("$.locations.content[?(@.localName == 'Active Child')].permanentlyInactive").isEqualTo(false)
+    }
+
+    @Test
+    fun `a child of an archived parent does not appear under the archived filter`() {
+      archivedParentWithActiveChild()
+
+      summary("?status=ARCHIVED").jsonPath("$.locations.content[?(@.localName == 'Active Child')]").doesNotExist()
+    }
+
+    @Test
+    fun `the archived parent itself still appears only under archived`() {
+      archivedParentWithActiveChild()
+
+      summary("?status=ACTIVE").jsonPath("$.locations.content[?(@.localName == 'Archived Parent')]").doesNotExist()
+      summary("?status=ARCHIVED").jsonPath("$.locations.content[?(@.localName == 'Archived Parent')]").exists()
     }
   }
 
