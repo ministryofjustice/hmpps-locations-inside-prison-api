@@ -97,6 +97,12 @@ class NonResidentialLocation(
 
   override fun hasDeactivatedParent() = false
 
+  // A non-residential location's status reflects only its own state, never an ancestor's. The base
+  // implementation walks up the tree and treats a location under an archived parent as archived,
+  // but non-residential children are independent of their parents (see MAPB-670, and
+  // hasDeactivatedParent above which already ignores inactive parents) - so consider only own status.
+  override fun isPermanentlyDeactivated() = isArchived()
+
   fun isHiddenFromList() = hiddenFromList
 
   /**
