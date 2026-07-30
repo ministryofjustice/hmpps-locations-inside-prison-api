@@ -241,10 +241,11 @@ class NonResidentialService(
    * or null when there is none. The name match is case-insensitive (in the query), and where more than one
    * candidate somehow shares the name the oldest is chosen so the outcome is deterministic.
    */
-  private fun findReinstatablePropertyLocation(prisonId: String, localName: String): NonResidentialLocation? = nonResidentialLocationRepository
-    .findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
-    .filter { it.canBeReinstatedAsPropertyLocation() }
-    .minByOrNull { it.whenCreated }
+private fun findReinstatablePropertyLocation(prisonId: String, localName: String): NonResidentialLocation? = nonResidentialLocationRepository
+  .findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
+  .asSequence()
+  .filter { it.canBeReinstatedAsPropertyLocation() }
+  .minWithOrNull(compareBy<NonResidentialLocation> { it.whenCreated }.thenBy { it.getKey() })
 
   /** Put the property designation back on [location], with the capacity from [request]. */
   private fun reinstatePropertyLocation(
