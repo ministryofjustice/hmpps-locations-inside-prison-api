@@ -174,15 +174,27 @@ class NonResidentialService(
   }
 
   /**
-   * Create a new top-level BOX property storage location with a generated code and a PROPERTY usage
-   * carrying the given capacity. Returns the slim property DTO for the caller plus the full
-   * non-residential DTO for the domain event (so NOMIS is notified of the new usage/capacity).
+   * Make a property storage location available in a prison, either by reinstating one or by creating a new one.
+   *
+   * Removing a property location only drops its PROPERTY usage - the location itself lives on - so a user who
+   * removes one and then adds it back by the same name is really asking for the original location again, not a
+   * second record. When such a location exists (see [NonResidentialLocation.canBeReinstatedAsPropertyLocation])
+   * its designation is put back with the newly requested capacity, keeping its id, code and history; otherwise
+   * a new top-level BOX location is created with a generated code. Reinstating also avoids the code drift a
+   * duplicate would suffer, since [generateUniqueNonResidentialCode] lengthens the code when the natural one
+   * is taken.
+   *
+   * [PropertyLocationWriteResult.reinstated] tells the caller which happened, so it can report the right
+   * status and raise an amended rather than a created event - NOMIS already knows about a reinstated location.
    */
   @Transactional
   fun createPropertyLocation(
     prisonId: String,
     request: CreatePropertyLocationRequest,
-  ): Pair<PropertyLocationDto, NonResidentialLocationDTO> {
+  ): PropertyLocationWriteResult {
+    findReinstatablePropertyLocation(prisonId, request.localName)
+      ?.let { return reinstatePropertyLocation(it, request) }
+
     validateLocalNameNotDuplicated(prisonId, request.localName)
 
     val code = generateUniqueNonResidentialCode(prisonId, request.localName)
@@ -221,7 +233,41 @@ class NonResidentialService(
     commonLocationService.trackLocationUpdate(created, "Created Property Location")
     linkedTransaction.txEndTime = LocalDateTime.now(clock)
 
-    return created.toPropertyLocationDto() to created.toNonResidentialDto()
+    return PropertyLocationWriteResult(created.toPropertyLocationDto(), created.toNonResidentialDto(), reinstated = false)
+  }
+
+  /**
+   * The location in [prisonId] named [localName] whose property designation was removed and can be put back,
+   * or null when there is none. The name match is case-insensitive (in the query), and where more than one
+   * candidate somehow shares the name the oldest is chosen so the outcome is deterministic.
+   */
+  private fun findReinstatablePropertyLocation(prisonId: String, localName: String): NonResidentialLocation? = nonResidentialLocationRepository
+    .findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
+    .asSequence()
+    .filter { it.canBeReinstatedAsPropertyLocation() }
+    .minWithOrNull(compareBy<NonResidentialLocation> { it.whenCreated }.thenBy { it.getKey() })
+
+  /** Put the property designation back on [location], with the capacity from [request]. */
+  private fun reinstatePropertyLocation(
+    location: NonResidentialLocation,
+    request: CreatePropertyLocationRequest,
+  ): PropertyLocationWriteResult {
+    val username = commonLocationService.getUsername()
+    val linkedTransaction = commonLocationService.createLinkedTransaction(
+      prisonId = location.prisonId,
+      TransactionType.LOCATION_UPDATE_NON_RESI,
+      "Reinstate property designation on ${location.getKey()}",
+    )
+
+    // Records the usage coming back (and any capacity change) in history; the location was not created now,
+    // so no LOCATION_CREATED history is added.
+    location.setPropertyCapacity(request.capacity, username, clock, linkedTransaction)
+
+    log.info("Property location ${location.id} reinstated in ${location.prisonId}")
+    commonLocationService.trackLocationUpdate(location, "Reinstated Property Location")
+    linkedTransaction.txEndTime = LocalDateTime.now(clock)
+
+    return PropertyLocationWriteResult(location.toPropertyLocationDto(), location.toNonResidentialDto(), reinstated = true)
   }
 
   /**
@@ -662,6 +708,18 @@ class NonResidentialService(
     return NonResidentialSummary(prisonId = prisonId, locations = locations)
   }
 }
+
+/**
+ * The outcome of making a property storage location available: the slim [propertyLocation] DTO for the
+ * caller, the full [location] DTO for the domain event, and whether an existing location's designation was
+ * [reinstated] rather than a new location created. The caller uses [reinstated] to report the right status and
+ * to raise an amended rather than a created event.
+ */
+data class PropertyLocationWriteResult(
+  val propertyLocation: PropertyLocationDto,
+  val location: NonResidentialLocationDTO,
+  val reinstated: Boolean,
+)
 
 @Schema(description = "Non Residential Summary")
 @JsonInclude(JsonInclude.Include.NON_NULL)
