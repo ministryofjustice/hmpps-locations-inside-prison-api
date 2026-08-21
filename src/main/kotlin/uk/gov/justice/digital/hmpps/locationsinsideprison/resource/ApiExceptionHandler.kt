@@ -19,6 +19,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import org.springframework.web.reactive.function.client.WebClientResponseException
 import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NotificationGroup
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
 import java.util.UUID
 
@@ -350,6 +351,21 @@ class ApiExceptionHandler {
           status = HttpStatus.NOT_FOUND,
           errorCode = ErrorCode.LocationNotFound,
           userMessage = "Prison not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(PrisonNotificationMailboxNotFoundException::class)
+  fun handlePrisonNotificationMailboxNotFound(e: PrisonNotificationMailboxNotFoundException): ResponseEntity<ErrorResponse> {
+    log.debug("Prison notification mailbox not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.PrisonNotificationMailboxNotFound,
+          userMessage = "Notification mailbox not found: ${e.message}",
           developerMessage = e.message,
         ),
       )
@@ -798,6 +814,7 @@ class PrisonNotFoundException(id: String) : Exception("There is no prison found 
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
 class TransactionNotFoundException(txId: UUID) : Exception("There is no transaction found for txId = $txId")
 class LocationPrefixNotFoundException(id: String) : Exception("Location prefix not found for $id")
+class PrisonNotificationMailboxNotFoundException(prisonId: String, notificationGroup: NotificationGroup) : Exception("There is no notification mailbox found for prisonId = $prisonId, notificationGroup = $notificationGroup")
 class SignedOperationCapacityNotFoundException(prisonId: String) : Exception("There is no signed operation capacity found for prison ID = $prisonId")
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class ReasonForDeactivationMustBeProvidedException(key: String) : Exception("De-activating location $key requires a reason when using OTHER reason type")
