@@ -56,6 +56,8 @@ class PrisonNotificationMailboxService(
     }
 
     prisonNotificationMailboxRepository.deleteByPrisonIdAndNotificationGroup(prisonId, notificationGroup)
+    // Hibernate flushes inserts before deletes regardless of call order, so without this the re-added rows can collide with the not-yet-deleted old ones
+    prisonNotificationMailboxRepository.flush()
 
     val updatedBy = authenticationHolder.username ?: SYSTEM_USERNAME
     val now = LocalDateTime.now(clock)
