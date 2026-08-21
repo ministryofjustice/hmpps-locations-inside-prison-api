@@ -217,6 +217,31 @@ class PrisonNotificationMailboxResourceTest : SqsIntegrationTestBase() {
             JsonCompareMode.STRICT,
           )
       }
+
+      @Test
+      fun `can replace notification mailbox when new list overlaps with existing addresses`() {
+        webTestClient.put().uri("/prison-configuration/$prisonId/notification-mailboxes/CERT_ADMIN")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .bodyValue(mapOf("emailAddresses" to listOf("first@justice.gov.uk", "second@justice.gov.uk")))
+          .exchange()
+          .expectStatus().isOk
+
+        webTestClient.put().uri("/prison-configuration/$prisonId/notification-mailboxes/CERT_ADMIN")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .bodyValue(mapOf("emailAddresses" to listOf("first@justice.gov.uk")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "prisonId": "$prisonId",
+                "notificationGroup": "CERT_ADMIN",
+                "emailAddresses": ["first@justice.gov.uk"]
+              }
+            """.trimIndent(),
+            JsonCompareMode.STRICT,
+          )
+      }
     }
   }
 
