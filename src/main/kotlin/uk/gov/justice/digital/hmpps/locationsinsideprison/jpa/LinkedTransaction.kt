@@ -113,4 +113,6 @@ enum class TransactionType(val description: String) {
   REJECT_CERTIFICATION_REQUEST("Reject request"),
   WITHDRAW_CERTIFICATION_REQUEST("Withdraw request"),
   CERTIFICATE_BASELINE("Certificate baseline"),
+  NOTIFICATION_MAILBOX_UPDATE("Notification mailbox updated"),
+  NOTIFICATION_MAILBOX_DELETE("Notification mailbox deleted"),
 }

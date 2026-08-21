@@ -71,8 +71,12 @@ dps-gradle-spring-boot-suppressions.xml
 .editorconfig
 sonar-project.properties
 
-#Helm
+# Helm
 **/Chart.lock
 
-#Synk
+# Synk
 .snyk
+
+# VSCode
+bin
+.vscode

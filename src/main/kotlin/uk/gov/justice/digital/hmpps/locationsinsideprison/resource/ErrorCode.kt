@@ -52,4 +52,5 @@ enum class ErrorCode(val errorCode: Int) {
   LocationCannotBeUnarchived(143),
   LocationCannotBeHiddenFromList(144),
   NonResidentialParentCannotBeArchived(145),
+  PrisonNotificationMailboxNotFound(146),
 }
