@@ -18,7 +18,7 @@ class PrisonNotificationMailbox(
   @Column(name = "id", updatable = false, nullable = false)
   val id: UUID? = null,
 
-  val prisonId: String,
+  val prisonId: String? = null,
 
   @Enumerated(EnumType.STRING)
   val notificationGroup: NotificationGroup,

@@ -29,7 +29,7 @@ class PrisonNotificationMailboxRepositoryTest : TestBase() {
     repository.deleteAll()
   }
 
-  private fun mailbox(email: String, group: NotificationGroup = NotificationGroup.CERT_ADMIN, prisonId: String = testPrisonId) = PrisonNotificationMailbox(
+  private fun mailbox(email: String, group: NotificationGroup = NotificationGroup.CERT_ADMIN, prisonId: String? = testPrisonId) = PrisonNotificationMailbox(
     prisonId = prisonId,
     notificationGroup = group,
     emailAddress = email,
@@ -56,11 +56,31 @@ class PrisonNotificationMailboxRepositoryTest : TestBase() {
   }
 
   @Test
+  fun `returns default mailboxes when prison id is null`() {
+    repository.save(mailbox("default.viewer@justice.gov.uk", NotificationGroup.CERT_VIEWER, prisonId = null))
+    repository.save(mailbox("prison.viewer@justice.gov.uk", NotificationGroup.CERT_VIEWER))
+
+    val result = repository.findByPrisonIdIsNullAndNotificationGroup(NotificationGroup.CERT_VIEWER)
+
+    assertThat(result).hasSize(1)
+    assertThat(result[0].emailAddress).isEqualTo("default.viewer@justice.gov.uk")
+  }
+
+  @Test
   fun `rejects duplicate email address for the same prison and group regardless of case`() {
     repository.saveAndFlush(mailbox("duplicate@justice.gov.uk"))
 
     assertThatThrownBy {
       repository.saveAndFlush(mailbox("DUPLICATE@justice.gov.uk"))
+    }.isInstanceOf(DataIntegrityViolationException::class.java)
+  }
+
+  @Test
+  fun `rejects duplicate default email address for the same group regardless of case`() {
+    repository.saveAndFlush(mailbox("duplicate.default@justice.gov.uk", prisonId = null))
+
+    assertThatThrownBy {
+      repository.saveAndFlush(mailbox("DUPLICATE.DEFAULT@justice.gov.uk", prisonId = null))
     }.isInstanceOf(DataIntegrityViolationException::class.java)
   }
 
@@ -73,6 +93,17 @@ class PrisonNotificationMailboxRepositoryTest : TestBase() {
 
     assertThat(deleted).hasSize(2)
     assertThat(repository.findByPrisonIdAndNotificationGroup(testPrisonId, NotificationGroup.CERT_ADMIN)).isEmpty()
+  }
+
+  @Test
+  fun `deletes all default mailboxes for a group`() {
+    repository.save(mailbox("one.default@justice.gov.uk", prisonId = null))
+    repository.save(mailbox("two.default@justice.gov.uk", prisonId = null))
+
+    val deleted = repository.deleteByPrisonIdIsNullAndNotificationGroup(NotificationGroup.CERT_ADMIN)
+
+    assertThat(deleted).hasSize(2)
+    assertThat(repository.findByPrisonIdIsNullAndNotificationGroup(NotificationGroup.CERT_ADMIN)).isEmpty()
   }
 
   private fun assertThatThrownBy(block: () -> Unit) = org.assertj.core.api.Assertions.assertThatThrownBy(block)

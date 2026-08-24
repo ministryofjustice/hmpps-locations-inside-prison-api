@@ -10,5 +10,9 @@ import java.util.UUID
 interface PrisonNotificationMailboxRepository : JpaRepository<PrisonNotificationMailbox, UUID> {
   fun findByPrisonIdAndNotificationGroup(prisonId: String, notificationGroup: NotificationGroup): List<PrisonNotificationMailbox>
 
+  fun findByPrisonIdIsNullAndNotificationGroup(notificationGroup: NotificationGroup): List<PrisonNotificationMailbox>
+
   fun deleteByPrisonIdAndNotificationGroup(prisonId: String, notificationGroup: NotificationGroup): List<PrisonNotificationMailbox>
+
+  fun deleteByPrisonIdIsNullAndNotificationGroup(notificationGroup: NotificationGroup): List<PrisonNotificationMailbox>
 }
