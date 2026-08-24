@@ -814,7 +814,13 @@ class PrisonNotFoundException(id: String) : Exception("There is no prison found 
 class LocationNotFoundException(id: String) : Exception("There is no location found for ID = $id")
 class TransactionNotFoundException(txId: UUID) : Exception("There is no transaction found for txId = $txId")
 class LocationPrefixNotFoundException(id: String) : Exception("Location prefix not found for $id")
-class PrisonNotificationMailboxNotFoundException(prisonId: String, notificationGroup: NotificationGroup) : Exception("There is no notification mailbox found for prisonId = $prisonId, notificationGroup = $notificationGroup")
+class PrisonNotificationMailboxNotFoundException private constructor(message: String) : Exception(message) {
+  constructor(prisonId: String, notificationGroup: NotificationGroup) : this("There is no notification mailbox found for prisonId = $prisonId, notificationGroup = $notificationGroup")
+
+  companion object {
+    fun default(notificationGroup: NotificationGroup) = PrisonNotificationMailboxNotFoundException("There is no default notification mailbox found for notificationGroup = $notificationGroup")
+  }
+}
 class SignedOperationCapacityNotFoundException(prisonId: String) : Exception("There is no signed operation capacity found for prison ID = $prisonId")
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class ReasonForDeactivationMustBeProvidedException(key: String) : Exception("De-activating location $key requires a reason when using OTHER reason type")

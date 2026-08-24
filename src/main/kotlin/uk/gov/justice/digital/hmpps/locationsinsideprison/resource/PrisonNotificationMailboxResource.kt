@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NotificationGroup
@@ -34,6 +35,105 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.UpdateNotifica
 class PrisonNotificationMailboxResource(
   private val prisonNotificationMailboxService: PrisonNotificationMailboxService,
 ) {
+
+  @GetMapping("/notification-mailboxes/defaults/{notificationGroup}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_LOCATION_CONFIG_ADMIN')")
+  @Operation(
+    summary = "Get default notification mailbox email addresses",
+    description = "Requires role LOCATION_CONFIG_ADMIN",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns default notification mailbox",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CONFIG_ADMIN role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "No default notification mailbox found for this notification group",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getDefaultNotificationMailbox(
+    @Schema(description = "Notification group", example = "CERT_VIEWER", required = true)
+    @PathVariable
+    notificationGroup: NotificationGroup,
+  ) = prisonNotificationMailboxService.getDefaultMailboxes(notificationGroup)
+
+  @PutMapping("/notification-mailboxes/defaults/{notificationGroup}")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_LOCATION_CONFIG_ADMIN')")
+  @Operation(
+    summary = "Replace all default notification mailbox email addresses",
+    description = "Overwrites any existing default email addresses for this notification group. Requires role LOCATION_CONFIG_ADMIN",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns updated default notification mailbox",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CONFIG_ADMIN role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun replaceDefaultNotificationMailbox(
+    @Schema(description = "Notification group", example = "CERT_VIEWER", required = true)
+    @PathVariable
+    notificationGroup: NotificationGroup,
+    @RequestBody @Valid
+    request: UpdateNotificationMailboxRequest,
+  ) = prisonNotificationMailboxService.replaceDefaultMailboxes(notificationGroup, request.emailAddresses)
+
+  @DeleteMapping("/notification-mailboxes/defaults/{notificationGroup}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  @PreAuthorize("hasRole('ROLE_LOCATION_CONFIG_ADMIN')")
+  @Operation(
+    summary = "Delete all default notification mailbox email addresses",
+    description = "Requires role LOCATION_CONFIG_ADMIN",
+    responses = [
+      ApiResponse(
+        responseCode = "204",
+        description = "Default notification mailbox deleted",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CONFIG_ADMIN role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "No default notification mailbox found for this notification group",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun deleteDefaultNotificationMailbox(
+    @Schema(description = "Notification group", example = "CERT_VIEWER", required = true)
+    @PathVariable
+    notificationGroup: NotificationGroup,
+  ) = prisonNotificationMailboxService.deleteDefaultMailboxes(notificationGroup)
 
   @GetMapping("/{prisonId}/notification-mailboxes/{notificationGroup}")
   @ResponseStatus(HttpStatus.OK)
@@ -80,7 +180,10 @@ class PrisonNotificationMailboxResource(
     @Schema(description = "Notification group", example = "CERT_ADMIN", required = true)
     @PathVariable
     notificationGroup: NotificationGroup,
-  ) = prisonNotificationMailboxService.getMailboxes(prisonId, notificationGroup)
+    @Schema(description = "Include default mailbox when no prison-specific mailbox exists", example = "true")
+    @RequestParam(defaultValue = "true")
+    includeDefault: Boolean,
+  ) = prisonNotificationMailboxService.getMailboxes(prisonId, notificationGroup, includeDefault)
 
   @PutMapping("/{prisonId}/notification-mailboxes/{notificationGroup}")
   @ResponseStatus(HttpStatus.OK)

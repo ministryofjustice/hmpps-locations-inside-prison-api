@@ -45,6 +45,7 @@ class PrisonNotificationMailboxServiceTest {
   fun setUp() {
     whenever(authenticationHolder.username).thenReturn("TEST_USER")
     whenever(linkedTransactionRepository.save(any<LinkedTransaction>())).thenReturn(Mockito.mock())
+    whenever(prisonNotificationMailboxRepository.findByPrisonIdIsNullAndNotificationGroup(any())).thenReturn(emptyList())
     whenever(activePrisonService.getPrisonConfiguration(any())).thenReturn(
       PrisonConfiguration(id = prisonId, whenUpdated = LocalDateTime.now(clock), updatedBy = "TEST_USER"),
     )
@@ -69,6 +70,31 @@ class PrisonNotificationMailboxServiceTest {
     val result = service.getMailboxes(prisonId, NotificationGroup.CERT_ADMIN)
 
     assertThat(result.emailAddresses).containsExactly(secretEmail)
+    assertThat(result.source).isEqualTo(NotificationMailboxSource.PRISON)
+  }
+
+  @Test
+  fun `returns default email addresses when no prison mailboxes exist`() {
+    whenever(prisonNotificationMailboxRepository.findByPrisonIdAndNotificationGroup(prisonId, NotificationGroup.CERT_VIEWER)).thenReturn(emptyList())
+    whenever(prisonNotificationMailboxRepository.findByPrisonIdIsNullAndNotificationGroup(NotificationGroup.CERT_VIEWER)).thenReturn(
+      listOf(
+        PrisonNotificationMailbox(prisonId = null, notificationGroup = NotificationGroup.CERT_VIEWER, emailAddress = secretEmail, whenUpdated = LocalDateTime.now(clock), updatedBy = "TEST_USER"),
+      ),
+    )
+
+    val result = service.getMailboxes(prisonId, NotificationGroup.CERT_VIEWER)
+
+    assertThat(result.prisonId).isEqualTo(prisonId)
+    assertThat(result.emailAddresses).containsExactly(secretEmail)
+    assertThat(result.source).isEqualTo(NotificationMailboxSource.DEFAULT)
+  }
+
+  @Test
+  fun `does not return default email addresses when includeDefault is false`() {
+    whenever(prisonNotificationMailboxRepository.findByPrisonIdAndNotificationGroup(prisonId, NotificationGroup.CERT_VIEWER)).thenReturn(emptyList())
+
+    assertThatThrownBy { service.getMailboxes(prisonId, NotificationGroup.CERT_VIEWER, includeDefault = false) }
+      .isInstanceOf(PrisonNotificationMailboxNotFoundException::class.java)
   }
 
   @Test
@@ -94,6 +120,18 @@ class PrisonNotificationMailboxServiceTest {
   }
 
   @Test
+  fun `replace default mailboxes stores rows without a prison id`() {
+    whenever(prisonNotificationMailboxRepository.saveAll(any<List<PrisonNotificationMailbox>>())).thenAnswer { it.arguments[0] }
+
+    val result = service.replaceDefaultMailboxes(NotificationGroup.CERT_VIEWER, listOf(secretEmail))
+
+    verify(prisonNotificationMailboxRepository).deleteByPrisonIdIsNullAndNotificationGroup(NotificationGroup.CERT_VIEWER)
+    assertThat(result.prisonId).isNull()
+    assertThat(result.emailAddresses).containsExactly(secretEmail)
+    assertThat(result.source).isEqualTo(NotificationMailboxSource.DEFAULT)
+  }
+
+  @Test
   fun `replace does not leak email addresses into linked transaction or telemetry`() {
     whenever(prisonNotificationMailboxRepository.saveAll(any<List<PrisonNotificationMailbox>>())).thenAnswer { it.arguments[0] }
 
@@ -114,6 +152,15 @@ class PrisonNotificationMailboxServiceTest {
 
     assertThatThrownBy { service.deleteMailboxes(prisonId, NotificationGroup.CERT_ADMIN) }
       .isInstanceOf(PrisonNotificationMailboxNotFoundException::class.java)
+  }
+
+  @Test
+  fun `delete default fails with a default-specific not found message when no mailboxes exist`() {
+    whenever(prisonNotificationMailboxRepository.findByPrisonIdIsNullAndNotificationGroup(NotificationGroup.CERT_VIEWER)).thenReturn(emptyList())
+
+    assertThatThrownBy { service.deleteDefaultMailboxes(NotificationGroup.CERT_VIEWER) }
+      .isInstanceOf(PrisonNotificationMailboxNotFoundException::class.java)
+      .hasMessage("There is no default notification mailbox found for notificationGroup = CERT_VIEWER")
   }
 
   @Test

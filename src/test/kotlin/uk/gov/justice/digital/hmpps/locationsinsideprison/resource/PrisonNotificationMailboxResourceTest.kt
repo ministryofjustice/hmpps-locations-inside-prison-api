@@ -116,11 +116,59 @@ class PrisonNotificationMailboxResourceTest : SqsIntegrationTestBase() {
               {
                 "prisonId": "$prisonId",
                 "notificationGroup": "CERT_ADMIN",
-                "emailAddresses": ["cert.admin@justice.gov.uk"]
+                "emailAddresses": ["cert.admin@justice.gov.uk"],
+                "source": "PRISON"
               }
             """.trimIndent(),
             JsonCompareMode.STRICT,
           )
+      }
+
+      @Test
+      fun `can get default notification mailbox when no prison-specific mailbox exists`() {
+        prisonNotificationMailboxRepository.save(
+          PrisonNotificationMailbox(
+            prisonId = null,
+            notificationGroup = NotificationGroup.CERT_VIEWER,
+            emailAddress = "default.viewer@justice.gov.uk",
+            whenUpdated = LocalDateTime.now(clock),
+            updatedBy = "TEST",
+          ),
+        )
+
+        webTestClient.get().uri("/prison-configuration/$prisonId/notification-mailboxes/CERT_VIEWER")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().json(
+            """
+              {
+                "prisonId": "$prisonId",
+                "notificationGroup": "CERT_VIEWER",
+                "emailAddresses": ["default.viewer@justice.gov.uk"],
+                "source": "DEFAULT"
+              }
+            """.trimIndent(),
+            JsonCompareMode.STRICT,
+          )
+      }
+
+      @Test
+      fun `can exclude default notification mailbox when no prison-specific mailbox exists`() {
+        prisonNotificationMailboxRepository.save(
+          PrisonNotificationMailbox(
+            prisonId = null,
+            notificationGroup = NotificationGroup.CERT_VIEWER,
+            emailAddress = "default.viewer@justice.gov.uk",
+            whenUpdated = LocalDateTime.now(clock),
+            updatedBy = "TEST",
+          ),
+        )
+
+        webTestClient.get().uri("/prison-configuration/$prisonId/notification-mailboxes/CERT_VIEWER?includeDefault=false")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().isNotFound
       }
     }
   }
@@ -211,7 +259,8 @@ class PrisonNotificationMailboxResourceTest : SqsIntegrationTestBase() {
               {
                 "prisonId": "$prisonId",
                 "notificationGroup": "CERT_ADMIN",
-                "emailAddresses": ["second@justice.gov.uk", "third@justice.gov.uk"]
+                "emailAddresses": ["second@justice.gov.uk", "third@justice.gov.uk"],
+                "source": "PRISON"
               }
             """.trimIndent(),
             JsonCompareMode.STRICT,
@@ -236,12 +285,151 @@ class PrisonNotificationMailboxResourceTest : SqsIntegrationTestBase() {
               {
                 "prisonId": "$prisonId",
                 "notificationGroup": "CERT_ADMIN",
-                "emailAddresses": ["first@justice.gov.uk"]
+                "emailAddresses": ["first@justice.gov.uk"],
+                "source": "PRISON"
               }
             """.trimIndent(),
             JsonCompareMode.STRICT,
           )
       }
+    }
+  }
+
+  @DisplayName("/prison-configuration/notification-mailboxes/defaults/{notificationGroup}")
+  @Nested
+  inner class DefaultNotificationMailboxTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `get access forbidden when no authority`() {
+        webTestClient.get().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `get access forbidden when no role`() {
+        webTestClient.get().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `get access forbidden with wrong role`() {
+        webTestClient.get().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `put access forbidden when no authority`() {
+        webTestClient.put().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+          .bodyValue(mapOf("emailAddresses" to listOf("default.viewer@justice.gov.uk")))
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `put access forbidden when no role`() {
+        webTestClient.put().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+          .headers(setAuthorisation(roles = listOf()))
+          .bodyValue(mapOf("emailAddresses" to listOf("default.viewer@justice.gov.uk")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `put access forbidden with wrong role`() {
+        webTestClient.put().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .bodyValue(mapOf("emailAddresses" to listOf("default.viewer@justice.gov.uk")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `delete access forbidden when no authority`() {
+        webTestClient.delete().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `delete access forbidden when no role`() {
+        webTestClient.delete().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `delete access forbidden with wrong role`() {
+        webTestClient.delete().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Test
+    fun `can replace and get default notification mailbox`() {
+      webTestClient.put().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+        .bodyValue(mapOf("emailAddresses" to listOf("default.viewer@justice.gov.uk")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().json(
+          """
+            {
+              "notificationGroup": "CERT_VIEWER",
+              "emailAddresses": ["default.viewer@justice.gov.uk"],
+              "source": "DEFAULT"
+            }
+          """.trimIndent(),
+          JsonCompareMode.STRICT,
+        )
+
+      webTestClient.get().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().json(
+          """
+            {
+              "notificationGroup": "CERT_VIEWER",
+              "emailAddresses": ["default.viewer@justice.gov.uk"],
+              "source": "DEFAULT"
+            }
+          """.trimIndent(),
+          JsonCompareMode.STRICT,
+        )
+    }
+
+    @Test
+    fun `can delete default notification mailbox`() {
+      prisonNotificationMailboxRepository.save(
+        PrisonNotificationMailbox(
+          prisonId = null,
+          notificationGroup = NotificationGroup.CERT_VIEWER,
+          emailAddress = "default.viewer@justice.gov.uk",
+          whenUpdated = LocalDateTime.now(clock),
+          updatedBy = "TEST",
+        ),
+      )
+
+      webTestClient.delete().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+        .exchange()
+        .expectStatus().isNoContent
+
+      webTestClient.get().uri("/prison-configuration/notification-mailboxes/defaults/CERT_VIEWER")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+        .exchange()
+        .expectStatus().isNotFound
     }
   }
 
