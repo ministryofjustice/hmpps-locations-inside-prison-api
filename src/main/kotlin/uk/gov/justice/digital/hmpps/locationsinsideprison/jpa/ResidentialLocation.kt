@@ -632,15 +632,28 @@ open class ResidentialLocation(
     return this
   }
 
-  fun toCellCertificateLocation(approvalRequest: CertificationApprovalRequest, currentCellCertificate: CellCertificate?): CellCertificateLocation {
+  /**
+   * [certifiedCapacityOverrides], keyed by cell path hierarchy, supplies the certified capacity for cells
+   * that came from a cell certificate upload. Ingestion no longer forces the uploaded working (or max)
+   * capacity onto the location, so the certificate must record the uploaded values rather than derive
+   * them from current state. While overrides are in play, structural locations total their own certificate
+   * rows so wing/landing figures agree with the cells listed beneath them.
+   */
+  fun toCellCertificateLocation(
+    approvalRequest: CertificationApprovalRequest,
+    currentCellCertificate: CellCertificate?,
+    certifiedCapacityOverrides: Map<String, CertifiedCapacity> = emptyMap(),
+  ): CellCertificateLocation {
     val subLocations: List<CellCertificateLocation> = getResidentialLocationsBelowThisLevel()
       .filter { !it.isDraft() && (it.isStructural() || it.isCell() || it.isConvertedCell()) }
-      .map { it.toCellCertificateLocation(approvalRequest, currentCellCertificate) }
+      .map { it.toCellCertificateLocation(approvalRequest, currentCellCertificate, certifiedCapacityOverrides) }
 
     val locationInExistingCertificate = currentCellCertificate?.findLocationInCertificate(getPathHierarchy())
     // A cell certificate upload re-certifies every location directly from current state, so always build
     // fresh rows rather than cloning the previous certificate (which would keep stale capacities).
     if (approvalRequest is CellCertificateUploadApprovalRequest || approvalLocationIsPartOfHierarchy(approvalRequest) || locationInExistingCertificate == null) {
+      val certifiedCapacity = certifiedCapacityOverrides[getPathHierarchy()]
+      val totalFromCertificateRows = certifiedCapacityOverrides.isNotEmpty() && isStructural()
       return CellCertificateLocation(
         locationType = getDerivedLocationType(),
         locationCode = getLocationCode(),
@@ -657,13 +670,17 @@ open class ResidentialLocation(
         } else {
           null
         },
-        maxCapacity = calcMaxCapacity(),
-        workingCapacity = if (approvalRequest is DraftChangeApprovalRequest) {
+        maxCapacity = certifiedCapacity?.maxCapacity
+          ?: if (totalFromCertificateRows) subLocations.sumOf { it.maxCapacity ?: 0 } else calcMaxCapacity(),
+        workingCapacity = certifiedCapacity?.workingCapacity ?: if (totalFromCertificateRows) {
+          subLocations.sumOf { it.workingCapacity ?: 0 }
+        } else if (approvalRequest is DraftChangeApprovalRequest) {
           getWorkingCapacityIgnoringInactiveStatus()
         } else {
           calcWorkingCapacityForCertificate()
         },
-        certifiedNormalAccommodation = calcCertifiedNormalAccommodation(),
+        certifiedNormalAccommodation = certifiedCapacity?.certifiedNormalAccommodation
+          ?: if (totalFromCertificateRows) subLocations.sumOf { it.certifiedNormalAccommodation ?: 0 } else calcCertifiedNormalAccommodation(),
         usedForTypes = getUsedForValuesAsCSV(),
         accommodationTypes = getAccommodationTypesAsCSV(),
         specialistCellTypes = getSpecialistCellTypesAsCSV(),

@@ -135,6 +135,17 @@ open class CellCertificate(
   )
 }
 
+/**
+ * The certified capacity to record for a cell, supplied by a cell certificate upload rather than derived
+ * from the cell's current state. Ingestion never forces a cell's working (or max) capacity, so the
+ * certificate has to be told what the uploaded certificate said.
+ */
+data class CertifiedCapacity(
+  val maxCapacity: Int,
+  val workingCapacity: Int,
+  val certifiedNormalAccommodation: Int,
+)
+
 @Entity
 open class CellCertificateLocation(
   @Id

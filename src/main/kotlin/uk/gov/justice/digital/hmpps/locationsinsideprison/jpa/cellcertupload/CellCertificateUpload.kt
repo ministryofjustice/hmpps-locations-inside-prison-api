@@ -59,6 +59,10 @@ open class CellCertificateUpload(
   @Column(nullable = false)
   open var failedRecords: Int = 0,
 
+  /** Rows whose certified capacity differs from the capacity the location kept, needing review. */
+  @Column(nullable = false)
+  open var discrepancyRecords: Int = 0,
+
   open var reasonForChange: String? = null,
 
   /** Set once the certificate has been generated from this upload (later step). */
@@ -83,6 +87,7 @@ open class CellCertificateUpload(
     processedRecords = processedRecords,
     skippedRecords = skippedRecords,
     failedRecords = failedRecords,
+    discrepancyRecords = discrepancyRecords,
     requestedBy = requestedBy,
     requestedDate = requestedDate,
     startTime = startTime,
@@ -133,6 +138,18 @@ open class CellCertificateUploadLocation(
 
   open var previousInCellSanitation: Boolean? = null,
 
+  /** The certificate holds the uploaded working capacity but the location kept its own. */
+  @Column(nullable = false)
+  open var workingCapacityMismatch: Boolean = false,
+
+  /** The certificate holds the uploaded max capacity but the location kept its own. */
+  @Column(nullable = false)
+  open var maxCapacityMismatch: Boolean = false,
+
+  /** The certificate holds the uploaded CNA but the location kept its own. */
+  @Column(nullable = false)
+  open var certifiedNormalAccommodationMismatch: Boolean = false,
+
   open var message: String? = null,
 
   open var processedDate: LocalDateTime? = null,
@@ -151,6 +168,22 @@ open class CellCertificateUploadLocation(
     this.previousCellMark = previousCellMark
     this.previousInCellSanitation = previousInCellSanitation
   }
+
+  /**
+   * Records that the uploaded certified capacity could not be (or must not be) applied to the location,
+   * so the certificate and the location now hold different values for review.
+   */
+  fun recordDiscrepancy(
+    workingCapacityMismatch: Boolean,
+    maxCapacityMismatch: Boolean,
+    certifiedNormalAccommodationMismatch: Boolean,
+  ) {
+    this.workingCapacityMismatch = workingCapacityMismatch
+    this.maxCapacityMismatch = maxCapacityMismatch
+    this.certifiedNormalAccommodationMismatch = certifiedNormalAccommodationMismatch
+  }
+
+  fun hasDiscrepancy() = workingCapacityMismatch || maxCapacityMismatch || certifiedNormalAccommodationMismatch
 
   fun markProcessed(processedDate: LocalDateTime) {
     this.status = CellCertificateUploadLocationStatus.PROCESSED
@@ -190,6 +223,9 @@ open class CellCertificateUploadLocation(
     previousCertifiedNormalAccommodation = previousCertifiedNormalAccommodation,
     previousCellMark = previousCellMark,
     previousInCellSanitation = previousInCellSanitation,
+    workingCapacityMismatch = workingCapacityMismatch,
+    maxCapacityMismatch = maxCapacityMismatch,
+    certifiedNormalAccommodationMismatch = certifiedNormalAccommodationMismatch,
   )
 
   override fun toString(): String = "CellCertificateUploadLocation(locationKey='$locationKey', status=$status)"
