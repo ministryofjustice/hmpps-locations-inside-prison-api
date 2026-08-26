@@ -53,6 +53,9 @@ data class CellCertificateUploadDto(
   @param:Schema(description = "ID of the cell certificate generated from this upload, set once complete")
   val cellCertificateId: UUID? = null,
 
+  @param:Schema(description = "ID of the approval request this upload raised, set once complete")
+  val certificationApprovalRequestId: UUID? = null,
+
   @param:Schema(description = "Reason supplied for the change, where required")
   val reasonForChange: String? = null,
 

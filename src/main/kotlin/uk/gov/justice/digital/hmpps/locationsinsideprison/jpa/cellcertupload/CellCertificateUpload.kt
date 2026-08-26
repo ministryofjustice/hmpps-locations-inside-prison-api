@@ -68,6 +68,12 @@ open class CellCertificateUpload(
   /** Set once the certificate has been generated from this upload (later step). */
   open var cellCertificateId: UUID? = null,
 
+  /**
+   * The approval request this upload raised when it finished. Lets the cell certificate import request
+   * details page find the ingestion behind it, which nothing else records.
+   */
+  open var certificationApprovalRequestId: UUID? = null,
+
   @SortNatural
   @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "cell_certificate_upload_id", nullable = false)
@@ -93,6 +99,7 @@ open class CellCertificateUpload(
     startTime = startTime,
     endTime = endTime,
     cellCertificateId = cellCertificateId,
+    certificationApprovalRequestId = certificationApprovalRequestId,
     reasonForChange = reasonForChange,
     locations = if (includeLocations) locations.map { it.toDto() } else null,
   )

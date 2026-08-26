@@ -266,6 +266,21 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(CellCertificateUploadForApprovalRequestNotFoundException::class)
+  fun handleCellCertificateUploadForApprovalRequestNotFoundException(e: CellCertificateUploadForApprovalRequestNotFoundException): ResponseEntity<ErrorResponse> {
+    log.debug("Cell certificate upload for approval request not found exception caught: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.CellCertificateUploadNotFound,
+          userMessage = "Cell certificate upload not found: ${e.message}",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(CellCertificateUploadNotFoundException::class)
   fun handleCellCertificateUploadNotFoundException(e: CellCertificateUploadNotFoundException): ResponseEntity<ErrorResponse> {
     log.debug("Cell certificate upload not found: {}", e.message)
@@ -860,3 +875,4 @@ class SpecialistCellTypeChangesDoNotRequireApprovalException(key: String) : Exce
 class UsedForTypesOnlyForNormalAccommodationException(key: String) : Exception("Used for types can only be set on normal accommodation cells - $key is not a normal accommodation cell")
 class CellCertificateUploadAlreadyInProgressException(prisonId: String) : Exception("A cell certificate upload is already in progress for prison $prisonId")
 class CellCertificateUploadNotFoundException(id: UUID) : Exception("Cell certificate upload with id $id not found")
+class CellCertificateUploadForApprovalRequestNotFoundException(approvalRequestId: UUID) : Exception("No cell certificate upload was raised by approval request $approvalRequestId")

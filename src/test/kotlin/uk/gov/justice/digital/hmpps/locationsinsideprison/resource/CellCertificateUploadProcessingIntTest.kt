@@ -81,6 +81,8 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     TransactionTemplate(transactionManager).execute {
       val upload = cellCertificateUploadRepository.findAll().first()
       assertThat(upload.cellCertificateId).isNotNull()
+      // the import request details page finds the ingestion through this link
+      assertThat(upload.certificationApprovalRequestId).isNotNull()
       assertThat(upload.processedRecords).isEqualTo(2) // cell1 changed + inactive cell flagged
       assertThat(upload.skippedRecords).isEqualTo(1) // cell2 unchanged
       assertThat(upload.failedRecords).isEqualTo(0)
