@@ -19,6 +19,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.Cel
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateUploadRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestRequiresReasonForChangeException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificateUploadAlreadyInProgressException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificateUploadForApprovalRequestNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificateUploadNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateCapacityRequest
@@ -109,6 +110,15 @@ class CellCertificateUploadService(
   fun getCellCertificateUpload(uploadId: UUID): CellCertificateUploadDto = cellCertificateUploadRepository.findById(uploadId)
     .orElseThrow { CellCertificateUploadNotFoundException(uploadId) }
     .toDto(includeLocations = true)
+
+  /**
+   * Returns the upload behind an approval request, with its per-cell results, so the cell certificate import
+   * request details page can show what the ingestion did.
+   */
+  @Transactional(readOnly = true)
+  fun getCellCertificateUploadByApprovalRequest(approvalRequestId: UUID): CellCertificateUploadDto = cellCertificateUploadRepository.findByCertificationApprovalRequestId(approvalRequestId)
+    ?.toDto(includeLocations = true)
+    ?: throw CellCertificateUploadForApprovalRequestNotFoundException(approvalRequestId)
 
   private fun sendStartProcessingMessageAfterCommit(uploadId: UUID) {
     TransactionSynchronizationManager.registerSynchronization(

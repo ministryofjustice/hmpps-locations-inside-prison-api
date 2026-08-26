@@ -136,4 +136,37 @@ class CellCertificateUploadResource(
     @Schema(description = "Upload ID", example = "01912e1e-0000-7000-8000-000000000000", required = true)
     @PathVariable uploadId: UUID,
   ): CellCertificateUploadDto = cellCertificateUploadService.getCellCertificateUpload(uploadId)
+
+  @GetMapping("update-cell-certificate/by-approval-request/{approvalRequestId}")
+  // Called from the cell certificate import request details page, which is served under
+  // ROLE_LOCATION_CERTIFICATION, whereas the rest of this resource is ROLE_MAINTAIN_LOCATIONS.
+  @PreAuthorize("hasAnyRole('ROLE_MAINTAIN_LOCATIONS', 'ROLE_LOCATION_CERTIFICATION')")
+  @Operation(
+    summary = "Get the cell certificate upload behind an approval request, with its per-cell results",
+    description = "Returns the upload that raised the given certification approval request, plus each cell's " +
+      "result, so an approved initial cell certificate import can show what the ingestion did. " +
+      "Requires role MAINTAIN_LOCATIONS or LOCATION_CERTIFICATION.",
+    responses = [
+      ApiResponse(responseCode = "200", description = "Returns the upload and its per-cell results"),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS or LOCATION_CERTIFICATION role.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "404",
+        description = "No cell certificate upload was raised by this approval request",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getCellCertificateUploadByApprovalRequest(
+    @Schema(description = "Approval request ID", example = "01912e1e-0000-7000-8000-000000000000", required = true)
+    @PathVariable approvalRequestId: UUID,
+  ): CellCertificateUploadDto = cellCertificateUploadService.getCellCertificateUploadByApprovalRequest(approvalRequestId)
 }

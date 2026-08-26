@@ -350,6 +350,7 @@ class CellCertificateUploadProcessingService(
     )
 
     upload.cellCertificateId = cellCertificate.id
+    upload.certificationApprovalRequestId = approvalRequest.id
     upload.status = CellCertificateUploadStatus.FINISHED
     upload.endTime = now
     linkedTransaction.txEndTime = now

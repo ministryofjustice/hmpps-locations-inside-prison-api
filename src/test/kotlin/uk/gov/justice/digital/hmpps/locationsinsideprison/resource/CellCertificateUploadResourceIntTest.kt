@@ -268,6 +268,48 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
     }
 
     @Test
+    fun `finds the upload behind an approval request`() {
+      val approvalRequestId = java.util.UUID.randomUUID()
+      val row = CellCertificateUploadLocation(
+        locationKey = "MDI-Z-1-001",
+        maxCapacity = 2,
+        workingCapacity = 1,
+        certifiedNormalAccommodation = 2,
+      ).apply { markProcessed(LocalDateTime.now(clock)) }
+      val upload = saveUpload("MDI", CellCertificateUploadStatus.FINISHED, daysAgo = 0, rows = listOf(row))
+        .also {
+          it.certificationApprovalRequestId = approvalRequestId
+          cellCertificateUploadRepository.saveAndFlush(it)
+        }
+
+      webTestClient.get().uri("/locations/bulk/update-cell-certificate/by-approval-request/$approvalRequestId")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.id").isEqualTo(upload.id.toString())
+        .jsonPath("$.certificationApprovalRequestId").isEqualTo(approvalRequestId.toString())
+        .jsonPath("$.locations.length()").isEqualTo(1)
+        .jsonPath("$.locations[0].locationKey").isEqualTo("MDI-Z-1-001")
+    }
+
+    @Test
+    fun `returns 404 when no upload was raised by the approval request`() {
+      webTestClient.get().uri("/locations/bulk/update-cell-certificate/by-approval-request/${java.util.UUID.randomUUID()}")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isNotFound
+    }
+
+    @Test
+    fun `by-approval-request is forbidden without a suitable role`() {
+      webTestClient.get().uri("/locations/bulk/update-cell-certificate/by-approval-request/${java.util.UUID.randomUUID()}")
+        .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+        .exchange()
+        .expectStatus().isForbidden
+    }
+
+    @Test
     fun `returns 404 when the upload does not exist`() {
       webTestClient.get().uri("/locations/bulk/update-cell-certificate/upload/${java.util.UUID.randomUUID()}")
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS")))

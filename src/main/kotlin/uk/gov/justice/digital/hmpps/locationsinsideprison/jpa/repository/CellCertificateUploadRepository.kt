@@ -42,6 +42,8 @@ interface CellCertificateUploadRepository : JpaRepository<CellCertificateUpload,
   @Query("update CellCertificateUpload u set u.discrepancyRecords = u.discrepancyRecords + 1 where u.id = :id")
   fun incrementDiscrepancyRecords(@Param("id") id: UUID)
 
+  fun findByCertificationApprovalRequestId(certificationApprovalRequestId: UUID): CellCertificateUpload?
+
   fun findByPrisonIdOrderByRequestedDateDesc(prisonId: String): List<CellCertificateUpload>
 
   fun findByPrisonIdAndStatusInOrderByRequestedDateDesc(prisonId: String, statuses: Collection<CellCertificateUploadStatus>): List<CellCertificateUpload>
