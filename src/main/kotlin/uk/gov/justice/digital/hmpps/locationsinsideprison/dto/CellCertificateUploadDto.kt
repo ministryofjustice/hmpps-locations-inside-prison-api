@@ -31,6 +31,13 @@ data class CellCertificateUploadDto(
   @param:Schema(description = "Number of records that failed", example = "0", required = true)
   val failedRecords: Int,
 
+  @param:Schema(
+    description = "Number of cells whose certified capacity does not match the capacity the location kept, needing review",
+    example = "0",
+    required = true,
+  )
+  val discrepancyRecords: Int = 0,
+
   @param:Schema(description = "Who requested the upload", example = "MALEXANDER_GEN", required = true)
   val requestedBy: String,
 
@@ -97,4 +104,25 @@ data class CellCertificateUploadLocationDto(
 
   @param:Schema(description = "In-cell sanitation before the change")
   val previousInCellSanitation: Boolean? = null,
+
+  @param:Schema(
+    description = "The certificate holds the uploaded working capacity but the location kept its own, so the two do not match",
+    example = "false",
+    required = true,
+  )
+  val workingCapacityMismatch: Boolean = false,
+
+  @param:Schema(
+    description = "The certificate holds the uploaded max capacity but the location kept its own, so the two do not match",
+    example = "false",
+    required = true,
+  )
+  val maxCapacityMismatch: Boolean = false,
+
+  @param:Schema(
+    description = "The certificate holds the uploaded certified normal accommodation but the location kept its own, so the two do not match",
+    example = "false",
+    required = true,
+  )
+  val certifiedNormalAccommodationMismatch: Boolean = false,
 )

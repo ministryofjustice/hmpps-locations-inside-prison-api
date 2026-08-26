@@ -7,6 +7,7 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.TransactionDefinition
 import org.springframework.transaction.support.TransactionTemplate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CertifiedCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CellCertificateUploadApprovalRequest
@@ -20,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLoc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CertificationApprovalRequestRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.SignedOperationCapacityRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import java.time.Clock
 import java.time.Duration
 import java.time.LocalDateTime
@@ -167,7 +169,7 @@ class CellCertificateUploadProcessingService(
       if (cell == null) {
         row.markFailed(LOCATION_NOT_FOUND_MESSAGE, now)
       } else if (cell.isPermanentlyDeactivated()) {
-        row.markSkipped("Archived location", now)
+        row.markSkipped(ARCHIVED_LOCATION_MESSAGE, now)
       } else {
         val linkedTransaction = linkedTransactionRepository.findById(linkedTransactionId).orElseThrow()
         if (applyToCell(cell, row, requestedBy, now, linkedTransaction)) {
@@ -180,6 +182,9 @@ class CellCertificateUploadProcessingService(
     }
     cellCertificateUploadLocationRepository.save(row)
     incrementRunningCount(uploadId, row.status)
+    if (row.hasDiscrepancy()) {
+      cellCertificateUploadRepository.incrementDiscrepancyRecords(uploadId)
+    }
     return capacityChangedLocationId
   }
 
@@ -211,26 +216,54 @@ class CellCertificateUploadProcessingService(
     val oldCellMark = cell.getDoorCellMark()
     val oldInCellSanitation = cell.getSanitationOfCell()
 
-    val cna = row.certifiedNormalAccommodation ?: oldCertifiedNormalAccommodation ?: 0
+    // An ingestion never moves the prison's working capacity: a difference between it and the uploaded
+    // certified working capacity does not tell us which of the two is correct. The certificate records the
+    // uploaded value, the location keeps its own, and the difference is reported for a user to resolve.
+    val retainedWorkingCapacity = oldWorkingCapacity ?: 0
+    val currentMaxCapacity = oldMaxCapacity ?: 0
+    val currentCertifiedNormalAccommodation = oldCertifiedNormalAccommodation ?: 0
+    val requestedCna = row.certifiedNormalAccommodation ?: currentCertifiedNormalAccommodation
 
+    var appliedMaxCapacity = currentMaxCapacity
+    var appliedCertifiedNormalAccommodation = currentCertifiedNormalAccommodation
     var changed = false
     var capacityChanged = false
 
-    if (oldMaxCapacity != row.maxCapacity || oldWorkingCapacity != row.workingCapacity || oldCertifiedNormalAccommodation != cna) {
+    if (row.maxCapacity != currentMaxCapacity || requestedCna != currentCertifiedNormalAccommodation) {
       // Look up occupancy via the non-transactional search service directly: a failure here must mark just this
-      // row FAILED (caught below), not roll back the per-row transaction the way a throwing @Transactional bean would.
+      // row FAILED (caught by the caller), not roll back the per-row transaction the way a throwing
+      // @Transactional bean would.
       val occupancy = prisonerSearchService.findPrisonersInLocations(cell.prisonId, listOf(cell.getPathHierarchy())).size
-      validateCapacityNotBelowOccupancy(cell, occupancy, row.maxCapacity, row.workingCapacity)
-      cell.setCapacity(
-        maxCapacity = row.maxCapacity,
-        workingCapacity = row.workingCapacity,
-        certifiedNormalAccommodation = cna,
-        userOrSystemInContext = requestedBy,
-        amendedDate = now,
-        linkedTransaction = linkedTransaction,
-      )
-      changed = true
-      capacityChanged = true
+
+      // Prefer everything the upload asked for, then degrade one value at a time, so a single value the cell
+      // cannot take (max capacity below occupancy, a CNA of zero on normal accommodation) no longer discards
+      // the rest of the row. setCapacity validates before it mutates, so a rejected attempt changes nothing.
+      val candidates = listOf(
+        row.maxCapacity to requestedCna,
+        currentMaxCapacity to requestedCna,
+        row.maxCapacity to currentCertifiedNormalAccommodation,
+      ).distinct()
+      for ((maxCapacity, cna) in candidates) {
+        if (maxCapacity == currentMaxCapacity && cna == currentCertifiedNormalAccommodation) continue
+        try {
+          validateCapacityNotBelowOccupancy(cell, occupancy, maxCapacity, retainedWorkingCapacity)
+          cell.setCapacity(
+            maxCapacity = maxCapacity,
+            workingCapacity = retainedWorkingCapacity,
+            certifiedNormalAccommodation = cna,
+            userOrSystemInContext = requestedBy,
+            amendedDate = now,
+            linkedTransaction = linkedTransaction,
+          )
+          appliedMaxCapacity = maxCapacity
+          appliedCertifiedNormalAccommodation = cna
+          changed = true
+          capacityChanged = true
+          break
+        } catch (e: CapacityException) {
+          log.info("${cell.getKey()}: cannot certify max capacity $maxCapacity / CNA $cna on the location: ${e.message}")
+        }
+      }
     }
 
     if (row.cellMark != null && row.cellMark != oldCellMark) {
@@ -262,10 +295,25 @@ class CellCertificateUploadProcessingService(
       previousCellMark = oldCellMark,
       previousInCellSanitation = oldInCellSanitation,
     )
+    row.recordDiscrepancy(
+      // A temporarily deactivated cell holds a working capacity of zero by definition, so comparing it with
+      // the certified value says nothing - the INACTIVE_TEMP handling above already covers those cells.
+      workingCapacityMismatch = !cell.isTemporarilyDeactivated() && row.workingCapacity != retainedWorkingCapacity,
+      maxCapacityMismatch = row.maxCapacity != appliedMaxCapacity,
+      certifiedNormalAccommodationMismatch = requestedCna != appliedCertifiedNormalAccommodation,
+    )
+
     if (changed) {
       row.markProcessed(now)
     } else {
-      row.markSkipped("No changes required", now)
+      row.markSkipped(NO_CHANGES_REQUIRED_MESSAGE, now)
+    }
+    // A discrepancy is orthogonal to whether the location changed - a cell can keep every value it already
+    // had and still be certified at a different working capacity - so it overwrites the outcome message.
+    if (row.workingCapacityMismatch) {
+      row.message = WORKING_CAPACITY_MISMATCH_MESSAGE
+    } else if (row.hasDiscrepancy()) {
+      row.message = CERTIFIED_CAPACITY_MISMATCH_MESSAGE
     }
     return capacityChanged
   }
@@ -279,6 +327,7 @@ class CellCertificateUploadProcessingService(
     upload.processedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.PROCESSED }
     upload.skippedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.SKIPPED }
     upload.failedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.FAILED }
+    upload.discrepancyRecords = upload.locations.count { it.hasDiscrepancy() }
 
     val now = LocalDateTime.now(clock)
     val approvalRequest = certificationApprovalRequestRepository.save(
@@ -297,6 +346,7 @@ class CellCertificateUploadProcessingService(
       approvedDate = now,
       approvalRequest = approvalRequest,
       signedOperationCapacity = signedOperationCapacityRepository.findByPrisonId(upload.prisonId)?.signedOperationCapacity ?: 0,
+      certifiedCapacityOverrides = certifiedCapacityOverrides(upload),
     )
 
     upload.cellCertificateId = cellCertificate.id
@@ -304,8 +354,25 @@ class CellCertificateUploadProcessingService(
     upload.endTime = now
     linkedTransaction.txEndTime = now
 
-    log.info("Finished cell certificate upload ${upload.id}: processed=${upload.processedRecords}, skipped=${upload.skippedRecords}, failed=${upload.failedRecords}, certificate=${cellCertificate.id}")
+    log.info("Finished cell certificate upload ${upload.id}: processed=${upload.processedRecords}, skipped=${upload.skippedRecords}, failed=${upload.failedRecords}, needingReview=${upload.discrepancyRecords}, certificate=${cellCertificate.id}")
   }
+
+  /**
+   * The certified capacity to record for each cell the upload covered, keyed by path hierarchy. These are the
+   * values the uploaded certificate stated, which are not necessarily the values the locations ended up with -
+   * the certificate must reflect the upload. Rows that could not be matched to a live cell (FAILED) contribute
+   * nothing and those cells fall back to their current state; archived locations are left out of the
+   * certificate altogether by [CellCertificateService.createCellCertificate].
+   */
+  private fun certifiedCapacityOverrides(upload: CellCertificateUpload): Map<String, CertifiedCapacity> = upload.locations
+    .filter { it.status == CellCertificateUploadLocationStatus.PROCESSED || it.status == CellCertificateUploadLocationStatus.SKIPPED }
+    .associate { row ->
+      row.locationKey.removePrefix("${upload.prisonId}-") to CertifiedCapacity(
+        maxCapacity = row.maxCapacity,
+        workingCapacity = row.workingCapacity,
+        certifiedNormalAccommodation = row.certifiedNormalAccommodation ?: row.previousCertifiedNormalAccommodation ?: 0,
+      )
+    }
 
   /**
    * A STARTED claim is considered stale (its consumer crashed) once its startTime is older than
@@ -330,6 +397,18 @@ class CellCertificateUploadProcessingService(
 
     /** Failure message shown when an uploaded cell certificate row references a location we do not hold. */
     const val LOCATION_NOT_FOUND_MESSAGE = "Location not found on Residential locations"
+
+    /** Skip message for a row whose location has been permanently deactivated. */
+    const val ARCHIVED_LOCATION_MESSAGE = "Archived location"
+
+    /** Skip message for a row that asked for nothing the location did not already hold. */
+    const val NO_CHANGES_REQUIRED_MESSAGE = "No changes required"
+
+    /** Reported against a cell that kept its own working capacity while the certificate took the uploaded one. */
+    const val WORKING_CAPACITY_MISMATCH_MESSAGE = "Working capacity and certified working capacity do not match"
+
+    /** Reported when the max capacity or CNA on the certificate could not be applied to the location. */
+    const val CERTIFIED_CAPACITY_MISMATCH_MESSAGE = "Certified capacity does not match the cell's capacity"
 
     /** Fixed explanation recorded against the approval request generated by a cell certificate upload. */
     const val UPLOAD_REASON_FOR_CHANGE =

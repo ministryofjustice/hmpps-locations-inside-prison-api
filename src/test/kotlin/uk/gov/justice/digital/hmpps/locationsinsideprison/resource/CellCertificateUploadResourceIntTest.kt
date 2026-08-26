@@ -176,13 +176,20 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
 
   @Nested
   inner class ListAndDrillDown {
-    private fun saveUpload(prisonId: String, status: CellCertificateUploadStatus, daysAgo: Long, rows: List<CellCertificateUploadLocation> = emptyList()) = cellCertificateUploadRepository.saveAndFlush(
+    private fun saveUpload(
+      prisonId: String,
+      status: CellCertificateUploadStatus,
+      daysAgo: Long,
+      rows: List<CellCertificateUploadLocation> = emptyList(),
+      discrepancyRecords: Int = 0,
+    ) = cellCertificateUploadRepository.saveAndFlush(
       CellCertificateUpload(
         prisonId = prisonId,
         status = status,
         requestedBy = EXPECTED_USERNAME,
         requestedDate = LocalDateTime.now(clock).minusDays(daysAgo),
         totalRecords = rows.size,
+        discrepancyRecords = discrepancyRecords,
       ).apply { rows.forEach { addLocation(it) } },
     )
 
@@ -233,9 +240,14 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
           previousCellMark = null,
           previousInCellSanitation = null,
         )
+        recordDiscrepancy(
+          workingCapacityMismatch = true,
+          maxCapacityMismatch = false,
+          certifiedNormalAccommodationMismatch = false,
+        )
         markProcessed(LocalDateTime.now(clock))
       }
-      val upload = saveUpload("MDI", CellCertificateUploadStatus.FINISHED, daysAgo = 0, rows = listOf(row))
+      val upload = saveUpload("MDI", CellCertificateUploadStatus.FINISHED, daysAgo = 0, rows = listOf(row), discrepancyRecords = 1)
 
       webTestClient.get().uri("/locations/bulk/update-cell-certificate/upload/${upload.id}")
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS")))
@@ -249,6 +261,10 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
         .jsonPath("$.locations[0].status").isEqualTo("PROCESSED")
         .jsonPath("$.locations[0].previousWorkingCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].workingCapacity").isEqualTo(1)
+        .jsonPath("$.discrepancyRecords").isEqualTo(1)
+        .jsonPath("$.locations[0].workingCapacityMismatch").isEqualTo(true)
+        .jsonPath("$.locations[0].maxCapacityMismatch").isEqualTo(false)
+        .jsonPath("$.locations[0].certifiedNormalAccommodationMismatch").isEqualTo(false)
     }
 
     @Test

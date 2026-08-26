@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.capitalizeWords
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificate
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CertifiedCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CertificationApprovalRequest
@@ -32,11 +33,16 @@ class CellCertificateService(
     val log: Logger = LoggerFactory.getLogger(this::class.java)
   }
 
+  /**
+   * [certifiedCapacityOverrides], keyed by cell path hierarchy, lets a cell certificate upload record the
+   * capacities the uploaded certificate stated, rather than the capacities the locations ended up with.
+   */
   fun createCellCertificate(
     approvedBy: String,
     approvedDate: LocalDateTime,
     approvalRequest: CertificationApprovalRequest,
     signedOperationCapacity: Int,
+    certifiedCapacityOverrides: Map<String, CertifiedCapacity> = emptyMap(),
   ): CellCertificateDto {
     val currentCellCertificate = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(approvalRequest.prisonId)
 
@@ -51,7 +57,7 @@ class CellCertificateService(
         locations = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(approvalRequest.prisonId)
           .filter { !it.isPermanentlyDeactivated() && !it.isDraft() && it.isStructural() }
           .map {
-            it.toCellCertificateLocation(approvalRequest, currentCellCertificate)
+            it.toCellCertificateLocation(approvalRequest, currentCellCertificate, certifiedCapacityOverrides)
           }.toSortedSet(),
       ).apply {
         totalWorkingCapacity = locations.sumOf { it.workingCapacity ?: 0 }
