@@ -96,6 +96,9 @@ data class CellCertificateUploadLocationDto(
   @param:Schema(description = "Max capacity before the change", example = "3")
   val previousMaxCapacity: Int? = null,
 
+  @param:Schema(description = "Max capacity the location ended up with, which can differ from the certified value", example = "1")
+  val appliedMaxCapacity: Int? = null,
+
   @param:Schema(description = "Working capacity before the change", example = "2")
   val previousWorkingCapacity: Int? = null,
 

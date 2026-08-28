@@ -154,6 +154,26 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
     }
 
     @Test
+    fun `returns 400 when a row certifies a working capacity above its max capacity`() {
+      webTestClient.post().uri("/locations/bulk/update-cell-certificate/MDI")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            UpdateCapacityRequest(
+              locations = mapOf(
+                "MDI-Z-1-001" to CellCapacityUpdateDetail(maxCapacity = 1, workingCapacity = 2, certifiedNormalAccommodation = 1),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+
+      assertThat(cellCertificateUploadRepository.findAll()).isEmpty()
+    }
+
+    @Test
     fun `returns 409 when an upload is already in progress for the prison`() {
       cellCertificateUploadRepository.saveAndFlush(
         CellCertificateUpload(
@@ -239,6 +259,7 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
           previousCertifiedNormalAccommodation = 2,
           previousCellMark = null,
           previousInCellSanitation = null,
+          appliedMaxCapacity = 2,
         )
         recordDiscrepancy(
           workingCapacityMismatch = true,

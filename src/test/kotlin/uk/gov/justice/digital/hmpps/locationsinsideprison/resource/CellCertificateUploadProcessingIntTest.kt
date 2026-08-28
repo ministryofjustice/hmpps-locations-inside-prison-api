@@ -10,12 +10,16 @@ import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUpload
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateUploadRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildCell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CellCertificateUploadProcessingService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.UPDATE_CELL_CERTIFICATE_QUEUE_CONFIG_KEY
 import uk.gov.justice.hmpps.sqs.HmppsQueue
@@ -438,6 +442,92 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     }
 
     assertThat(currentCertificateFor(cell1).workingCapacity).isEqualTo(1)
+  }
+
+  @Test
+  fun `an uploaded max capacity of zero is certified as zero and only floored to one on the location`() {
+    val emptyCell = saveCellHoldingNoPrisoners("Z-2-001")
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(emptyCell.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(emptyCell.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0)),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      // rounding a max capacity of zero up to one is not something a user can resolve, so it is not a discrepancy
+      assertThat(upload.discrepancyRecords).isEqualTo(0)
+      with(upload.locations.first()) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+        assertThat(maxCapacityMismatch).isFalse()
+        assertThat(hasDiscrepancy()).isFalse()
+        // the report shows the value the location took, not the certified zero
+        assertThat(appliedMaxCapacity).isEqualTo(1)
+      }
+    }
+
+    // the location cannot hold a max capacity of zero, so it takes the floor of one ...
+    TransactionTemplate(transactionManager).executeWithoutResult {
+      with(cellRepository.findById(emptyCell.id!!).get()) {
+        assertThat(getMaxCapacity()).isEqualTo(1)
+        assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(0)
+      }
+    }
+
+    // ... but the certificate records the value the prison actually uploaded
+    with(currentCertificateFor(emptyCell)) {
+      assertThat(maxCapacity).isEqualTo(0)
+      assertThat(workingCapacity).isEqualTo(0)
+      assertThat(certifiedNormalAccommodation).isEqualTo(0)
+    }
+  }
+
+  @Test
+  fun `a max capacity of zero the location cannot take is still certified as zero and reported`() {
+    // cell2 holds a working capacity of 2, so it cannot be reduced to the floor of one
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell2.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0)),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      with(cellCertificateUploadRepository.findAll().first().locations.first()) {
+        assertThat(maxCapacityMismatch).isTrue()
+        assertThat(appliedMaxCapacity).isEqualTo(2)
+        // the CNA the upload asked for was still applied
+        assertThat(certifiedNormalAccommodationMismatch).isFalse()
+      }
+    }
+
+    TransactionTemplate(transactionManager).executeWithoutResult {
+      with(cellRepository.findById(cell2.id!!).get()) {
+        assertThat(getMaxCapacity()).isEqualTo(2)
+        assertThat(getCertifiedNormalAccommodation()).isEqualTo(0)
+      }
+    }
+
+    assertThat(currentCertificateFor(cell2).maxCapacity).isEqualTo(0)
+  }
+
+  /**
+   * A cell that already holds no-one, mirroring the toilets, stores and offices prisons list on their cell
+   * certificate spreadsheet with a max capacity of 0.
+   */
+  private fun saveCellHoldingNoPrisoners(pathHierarchy: String): Cell {
+    val cell = repository.save(
+      buildCell(
+        pathHierarchy = pathHierarchy,
+        capacity = Capacity(maxCapacity = 2, workingCapacity = 0, certifiedNormalAccommodation = 0),
+        specialistCellType = SpecialistCellType.ACCESSIBLE_CELL,
+        accommodationType = AccommodationType.CARE_AND_SEPARATION,
+        linkedTransaction = linkedTransaction,
+      ),
+    ) as Cell
+    repository.save(landingZ2.addChildLocation(cell))
+    return cell
   }
 
   /** A cell's capacity is a lazy association, so re-reading it needs an open session. */
