@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.tags.Tag
+import jakarta.validation.constraints.AssertTrue
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -200,7 +201,21 @@ data class UpdateCapacityRequest(
 
   @param:Schema(description = "The reason why the approval was requested, mandatory if it must be approved", example = "The cell capacity has changed", required = false)
   val reasonForChange: String? = null,
-)
+) {
+  /**
+   * A cell cannot hold more prisoners than its max capacity allows. The rule is enforced on the location by
+   * [uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.validateCapacity], but a cell certificate upload
+   * records the certified working capacity without pushing it onto the location, so an impossible pair would
+   * otherwise reach the certificate unchecked.
+   *
+   * Declared here rather than on [CellCapacityUpdateDetail] because bean validation does not cascade into the
+   * values of a map without @Valid on the type argument, which a Kotlin constructor property does not carry
+   * through to the field.
+   */
+  @JsonIgnore
+  @AssertTrue(message = "Working capacity cannot be greater than max capacity")
+  fun isEveryWorkingCapacityWithinMaxCapacity() = locations.values.all { it.workingCapacity <= it.maxCapacity }
+}
 
 @Schema(description = "Bulk permanent deactivation request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
