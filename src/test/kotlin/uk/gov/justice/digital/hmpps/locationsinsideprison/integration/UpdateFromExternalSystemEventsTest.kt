@@ -99,10 +99,11 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
       await untilAsserted { verify(locationService, times(1)).deactivateLocations(any<DeactivateLocationsRequest>()) }
 
       val parentLocations = cell1.getParentLocations()
-      getDomainEvents(parentLocations.size + 1).let {
+      getDomainEvents(parentLocations.size + 2).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrderElementsOf(
           buildList {
             add(InternalLocationDomainEventType.LOCATION_DEACTIVATED.value to cell1.getKey())
+            add(InternalLocationDomainEventType.LOCATION_AMENDED.value to cell1.getKey())
             addAll(parentLocations.map { parentLocation -> InternalLocationDomainEventType.LOCATION_AMENDED.value to parentLocation.getKey() })
           },
         )

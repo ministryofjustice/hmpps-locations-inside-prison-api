@@ -86,16 +86,19 @@ class EventPublishAndAuditService(
     source: InformationSource,
   ) {
     if (location.status != DerivedLocationStatus.DRAFT) {
-      snsService.publishDomainEvent(
-        eventType = event,
-        description = "${location.getKey()} ${event.description}",
-        occurredAt = LocalDateTime.now(clock),
-        additionalInformation = AdditionalInformation(
-          id = location.id,
-          key = location.getKey(),
-          source = source,
-        ),
-      )
+      val occurredAt = LocalDateTime.now(clock)
+      event.withCompanionAmendedEvent().forEach { eventToPublish ->
+        snsService.publishDomainEvent(
+          eventType = eventToPublish,
+          description = "${location.getKey()} ${eventToPublish.description}",
+          occurredAt = occurredAt,
+          additionalInformation = AdditionalInformation(
+            id = location.id,
+            key = location.getKey(),
+            source = source,
+          ),
+        )
+      }
     }
   }
 
@@ -104,17 +107,32 @@ class EventPublishAndAuditService(
     location: NonResidentialLocationDTO,
   ) {
     if (location.status != DerivedLocationStatus.DRAFT) {
-      snsService.publishDomainEvent(
-        eventType = event,
-        description = "[${location.getKey()}] : ${location.localName} ${event.description}",
-        occurredAt = LocalDateTime.now(clock),
-        additionalInformation = AdditionalInformation(
-          id = location.id,
-          key = location.getKey(),
-          source = InformationSource.DPS,
-        ),
-      )
+      val occurredAt = LocalDateTime.now(clock)
+      event.withCompanionAmendedEvent().forEach { eventToPublish ->
+        snsService.publishDomainEvent(
+          eventType = eventToPublish,
+          description = "[${location.getKey()}] : ${location.localName} ${eventToPublish.description}",
+          occurredAt = occurredAt,
+          additionalInformation = AdditionalInformation(
+            id = location.id,
+            key = location.getKey(),
+            source = InformationSource.DPS,
+          ),
+        )
+      }
     }
+  }
+
+  /**
+   * Transitional (MAPA-346): the NOMIS sync consumer is moving to listen only to created/amended/deleted,
+   * so every deactivated/reactivated event is accompanied by an amended event for the same location.
+   * Remove once deactivated/reactivated are retired (MAPA-347).
+   */
+  private fun InternalLocationDomainEventType.withCompanionAmendedEvent(): List<InternalLocationDomainEventType> = when (this) {
+    InternalLocationDomainEventType.LOCATION_DEACTIVATED,
+    InternalLocationDomainEventType.LOCATION_REACTIVATED,
+    -> listOf(this, InternalLocationDomainEventType.LOCATION_AMENDED)
+    else -> listOf(this)
   }
 
   fun auditEvent(

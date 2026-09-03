@@ -120,11 +120,12 @@ class UnarchiveLocationResourceTest : CommonDataTestBase() {
           JsonCompareMode.LENIENT,
         )
 
-      getDomainEvents(3).let {
+      getDomainEvents(4).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
           "location.inside.prison.amended" to "MDI-Z-1",
           "location.inside.prison.amended" to "MDI-Z",
           "location.inside.prison.reactivated" to cell1.getKey(),
+          "location.inside.prison.amended" to cell1.getKey(),
         )
       }
     }
