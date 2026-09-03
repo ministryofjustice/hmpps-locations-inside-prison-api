@@ -8,6 +8,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.EventPublishAndAuditService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InformationSource
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationChangeResult
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialLocationDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
@@ -28,6 +29,7 @@ abstract class EventBase {
 
   protected fun eventPublishAndAudit(
     event: InternalLocationDomainEventType,
+    auditType: AuditType = event.auditType,
     function: () -> Location,
   ) = function().also { location ->
     eventPublishAndAuditService.publishEvent(
@@ -35,19 +37,28 @@ abstract class EventBase {
       locationDetail = location,
       auditData = location.copy(childLocations = null, parentLocation = null, changeHistory = null),
       source = InformationSource.DPS,
+      auditType = auditType,
     )
   }
 
   protected fun eventPublishNonResiAndAudit(
     event: InternalLocationDomainEventType,
+    auditType: AuditType = event.auditType,
     function: () -> NonResidentialLocationDTO,
   ) = function().also { location ->
     eventPublishAndAuditService.publishEvent(
       eventType = event,
       locationDetail = location,
       auditData = location,
+      auditType = auditType,
     )
   }
+
+  /**
+   * Publishes amended events for everything the operation changed, audits the targets with the result's audit
+   * type and returns the targets for use as the response body.
+   */
+  protected fun publishAndAudit(result: LocationChangeResult): List<Location> = eventPublishAndAuditService.publishAndAudit(result)
 
   protected fun eventPublish(
     function: () -> Map<InternalLocationDomainEventType, List<LocationDTO>>,
@@ -78,19 +89,5 @@ abstract class EventBase {
       location = location,
       auditData = location.copy(changeHistory = null),
     )
-  }
-
-  protected fun reactivate(reactivatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> = auditAndEmit(InternalLocationDomainEventType.LOCATION_REACTIVATED, reactivatedLocations)
-
-  protected fun deactivate(deactivatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> = auditAndEmit(InternalLocationDomainEventType.LOCATION_DEACTIVATED, deactivatedLocations)
-
-  protected fun update(updatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>): List<Location> = auditAndEmit(InternalLocationDomainEventType.LOCATION_AMENDED, updatedLocations)
-
-  private fun auditAndEmit(eventType: InternalLocationDomainEventType, locations: Map<InternalLocationDomainEventType, List<Location>>): List<Location> {
-    eventPublish { locations }
-    locations[eventType]?.forEach {
-      audit(it.getKey()) { it.copy(childLocations = null, parentLocation = null) }
-    }
-    return locations[eventType] ?: emptyList()
   }
 }
