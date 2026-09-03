@@ -297,6 +297,8 @@ Six domain event types are published to the `domainevents` SNS topic:
 
 Events carry the location id, key and source (`DPS` or `NOMIS`) — no prisoner data. A single API call can fan out to many events, as the API publishes for each sub-location and then walks up the parent chain publishing `amended`. Draft locations are skipped. The contract is documented in [`async-api.yml`](../async-api.yml).
 
+The NOMIS sync consumer listens only to `created`, `amended` and `deleted`. Every `deactivated` and `reactivated` event is therefore accompanied by an `amended` event for the same location (MAPA-346). `deactivated` and `reactivated` are deprecated and will be removed once that consumer has switched over (MAPA-347); consumers must treat repeated `amended` events for one location as idempotent.
+
 Three queues are used:
 
 | Queue | Source | Purpose |

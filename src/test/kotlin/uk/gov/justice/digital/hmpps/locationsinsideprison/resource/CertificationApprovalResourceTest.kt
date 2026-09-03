@@ -621,7 +621,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .exchange()
         .expectStatus().isOk
 
-      getDomainEvents(1)
+      getDomainEvents(2)
 
       // Now deactivate the wing (which should still show full working capacity change for ALL cells, including already-inactive ones)
       prisonerSearchMockServer.stubSearchByLocations(
@@ -656,7 +656,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       val pendingApprovalRequestId = deactivatedLocation.pendingApprovalRequestId!!
 
-      getDomainEvents(8) // 8 locations because 1 was already deactivated
+      getDomainEvents(16) // 8 locations because 1 was already deactivated, each publishing deactivated and amended
 
       val pendingApproval = webTestClient.get().uri("/certification/request-approvals/$pendingApprovalRequestId")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -1006,10 +1006,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(deactivatedLocation.status).isEqualTo(DerivedLocationStatus.LOCKED_INACTIVE)
       val pendingApprovalRequestId = deactivatedLocation.pendingApprovalRequestId!!
 
-      getDomainEvents(9).let { messages ->
+      getDomainEvents(18).let { messages ->
         val results = leedsWing.findSubLocations().map { it.getKey() }.plus(leedsWing.getKey())
         assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
           *results.map { "location.inside.prison.deactivated" to it }.toTypedArray(),
+          *results.map { "location.inside.prison.amended" to it }.toTypedArray(),
         )
       }
 
@@ -1270,9 +1271,9 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .exchange()
         .expectStatus().isOk
 
-      getDomainEvents(1).let {
+      getDomainEvents(2).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key })
-          .containsExactly("location.inside.prison.deactivated" to firstCell.getKey())
+          .containsExactlyInAnyOrder("location.inside.prison.deactivated" to firstCell.getKey(), "location.inside.prison.amended" to firstCell.getKey())
       }
 
       val archivedCell = getLocation(firstCell.id!!)
@@ -1316,9 +1317,9 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .exchange()
         .expectStatus().isOk
 
-      getDomainEvents(1).let {
+      getDomainEvents(2).let {
         assertThat(it.map { message -> message.eventType to message.additionalInformation?.key })
-          .containsExactly("location.inside.prison.deactivated" to leedsWing.getKey())
+          .containsExactlyInAnyOrder("location.inside.prison.deactivated" to leedsWing.getKey(), "location.inside.prison.amended" to leedsWing.getKey())
       }
 
       // the wing and the cells below it are all permanently deactivated
@@ -1500,11 +1501,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       val parentResults = firstCell.getParentLocations().associate {
         it.getKey() to "location.inside.prison.amended"
       }
-      val results = mapOf(firstCell.getKey() to "location.inside.prison.reactivated") + parentResults
+      val results = listOf(firstCell.getKey() to "location.inside.prison.reactivated", firstCell.getKey() to "location.inside.prison.amended") + parentResults.toList()
 
       getDomainEvents(results.size).let { messages ->
         assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-          *results.map { it.value to it.key }.toTypedArray(),
+          *results.map { it.second to it.first }.toTypedArray(),
         )
       }
 
@@ -1613,11 +1614,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       val parentResults = firstCell.getParentLocations().associate {
         it.getKey() to "location.inside.prison.amended"
       }
-      val results = mapOf(firstCell.getKey() to "location.inside.prison.reactivated") + parentResults
+      val results = listOf(firstCell.getKey() to "location.inside.prison.reactivated", firstCell.getKey() to "location.inside.prison.amended") + parentResults.toList()
 
       getDomainEvents(results.size).let { messages ->
         assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-          *results.map { it.value to it.key }.toTypedArray(),
+          *results.map { it.second to it.first }.toTypedArray(),
         )
       }
 
@@ -1727,11 +1728,11 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       val parentResults = firstCell.getParentLocations().plus(firstCell).associate {
         it.getKey() to "location.inside.prison.amended"
       }
-      val results = mapOf(firstCell.getKey() to "location.inside.prison.reactivated") + parentResults
+      val results = listOf(firstCell.getKey() to "location.inside.prison.reactivated", firstCell.getKey() to "location.inside.prison.amended") + parentResults.toList()
 
       getDomainEvents(results.size).let { messages ->
         assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-          *results.map { it.value to it.key }.toTypedArray(),
+          *results.map { it.second to it.first }.toTypedArray(),
         )
       }
 
@@ -1999,9 +2000,10 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .returnResult().responseBody!!
 
       val reactivatedLocations = leedsWing.findSubLocations().map { it.getKey() }.plus(leedsWing.getKey())
-      getDomainEvents(reactivatedLocations.size * 2).let { messages ->
+      getDomainEvents(reactivatedLocations.size * 3).let { messages ->
         assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
           *reactivatedLocations.map { "location.inside.prison.reactivated" to it }.toTypedArray(),
+          *reactivatedLocations.map { "location.inside.prison.amended" to it }.toTypedArray(),
           *reactivatedLocations.map { "location.inside.prison.amended" to it }.toTypedArray(),
         )
       }
@@ -2136,9 +2138,10 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .returnResult().responseBody!!
 
       val reactivatedLocations = leedsWing.findSubLocations().map { it.getKey() }.plus(leedsWing.getKey())
-      getDomainEvents(reactivatedLocations.size * 2).let { messages ->
+      getDomainEvents(reactivatedLocations.size * 3).let { messages ->
         assertThat(messages.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
           *reactivatedLocations.map { "location.inside.prison.reactivated" to it }.toTypedArray(),
+          *reactivatedLocations.map { "location.inside.prison.amended" to it }.toTypedArray(),
           *reactivatedLocations.map { "location.inside.prison.amended" to it }.toTypedArray(),
         )
       }
@@ -2881,6 +2884,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     val locationsAndSubLocations = listOf(location) + location.findSubLocations()
     val expectedEvents = if (inactiveStatus == null) {
       locationsAndSubLocations.map { "location.inside.prison.deactivated" to it.getKey() } +
+        locationsAndSubLocations.map { "location.inside.prison.amended" to it.getKey() } +
         location.findParentLocations().map { "location.inside.prison.amended" to it.getKey() }
     } else {
       locationsAndSubLocations
@@ -4361,9 +4365,10 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(updatedLocation.convertedCellType).isNull()
 
       // The cell is deactivated; its parents are amended.
-      getDomainEvents(3).let { messages ->
+      getDomainEvents(4).let { messages ->
         assertThat(messages.map { it.eventType to it.additionalInformation?.key }).containsExactlyInAnyOrder(
           "location.inside.prison.deactivated" to cell.getKey(),
+          "location.inside.prison.amended" to cell.getKey(),
           *cell.getParentLocations().map { parent -> "location.inside.prison.amended" to parent.getKey() }.toTypedArray(),
         )
       }
@@ -4431,7 +4436,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       stubNoPrisoners(cell)
       val updatedLocation = requestConversion(cell)
-      getDomainEvents(3)
+      getDomainEvents(4)
 
       val approval = getApproval(updatedLocation.pendingApprovalRequestId!!)
       assertThat(approval.currentSpecialistCellTypes).containsExactly(SpecialistCellType.ACCESSIBLE_CELL)
@@ -4467,7 +4472,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       val cell = firstLeedsCell()
       stubNoPrisoners(cell)
       val updatedLocation = requestConversion(cell)
-      getDomainEvents(3)
+      getDomainEvents(4)
 
       val approved = approveRequest(updatedLocation.pendingApprovalRequestId!!)
       assertThat(approved.approvalType).isEqualTo(ApprovalType.CONVERT_CELL_TO_ROOM)
@@ -4509,7 +4514,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       val cell = firstLeedsCell()
       stubNoPrisoners(cell)
       val updatedLocation = requestConversion(cell)
-      getDomainEvents(3)
+      getDomainEvents(4)
 
       val rejected = webTestClient.put().uri("/certification/location/reject")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -4540,7 +4545,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       val cell = firstLeedsCell()
       stubNoPrisoners(cell)
       val updatedLocation = requestConversion(cell)
-      getDomainEvents(3)
+      getDomainEvents(4)
 
       val withdrawn = webTestClient.put().uri("/certification/location/withdraw")
         .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
