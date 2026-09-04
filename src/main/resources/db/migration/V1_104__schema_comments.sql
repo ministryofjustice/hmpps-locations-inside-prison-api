@@ -346,8 +346,23 @@ COMMENT ON COLUMN cell_certificate_upload_location.applied_max_capacity IS 'The 
 -- Migration leftover
 -- ---------------------------------------------------------------------------------------------------
 
-COMMENT ON TABLE certification_backup IS 'One-off backup taken by migration V1_74 (CREATE TABLE AS SELECT) before certification data moved onto the location table. Not written to by the application and not read by anything - a candidate for removal in a later migration.';
-COMMENT ON COLUMN certification_backup.location_id IS 'The location the backed up certification row belonged to. [Sensitivity: NONE]';
-COMMENT ON COLUMN certification_backup.certificate_id IS 'Primary key of the row in the old certification table, which has since been dropped. [Sensitivity: NONE]';
-COMMENT ON COLUMN certification_backup.certified IS 'Whether the location was certified, as at migration V1_74. [Sensitivity: NONE]';
-COMMENT ON COLUMN certification_backup.certified_normal_accommodation IS 'Certified normal accommodation for the location, as at migration V1_74. [Sensitivity: NONE]';
+-- certification_backup is the one table here that is not part of the running application: V1_74 created
+-- it with CREATE TABLE AS SELECT as a safety net before certification data moved onto location, and
+-- nothing has read or written it since. Because no code depends on it, it can be - and in at least one
+-- environment has been - dropped by hand, so it is present in a freshly migrated database but absent
+-- elsewhere. An unguarded COMMENT ON then aborts this migration and, with it, application startup.
+-- Comment it only where it still exists.
+DO $certification_backup$
+BEGIN
+  IF to_regclass('certification_backup') IS NULL THEN
+    RAISE NOTICE 'certification_backup is not present in this database; skipping its comments';
+    RETURN;
+  END IF;
+
+  EXECUTE $c$COMMENT ON TABLE certification_backup IS 'One-off backup taken by migration V1_74 (CREATE TABLE AS SELECT) before certification data moved onto the location table. Not written to by the application and not read by anything - a candidate for removal in a later migration. Absent from any environment where it has already been dropped by hand.'$c$;
+  EXECUTE $c$COMMENT ON COLUMN certification_backup.location_id IS 'The location the backed up certification row belonged to. [Sensitivity: NONE]'$c$;
+  EXECUTE $c$COMMENT ON COLUMN certification_backup.certificate_id IS 'Primary key of the row in the old certification table, which has since been dropped. [Sensitivity: NONE]'$c$;
+  EXECUTE $c$COMMENT ON COLUMN certification_backup.certified IS 'Whether the location was certified, as at migration V1_74. [Sensitivity: NONE]'$c$;
+  EXECUTE $c$COMMENT ON COLUMN certification_backup.certified_normal_accommodation IS 'Certified normal accommodation for the location, as at migration V1_74. [Sensitivity: NONE]'$c$;
+END
+$certification_backup$;
