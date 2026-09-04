@@ -44,7 +44,7 @@ SELECT
   pg_get_expr(ad.adbin, ad.adrelid)                      AS column_default,
   regexp_replace(
     col_description(c.oid, a.attnum),
-    '\s*\[Sensitivity: [A-Z-]+\]\$', ''
+    '\s*\[Sensitivity: [A-Z-]+\]$', ''
   )                                                      AS column_description,
   substring(
     col_description(c.oid, a.attnum)
