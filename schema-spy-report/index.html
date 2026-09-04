@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>locations_inside_prison.public</title>
+        <!-- Tell the browser to be responsive to screen width -->
+        <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+        <link rel="icon" type="image/png" sizes="16x16" href="favicon.png">
+        <!-- Bootstrap 3.3.5 -->
+        <link rel="stylesheet" href="bower/admin-lte/bootstrap/css/bootstrap.min.css">
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="bower/font-awesome/css/font-awesome.min.css">
+        <!-- Ionicons -->
+        <link rel="stylesheet" href="bower/ionicons/css/ionicons.min.css">
+        <!-- DataTables -->
+        <link rel="stylesheet" href="bower/datatables.net-bs/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="bower/datatables.net-buttons-bs/css/buttons.bootstrap.min.css">
+        <!-- Code Mirror -->
+        <link rel="stylesheet" href="bower/codemirror/codemirror.css">
+        <!-- Fonts -->
+        <link href='fonts/indieflower/indie-flower.css' rel='stylesheet' type='text/css'>
+        <link href='fonts/source-sans-pro/source-sans-pro.css' rel='stylesheet' type='text/css'>
+
+        <!-- Theme style -->
+        <link rel="stylesheet" href="bower/admin-lte/dist/css/AdminLTE.min.css">
+        <!-- Salvattore -->
+        <link rel="stylesheet" href="bower/salvattore/salvattore.css">
+        <!-- AdminLTE Skins. Choose a skin from the css/skins
+           folder instead of downloading all of them to reduce the load. -->
+        <link rel="stylesheet" href="bower/admin-lte/dist/css/skins/_all-skins.min.css">
+        <!-- SchemaSpy -->
+        <link rel="stylesheet" href="schemaSpy.css">
+
+        <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+        <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+        <!--[if lt IE 9]>
+        <script src="bower/html5shiv/html5shiv.min.js"></script>
+        <script src="bower/respond/respond.min.js"></script>
+        <![endif]-->
+    </head>
+    <!-- ADD THE CLASS layout-top-nav TO REMOVE THE SIDEBAR. -->
+    <body class="hold-transition skin-blue layout-top-nav">
+        <div class="wrapper">
+            <header class="main-header">
+                <nav class="navbar navbar-static-top">
+                    <div class="container">
+                        <div class="navbar-header">
+                            <a href="index.html" class="navbar-brand"><b>locations_inside_prison</b></a><span class="navbar-brand" style="padding-left: 0">.public</span>
+                            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar-collapse"><i class="fa fa-bars"></i></button>
+                        </div>
+
+                        <!-- Collect the nav links, forms, and other content for toggling -->
+                        <div class="collapse navbar-collapse pull-left" id="navbar-collapse">
+                            <ul class="nav navbar-nav">
+                                <li><a href="index.html">Tables <span class="sr-only">(current)</span></a></li>
+                                <li><a href="columns.html" title="All of the columns in the schema">Columns</a></li>
+                                <li><a href="constraints.html" title="Useful for diagnosing error messages that just give constraint name or number">Constraints</a></li>
+                                <li><a href="relationships.html" title="Diagram of table relationships">Relationships</a></li>
+                                <li><a href="orphans.html" title="View of tables with neither parents nor children">Orphan&nbsp;Tables</a></li>
+                                <li><a href="anomalies.html" title="Things that might not be quite right">Anomalies</a></li>
+                                <li><a href="routines.html" title="Procedures and functions">Routines</a></li>
+                            </ul>
+                        </div>
+                        <!-- /.navbar-collapse -->
+                        <!-- Navbar Right Menu -->
+                    </div>
+                    <!-- /.container-fluid -->
+                </nav>
+            </header>
+            <!-- Main content -->
+            <!-- Full Width Column -->
+            <div class="content-wrapper">
+                <!-- Content Header (Page header) -->
+                <section class="content-header">
+                    <h1>Tables</h1><br />
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="callout callout-info">
+                                <h4>SchemaSpy Analysis of locations_inside_prison.public</h4>
+                                <p>Generated on Fri Sep 04 16:33 UTC 2026</p>
+                            </div>
+                        </div>
+                    </div>
+                    <a href="locations_inside_prison.public.xml" title="XML Representation">XML Representation</a><br />
+                    <a href="insertionOrder.txt" title="Useful for loading data into a database">Insertion Order</a>
+                    <a href="deletionOrder.txt" title="Useful for purging data from a database">Deletion Order</a>
+                </section>
+                <!-- Main content -->
+                <section class="content">
+                    <div class="row">
+                        <div class="col-md-2 col-sm-4 col-xs-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-aqua"><i class="fa fa-table"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">TABLES</span>
+                                    <span class="info-box-number">21</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                        </div>
+                        <!-- /.col -->
+                        <div class="col-md-2 col-sm-4 col-xs-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-teal"><i class="fa fa-table"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">VIEWS</span>
+                                    <span class="info-box-number">0</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                        </div>
+                        <!-- /.col -->
+                        <div class="col-md-2 col-sm-4 col-xs-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-green"><span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">COLUMNS</span>
+                                    <span class="info-box-number">230</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                        </div>
+                        <!-- /.col -->
+                        <div class="col-md-2 col-sm-4 col-xs-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-yellow"><i class="ion ion-key"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Constraints</span>
+                                    <span class="info-box-number">16</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                        </div>
+                        <!-- /.col -->
+                        <div class="col-md-2 col-sm-4 col-xs-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-red-active"><i class="fa fa-question" aria-hidden="true"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Anomalies</span>
+                                    <span class="info-box-number">8</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                        </div>
+                        <!-- /.col -->
+                        <div class="col-md-2 col-sm-4 col-xs-12">
+                            <div class="info-box">
+                                <span class="info-box-icon bg-navy"><i class="fa fa-file-code-o" aria-hidden="true"></i></span>
+                                <div class="info-box-content">
+                                    <span class="info-box-text">Routines</span>
+                                    <span class="info-box-number">0</span>
+                                </div>
+                                <!-- /.info-box-content -->
+                            </div>
+                            <!-- /.info-box -->
+                        </div>
+                        <!-- /.col -->
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Database Properties</h3>
+                            <span class="label label-primary pull-right"><i class="fa fa-cog fa-2x"></i></span>
+                        </div><!-- /.box-header -->
+                        <div class="box-body">
+                            <p>Database Type: PostgreSQL - 18.6 (Debian 18.6-1.pgdg13+2)</p>
+                        </div><!-- /.box-body -->
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Schema public</h3>
+                            <span class="label label-primary pull-right"><i class="fa fa-cog fa-2x"></i></span>
+                        </div><!-- /.box-header -->
+                        <div class="box-body">
+                            <p> <p>standard public schema</p> </p>
+                        </div><!-- /.box-body -->
+                    </div>
+                    <div class="box box-primary">
+                        <div class="box-header with-border">
+                            <h3 class="box-title">Tables</h3>
+                            <span class="label label-primary pull-right"><i class="fa fa-database fa-2x"></i></span>
+                        </div><!-- /.box-header -->
+                        <div class="box-body">
+                            <table
+                                    id="database_objects"
+                                    class="table table-bordered table-striped dataTable"
+                                    role="grid"
+                                    data-paging="true"
+                                    data-page-length="50"
+                                    data-length-change="false">
+                                <thead>
+                                    <tr>
+                                        <th valign="bottom">Table / View</th>
+                                        <th align="right" valign="bottom">Children</th>
+                                        <th align="right" valign="bottom">Parents</th>
+                                        <th align="right" valign="bottom">Columns</th>
+                                        <th align="right" valign="bottom">Rows</th>
+                                        <th align="right" valign="bottom">Type</th>
+                                        <th class="toggle">Comments</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/location.html">location</a></td>
+                                        <td class="detail" align="right">8</td>
+                                        <td class="detail" align="right">3</td>
+                                        <td class="detail" align="right">33</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>Every location inside a prison, from a wing down to an individual cell, held as a self-referencing tree via parent_id. Single-table inheritance: location_type_discriminator says which kind of location a row is, and which columns are meaningful.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/capacity.html">capacity</a></td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">4</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>The three capacity figures for a single location: how many people it is designed for, how many it is certified for, and how many it can safely hold today.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/residential_attribute.html">residential_attribute</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">4</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>Legacy NOMIS attributes of a residential location, retained for the NOMIS sync and for historic reporting. Superseded by specialist_cell and cell_used_for.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/certification_approval_request_location.html">certification_approval_request_location</a></td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">2</td>
+                                        <td class="detail" align="right">24</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>The locations covered by an approval request, held as a self-contained tree that is copied from the live locations when the request is raised. Kept separate from the location table so a request shows what was asked for even if the estate changes afterwards.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/flyway_schema_history.html">flyway_schema_history</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">10</td>
+                                        <td class="detail" align="right">104</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/specialist_cell.html">specialist_cell</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">3</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>Specialist cell types held against a cell, such as accessible or constant supervision cells. A cell can have several.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/service_usage.html">service_usage</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">3</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>Which DPS services a non-residential location is available to, so each service can offer only the locations relevant to it.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/cell_certificate_upload.html">cell_certificate_upload</a></td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">15</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>One run of the bulk import that seeds or corrects a prison&rsquo;s cell certificate from a spreadsheet, with counts of how the run went.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/prison_configuration.html">prison_configuration</a></td>
+                                        <td class="detail" align="right">7</td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">7</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>Per-prison settings controlling how this service behaves at that prison. One row per prison, keyed by the prison code itself.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/cell_certificate_location.html">cell_certificate_location</a></td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">2</td>
+                                        <td class="detail" align="right">18</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>The location tree as recorded on a cell certificate: a frozen copy taken when the certificate was issued, so the certificate remains an accurate record even after the live locations change.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/constant_transaction_type.html">constant_transaction_type</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">3</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>A copy of the TransactionType enumeration as a table, so reporting tools and the Analytical Platform can decode linked_transaction.transaction_type without hard-coding the list. Kept in sync with the enum by ConstantsTableTest. Deliberately not the target of a foreign key.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/non_residential_usage.html">non_residential_usage</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">5</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>What a non-residential location is used for, such as visits or adjudications. A location can have several usages.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/cell_used_for.html">cell_used_for</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">3</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>What a cell is used for. A cell can serve several purposes, so this is a list rather than a column on location.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/prison_notification_mailbox.html">prison_notification_mailbox</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">6</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>Email addresses notified about cell certification activity. A row with a null prison_id is the national default for that notification group.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/certification_backup.html">certification_backup</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">4</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>One-off backup taken by migration V1_74 (CREATE TABLE AS SELECT) before certification data moved onto the location table. Not written to by the application and not read by anything - a candidate for removal in a later migration.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/cell_certificate_upload_location.html">cell_certificate_upload_location</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">20</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>One row of a bulk certificate import: the values being imported for a location, the values the service already held, and what happened when the two were reconciled.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/cell_certificate.html">cell_certificate</a></td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">2</td>
+                                        <td class="detail" align="right">10</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>A point-in-time certificate recording what a prison was certified to hold, with the full location tree as it stood when the certificate was issued. A new certificate is issued each time an approval changes certified capacity; only one is current per prison.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/linked_transaction.html">linked_transaction</a></td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">7</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>One user action or system job, grouping together every location change it caused. Lets the history be read as &ldquo;what somebody did&rdquo; rather than as isolated field changes.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/signed_operation_capacity.html">signed_operation_capacity</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">1</td>
+                                        <td class="detail" align="right">5</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>The signed operational capacity of a prison: the maximum population the governor has signed off as safe to hold. One current row per prison.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/certification_approval_request.html">certification_approval_request</a></td>
+                                        <td class="detail" align="right">2</td>
+                                        <td class="detail" align="right">2</td>
+                                        <td class="detail" align="right">38</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>A request to change something that affects a prison&rsquo;s certified capacity, awaiting review. Holds both the proposed values and a snapshot of the current ones, so the request can be assessed without re-reading the live locations.</p></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/location_history.html">location_history</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">2</td>
+                                        <td class="detail" align="right">8</td>
+                                        <td class="detail" align="right">-1</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"><p>Audit trail of every change to a location: one row per changed attribute, tied to the transaction that changed it.</p></td>
+                                    </tr>
+                            </table>
+                        </div>
+                    </div><!-- /.box-body -->
+                </section>
+                <!-- /.content -->
+                <script>
+                    var config = {
+                        pagination: true
+                    }
+                </script>
+            </div>
+            <!-- /.content-wrapper -->
+            <footer class="main-footer">
+                <div>
+                    <div class="pull-right hidden-xs">
+                        <a href="https://github.com/schemaspy/schemaspy" title="GitHub for SchemaSpy"><i class="fa fa-github-square fa-2x"></i></a>
+                        <a href="http://stackoverflow.com/questions/tagged/schemaspy" title="StackOverflow for SchemaSpy"><i class="fa fa-stack-overflow fa-2x"></i></a>
+                    </div>
+                    <strong>Generated by <a href="http://schemaspy.org/" class="logo-text"><i class="fa fa-database"></i> SchemaSpy 6.2.4</a></strong>
+                </div>
+                <!-- /.container -->
+            </footer>
+        </div>
+        <!-- ./wrapper -->
+
+        <!-- jQuery 2.2.3 -->
+        <script src="bower/admin-lte/plugins/jQuery/jquery-2.2.3.min.js"></script>
+        <script src="bower/admin-lte/plugins/jQueryUI/jquery-ui.min.js"></script>
+        <!-- Bootstrap 3.3.5 -->
+        <script src="bower/admin-lte/bootstrap/js/bootstrap.min.js"></script>
+        <!-- DataTables -->
+        <script src="bower/datatables.net/jquery.dataTables.min.js"></script>
+        <script src="bower/datatables.net-bs/js/dataTables.bootstrap.min.js"></script>
+        <script src="bower/datatables.net-buttons/dataTables.buttons.min.js"></script>
+        <script src="bower/datatables.net-buttons-bs/js/buttons.bootstrap.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.html5.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.print.min.js"></script>
+        <script src="bower/datatables.net-buttons/buttons.colVis.min.js"></script>
+        <!-- SheetJS -->
+        <script src="bower/js-xlsx/xlsx.full.min.js"></script>
+        <!-- pdfmake -->
+        <script src="bower/pdfmake/pdfmake.min.js"></script>
+        <script src="bower/pdfmake/vfs_fonts.js"></script>
+        <!-- SlimScroll -->
+        <script src="bower/admin-lte/plugins/slimScroll/jquery.slimscroll.min.js"></script>
+        <!-- FastClick -->
+        <script src="bower/admin-lte/plugins/fastclick/fastclick.js"></script>
+        <!-- Salvattore -->
+        <script src="bower/salvattore/salvattore.min.js"></script>
+        <!-- AnchorJS -->
+        <script src="bower/anchor-js/anchor.min.js"></script>
+        <!-- CodeMirror -->
+        <script src="bower/codemirror/codemirror.js"></script>
+        <script src="bower/codemirror/sql.js"></script>
+        <!-- AdminLTE App -->
+        <script src="bower/admin-lte/dist/js/app.min.js"></script>
+        <script src="main.js"></script>
+        <script src="schemaSpy.js"></script>
+    </body>
+</html>

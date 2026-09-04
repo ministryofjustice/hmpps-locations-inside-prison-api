@@ -1,0 +1,586 @@
+<?xml version="1.0" encoding="UTF-8"?><database name="locations_inside_prison" schema="public" type="PostgreSQL - 18.6 (Debian 18.6-1.pgdg13+2)">
+   <sequences>
+      <sequence increment="1" name="capacity_id_seq" startValue="1"/>
+      <sequence increment="1" name="cell_used_for_id_seq" startValue="1"/>
+      <sequence increment="1" name="location_attribute_id_seq" startValue="1"/>
+      <sequence increment="1" name="location_history_id_seq" startValue="1"/>
+      <sequence increment="1" name="location_usage_id_seq" startValue="1"/>
+      <sequence increment="1" name="service_usage_id_seq" startValue="1"/>
+      <sequence increment="1" name="signed_operation_capacity_id_seq" startValue="1"/>
+      <sequence increment="1" name="specialist_cell_id_seq" startValue="1"/>
+   </sequences>
+   <tables>
+      <table name="capacity" remarks="The three capacity figures for a single location: how many people it is designed for, how many it is certified for, and how many it can safely hold today." schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('capacity_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="10" type="serial" typeCode="4">
+            <child column="capacity_id" foreignKey="fk_location_capacity_id" implied="false" onDeleteCascade="true" schema="public" table="location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="1" name="max_capacity" nullable="false" remarks="The most people the location can hold, including overcrowding. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="2" name="working_capacity" nullable="false" remarks="How many people the location can hold today, allowing for anything currently out of use. Zero for a location that cannot currently be used. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="3" name="certified_normal_accommodation" nullable="false" remarks="Certified normal accommodation (CNA): the uncrowded capacity of the location, as certified. Published by MoJ in the prison population statistics. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="capacity_pk" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+      </table>
+      <table name="cell_certificate" remarks="A point-in-time certificate recording what a prison was certified to hold, with the full location tree as it stood when the certificate was issued. A new certificate is issued each time an approval changes certified capacity; only one is current per prison." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <child column="cell_certificate_id" foreignKey="fk_cell_certificate_location_cell_certificate" implied="false" onDeleteCascade="true" schema="public" table="cell_certificate_location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="prison_id" nullable="false" remarks="The prison this certificate covers, as a NOMIS agency code. [Sensitivity: NONE]" size="5" type="varchar" typeCode="12">
+            <parent column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="prison_configuration"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="approved_by" nullable="false" remarks="DPS username of the person who approved the certificate. [Sensitivity: STAFF]" size="100" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="3" name="approved_date" nullable="false" remarks="When the certificate was approved. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="certification_approval_request_id" nullable="true" remarks="The approval request that produced this certificate. Null for certificates created by the initial prison baseline rather than by a request. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="fk_cell_certificate_certification_approval_request" implied="false" onDeleteCascade="true" schema="public" table="certification_approval_request"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="total_working_capacity" nullable="false" remarks="Total working capacity across the prison at the point of certification. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="total_max_capacity" nullable="false" remarks="Total maximum capacity across the prison at the point of certification. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="total_certified_normal_accommodation" nullable="false" remarks="Total certified normal accommodation across the prison at the point of certification. Published by MoJ in the prison population statistics. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="true" digits="0" id="8" name="current" nullable="false" remarks="Whether this is the prison's current certificate. Exactly one row per prison should be true; the rest are superseded and kept for history. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="9" name="signed_operation_capacity" nullable="false" remarks="The prison's signed operational capacity at the point of certification. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="cell_certificate_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="cell_certificate_certification_approval_request_idx" unique="false">
+            <column ascending="true" name="certification_approval_request_id"/>
+         </index>
+         <index name="cell_certificate_prison_id_current_idx" unique="false">
+            <column ascending="true" name="prison_id"/>
+            <column ascending="true" name="current"/>
+         </index>
+         <index name="cell_certificate_prison_id_idx" unique="false">
+            <column ascending="true" name="prison_id"/>
+         </index>
+         <index name="uk_cell_certificate_certification_approval_request_id" unique="true">
+            <column ascending="true" name="certification_approval_request_id"/>
+         </index>
+      </table>
+      <table name="cell_certificate_location" remarks="The location tree as recorded on a cell certificate: a frozen copy taken when the certificate was issued, so the certificate remains an accurate record even after the live locations change." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <child column="parent_location_id" foreignKey="cell_certificate_location_parent_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="cell_certificate_location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="cell_certificate_id" nullable="true" remarks="The certificate this location belongs to. Deleted with the certificate. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="fk_cell_certificate_location_cell_certificate" implied="false" onDeleteCascade="true" schema="public" table="cell_certificate"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="location_code" nullable="false" remarks="The location's own code within its parent, as certified. [Sensitivity: NONE]" size="40" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="path_hierarchy" nullable="false" remarks="Full path of the location within the prison, as certified. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="certified_normal_accommodation" nullable="true" remarks="Certified normal accommodation for this location, as certified. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="working_capacity" nullable="true" remarks="Working capacity for this location, as certified. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="max_capacity" nullable="true" remarks="Maximum capacity for this location, as certified. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="in_cell_sanitation" nullable="true" remarks="Whether the cell had its own toilet and washing facilities, as certified. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="location_type" nullable="false" remarks="What kind of location this is. See LocationType in reference-data.csv. [Sensitivity: NONE]" size="40" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="specialist_cell_types" nullable="true" remarks="Specialist cell types held against the location, comma separated, as certified. [Sensitivity: NONE]" size="300" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="10" name="cell_mark" nullable="true" remarks="The number on the cell door, as certified. [Sensitivity: NONE]" size="12" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="11" name="level" nullable="false" remarks="Depth of this location in the certificate's tree, with the top level location at the lowest number. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="12" name="local_name" nullable="true" remarks="The name the prison used for this location, as certified. [Sensitivity: NONE]" size="100" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="13" name="parent_location_id" nullable="true" remarks="The location above this one within the certificate's own tree, not the live location tree. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="cell_certificate_location_parent_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="cell_certificate_location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="14" name="converted_cell_type" nullable="true" remarks="What a former cell was being used as, as certified. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="15" name="used_for_types" nullable="true" remarks="What the cell was used for, comma separated, as certified. [Sensitivity: NONE]" size="300" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="16" name="accommodation_types" nullable="true" remarks="Accommodation types for the location, comma separated, as certified. [Sensitivity: NONE]" size="120" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="17" name="other_converted_cell_type" nullable="true" remarks="Free text description used when the certified converted_cell_type was OTHER. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="cell_certificate_location_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="cell_certificate_location_cell_certificate_id_idx" unique="false">
+            <column ascending="true" name="cell_certificate_id"/>
+         </index>
+         <index name="cell_certificate_location_parent_location_idx" unique="false">
+            <column ascending="true" name="parent_location_id"/>
+         </index>
+         <index name="cell_certificate_location_path_hierarchy_idx" unique="false">
+            <column ascending="true" name="path_hierarchy"/>
+         </index>
+      </table>
+      <table name="cell_certificate_upload" remarks="One run of the bulk import that seeds or corrects a prison's cell certificate from a spreadsheet, with counts of how the run went." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <child column="cell_certificate_upload_id" foreignKey="fk_cell_certificate_upload_location_upload" implied="false" onDeleteCascade="true" schema="public" table="cell_certificate_upload_location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="prison_id" nullable="false" remarks="The prison being imported, as a NOMIS agency code. [Sensitivity: NONE]" size="5" type="varchar" typeCode="12">
+            <parent column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="prison_configuration"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="status" nullable="false" remarks="Where the run has got to - PENDING, STARTED or FINISHED. See CellCertificateUploadStatus in reference-data.csv. [Sensitivity: NONE]" size="20" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="requested_by" nullable="false" remarks="DPS username of the person who started the import. [Sensitivity: STAFF]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="4" name="requested_date" nullable="false" remarks="When the import was requested. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="5" name="start_time" nullable="true" remarks="When processing actually began. Null while the run is still queued. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="6" name="end_time" nullable="true" remarks="When processing finished. Null while the run is still going. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="7" name="total_records" nullable="false" remarks="How many rows the uploaded file contained. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="8" name="processed_records" nullable="false" remarks="How many rows were applied successfully. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="9" name="skipped_records" nullable="false" remarks="How many rows were deliberately skipped, typically because they matched what the service already held. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="10" name="failed_records" nullable="false" remarks="How many rows could not be applied. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="11" name="reason_for_change" nullable="true" remarks="Free text from the requester explaining why the import was run. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="12" name="cell_certificate_id" nullable="true" remarks="The certificate produced by this run, once it has completed. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="13" name="discrepancy_records" nullable="false" remarks="How many rows differed from what the service already held, and so needed review rather than straight application. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="14" name="certification_approval_request_id" nullable="true" remarks="The approval request raised off the back of this import, where the discrepancies needed approving. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="cell_certificate_upload_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="cell_certificate_upload_active_prison_idx" unique="true">
+            <column ascending="true" name="prison_id"/>
+         </index>
+         <index name="cell_certificate_upload_approval_request_idx" unique="false">
+            <column ascending="true" name="certification_approval_request_id"/>
+         </index>
+         <index name="cell_certificate_upload_prison_id_idx" unique="false">
+            <column ascending="true" name="prison_id"/>
+         </index>
+      </table>
+      <table name="cell_certificate_upload_location" remarks="One row of a bulk certificate import: the values being imported for a location, the values the service already held, and what happened when the two were reconciled." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="cell_certificate_upload_id" nullable="false" remarks="The import run this row belongs to. Deleted with the run. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="fk_cell_certificate_upload_location_upload" implied="false" onDeleteCascade="true" schema="public" table="cell_certificate_upload"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="location_key" nullable="false" remarks="The location this row is about, as {prisonId}-{pathHierarchy}. Matched by key rather than by id because the spreadsheet has no ids. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="max_capacity" nullable="false" remarks="Maximum capacity given in the uploaded file. A proposed value until the import is approved. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="working_capacity" nullable="false" remarks="Working capacity given in the uploaded file. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="certified_normal_accommodation" nullable="true" remarks="Certified normal accommodation given in the uploaded file. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="cell_mark" nullable="true" remarks="Cell door number given in the uploaded file. [Sensitivity: NONE]" size="12" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="in_cell_sanitation" nullable="true" remarks="In-cell sanitation setting given in the uploaded file. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="status" nullable="false" remarks="What happened to this row - PENDING, PROCESSED, SKIPPED or FAILED. See CellCertificateUploadLocationStatus in reference-data.csv. [Sensitivity: NONE]" size="20" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="previous_max_capacity" nullable="true" remarks="Maximum capacity the service held for this location before the import, for comparison. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="10" name="previous_working_capacity" nullable="true" remarks="Working capacity the service held before the import, for comparison. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="11" name="previous_certified_normal_accommodation" nullable="true" remarks="Certified normal accommodation the service held before the import, for comparison. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="12" name="previous_cell_mark" nullable="true" remarks="Cell door number the service held before the import, for comparison. [Sensitivity: NONE]" size="12" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="13" name="previous_in_cell_sanitation" nullable="true" remarks="In-cell sanitation setting the service held before the import, for comparison. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="14" name="message" nullable="true" remarks="System generated explanation of why the row was skipped or failed. Not typed by a user. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="15" name="processed_date" nullable="true" remarks="When this row was processed. Null while the row is still pending. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="16" name="working_capacity_mismatch" nullable="false" remarks="Whether the uploaded working capacity differed from what the service already held, flagging the row for review. [Sensitivity: OFFICIAL-SENSITIVE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="17" name="max_capacity_mismatch" nullable="false" remarks="Whether the uploaded maximum capacity differed from what the service already held. [Sensitivity: OFFICIAL-SENSITIVE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="18" name="certified_normal_accommodation_mismatch" nullable="false" remarks="Whether the uploaded certified normal accommodation differed from what the service already held. [Sensitivity: OFFICIAL-SENSITIVE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="19" name="applied_max_capacity" nullable="true" remarks="The maximum capacity actually applied to the location, which can differ from the uploaded value where the import had to reconcile a mismatch. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="cell_certificate_upload_location_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="cell_certificate_upload_location_upload_id_idx" unique="false">
+            <column ascending="true" name="cell_certificate_upload_id"/>
+         </index>
+      </table>
+      <table name="cell_used_for" remarks="What a cell is used for. A cell can serve several purposes, so this is a list rather than a column on location." schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('cell_used_for_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="location_id" nullable="false" remarks="The cell this applies to. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="cell_used_for_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="used_for" nullable="false" remarks="What the cell is used for - STANDARD_ACCOMMODATION, FIRST_NIGHT_CENTRE, DRUG_RECOVERY_UNIT and so on. See UsedForType in reference-data.csv. [Sensitivity: NONE]" size="80" type="varchar" typeCode="12"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="cell_used_for_pk" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="cell_used_for_location_id_idx" unique="false">
+            <column ascending="true" name="location_id"/>
+         </index>
+         <index name="cell_used_uk" unique="true">
+            <column ascending="true" name="location_id"/>
+            <column ascending="true" name="used_for"/>
+         </index>
+      </table>
+      <table name="certification_approval_request" remarks="A request to change something that affects a prison's certified capacity, awaiting review. Holds both the proposed values and a snapshot of the current ones, so the request can be assessed without re-reading the live locations." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <child column="certification_approval_request_id" foreignKey="fk_cell_certificate_certification_approval_request" implied="false" onDeleteCascade="true" schema="public" table="cell_certificate"/>
+            <child column="certification_approval_request_id" foreignKey="certification_approval_reques_certification_approval_reque_fkey" implied="false" onDeleteCascade="true" schema="public" table="certification_approval_request_location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="prison_id" nullable="false" remarks="Prison the request applies to, as a NOMIS agency code. [Sensitivity: NONE]" size="5" type="varchar" typeCode="12">
+            <parent column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="prison_configuration"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="location_id" nullable="true" remarks="The location the request is about. Null for prison-wide requests such as a signed operational capacity change. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="fk_location" implied="false" onDeleteCascade="true" schema="public" table="location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="location_key" nullable="true" remarks="The location's key ({prisonId}-{pathHierarchy}) captured when the request was raised, so the request stays readable if the location is later renamed or removed. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="status" nullable="false" remarks="Where the request has got to - PENDING, APPROVED, REJECTED or WITHDRAWN. See ApprovalRequestStatus in reference-data.csv. [Sensitivity: NONE]" size="20" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="requested_by" nullable="false" remarks="DPS username of the person who raised the request. [Sensitivity: STAFF]" size="80" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="6" name="requested_date" nullable="false" remarks="When the request was raised. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="approved_or_rejected_by" nullable="true" remarks="DPS username of the person who approved or rejected the request. Null while it is still pending. [Sensitivity: STAFF]" size="80" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="8" name="approved_or_rejected_date" nullable="true" remarks="When the request was approved or rejected. Null while it is still pending. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="comments" nullable="true" remarks="Free text left by the approver explaining their decision. Assume it can name a prisoner. [Sensitivity: PERSONAL]" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="10" name="certified_normal_accommodation_change" nullable="false" remarks="Net change to the prison's certified normal accommodation if this request is approved. A proposal, not the published figure. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="11" name="working_capacity_change" nullable="false" remarks="Net change to working capacity if this request is approved. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="12" name="max_capacity_change" nullable="false" remarks="Net change to maximum capacity if this request is approved. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="'DRAFT'::character varying" digits="0" id="13" name="approval_type" nullable="false" remarks="What kind of change is being requested - DEACTIVATION, CAPACITY_CHANGE, SIGNED_OP_CAP and so on. Determines which of the proposed value columns below are populated. See ApprovalType in reference-data.csv. [Sensitivity: NONE]" size="30" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="14" name="signed_operation_capacity_change" nullable="false" remarks="Net change to the prison's signed operational capacity if this request is approved. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="15" name="signed_operation_capacity_id" nullable="true" remarks="The signed_operation_capacity row this request would update. [Sensitivity: NONE]" size="19" type="int8" typeCode="-5"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="16" name="reason_for_change" nullable="true" remarks="Free text from the requester explaining why the change is needed. Assume it can name a prisoner. [Sensitivity: PERSONAL]" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="17" name="current_signed_operation_capacity" nullable="false" remarks="The prison's signed operational capacity when the request was raised, as a snapshot for comparison. Already published, so not sensitive in itself. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="18" name="cell_mark" nullable="true" remarks="Proposed new cell door number. [Sensitivity: NONE]" size="12" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="19" name="deactivated_reason" nullable="true" remarks="Proposed reason for taking the location out of use. See DeactivatedReason in reference-data.csv. [Sensitivity: NONE]" size="30" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="20" name="deactivation_reason_description" nullable="true" remarks="Free text expanding on the proposed deactivation reason. Assume it can name a prisoner. [Sensitivity: PERSONAL]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="21" name="proposed_reactivation_date" nullable="true" remarks="Date the location is expected to come back into use, if the deactivation is approved. [Sensitivity: NONE]" size="13" type="date" typeCode="91"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="22" name="planet_fm_reference" nullable="true" remarks="Planet FM job reference for the maintenance work behind the request. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="23" name="in_cell_sanitation" nullable="true" remarks="Proposed in-cell sanitation setting. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="24" name="current_cell_mark" nullable="true" remarks="The cell door number when the request was raised, as a snapshot for comparison. [Sensitivity: NONE]" size="12" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="25" name="current_in_cell_sanitation" nullable="true" remarks="The in-cell sanitation setting when the request was raised, as a snapshot for comparison. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="26" name="max_capacity" nullable="true" remarks="Proposed maximum capacity for the location. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="27" name="working_capacity" nullable="true" remarks="Proposed working capacity for the location. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="28" name="certified_normal_accommodation" nullable="true" remarks="Proposed certified normal accommodation for the location. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="29" name="pending_specialist_cell_types" nullable="true" remarks="Proposed specialist cell types, as a comma separated list. Denormalised because the request is a snapshot rather than a live relationship. [Sensitivity: NONE]" size="300" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="30" name="converted_cell_type" nullable="true" remarks="Proposed non-residential use for a cell being converted. See ConvertedCellType in reference-data.csv. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="31" name="other_converted_cell_type" nullable="true" remarks="Free text description used when the proposed converted_cell_type is OTHER. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="32" name="accommodation_type" nullable="true" remarks="Proposed accommodation type for the location. See AccommodationType in reference-data.csv. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="33" name="used_for_types" nullable="true" remarks="Proposed list of what the cell is used for, comma separated. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="34" name="current_accommodation_types" nullable="true" remarks="The accommodation types when the request was raised, as a snapshot for comparison. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="35" name="current_used_for_types" nullable="true" remarks="What the cell was used for when the request was raised, as a snapshot for comparison. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="36" name="top_level_accommodation_types" nullable="true" remarks="Accommodation types of the top level location above this one, so a reviewer can see the request in the context of the wing it sits in. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="37" name="top_level_used_for_types" nullable="true" remarks="What the top level location above this one is used for, for the same reason. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="certification_approval_request_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="certification_approval_request_location_id_idx" unique="false">
+            <column ascending="true" name="location_id"/>
+         </index>
+         <index name="certification_approval_request_prison_id_idx" unique="false">
+            <column ascending="true" name="prison_id"/>
+         </index>
+      </table>
+      <table name="certification_approval_request_location" remarks="The locations covered by an approval request, held as a self-contained tree that is copied from the live locations when the request is raised. Kept separate from the location table so a request shows what was asked for even if the estate changes afterwards." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <child column="parent_location_id" foreignKey="certification_approval_request_location_parent_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="certification_approval_request_location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="certification_approval_request_id" nullable="true" remarks="The approval request this location belongs to. Deleted with the request. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="certification_approval_reques_certification_approval_reque_fkey" implied="false" onDeleteCascade="true" schema="public" table="certification_approval_request"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="location_code" nullable="false" remarks="The location's own code within its parent, copied from the live location. [Sensitivity: NONE]" size="40" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="cell_mark" nullable="true" remarks="Proposed number on the cell door. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="local_name" nullable="true" remarks="The name the prison uses for this location. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="path_hierarchy" nullable="false" remarks="Full path of the location within the prison, copied when the request was raised. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="level" nullable="false" remarks="Depth of this location in the request's tree, with the top level location at the lowest number. Lets the tree be rendered without recursion. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="certified_normal_accommodation" nullable="true" remarks="Proposed certified normal accommodation for this location. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="working_capacity" nullable="true" remarks="Proposed working capacity for this location. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="max_capacity" nullable="true" remarks="Proposed maximum capacity for this location. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="10" name="in_cell_sanitation" nullable="true" remarks="Proposed in-cell sanitation setting for this location. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="11" name="location_type" nullable="false" remarks="What kind of location this is. See LocationType in reference-data.csv. [Sensitivity: NONE]" size="40" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="12" name="specialist_cell_types" nullable="true" remarks="Proposed specialist cell types, comma separated. [Sensitivity: NONE]" size="300" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="13" name="converted_cell_type" nullable="true" remarks="Proposed non-residential use for a cell being converted. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="14" name="parent_location_id" nullable="true" remarks="The location above this one within the request's own tree, not the live location tree. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="certification_approval_request_location_parent_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="certification_approval_request_location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="15" name="used_for_types" nullable="true" remarks="Proposed list of what the cell is used for, comma separated. [Sensitivity: NONE]" size="300" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="16" name="accommodation_types" nullable="true" remarks="Proposed accommodation types, comma separated. [Sensitivity: NONE]" size="120" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="17" name="current_working_capacity" nullable="true" remarks="Working capacity when the request was raised, as a snapshot for comparison. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="18" name="current_max_capacity" nullable="true" remarks="Maximum capacity when the request was raised, as a snapshot for comparison. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="19" name="current_certified_normal_accommodation" nullable="true" remarks="Certified normal accommodation when the request was raised, as a snapshot for comparison. [Sensitivity: OFFICIAL-SENSITIVE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="20" name="reactivate_this_location" nullable="false" remarks="Whether this particular location should be brought back into use if the request is approved. A request can cover a tree in which only some locations are reactivated. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="21" name="current_specialist_cell_types" nullable="true" remarks="Specialist cell types when the request was raised, as a snapshot for comparison. [Sensitivity: NONE]" size="300" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="22" name="current_cell_mark" nullable="true" remarks="The cell door number when the request was raised, as a snapshot for comparison. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="23" name="current_in_cell_sanitation" nullable="true" remarks="In-cell sanitation setting when the request was raised, as a snapshot for comparison. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="certification_approval_request_location_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="idx_cert_approval_req_loc_parent_id" unique="false">
+            <column ascending="true" name="parent_location_id"/>
+         </index>
+         <index name="idx_cert_approval_req_loc_req_id" unique="false">
+            <column ascending="true" name="certification_approval_request_id"/>
+         </index>
+         <checkConstraint constraint="id IS NOT NULL" name="certification_approval_request_location_id_not_null1"/>
+      </table>
+      <table name="certification_backup" remarks="One-off backup taken by migration V1_74 (CREATE TABLE AS SELECT) before certification data moved onto the location table. Not written to by the application and not read by anything - a candidate for removal in a later migration." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="location_id" nullable="true" remarks="The location the backed up certification row belonged to. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="certificate_id" nullable="true" remarks="Primary key of the row in the old certification table, which has since been dropped. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="certified" nullable="true" remarks="Whether the location was certified, as at migration V1_74. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="certified_normal_accommodation" nullable="true" remarks="Certified normal accommodation for the location, as at migration V1_74. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+      </table>
+      <table name="constant_transaction_type" remarks="A copy of the TransactionType enumeration as a table, so reporting tools and the Analytical Platform can decode linked_transaction.transaction_type without hard-coding the list. Kept in sync with the enum by ConstantsTableTest. Deliberately not the target of a foreign key." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="code" nullable="false" remarks="Primary key: the transaction type code as stored in linked_transaction.transaction_type. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="sequence" nullable="false" remarks="Display order, matching the order the values are declared in the Kotlin enum. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="description" nullable="false" remarks="Human readable description of the transaction type. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <primaryKey column="code" sequenceNumberInPK="1"/>
+         <index name="constant_transaction_type_pkey" unique="true">
+            <column ascending="true" name="code"/>
+         </index>
+      </table>
+      <table name="flyway_schema_history" numRows="104" remarks="" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="installed_rank" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="version" nullable="true" remarks="" size="50" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="description" nullable="false" remarks="" size="200" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="type" nullable="false" remarks="" size="20" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="script" nullable="false" remarks="" size="1000" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="checksum" nullable="true" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="installed_by" nullable="false" remarks="" size="100" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="now()" digits="6" id="7" name="installed_on" nullable="false" remarks="" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="execution_time" nullable="false" remarks="" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="success" nullable="false" remarks="" size="1" type="bool" typeCode="-7"/>
+         <primaryKey column="installed_rank" sequenceNumberInPK="1"/>
+         <index name="flyway_schema_history_pk" unique="true">
+            <column ascending="true" name="installed_rank"/>
+         </index>
+         <index name="flyway_schema_history_s_idx" unique="false">
+            <column ascending="true" name="success"/>
+         </index>
+      </table>
+      <table name="linked_transaction" remarks="One user action or system job, grouping together every location change it caused. Lets the history be read as &quot;what somebody did&quot; rather than as isolated field changes." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Primary key, and the transaction identifier exposed in the API. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <child column="linked_transaction_id" foreignKey="linked_transaction_fk" implied="false" onDeleteCascade="true" schema="public" table="location_history"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="transaction_type" nullable="false" remarks="What kind of action this was, such as LOCATION_UPDATE or CAPACITY_CHANGE. Decoded by the constant_transaction_type table. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="transaction_detail" nullable="false" remarks="System generated one line summary of the action, built from a template rather than typed by a user. [Sensitivity: NONE]" size="2147483647" type="text" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="transaction_invoked_by" nullable="false" remarks="DPS username of the person who performed the action, or a system identifier for automated jobs. [Sensitivity: STAFF]" size="80" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="4" name="tx_start_time" nullable="false" remarks="When the transaction started. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="5" name="tx_end_time" nullable="true" remarks="When the transaction finished. Null if it is still running or did not complete. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="prison_id" nullable="false" remarks="Prison the transaction applied to, as a NOMIS agency code. [Sensitivity: NONE]" size="5" type="varchar" typeCode="12">
+            <parent column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="prison_configuration"/>
+         </column>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="linked_transaction_pk" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="idx_linked_transaction_prison_id" unique="false">
+            <column ascending="true" name="prison_id"/>
+            <column ascending="true" name="transaction_type"/>
+         </index>
+         <index name="idx_linked_transaction_tx_start_time" unique="false">
+            <column ascending="true" name="tx_start_time"/>
+         </index>
+      </table>
+      <table name="location" remarks="Every location inside a prison, from a wing down to an individual cell, held as a self-referencing tree via parent_id. Single-table inheritance: location_type_discriminator says which kind of location a row is, and which columns are meaningful." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="gen_random_uuid()" digits="0" id="0" name="id" nullable="false" remarks="Primary key. A UUIDv7 generated by the application, used as the location's permanent public identifier across DPS. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <child column="location_id" foreignKey="cell_used_for_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="cell_used_for"/>
+            <child column="location_id" foreignKey="fk_location" implied="false" onDeleteCascade="true" schema="public" table="certification_approval_request"/>
+            <child column="parent_id" foreignKey="fk_location_parent_id" implied="false" onDeleteCascade="false" schema="public" table="location"/>
+            <child column="location_id" foreignKey="location_history_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="location_history"/>
+            <child column="location_id" foreignKey="location_usage_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="non_residential_usage"/>
+            <child column="location_id" foreignKey="location_attribute_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="residential_attribute"/>
+            <child column="location_id" foreignKey="service_usage_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="service_usage"/>
+            <child column="location_id" foreignKey="specialist_cell_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="specialist_cell"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="prison_id" nullable="false" remarks="Prison the location belongs to, as a NOMIS agency code such as MDI. [Sensitivity: NONE]" size="5" type="varchar" typeCode="12">
+            <parent column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="prison_configuration"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="path_hierarchy" nullable="false" remarks="Full path of the location within the prison, hyphen separated, such as A-1-001. Unique within a prison and used with prison_id to form the location key. [Sensitivity: NONE]" size="150" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="code" nullable="false" remarks="The location's own code within its parent, such as 001 for cell A-1-001. Not unique on its own. [Sensitivity: NONE]" size="12" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="location_type" nullable="false" remarks="What kind of location this is - WING, LANDING, CELL, ADJUDICATION_ROOM and so on. See LocationType in reference-data.csv. [Sensitivity: NONE]" size="30" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="parent_id" nullable="true" remarks="The location immediately above this one in the tree. Null for a top level location such as a wing. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="fk_location_parent_id" implied="false" onDeleteCascade="false" schema="public" table="location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="local_name" nullable="true" remarks="Name the prison uses for this location in conversation, such as &quot;Houseblock 1&quot;. Optional; the path hierarchy is the authoritative identifier. [Sensitivity: NONE]" size="80" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="comments" nullable="true" remarks="Free text notes about the location. Free text: assume it can name a prisoner, for example when explaining why a cell is out of use. [Sensitivity: PERSONAL]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="8" name="order_within_parent_location" nullable="true" remarks="Sort order among siblings, so a wing's landings list in the order staff expect rather than alphabetically. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="9" name="residential_housing_type" nullable="true" remarks="Legacy NOMIS housing classification, superseded by accommodation_type. Retained because historic rows and the NOMIS sync still carry it. See ResidentialHousingType in reference-data.csv. [Sensitivity: NONE]" size="30" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="10" name="capacity_id" nullable="true" remarks="Foreign key to capacity, holding this location's working capacity, maximum capacity and certified normal accommodation. Null for locations that hold no one. [Sensitivity: NONE]" size="19" type="int8" typeCode="-5">
+            <parent column="id" foreignKey="fk_location_capacity_id" implied="false" onDeleteCascade="true" schema="public" table="capacity"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="11" name="deactivated_date" nullable="true" remarks="When the location was taken out of use. Null while it is in use. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="12" name="deactivated_reason" nullable="true" remarks="Why the location was taken out of use - DAMAGED, MAINTENANCE, REFURBISHMENT and so on. See DeactivatedReason in reference-data.csv. [Sensitivity: NONE]" size="30" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="13" name="proposed_reactivation_date" nullable="true" remarks="Date the prison expects the location to come back into use. An estimate, not a commitment. [Sensitivity: NONE]" size="13" type="date" typeCode="91"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="14" name="when_created" nullable="false" remarks="When this location record was first created. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="15" name="when_updated" nullable="false" remarks="When this location record was last changed. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="16" name="updated_by" nullable="false" remarks="DPS username of the last person to change this location. [Sensitivity: STAFF]" size="80" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="17" name="accommodation_type" nullable="true" remarks="What the location is used for at the top level - NORMAL_ACCOMMODATION, HEALTHCARE_INPATIENTS, CARE_AND_SEPARATION or OTHER_NON_RESIDENTIAL. Drives roll count reporting. See AccommodationType in reference-data.csv. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="18" name="planet_fm_reference" nullable="true" remarks="Reference for the corresponding job in Planet FM, the facilities management system, when a location is out of use for maintenance. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="19" name="converted_cell_type" nullable="true" remarks="What a former cell is now used as, when it has been converted to a non-residential room - OFFICE, STORE, SHOWER and so on. See ConvertedCellType in reference-data.csv. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="20" name="other_converted_cell_type" nullable="true" remarks="Free text description used when converted_cell_type is OTHER. [Sensitivity: NONE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="21" name="archived_reason" nullable="true" remarks="Why the location was permanently archived rather than merely deactivated. Free text: assume it can name a prisoner. [Sensitivity: PERSONAL]" size="200" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="22" name="deactivated_by" nullable="true" remarks="DPS username of the person who took the location out of use. [Sensitivity: STAFF]" size="80" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="23" name="deactivation_reason_description" nullable="true" remarks="Free text expanding on deactivated_reason, and the only detail available when the reason is OTHER. Assume it can name a prisoner - &quot;damaged by&quot; is a common phrasing. [Sensitivity: PERSONAL]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="24" name="location_type_discriminator" nullable="false" remarks="Single-table inheritance discriminator: CELL, RESIDENTIAL, NON_RESIDENTIAL or VIRTUAL. Determines which subclass the row maps to and therefore which columns apply. [Sensitivity: NONE]" size="20" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="'DRAFT'::character varying" digits="0" id="25" name="status" nullable="false" remarks="Lifecycle state of the location - DRAFT, ACTIVE, INACTIVE or ARCHIVED. See LocationStatus in reference-data.csv. [Sensitivity: NONE]" size="20" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="26" name="in_cell_sanitation" nullable="true" remarks="Whether the cell has its own toilet and washing facilities. Part of the certified specification of a cell. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="NULL::character varying" digits="0" id="27" name="cell_mark" nullable="true" remarks="The number physically painted on the cell door, which can differ from the location code. [Sensitivity: NONE]" size="12" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="NULL::character varying" digits="0" id="28" name="residential_structure" nullable="true" remarks="Hyphen separated list of the location types making up the path from the top of the prison down to this location, such as WING-LANDING-CELL. Denormalised so the shape of a prison can be read without walking the tree. [Sensitivity: NONE]" size="150" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="29" name="internal_movement_allowed" nullable="true" remarks="Whether prisoners may move to and from this non-residential location unescorted. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="30" name="certified_cell" nullable="true" remarks="Whether the cell currently appears on the prison's cell certificate. A cell that is not certified must not be used to hold anyone. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="31" name="temporarily_off_cell_cert" nullable="true" remarks="Whether a certified cell is temporarily suspended from the certificate, for example during refurbishment, without losing its certification. Required for rows where the discriminator is CELL. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="32" name="hidden_from_list" nullable="false" remarks="Whether the location is suppressed from the location lists shown in the UI. Used for locations that exist for data reasons but that staff should not browse. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="location_pk" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="idx_location_capacity_id" unique="false">
+            <column ascending="true" name="capacity_id"/>
+         </index>
+         <index name="idx_location_parent_id" unique="false">
+            <column ascending="true" name="parent_id"/>
+         </index>
+         <index name="idx_location_path_hierarchy" unique="false">
+            <column ascending="true" name="path_hierarchy"/>
+         </index>
+         <index name="location_housing_type_idx" unique="false">
+            <column ascending="true" name="residential_housing_type"/>
+            <column ascending="true" name="location_type"/>
+            <column ascending="true" name="code"/>
+         </index>
+         <index name="location_status_idx" unique="false">
+            <column ascending="true" name="prison_id"/>
+            <column ascending="true" name="status"/>
+         </index>
+         <index name="location_type_discriminator_idx" unique="false">
+            <column ascending="true" name="location_type_discriminator"/>
+            <column ascending="true" name="prison_id"/>
+            <column ascending="true" name="path_hierarchy"/>
+         </index>
+         <index name="uk_location_prison_code_id" unique="true">
+            <column ascending="true" name="prison_id"/>
+            <column ascending="true" name="path_hierarchy"/>
+         </index>
+         <checkConstraint constraint="(((location_type_discriminator)::text &lt;&gt; 'CELL'::text) OR (temporarily_off_cell_cert IS NOT NULL))" name="location_temp_off_cell_cert_required_for_cells"/>
+      </table>
+      <table name="location_history" remarks="Audit trail of every change to a location: one row per changed attribute, tied to the transaction that changed it." schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('location_history_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="location_id" nullable="true" remarks="The location that changed. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="location_history_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="attribute_name" nullable="false" remarks="Which attribute of the location changed, such as CAPACITY or CODE. See LocationAttribute in reference-data.csv. [Sensitivity: NONE]" size="80" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="old_value" nullable="true" remarks="The attribute's value before the change, rendered as text. Carries the sensitivity of whichever attribute changed, so where the attribute was a free-text field this can name a prisoner. [Sensitivity: PERSONAL]" size="1024" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="new_value" nullable="true" remarks="The attribute's value after the change, rendered as text. Same caveat as old_value. [Sensitivity: PERSONAL]" size="1024" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="amended_by" nullable="false" remarks="DPS username of the person who made the change. [Sensitivity: STAFF]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="6" name="amended_date" nullable="false" remarks="When the change was made. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="7" name="linked_transaction_id" nullable="true" remarks="The transaction this change belonged to, so all the changes made by one user action can be read together. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="linked_transaction_fk" implied="false" onDeleteCascade="true" schema="public" table="linked_transaction"/>
+         </column>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="location_history_pk" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="idx_location_history_linked_transaction_id" unique="false">
+            <column ascending="true" name="linked_transaction_id"/>
+         </index>
+         <index name="location_history_location_id_amend" unique="false">
+            <column ascending="true" name="location_id"/>
+            <column ascending="true" name="amended_date"/>
+            <column ascending="true" name="amended_by"/>
+         </index>
+         <index name="location_history_location_id_idx" unique="false">
+            <column ascending="true" name="location_id"/>
+         </index>
+      </table>
+      <table name="non_residential_usage" remarks="What a non-residential location is used for, such as visits or adjudications. A location can have several usages." schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('location_usage_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="location_id" nullable="false" remarks="The non-residential location this usage applies to. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="location_usage_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="usage_type" nullable="false" remarks="What the location is used for - ADJUDICATION_HEARING, VISIT, PROGRAMMES_ACTIVITIES and so on. Legacy NOMIS classification; service_usage is the modern equivalent. See NonResidentialUsageType in reference-data.csv. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="capacity" nullable="true" remarks="How many people the location holds for this particular usage, which can differ from its residential capacity. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="99" digits="0" id="4" name="sequence" nullable="false" remarks="Sort order when a location has more than one usage. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="location_usage_pk" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="location_usage_location_id_idx" unique="false">
+            <column ascending="true" name="location_id"/>
+         </index>
+         <index name="location_usage_location_id_usage_type_uindex" unique="true">
+            <column ascending="true" name="location_id"/>
+            <column ascending="true" name="usage_type"/>
+         </index>
+      </table>
+      <table name="prison_configuration" remarks="Per-prison settings controlling how this service behaves at that prison. One row per prison, keyed by the prison code itself." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="prison_id" nullable="false" remarks="Primary key: the prison, as a NOMIS agency code. [Sensitivity: NONE]" size="5" type="varchar" typeCode="12">
+            <child column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="cell_certificate"/>
+            <child column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="cell_certificate_upload"/>
+            <child column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="certification_approval_request"/>
+            <child column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="linked_transaction"/>
+            <child column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="location"/>
+            <child column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="prison_notification_mailbox"/>
+            <child column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="signed_operation_capacity"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="1" name="when_updated" nullable="false" remarks="When the configuration was last changed. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="updated_by" nullable="false" remarks="DPS username of the person who last changed the configuration. [Sensitivity: STAFF]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="3" name="resi_location_service_active" nullable="false" remarks="Whether the prison manages its residential locations in this service rather than in NOMIS. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="4" name="include_segregation_in_roll_count" nullable="false" remarks="Whether prisoners in segregation are counted in the prison's roll count figures. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="5" name="certification_approval_required" nullable="true" remarks="Whether changes affecting certified capacity at this prison must go through the approval workflow before taking effect. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <column autoUpdated="false" defaultValue="false" digits="0" id="6" name="non_resi_service_active" nullable="false" remarks="Whether the prison manages its non-residential locations in this service rather than in NOMIS. [Sensitivity: NONE]" size="1" type="bool" typeCode="-7"/>
+         <primaryKey column="prison_id" sequenceNumberInPK="1"/>
+         <index name="prison_configuration_pkey" unique="true">
+            <column ascending="true" name="prison_id"/>
+         </index>
+      </table>
+      <table name="prison_notification_mailbox" remarks="Email addresses notified about cell certification activity. A row with a null prison_id is the national default for that notification group." schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="prison_id" nullable="true" remarks="The prison this mailbox serves, as a NOMIS agency code. Null means it is the default used for any prison without its own entry. [Sensitivity: NONE]" size="5" type="varchar" typeCode="12">
+            <parent column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="prison_configuration"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="notification_group" nullable="false" remarks="Which role the mailbox is notified in - CERT_ADMIN, CERT_VIEWER or CERT_REVIEWER. See NotificationGroup in reference-data.csv. [Sensitivity: NONE]" size="20" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="email_address" nullable="false" remarks="Address notified. Usually a shared team mailbox, but can be an individual member of staff, so treat it as staff personal data. [Sensitivity: STAFF]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="4" name="when_updated" nullable="false" remarks="When the mailbox entry was last changed. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="updated_by" nullable="false" remarks="DPS username of the person who last changed the mailbox entry. [Sensitivity: STAFF]" size="255" type="varchar" typeCode="12"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="prison_notification_mailbox_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="prison_notification_mailbox_default_unique_idx" unique="true">
+            <column ascending="true" name="notification_group"/>
+         </index>
+         <index name="prison_notification_mailbox_prison_unique_idx" unique="true">
+            <column ascending="true" name="prison_id"/>
+            <column ascending="true" name="notification_group"/>
+         </index>
+      </table>
+      <table name="residential_attribute" remarks="Legacy NOMIS attributes of a residential location, retained for the NOMIS sync and for historic reporting. Superseded by specialist_cell and cell_used_for." schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('location_attribute_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="location_id" nullable="false" remarks="The location the attribute applies to. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="location_attribute_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="attribute_type" nullable="false" remarks="Which NOMIS attribute domain the value belongs to, such as LOCATION_ATTRIBUTE or SANITATION_FITTINGS. See ResidentialAttributeType in reference-data.csv. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="attribute_value" nullable="false" remarks="The NOMIS attribute value itself. See ResidentialAttributeValue in reference-data.csv. [Sensitivity: NONE]" size="60" type="varchar" typeCode="12"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="location_attribute_pk" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="location_attribute_location_id_idx" unique="false">
+            <column ascending="true" name="location_id"/>
+         </index>
+         <index name="location_attribute_location_id_usage_type_usage_value_idx" unique="true">
+            <column ascending="true" name="location_id"/>
+            <column ascending="true" name="attribute_type"/>
+            <column ascending="true" name="attribute_value"/>
+         </index>
+      </table>
+      <table name="service_usage" remarks="Which DPS services a non-residential location is available to, so each service can offer only the locations relevant to it." schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('service_usage_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="location_id" nullable="false" remarks="The location this applies to. Deleted with the location. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="service_usage_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="service_type" nullable="false" remarks="The service the location is available to, such as ADJUDICATION_HEARING or VIDEO_LINK. See ServiceType in reference-data.csv. [Sensitivity: NONE]" size="80" type="varchar" typeCode="12"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="non_residential_service_pk" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="service_usage_location_uk" unique="true">
+            <column ascending="true" name="location_id"/>
+            <column ascending="true" name="service_type"/>
+         </index>
+      </table>
+      <table name="signed_operation_capacity" remarks="The signed operational capacity of a prison: the maximum population the governor has signed off as safe to hold. One current row per prison." schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('signed_operation_capacity_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="prison_id" nullable="false" remarks="The prison, as a NOMIS agency code. Unique. [Sensitivity: NONE]" size="5" type="varchar" typeCode="12">
+            <parent column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="prison_configuration"/>
+         </column>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="2" name="signed_operation_capacity" nullable="false" remarks="The signed operational capacity figure itself. Published by MoJ in the prison population statistics. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="6" id="3" name="when_updated" nullable="false" remarks="When the figure was last changed. [Sensitivity: NONE]" size="29" type="timestamp" typeCode="93"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="updated_by" nullable="false" remarks="DPS username of the person who last changed the figure. [Sensitivity: STAFF]" size="255" type="varchar" typeCode="12"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="signed_operation_capacity_pk" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="signed_operation_capacity_prison_id_idx" unique="true">
+            <column ascending="true" name="prison_id"/>
+         </index>
+         <index name="signed_operation_capacity_prison_id_key" unique="true">
+            <column ascending="true" name="prison_id"/>
+         </index>
+      </table>
+      <table name="specialist_cell" remarks="Specialist cell types held against a cell, such as accessible or constant supervision cells. A cell can have several." schema="public" type="TABLE">
+         <column autoUpdated="true" defaultValue="nextval('specialist_cell_id_seq'::regclass)" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="10" type="serial" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="location_id" nullable="false" remarks="The cell this applies to. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="specialist_cell_location_id_fkey" implied="false" onDeleteCascade="true" schema="public" table="location"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="specialist_cell_type" nullable="false" remarks="The specialist type - ACCESSIBLE_CELL, CONSTANT_SUPERVISION, SAFE_CELL and so on. Some types reduce the cell's usable capacity. See SpecialistCellType in reference-data.csv. [Sensitivity: NONE]" size="80" type="varchar" typeCode="12"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="specialist_cell_pk" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="specialist_cell_location_id_idx" unique="false">
+            <column ascending="true" name="location_id"/>
+         </index>
+         <index name="specialist_cell_location_uk" unique="true">
+            <column ascending="true" name="location_id"/>
+            <column ascending="true" name="specialist_cell_type"/>
+         </index>
+      </table>
+   </tables>
+</database>
