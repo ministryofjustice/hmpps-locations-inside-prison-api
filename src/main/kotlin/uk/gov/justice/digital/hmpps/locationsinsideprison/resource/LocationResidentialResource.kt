@@ -37,6 +37,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ResidentialSummary
@@ -467,14 +468,14 @@ class LocationResidentialResource(
       locationService.convertToNonResidentialCell(id, convertedCellType, otherConvertedCellType, reasonForChange)
     }
     // On a prison that requires certification approval the cell is temporarily deactivated and an approval request
-    // is raised (conversion happens later on approval), so a deactivation event is published. Otherwise the cell is
-    // converted immediately and amended.
-    val event = if (updatedLocation.pendingApprovalRequestId != null) {
-      InternalLocationDomainEventType.LOCATION_DEACTIVATED
+    // is raised (conversion happens later on approval), so the change is audited as a deactivation. Otherwise the
+    // cell is converted immediately. Either way the location is published as amended.
+    val auditType = if (updatedLocation.pendingApprovalRequestId != null) {
+      AuditType.LOCATION_DEACTIVATED
     } else {
-      InternalLocationDomainEventType.LOCATION_AMENDED
+      AuditType.LOCATION_AMENDED
     }
-    return eventPublishAndAudit(event) { updatedLocation }
+    return eventPublishAndAudit(InternalLocationDomainEventType.LOCATION_AMENDED, auditType) { updatedLocation }
   }
 
   @PutMapping("/{id}/update-non-res-cell")

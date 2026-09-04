@@ -9,7 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationChangeResult
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
@@ -186,5 +186,5 @@ data class ApprovalResponse(
   val newLocation: Boolean = false,
   val prisonId: String,
   val location: Location? = null,
-  val events: Map<InternalLocationDomainEventType, List<Location>>? = null,
+  val locationChanges: LocationChangeResult? = null,
 )
