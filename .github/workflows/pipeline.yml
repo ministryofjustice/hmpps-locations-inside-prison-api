@@ -42,6 +42,16 @@ jobs:
       postgres-username: locations_inside_prison
       postgres-password: locations_inside_prison
       java-version: "25"
+  schema-spy:
+    name: Publish the data dictionary
+    if: github.ref == 'refs/heads/main'
+    needs:
+      - kotlin_validate
+    # top-level permissions grant contents: read; the reusable workflow needs write to publish to gh-pages
+    permissions:
+      contents: write
+    uses: ./.github/workflows/schema-spy.yml
+    secrets: inherit
   build:
     name: Build docker image from hmpps-github-actions
     if: github.ref == 'refs/heads/main'
