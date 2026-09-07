@@ -16,6 +16,5 @@ service_usage
 signed_operation_capacity
 specialist_cell
 location_history
-certification_backup
 constant_transaction_type
 flyway_schema_history

@@ -1,6 +1,5 @@
 flyway_schema_history
 constant_transaction_type
-certification_backup
 location_history
 specialist_cell
 signed_operation_capacity
