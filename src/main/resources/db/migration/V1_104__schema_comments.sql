@@ -340,14 +340,3 @@ COMMENT ON COLUMN cell_certificate_upload_location.working_capacity_mismatch IS 
 COMMENT ON COLUMN cell_certificate_upload_location.max_capacity_mismatch IS 'Whether the uploaded maximum capacity differed from what the service already held. [Sensitivity: OFFICIAL-SENSITIVE]';
 COMMENT ON COLUMN cell_certificate_upload_location.certified_normal_accommodation_mismatch IS 'Whether the uploaded certified normal accommodation differed from what the service already held. [Sensitivity: OFFICIAL-SENSITIVE]';
 COMMENT ON COLUMN cell_certificate_upload_location.applied_max_capacity IS 'The maximum capacity actually applied to the location, which can differ from the uploaded value where the import had to reconcile a mismatch. [Sensitivity: OFFICIAL-SENSITIVE]';
-
-
--- ---------------------------------------------------------------------------------------------------
--- Migration leftover
--- ---------------------------------------------------------------------------------------------------
-
-COMMENT ON TABLE certification_backup IS 'One-off backup taken by migration V1_74 (CREATE TABLE AS SELECT) before certification data moved onto the location table. Not written to by the application and not read by anything - a candidate for removal in a later migration.';
-COMMENT ON COLUMN certification_backup.location_id IS 'The location the backed up certification row belonged to. [Sensitivity: NONE]';
-COMMENT ON COLUMN certification_backup.certificate_id IS 'Primary key of the row in the old certification table, which has since been dropped. [Sensitivity: NONE]';
-COMMENT ON COLUMN certification_backup.certified IS 'Whether the location was certified, as at migration V1_74. [Sensitivity: NONE]';
-COMMENT ON COLUMN certification_backup.certified_normal_accommodation IS 'Certified normal accommodation for the location, as at migration V1_74. [Sensitivity: NONE]';

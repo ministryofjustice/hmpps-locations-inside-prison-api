@@ -1,0 +1,22 @@
+-- Drop certification_backup.
+--
+-- V1_74 created this table with CREATE TABLE AS SELECT as a one-off safety net, immediately before it
+-- dropped the certification table and moved that data onto location and capacity. Nothing has read or
+-- written it since: no entity, repository, service, test, view or script in this repository refers to
+-- it, and having come from CREATE TABLE AS SELECT it has no primary key, foreign keys or indexes, so
+-- nothing in the schema depends on it either.
+--
+-- Nothing of value goes with it. Of its four columns, certified survives as location.certified_cell
+-- and certified_normal_accommodation as capacity.certified_normal_accommodation; location_id is simply
+-- the location.id it was joined on; and certificate_id is a key into the certification table that
+-- V1_74 itself dropped. All that is lost is the point-in-time snapshot of those values as at V1_74,
+-- which nothing reads and which location_history covers for subsequent change.
+--
+-- IF EXISTS is required, not defensive tidiness. Because nothing depended on the table it had already
+-- been dropped by hand in dev, which is how it came to light: the COMMENT ON statements originally in
+-- V1_104 failed there with 42P01, taking Flyway and application startup down with them.
+--
+-- Deliberately not CASCADE. If something unexpectedly does depend on this table, that should fail the
+-- deploy loudly rather than be dropped silently.
+
+DROP TABLE IF EXISTS certification_backup;
