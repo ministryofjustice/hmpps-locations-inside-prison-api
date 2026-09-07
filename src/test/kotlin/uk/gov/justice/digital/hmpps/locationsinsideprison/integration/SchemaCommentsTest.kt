@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate
  *
  * Descriptions live in the database as COMMENT ON statements so SchemaSpy, the CSV export and any
  * Glue crawl share one source of truth. Nothing else would notice a new column arriving undocumented,
- * and this schema is large enough - 20 tables and over 200 columns - that undocumented columns would
+ * and this schema is large enough - 19 tables and over 200 columns - that undocumented columns would
  * accumulate silently.
  *
  * The relkind filter includes 'v' as well as 'r'. There are no views today, but one added later would
