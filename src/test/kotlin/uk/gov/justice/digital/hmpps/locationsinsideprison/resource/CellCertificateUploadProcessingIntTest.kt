@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
@@ -512,6 +513,136 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     assertThat(currentCertificateFor(cell2).maxCapacity).isEqualTo(0)
   }
 
+  @Test
+  fun `a cell that has never held a working capacity takes the certified value`() {
+    // The shape a prison migrating off NOMIS arrives in: a CNA was held, a working capacity never was.
+    val cell = saveCellWithoutWorkingCapacity("Z-2-010", certifiedNormalAccommodation = 2)
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(cell.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2)),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      assertThat(upload.discrepancyRecords).isEqualTo(0)
+      with(upload.locations.first()) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+        assertThat(workingCapacityMismatch).isFalse()
+        assertThat(hasDiscrepancy()).isFalse()
+        assertThat(previousWorkingCapacity).isEqualTo(0)
+      }
+    }
+
+    withReloadedCell(cell) {
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
+      assertThat(getMaxCapacity()).isEqualTo(2)
+      assertThat(getCertifiedNormalAccommodation()).isEqualTo(2)
+    }
+
+    assertThat(currentCertificateFor(cell).workingCapacity).isEqualTo(2)
+  }
+
+  @Test
+  fun `raising the working capacity from zero also lets the max capacity and CNA through`() {
+    // Previously the retained zero tripped the "normal accommodation must not have a working capacity of 0"
+    // rule, so every candidate failed and the max capacity and CNA were dropped along with it.
+    val cell = saveCellWithoutWorkingCapacity("Z-2-011")
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(cell.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 2, certifiedNormalAccommodation = 3)),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      with(cellCertificateUploadRepository.findAll().first().locations.first()) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+        assertThat(hasDiscrepancy()).isFalse()
+        assertThat(appliedMaxCapacity).isEqualTo(3)
+      }
+    }
+
+    withReloadedCell(cell) {
+      assertThat(getMaxCapacity()).isEqualTo(3)
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
+      assertThat(getCertifiedNormalAccommodation()).isEqualTo(3)
+    }
+  }
+
+  @Test
+  fun `a certified working capacity below the cell's occupancy is refused and reported`() {
+    val cell = saveCellWithoutWorkingCapacity("Z-2-012", certifiedNormalAccommodation = 2)
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell.getPathHierarchy()), true, numberOfPrisonersInCell = 2)
+
+    postCellCertificateUpdate(
+      mapOf(cell.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 1, certifiedNormalAccommodation = 2)),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      with(cellCertificateUploadRepository.findAll().first().locations.first()) {
+        assertThat(workingCapacityMismatch).isTrue()
+        assertThat(message).isEqualTo(CellCertificateUploadProcessingService.WORKING_CAPACITY_MISMATCH_MESSAGE)
+      }
+    }
+
+    // the cell keeps its zero, and the certificate still records what the prison uploaded
+    withReloadedCell(cell) {
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(0)
+    }
+    assertThat(currentCertificateFor(cell).workingCapacity).isEqualTo(1)
+  }
+
+  @Test
+  fun `a cell that already holds a working capacity keeps it even when the certificate is higher`() {
+    // The rule is narrow on purpose - only a cell that has never held a working capacity takes the
+    // certified one. Everything else still keeps its own in both directions.
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 3, workingCapacity = 3, certifiedNormalAccommodation = 2)),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      with(cellCertificateUploadRepository.findAll().first().locations.first()) {
+        assertThat(workingCapacityMismatch).isTrue()
+        assertThat(message).isEqualTo(CellCertificateUploadProcessingService.WORKING_CAPACITY_MISMATCH_MESSAGE)
+      }
+    }
+
+    withReloadedCell1 {
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
+      assertThat(getMaxCapacity()).isEqualTo(3)
+    }
+    assertThat(currentCertificateFor(cell1).workingCapacity).isEqualTo(3)
+  }
+
+  @Test
+  fun `a temporarily deactivated cell is never raised, it is marked as off the cell certificate instead`() {
+    val cell = saveCellWithoutWorkingCapacity("Z-2-013", status = LocationStatus.INACTIVE)
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(cell.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 0)),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      with(cellCertificateUploadRepository.findAll().first().locations.first()) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+        assertThat(workingCapacityMismatch).isFalse()
+      }
+    }
+
+    withReloadedCell(cell) {
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(0)
+      assertThat(isShortTermInactive()).isTrue()
+    }
+  }
+
   /**
    * A cell that already holds no-one, mirroring the toilets, stores and offices prisons list on their cell
    * certificate spreadsheet with a max capacity of 0.
@@ -530,12 +661,39 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     return cell
   }
 
+  /**
+   * The shape a prison migrating off NOMIS arrives in: an ordinary normal accommodation cell with no
+   * specialist cell type that has never held a working capacity, because NOMIS never recorded one.
+   */
+  private fun saveCellWithoutWorkingCapacity(
+    pathHierarchy: String,
+    certifiedNormalAccommodation: Int = 0,
+    status: LocationStatus = LocationStatus.ACTIVE,
+  ): Cell {
+    val cell = repository.save(
+      buildCell(
+        pathHierarchy = pathHierarchy,
+        status = status,
+        capacity = Capacity(
+          maxCapacity = 2,
+          workingCapacity = 0,
+          certifiedNormalAccommodation = certifiedNormalAccommodation,
+        ),
+        linkedTransaction = linkedTransaction,
+      ),
+    )
+    repository.save(landingZ2.addChildLocation(cell))
+    return cell
+  }
+
   /** A cell's capacity is a lazy association, so re-reading it needs an open session. */
-  private fun withReloadedCell1(assertions: Cell.() -> Unit) {
+  private fun withReloadedCell(cell: Cell, assertions: Cell.() -> Unit) {
     TransactionTemplate(transactionManager).executeWithoutResult {
-      cellRepository.findById(cell1.id!!).get().assertions()
+      cellRepository.findById(cell.id!!).get().assertions()
     }
   }
+
+  private fun withReloadedCell1(assertions: Cell.() -> Unit) = withReloadedCell(cell1, assertions)
 
   private fun awaitUploadFinished() {
     await untilAsserted {
