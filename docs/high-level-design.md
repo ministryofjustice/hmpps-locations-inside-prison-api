@@ -291,13 +291,13 @@ Two points worth holding in mind:
 
 ## Events
 
-Six domain event types are published to the `domainevents` SNS topic:
+Four domain event types are published to the `domainevents` SNS topic:
 
-`location.inside.prison.created`, `.amended`, `.deactivated`, `.reactivated`, `.deleted`, `.signed-op-cap.amended`
+`location.inside.prison.created`, `.amended`, `.deleted`, `.signed-op-cap.amended`
 
 Events carry the location id, key and source (`DPS` or `NOMIS`) — no prisoner data. A single API call can fan out to many events, as the API publishes for each sub-location and then walks up the parent chain publishing `amended`. Draft locations are skipped. The contract is documented in [`async-api.yml`](../async-api.yml).
 
-The NOMIS sync consumer listens only to `created`, `amended` and `deleted`. Every `deactivated` and `reactivated` event is therefore accompanied by an `amended` event for the same location (MAPA-346). `deactivated` and `reactivated` are deprecated and will be removed once that consumer has switched over (MAPA-347); consumers must treat repeated `amended` events for one location as idempotent.
+Deactivating, reactivating and un-archiving a location publish `amended`; there are no separate deactivated/reactivated event types (retired under MAPA-347). What actually happened is recorded by the audit event type (`LOCATION_DEACTIVATED`, `LOCATION_REACTIVATED`, `LOCATION_AMENDED`). Within one API call a location receives at most one event of a given type: sub-locations and ancestors are de-duplicated before publishing.
 
 Three queues are used:
 

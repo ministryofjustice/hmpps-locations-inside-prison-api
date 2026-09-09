@@ -94,11 +94,10 @@ graph TB
 
 #### Domain Event Types:
 In all instances the domain event will contain the unique reference to a location.
-- location.inside.prison.created 
-- location.inside.prison.amended
-- location.inside.prison.deactivated
-- location.inside.prison.reactivated
+- location.inside.prison.created
+- location.inside.prison.amended (covers deactivation, reactivation and un-archiving)
 - location.inside.prison.deleted
+- location.inside.prison.signed-op-cap.amended
 
 **Example:**
 ```json
@@ -106,10 +105,11 @@ In all instances the domain event will contain the unique reference to a locatio
   "eventType": "location.inside.prison.amended",
   "occurredAt": "2023-03-14T10:00:00",
   "version": "1.0",
-  "description": "Location LEI-A-1-003 amended",
+  "description": "LEI-A-1-003 A location inside prison has been amended",
   "additionalInformation": {
-    "locationId": "38c862ee-dbd8-4774-bdd2-499092a4a01e",
-    "locationKey": "LEI-A-1-003"
+    "id": "38c862ee-dbd8-4774-bdd2-499092a4a01e",
+    "key": "LEI-A-1-003",
+    "source": "DPS"
   }
 }
 ```

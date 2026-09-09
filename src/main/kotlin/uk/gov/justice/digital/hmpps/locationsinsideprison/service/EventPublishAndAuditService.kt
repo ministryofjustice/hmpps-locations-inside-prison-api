@@ -7,6 +7,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.SignedOperationCapacityDto
 import java.time.Clock
 import java.time.LocalDateTime
+import java.util.UUID
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 
 @Service
@@ -21,18 +22,18 @@ class EventPublishAndAuditService(
     locationDetail: List<LocationDTO>,
     source: InformationSource = InformationSource.DPS,
   ) {
-    locationDetail.forEach {
-      publishEvent(eventType = eventType, locationDetail = it, auditData = it, source = source)
-    }
+    publishTree(eventType = eventType, locations = locationDetail, source = source)
+    locationDetail.forEach { auditEvent(eventType.auditType, it.id.toString(), it) }
   }
 
   fun publishEvent(
     eventType: InternalLocationDomainEventType,
     locationDetail: NonResidentialLocationDTO,
     auditData: Any? = null,
+    auditType: AuditType = eventType.auditType,
   ) {
     publishEvent(event = eventType, location = locationDetail)
-    auditData?.let { auditEvent(eventType.auditType, locationDetail.id.toString(), it) }
+    auditData?.let { auditEvent(auditType, locationDetail.id.toString(), it) }
   }
 
   fun publishEvent(
@@ -40,19 +41,49 @@ class EventPublishAndAuditService(
     locationDetail: LocationDTO,
     auditData: Any? = null,
     source: InformationSource = InformationSource.DPS,
+    auditType: AuditType = eventType.auditType,
   ) {
-    locationDetail.getSubLocations().forEach {
-      publishEvent(event = eventType, location = it, source = source)
-    }
-    traverseUp(eventType = InternalLocationDomainEventType.LOCATION_AMENDED, location = locationDetail.parentLocation, source = source)
-    auditData?.let { auditEvent(eventType.auditType, locationDetail.id.toString(), it) }
+    publishTree(eventType = eventType, locations = listOf(locationDetail), source = source)
+    auditData?.let { auditEvent(auditType, locationDetail.id.toString(), it) }
   }
 
-  private fun traverseUp(eventType: InternalLocationDomainEventType, location: Location?, source: InformationSource) {
-    if (location != null) {
-      publishEvent(event = eventType, location = location, source = source)
-      traverseUp(eventType = eventType, location = location.parentLocation, source = source)
+  /**
+   * Publishes an amended event for every location changed by an operation (the targets and any knock-on
+   * changes such as parents) and audits the targets with the audit type describing what happened to them.
+   * Returns the targets so callers can use them as the response body.
+   */
+  fun publishAndAudit(
+    result: LocationChangeResult,
+    source: InformationSource = InformationSource.DPS,
+  ): List<LocationDTO> {
+    publishTree(
+      eventType = InternalLocationDomainEventType.LOCATION_AMENDED,
+      locations = result.changed + result.alsoAmended,
+      source = source,
+    )
+    result.changed.forEach {
+      auditEvent(result.auditType, it.id.toString(), it.copy(childLocations = null, parentLocation = null, changeHistory = null))
     }
+    return result.changed
+  }
+
+  /**
+   * Publishes [eventType] for each location and all of its sub-locations, then an amended event for each
+   * ancestor, de-duplicated so that a location receives at most one event of a given type per call.
+   */
+  private fun publishTree(
+    eventType: InternalLocationDomainEventType,
+    locations: List<LocationDTO>,
+    source: InformationSource,
+  ) {
+    val toPublish = LinkedHashMap<Pair<InternalLocationDomainEventType, UUID?>, Location>()
+    locations.forEach { root ->
+      root.getSubLocations().forEach { toPublish.putIfAbsent(eventType to it.id, it) }
+      generateSequence(root.parentLocation) { it.parentLocation }.forEach {
+        toPublish.putIfAbsent(InternalLocationDomainEventType.LOCATION_AMENDED to it.id, it)
+      }
+    }
+    toPublish.forEach { (key, location) -> publishEvent(event = key.first, location = location, source = source) }
   }
 
   fun legacyPublishEvent(
@@ -86,19 +117,16 @@ class EventPublishAndAuditService(
     source: InformationSource,
   ) {
     if (location.status != DerivedLocationStatus.DRAFT) {
-      val occurredAt = LocalDateTime.now(clock)
-      event.withCompanionAmendedEvent().forEach { eventToPublish ->
-        snsService.publishDomainEvent(
-          eventType = eventToPublish,
-          description = "${location.getKey()} ${eventToPublish.description}",
-          occurredAt = occurredAt,
-          additionalInformation = AdditionalInformation(
-            id = location.id,
-            key = location.getKey(),
-            source = source,
-          ),
-        )
-      }
+      snsService.publishDomainEvent(
+        eventType = event,
+        description = "${location.getKey()} ${event.description}",
+        occurredAt = LocalDateTime.now(clock),
+        additionalInformation = AdditionalInformation(
+          id = location.id,
+          key = location.getKey(),
+          source = source,
+        ),
+      )
     }
   }
 
@@ -107,32 +135,17 @@ class EventPublishAndAuditService(
     location: NonResidentialLocationDTO,
   ) {
     if (location.status != DerivedLocationStatus.DRAFT) {
-      val occurredAt = LocalDateTime.now(clock)
-      event.withCompanionAmendedEvent().forEach { eventToPublish ->
-        snsService.publishDomainEvent(
-          eventType = eventToPublish,
-          description = "[${location.getKey()}] : ${location.localName} ${eventToPublish.description}",
-          occurredAt = occurredAt,
-          additionalInformation = AdditionalInformation(
-            id = location.id,
-            key = location.getKey(),
-            source = InformationSource.DPS,
-          ),
-        )
-      }
+      snsService.publishDomainEvent(
+        eventType = event,
+        description = "[${location.getKey()}] : ${location.localName} ${event.description}",
+        occurredAt = LocalDateTime.now(clock),
+        additionalInformation = AdditionalInformation(
+          id = location.id,
+          key = location.getKey(),
+          source = InformationSource.DPS,
+        ),
+      )
     }
-  }
-
-  /**
-   * Transitional (MAPA-346): the NOMIS sync consumer is moving to listen only to created/amended/deleted,
-   * so every deactivated/reactivated event is accompanied by an amended event for the same location.
-   * Remove once deactivated/reactivated are retired (MAPA-347).
-   */
-  private fun InternalLocationDomainEventType.withCompanionAmendedEvent(): List<InternalLocationDomainEventType> = when (this) {
-    InternalLocationDomainEventType.LOCATION_DEACTIVATED,
-    InternalLocationDomainEventType.LOCATION_REACTIVATED,
-    -> listOf(this, InternalLocationDomainEventType.LOCATION_AMENDED)
-    else -> listOf(this)
   }
 
   fun auditEvent(
@@ -176,3 +189,13 @@ enum class InformationSource {
   DPS,
   NOMIS,
 }
+
+/**
+ * The outcome of an operation that changes locations. Every location in [changed] and [alsoAmended] is published
+ * as amended; only [changed] (the targets of the operation) are audited, with [auditType] recording what happened.
+ */
+data class LocationChangeResult(
+  val auditType: AuditType,
+  val changed: List<LocationDTO>,
+  val alsoAmended: List<LocationDTO> = emptyList(),
+)
