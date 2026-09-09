@@ -76,7 +76,7 @@ class EventPublishAndAuditService(
     locations: List<LocationDTO>,
     source: InformationSource,
   ) {
-    val toPublish = LinkedHashMap<Pair<InternalLocationDomainEventType, UUID?>, Location>()
+    val toPublish = LinkedHashMap<Pair<InternalLocationDomainEventType, UUID>, Location>()
     locations.forEach { root ->
       root.getSubLocations().forEach { toPublish.putIfAbsent(eventType to it.id, it) }
       generateSequence(root.parentLocation) { it.parentLocation }.forEach {

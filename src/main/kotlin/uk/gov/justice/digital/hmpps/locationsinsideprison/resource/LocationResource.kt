@@ -521,7 +521,10 @@ class LocationResource(
       defaultValue = "false",
     ) forceReactivation: Boolean = false,
   ): LocationDTO = publishAndAudit(locationService.reactivateLocations(ReactivateLocationsRequest(forceReactivation = forceReactivation, locations = mapOf(id to ReactivationDetail(cascadeReactivation = cascadeReactivation)))))
-    .let { reactivated -> reactivated.firstOrNull { it.id == id } ?: reactivated.first() }
+    .firstOrNull { it.id == id }
+    // The requested location was already active, so only its ancestors (if any) were reactivated. Return it
+    // unchanged rather than an ancestor or, when nothing was reactivated at all, throwing on an empty list.
+    ?: locationService.getLocationById(id) ?: throw LocationNotFoundException(id.toString())
 
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
