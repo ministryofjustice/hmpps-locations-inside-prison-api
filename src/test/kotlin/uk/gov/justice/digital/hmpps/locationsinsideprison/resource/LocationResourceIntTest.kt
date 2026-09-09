@@ -1176,6 +1176,16 @@ class LocationResourceIntTest : CommonDataTestBase() {
     @Nested
     inner class HappyPath {
       @Test
+      fun `returns the requested location when it is already active`() {
+        webTestClient.put().uri("/locations/${cell1.id}/reactivate")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().jsonPath("$.key").isEqualTo(cell1.getKey())
+      }
+
+      @Test
       fun `can cascade reactivated locations`() {
         prisonerSearchMockServer.stubSearchByLocations(cell1.prisonId, listOf(cell1.getPathHierarchy(), cell2.getPathHierarchy()), false)
 
