@@ -216,10 +216,21 @@ class CellCertificateUploadProcessingService(
     val oldCellMark = cell.getDoorCellMark()
     val oldInCellSanitation = cell.getSanitationOfCell()
 
-    // An ingestion never moves the prison's working capacity: a difference between it and the uploaded
-    // certified working capacity does not tell us which of the two is correct. The certificate records the
-    // uploaded value, the location keeps its own, and the difference is reported for a user to resolve.
+    // An ingestion does not move a working capacity the prison already holds: a difference between it and
+    // the uploaded certified working capacity does not tell us which of the two is correct. The certificate
+    // records the uploaded value, the location keeps its own, and the difference is reported for a user to
+    // resolve.
     val retainedWorkingCapacity = oldWorkingCapacity ?: 0
+    // The exception is a cell that has never held a working capacity at all. NOMIS never recorded one, so a
+    // prison migrating off it arrives with zero on every cell and the uploaded certificate is the only source
+    // that has the real value - there is nothing to weigh it against, so it wins. Temporarily deactivated
+    // cells are left alone: markAsTemporarilyOffCellCert below is how they keep a certified working capacity.
+    val requestedWorkingCapacity =
+      if (!cell.isTemporarilyDeactivated() && retainedWorkingCapacity == 0 && row.workingCapacity > 0) {
+        row.workingCapacity
+      } else {
+        retainedWorkingCapacity
+      }
     val currentMaxCapacity = oldMaxCapacity ?: 0
     // A live location cannot hold a max capacity of zero (validateCapacity), but the certificate must record
     // what the prison uploaded - so floor only the value pushed onto the location, never the certified one.
@@ -228,11 +239,15 @@ class CellCertificateUploadProcessingService(
     val requestedCna = row.certifiedNormalAccommodation ?: currentCertifiedNormalAccommodation
 
     var appliedMaxCapacity = currentMaxCapacity
+    var appliedWorkingCapacity = retainedWorkingCapacity
     var appliedCertifiedNormalAccommodation = currentCertifiedNormalAccommodation
     var changed = false
     var capacityChanged = false
 
-    if (locationMaxCapacity != currentMaxCapacity || requestedCna != currentCertifiedNormalAccommodation) {
+    if (locationMaxCapacity != currentMaxCapacity ||
+      requestedCna != currentCertifiedNormalAccommodation ||
+      requestedWorkingCapacity != retainedWorkingCapacity
+    ) {
       // Look up occupancy via the non-transactional search service directly: a failure here must mark just this
       // row FAILED (caught by the caller), not roll back the per-row transaction the way a throwing
       // @Transactional bean would.
@@ -241,30 +256,41 @@ class CellCertificateUploadProcessingService(
       // Prefer everything the upload asked for, then degrade one value at a time, so a single value the cell
       // cannot take (max capacity below occupancy, a CNA of zero on normal accommodation) no longer discards
       // the rest of the row. setCapacity validates before it mutates, so a rejected attempt changes nothing.
+      // Where the working capacity is being retained the last three entries repeat the first three, so for
+      // every cell that already holds one the ladder collapses back to the two-value form.
       val candidates = listOf(
-        locationMaxCapacity to requestedCna,
-        currentMaxCapacity to requestedCna,
-        locationMaxCapacity to currentCertifiedNormalAccommodation,
+        Triple(locationMaxCapacity, requestedWorkingCapacity, requestedCna),
+        Triple(currentMaxCapacity, requestedWorkingCapacity, requestedCna),
+        Triple(locationMaxCapacity, requestedWorkingCapacity, currentCertifiedNormalAccommodation),
+        Triple(locationMaxCapacity, retainedWorkingCapacity, requestedCna),
+        Triple(currentMaxCapacity, retainedWorkingCapacity, requestedCna),
+        Triple(locationMaxCapacity, retainedWorkingCapacity, currentCertifiedNormalAccommodation),
       ).distinct()
-      for ((maxCapacity, cna) in candidates) {
-        if (maxCapacity == currentMaxCapacity && cna == currentCertifiedNormalAccommodation) continue
+      for ((maxCapacity, workingCapacity, cna) in candidates) {
+        if (maxCapacity == currentMaxCapacity &&
+          workingCapacity == retainedWorkingCapacity &&
+          cna == currentCertifiedNormalAccommodation
+        ) {
+          continue
+        }
         try {
-          validateCapacityNotBelowOccupancy(cell, occupancy, maxCapacity, retainedWorkingCapacity)
+          validateCapacityNotBelowOccupancy(cell, occupancy, maxCapacity, workingCapacity)
           cell.setCapacity(
             maxCapacity = maxCapacity,
-            workingCapacity = retainedWorkingCapacity,
+            workingCapacity = workingCapacity,
             certifiedNormalAccommodation = cna,
             userOrSystemInContext = requestedBy,
             amendedDate = now,
             linkedTransaction = linkedTransaction,
           )
           appliedMaxCapacity = maxCapacity
+          appliedWorkingCapacity = workingCapacity
           appliedCertifiedNormalAccommodation = cna
           changed = true
           capacityChanged = true
           break
         } catch (e: CapacityException) {
-          log.info("${cell.getKey()}: cannot certify max capacity $maxCapacity / CNA $cna on the location: ${e.message}")
+          log.info("${cell.getKey()}: cannot certify max capacity $maxCapacity / working capacity $workingCapacity / CNA $cna on the location: ${e.message}")
         }
       }
     }
@@ -300,9 +326,10 @@ class CellCertificateUploadProcessingService(
       appliedMaxCapacity = appliedMaxCapacity,
     )
     row.recordDiscrepancy(
-      // A temporarily deactivated cell holds a working capacity of zero by definition, so comparing it with
-      // the certified value says nothing - the INACTIVE_TEMP handling above already covers those cells.
-      workingCapacityMismatch = !cell.isTemporarilyDeactivated() && row.workingCapacity != retainedWorkingCapacity,
+      // A temporarily deactivated cell keeps its stored working capacity but reports none while it is
+      // inactive, so comparing the certified value against it says nothing - the INACTIVE_TEMP handling
+      // above already covers those cells.
+      workingCapacityMismatch = !cell.isTemporarilyDeactivated() && row.workingCapacity != appliedWorkingCapacity,
       // Compared against the floored value: an uploaded max capacity of zero the location had to round up
       // to one is not something a user can resolve, so it must not be reported as a discrepancy.
       maxCapacityMismatch = locationMaxCapacity != appliedMaxCapacity,
