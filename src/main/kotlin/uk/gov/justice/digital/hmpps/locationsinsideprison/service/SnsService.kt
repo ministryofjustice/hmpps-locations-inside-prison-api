@@ -92,16 +92,6 @@ enum class InternalLocationDomainEventType(val value: String, val description: S
     "A location inside prison has been amended",
     AuditType.LOCATION_AMENDED,
   ),
-  LOCATION_DEACTIVATED(
-    "location.inside.prison.deactivated",
-    "A location inside prison has been deactivated",
-    AuditType.LOCATION_DEACTIVATED,
-  ),
-  LOCATION_REACTIVATED(
-    "location.inside.prison.reactivated",
-    "A location inside prison has been reactivated",
-    AuditType.LOCATION_REACTIVATED,
-  ),
   LOCATION_DELETED(
     "location.inside.prison.deleted",
     "A location inside prison has been deleted",

@@ -24,10 +24,6 @@ components:
       $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-created.yaml
     location.inside.prison.amended:
       $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-amended.yaml
-    location.inside.prison.deactivated:
-      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deactivated.yaml
-    location.inside.prison.reactivated:
-      $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-reactivated.yaml
     location.inside.prison.deleted:
       $ref: https://raw.githubusercontent.com/ministryofjustice/hmpps-domain-events/main/spec/schemas/locations-inside-prison/location-inside-prison-deleted.yaml
     location.inside.prison.signed-op-cap.amended:
@@ -44,10 +40,6 @@ channels:
         $ref: '#/components/messages/location.inside.prison.created'
       location.inside.prison.amended:
         $ref: '#/components/messages/location.inside.prison.amended'
-      location.inside.prison.deactivated:
-        $ref: '#/components/messages/location.inside.prison.deactivated'
-      location.inside.prison.reactivated:
-        $ref: '#/components/messages/location.inside.prison.reactivated'
       location.inside.prison.deleted:
         $ref: '#/components/messages/location.inside.prison.deleted'
       location.inside.prison.signed-op-cap.amended:
@@ -61,7 +53,5 @@ operations:
     messages:
       - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.created'
       - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.amended'
-      - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.deactivated'
-      - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.reactivated'
       - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.deleted'
       - $ref: '#/channels/hmpps-domain-events/messages/location.inside.prison.signed-op-cap.amended'

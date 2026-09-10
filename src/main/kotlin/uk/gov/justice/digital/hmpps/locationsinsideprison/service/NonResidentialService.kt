@@ -460,7 +460,7 @@ class NonResidentialService(
   fun updateNonResidentialLocation(
     id: UUID,
     updateRequest: CreateOrUpdateNonResidentialLocationRequest,
-  ): Pair<NonResidentialLocationDTO, List<InternalLocationDomainEventType>> {
+  ): Pair<NonResidentialLocationDTO, AuditType> {
     val nonResLocation =
       nonResidentialLocationRepository.findById(id).orElseThrow { LocationNotFoundException(id.toString()) }
 
@@ -480,7 +480,6 @@ class NonResidentialService(
       "Update non-residential location ${nonResLocation.getKey()}",
     )
 
-    val events = mutableListOf<InternalLocationDomainEventType>()
     nonResLocation.update(
       PatchNonResidentialLocationRequest(
         localName = updateRequest.localName,
@@ -490,24 +489,24 @@ class NonResidentialService(
       clock,
       linkedTransaction,
     )
-    events.add(InternalLocationDomainEventType.LOCATION_AMENDED)
 
+    var auditType = AuditType.LOCATION_AMENDED
     val username = commonLocationService.getUsername()
     updateRequest.active?.let { activate ->
       if (activate) {
         if (activateLocation(nonResLocation, username, linkedTransaction)) {
-          events.add(InternalLocationDomainEventType.LOCATION_REACTIVATED)
+          auditType = AuditType.LOCATION_REACTIVATED
         }
       } else {
         if (deactivateLocation(nonResLocation, username, linkedTransaction)) {
-          events.add(InternalLocationDomainEventType.LOCATION_DEACTIVATED)
+          auditType = AuditType.LOCATION_DEACTIVATED
         }
       }
     }
 
     commonLocationService.trackLocationUpdate(nonResLocation, "Updated non-residential location")
     linkedTransaction.txEndTime = LocalDateTime.now(clock)
-    return Pair(nonResLocation.toNonResidentialDto(), events)
+    return Pair(nonResLocation.toNonResidentialDto(), auditType)
   }
 
   private fun activateLocation(location: NonResidentialLocation, username: String, linkedTransaction: LinkedTransaction): Boolean {
