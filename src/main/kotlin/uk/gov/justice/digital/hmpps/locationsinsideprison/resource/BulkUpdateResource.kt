@@ -24,9 +24,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.BasicTemporaryDeac
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.CapacityChanges
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationChangeResult
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import java.util.*
 
@@ -75,7 +74,7 @@ class BulkUpdateResource(
   )
   fun bulkDeactivateLocations(
     @RequestBody @Validated deactivateLocationsRequest: DeactivateLocationsRequest,
-  ): List<Location> = publishAndAudit(locationService.deactivateLocations(deactivateLocationsRequest))
+  ): List<Location> = deactivate(locationService.deactivateLocations(deactivateLocationsRequest))
 
   @PutMapping("deactivate/permanent")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -111,12 +110,7 @@ class BulkUpdateResource(
   )
   fun bulkPermanentlyDeactivateLocations(
     @RequestBody @Validated permanentDeactivationRequest: BulkPermanentDeactivationRequest,
-  ): List<Location> = publishAndAudit(
-    LocationChangeResult(
-      auditType = AuditType.LOCATION_DEACTIVATED,
-      changed = locationService.permanentlyDeactivateLocations(permanentDeactivationRequest),
-    ),
-  )
+  ): List<Location> = deactivate(mapOf(InternalLocationDomainEventType.LOCATION_DEACTIVATED to locationService.permanentlyDeactivateLocations(permanentDeactivationRequest)))
 
   @PutMapping("reactivate")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -152,7 +146,7 @@ class BulkUpdateResource(
   )
   fun bulkReactivateLocations(
     @RequestBody @Validated reactivateLocationsRequest: ReactivateLocationsRequest,
-  ): List<Location> = publishAndAudit(locationService.reactivateLocations(reactivateLocationsRequest))
+  ): List<Location> = reactivate(locationService.reactivateLocations(reactivateLocationsRequest))
 
   @PutMapping("capacity-update")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
@@ -190,7 +184,7 @@ class BulkUpdateResource(
     @RequestBody @Validated updateCapacityRequest: UpdateCapacityRequest,
   ): Map<String, List<CapacityChanges>> {
     with(locationService.updateCapacityOfCellLocations(updateCapacityRequest)) {
-      publishAndAudit(updatedLocations)
+      update(updatedLocations)
       return audit
     }
   }

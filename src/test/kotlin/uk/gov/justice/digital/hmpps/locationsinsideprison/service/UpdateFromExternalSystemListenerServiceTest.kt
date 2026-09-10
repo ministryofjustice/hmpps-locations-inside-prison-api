@@ -31,12 +31,11 @@ import java.util.UUID
 internal class UpdateFromExternalSystemListenerServiceTest {
   private val objectMapper = jacksonObjectMapper()
   private val locationService = mock<LocationService>()
-  private val eventPublishAndAuditService = mock<EventPublishAndAuditService>()
-  private val updateFromExternalSystemListenerService = UpdateFromExternalSystemListenerService(objectMapper, locationService, eventPublishAndAuditService)
+  private val updateFromExternalSystemListenerService = UpdateFromExternalSystemListenerService(objectMapper, locationService)
 
   @BeforeEach
   internal fun setUp() {
-    Mockito.reset(locationService, eventPublishAndAuditService)
+    Mockito.reset(locationService)
   }
 
   @Nested
@@ -77,15 +76,12 @@ internal class UpdateFromExternalSystemListenerServiceTest {
 
     @Test
     fun `will process the event`() {
-      val deactivation = LocationChangeResult(auditType = AuditType.LOCATION_DEACTIVATED, changed = listOf(cellLocation))
-      whenever(locationService.deactivateLocations(any<DeactivateLocationsRequest>())).thenReturn(deactivation)
       val message = objectMapper.writeValueAsString(updateFromExternalSystemEvent)
 
       assertDoesNotThrow {
         updateFromExternalSystemListenerService.onEventReceived(message)
       }
       verify(locationService, times(1)).deactivateLocations(any<DeactivateLocationsRequest>())
-      verify(eventPublishAndAuditService, times(1)).publishAndAudit(deactivation)
     }
 
     @Test

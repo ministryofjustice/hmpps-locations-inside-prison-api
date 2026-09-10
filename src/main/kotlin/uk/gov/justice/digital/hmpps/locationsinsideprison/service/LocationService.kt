@@ -1013,7 +1013,7 @@ class LocationService(
   }
 
   @Transactional
-  fun deactivateLocations(locationsToDeactivate: DeactivateLocationsRequest): LocationChangeResult {
+  fun deactivateLocations(locationsToDeactivate: DeactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val prisonId = locationsToDeactivate.locations.entries.firstOrNull()?.key?.let { id ->
       locationRepository.findById(id)
         .orElseThrow { LocationNotFoundException(id.toString()) }.prisonId
@@ -1110,10 +1110,9 @@ class LocationService(
       .minus(deactivatedLocationsDto)
 
     log.info("Deactivated ${deactivatedLocationsDto.size} locations and updated ${updatedLocationsDto.size} locations")
-    return LocationChangeResult(
-      auditType = AuditType.LOCATION_DEACTIVATED,
-      changed = deactivatedLocationsDto.toList(),
-      alsoAmended = updatedLocationsDto.toList(),
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to updatedLocationsDto.toList(),
+      InternalLocationDomainEventType.LOCATION_DEACTIVATED to deactivatedLocationsDto.toList(),
     ).also {
       linkedTransaction.txEndTime = now(clock)
     }
@@ -1408,10 +1407,10 @@ class LocationService(
       telemetryClient.trackEvent("CAPACITY_CHANGE", trackMap, null)
     }
     return CapacityUpdateResult(
-      updatedLocations = LocationChangeResult(
-        auditType = AuditType.LOCATION_AMENDED,
-        changed = updatedLocationsDto.toList(),
-        alsoAmended = updatedCapacities.flatMap { changed -> changed.getParentLocations().map { it.toDto() } }.toSet().toList(),
+      updatedLocations = mapOf(
+        InternalLocationDomainEventType.LOCATION_AMENDED to updatedCapacities.flatMap { changed ->
+          changed.getParentLocations().map { it.toDto() }
+        }.toSet().plus(updatedLocationsDto).toList(),
       ),
       audit = audit,
     ).also {
@@ -1420,7 +1419,7 @@ class LocationService(
   }
 
   @Transactional
-  fun reactivateLocations(locationsToReactivate: ReactivateLocationsRequest): LocationChangeResult {
+  fun reactivateLocations(locationsToReactivate: ReactivateLocationsRequest): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val locationsReactivated = mutableSetOf<Location>()
     val amendedLocations = mutableSetOf<Location>()
 
@@ -1459,10 +1458,9 @@ class LocationService(
     }
 
     locationsReactivated.forEach { sharedLocationService.trackLocationUpdate(it, "Re-activated Location") }
-    return LocationChangeResult(
-      auditType = AuditType.LOCATION_REACTIVATED,
-      changed = locationsReactivated.map { it.toDto() },
-      alsoAmended = amendedLocations.map { it.toDto() },
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to amendedLocations.map { it.toDto() }.toList(),
+      InternalLocationDomainEventType.LOCATION_REACTIVATED to locationsReactivated.map { it.toDto() }.toList(),
     ).also {
       linkedTransaction.txEndTime = now(clock)
     }
@@ -2083,7 +2081,7 @@ data class UpdateLocationResult(
 )
 
 data class CapacityUpdateResult(
-  val updatedLocations: LocationChangeResult,
+  val updatedLocations: Map<InternalLocationDomainEventType, List<LocationDTO>>,
   val audit: Map<String, List<CapacityChanges>>,
 )
 

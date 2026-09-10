@@ -311,8 +311,10 @@ class LocationNonResidentialResource(
     id: UUID,
     @RequestBody @Validated updateRequest: CreateOrUpdateNonResidentialLocationRequest,
   ): NonResidentialLocationDTO {
-    val (location, auditType) = nonResidentialService.updateNonResidentialLocation(id, updateRequest)
-    eventPublishNonResiAndAudit(InternalLocationDomainEventType.LOCATION_AMENDED, auditType) { location }
+    val (location, events) = nonResidentialService.updateNonResidentialLocation(id, updateRequest)
+    events.forEach { event ->
+      eventPublishNonResiAndAudit(event) { location }
+    }
     return location
   }
 
