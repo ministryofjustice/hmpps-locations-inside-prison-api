@@ -989,9 +989,8 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(4).let {
+        getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.deactivated" to store.getKey(),
             "location.inside.prison.amended" to store.getKey(),
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
@@ -1016,9 +1015,8 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isOk
 
-        getDomainEvents(4).let {
+        getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
-            "location.inside.prison.deactivated" to store.getKey(),
             "location.inside.prison.amended" to store.getKey(),
             "location.inside.prison.amended" to "MDI-Z-1",
             "location.inside.prison.amended" to "MDI-Z",
