@@ -38,6 +38,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivationDetail
 import java.time.Clock
 import java.time.LocalDateTime
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDTO
 @Service
 @Transactional
 class ApprovalDecisionService(
@@ -77,7 +78,7 @@ class ApprovalDecisionService(
     )
 
     // some approvals change location data which need an event to be raised for synchronisation purposes
-    val locationChanges = handleComplexApprovalProcesses(approvalRequest, linkedTransaction)
+    val events = handleComplexApprovalProcesses(approvalRequest, linkedTransaction)
 
     approvalRequest.approve(
       approvedBy = username,
@@ -121,15 +122,15 @@ class ApprovalDecisionService(
       approvalRequest = approvalRequest.toDto(cellCertificateId = cellCertificate.id),
       prisonId = approvalRequest.prisonId,
       newLocation = wasDraft,
-      location = if (locationChanges != null) null else approvedLocation?.toDto(includeChildren = true, includeParent = true),
-      locationChanges = locationChanges,
+      location = if (events != null) null else approvedLocation?.toDto(includeChildren = true, includeParent = true),
+      events = events,
     ).also { linkedTransaction.txEndTime = LocalDateTime.now(clock) }
   }
 
   private fun handleComplexApprovalProcesses(
     approvalRequest: CertificationApprovalRequest,
     linkedTransaction: LinkedTransaction,
-  ): LocationChangeResult? = when (approvalRequest) {
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>>? = when (approvalRequest) {
     is ReactivationApprovalRequest -> {
       handleReactivation(approvalRequest, linkedTransaction)
     }
@@ -162,7 +163,7 @@ class ApprovalDecisionService(
   private fun handleConvertToCell(
     approvalRequest: ConvertToCellApprovalRequest,
     linkedTransaction: LinkedTransaction,
-  ): LocationChangeResult {
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val cell = approvalRequest.location as Cell
     // No prisoner check is needed: the location is a non-residential room, so it cannot contain prisoners.
     // Apply the conversion (guard-free, as the request is still PENDING) so the room becomes an active cell again.
@@ -180,13 +181,15 @@ class ApprovalDecisionService(
       linkedTransaction = linkedTransaction,
     )
 
-    return LocationChangeResult(auditType = AuditType.LOCATION_AMENDED, changed = listOf(cell.toDto(includeParent = true)))
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to listOf(cell.toDto(includeParent = true)),
+    )
   }
 
   private fun handlePermanentDeactivation(
     approvalRequest: PermanentDeactivationApprovalRequest,
     linkedTransaction: LinkedTransaction,
-  ): LocationChangeResult {
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val location = approvalRequest.location
     location.permanentlyDeactivate(
       reason = approvalRequest.reasonForChange ?: "Permanent deactivation",
@@ -197,13 +200,15 @@ class ApprovalDecisionService(
       bypassPendingApprovalCheck = true,
     )
     sharedLocationService.trackLocationUpdate(location, "Permanently deactivated location")
-    return LocationChangeResult(auditType = AuditType.LOCATION_DEACTIVATED, changed = listOf(location.toDto(includeChildren = true, includeParent = true)))
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_DEACTIVATED to listOf(location.toDto(includeChildren = true, includeParent = true)),
+    )
   }
 
   private fun handleConvertToNonResidentialCell(
     approvalRequest: ConvertToNonResidentialCellApprovalRequest,
     linkedTransaction: LinkedTransaction,
-  ): LocationChangeResult {
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val cell = approvalRequest.location as Cell
     // No prisoner check is needed: the cell was made temporarily inactive when the approval was requested, so it
     // cannot contain prisoners. Clear that temporary deactivation, then apply the conversion so the cell ends up
@@ -217,13 +222,15 @@ class ApprovalDecisionService(
       linkedTransaction = linkedTransaction,
     )
 
-    return LocationChangeResult(auditType = AuditType.LOCATION_AMENDED, changed = listOf(cell.toDto(includeParent = true)))
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to listOf(cell.toDto(includeParent = true)),
+    )
   }
 
   private fun handleCapacityChange(
     approvalRequest: CapacityChangeApprovalRequest,
     linkedTransaction: LinkedTransaction,
-  ): LocationChangeResult {
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     // need to check that the new capacity values are not below the number of prisoners in the cell at this time.
     validateCapacityNotBelowOccupancy(
       approvalRequest.location,
@@ -241,13 +248,15 @@ class ApprovalDecisionService(
       linkedTransaction = linkedTransaction,
     )
 
-    return LocationChangeResult(auditType = AuditType.LOCATION_AMENDED, changed = listOf(approvalRequest.location.toDto(includeParent = true)))
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to listOf(approvalRequest.location.toDto(includeParent = true)),
+    )
   }
 
   private fun handleSpecialistCellTypeChange(
     approvalRequest: SpecialistCellTypeChangeApprovalRequest,
     linkedTransaction: LinkedTransaction,
-  ): LocationChangeResult {
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val cell = approvalRequest.location as Cell
     validateCapacityNotBelowOccupancy(
       cell,
@@ -272,13 +281,15 @@ class ApprovalDecisionService(
       linkedTransaction = linkedTransaction,
     )
 
-    return LocationChangeResult(auditType = AuditType.LOCATION_AMENDED, changed = listOf(cell.toDto(includeParent = true)))
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to listOf(cell.toDto(includeParent = true)),
+    )
   }
 
   private fun handleReactivation(
     approvalRequest: ReactivationApprovalRequest,
     linkedTransaction: LinkedTransaction,
-  ): LocationChangeResult {
+  ): Map<InternalLocationDomainEventType, List<LocationDTO>> {
     val locationsReactivated = mutableSetOf<Location>()
     val amendedLocations = mutableSetOf<Location>()
 
@@ -303,10 +314,9 @@ class ApprovalDecisionService(
     }
 
     locationsReactivated.forEach { sharedLocationService.trackLocationUpdate(it, "Re-activated Location") }
-    return LocationChangeResult(
-      auditType = AuditType.LOCATION_REACTIVATED,
-      changed = locationsReactivated.map { it.toDto() },
-      alsoAmended = amendedLocations.map { it.toDto() },
+    return mapOf(
+      InternalLocationDomainEventType.LOCATION_AMENDED to amendedLocations.map { it.toDto() }.toList(),
+      InternalLocationDomainEventType.LOCATION_REACTIVATED to locationsReactivated.map { it.toDto() }.toList(),
     )
   }
 

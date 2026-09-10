@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.BasicTemporaryDeac
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternalSystemEvent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.EventBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationIsNotACellException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
 
@@ -18,8 +19,7 @@ const val UPDATE_FROM_EXTERNAL_SYSTEM_QUEUE_CONFIG_KEY = "updatefromexternalsyst
 class UpdateFromExternalSystemListenerService(
   private val objectMapper: ObjectMapper,
   private val locationService: LocationService,
-  private val eventPublishAndAuditService: EventPublishAndAuditService,
-) {
+) : EventBase() {
   private companion object {
     val LOG: Logger = LoggerFactory.getLogger(this::class.java)
   }
@@ -47,7 +47,7 @@ class UpdateFromExternalSystemListenerService(
           throw LocationIsNotACellException(location.getKey())
         }
         val deactivateLocationsRequest = DeactivateLocationsRequest(updatedBy = event.updatedBy, locations = mapOf(event.id to temporaryDeactivationLocationRequest))
-        eventPublishAndAuditService.publishAndAudit(locationService.deactivateLocations(deactivateLocationsRequest))
+        deactivate(locationService.deactivateLocations(deactivateLocationsRequest))
       }
       else -> throw Exception("Cannot process event of type ${sqsMessage.eventType}")
     }

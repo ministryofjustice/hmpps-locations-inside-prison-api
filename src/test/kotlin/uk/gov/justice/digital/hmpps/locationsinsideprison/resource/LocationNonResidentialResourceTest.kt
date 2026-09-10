@@ -428,8 +428,10 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
-        getDomainEvents(1).let {
+        getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.deactivated" to classroom2.getKey(),
+            "location.inside.prison.amended" to classroom2.getKey(),
             "location.inside.prison.amended" to classroom2.getKey(),
           )
         }
@@ -455,8 +457,10 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
             JsonCompareMode.LENIENT,
           )
 
-        getDomainEvents(1).let {
+        getDomainEvents(3).let {
           assertThat(it.map { message -> message.eventType to message.additionalInformation?.key }).containsExactlyInAnyOrder(
+            "location.inside.prison.reactivated" to inactiveClassroom3.getKey(),
+            "location.inside.prison.amended" to inactiveClassroom3.getKey(),
             "location.inside.prison.amended" to inactiveClassroom3.getKey(),
           )
         }

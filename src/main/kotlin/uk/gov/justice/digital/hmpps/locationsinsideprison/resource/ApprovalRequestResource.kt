@@ -282,7 +282,7 @@ class ApprovalRequestResource(
     val approvalResponse = approvalDecisionService.approveCertificationRequest(
       approveCertificationRequest = approveCertificationRequest,
     )
-    approvalResponse.locationChanges?.let { publishAndAudit(it) }
+    approvalResponse.events?.let { reactivate(it) }
     approvalResponse.location?.let { publishedLocation ->
       eventPublishAndAudit(
         if (approvalResponse.newLocation) {

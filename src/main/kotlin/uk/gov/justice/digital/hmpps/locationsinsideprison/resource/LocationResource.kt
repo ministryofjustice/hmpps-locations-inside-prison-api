@@ -31,7 +31,6 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PermanentDeactivat
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.TemporaryDeactivationLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UnArchiveLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AuditType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import java.util.UUID
@@ -313,7 +312,7 @@ class LocationResource(
     @Validated
     deactivationRequest: TemporaryDeactivationLocationRequest,
   ): List<LocationDTO> = with(deactivationRequest) {
-    publishAndAudit(
+    deactivate(
       locationService.deactivateLocations(
         DeactivateLocationsRequest(
           requiresApproval = requiresApproval,
@@ -364,8 +363,7 @@ class LocationResource(
     @Validated
     updateDeactivationDetailsRequest: TemporaryDeactivationLocationRequest,
   ): LocationDTO = eventPublishAndAudit(
-    InternalLocationDomainEventType.LOCATION_AMENDED,
-    AuditType.LOCATION_DEACTIVATED,
+    InternalLocationDomainEventType.LOCATION_DEACTIVATED,
   ) {
     locationService.updateDeactivatedDetails(
       id,
@@ -416,8 +414,7 @@ class LocationResource(
     @Validated
     permanentDeactivationLocationRequest: PermanentDeactivationLocationRequest,
   ): LocationDTO = eventPublishAndAudit(
-    InternalLocationDomainEventType.LOCATION_AMENDED,
-    AuditType.LOCATION_DEACTIVATED,
+    InternalLocationDomainEventType.LOCATION_DEACTIVATED,
   ) {
     locationService.permanentlyDeactivateLocation(
       id,
@@ -467,8 +464,7 @@ class LocationResource(
     @Validated
     unArchiveLocationRequest: UnArchiveLocationRequest,
   ): LocationDTO = eventPublishAndAudit(
-    InternalLocationDomainEventType.LOCATION_AMENDED,
-    AuditType.LOCATION_REACTIVATED,
+    InternalLocationDomainEventType.LOCATION_REACTIVATED,
   ) {
     locationService.unarchiveLocation(id, unArchiveLocationRequest)
   }
@@ -520,11 +516,7 @@ class LocationResource(
       required = false,
       defaultValue = "false",
     ) forceReactivation: Boolean = false,
-  ): LocationDTO = publishAndAudit(locationService.reactivateLocations(ReactivateLocationsRequest(forceReactivation = forceReactivation, locations = mapOf(id to ReactivationDetail(cascadeReactivation = cascadeReactivation)))))
-    .firstOrNull { it.id == id }
-    // The requested location was already active, so only its ancestors (if any) were reactivated. Return it
-    // unchanged rather than an ancestor or, when nothing was reactivated at all, throwing on an empty list.
-    ?: locationService.getLocationById(id) ?: throw LocationNotFoundException(id.toString())
+  ): LocationDTO = reactivate(locationService.reactivateLocations(ReactivateLocationsRequest(forceReactivation = forceReactivation, locations = mapOf(id to ReactivationDetail(cascadeReactivation = cascadeReactivation))))).first()
 
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
