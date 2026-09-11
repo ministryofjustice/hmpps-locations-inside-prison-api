@@ -324,6 +324,7 @@ class CellCertificateUploadProcessingService(
       previousCellMark = oldCellMark,
       previousInCellSanitation = oldInCellSanitation,
       appliedMaxCapacity = appliedMaxCapacity,
+      appliedWorkingCapacity = appliedWorkingCapacity,
     )
     row.recordDiscrepancy(
       // A temporarily deactivated cell keeps its stored working capacity but reports none while it is
@@ -347,6 +348,10 @@ class CellCertificateUploadProcessingService(
       row.message = WORKING_CAPACITY_MISMATCH_MESSAGE
     } else if (row.hasDiscrepancy()) {
       row.message = CERTIFIED_CAPACITY_MISMATCH_MESSAGE
+    } else if (appliedWorkingCapacity != retainedWorkingCapacity) {
+      // The one case where the import moves a working capacity: say so, because the report otherwise looks
+      // identical to a cell that simply matched.
+      row.message = WORKING_CAPACITY_TAKEN_FROM_CERTIFICATE_MESSAGE
     }
     return capacityChanged
   }
@@ -440,6 +445,9 @@ class CellCertificateUploadProcessingService(
 
     /** Reported against a cell that kept its own working capacity while the certificate took the uploaded one. */
     const val WORKING_CAPACITY_MISMATCH_MESSAGE = "Working capacity and certified working capacity do not match"
+
+    /** Reported against a cell that held no working capacity and so took the certified one. */
+    const val WORKING_CAPACITY_TAKEN_FROM_CERTIFICATE_MESSAGE = "Working capacity changed to match certified working capacity"
 
     /** Reported when the max capacity or CNA on the certificate could not be applied to the location. */
     const val CERTIFIED_CAPACITY_MISMATCH_MESSAGE = "Certified capacity does not match the cell's capacity"

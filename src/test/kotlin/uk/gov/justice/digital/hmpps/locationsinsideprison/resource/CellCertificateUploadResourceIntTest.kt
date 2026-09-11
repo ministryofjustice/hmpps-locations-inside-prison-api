@@ -260,6 +260,7 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
           previousCellMark = null,
           previousInCellSanitation = null,
           appliedMaxCapacity = 2,
+          appliedWorkingCapacity = 2,
         )
         recordDiscrepancy(
           workingCapacityMismatch = true,
@@ -281,6 +282,7 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
         .jsonPath("$.locations[0].locationKey").isEqualTo("MDI-Z-1-001")
         .jsonPath("$.locations[0].status").isEqualTo("PROCESSED")
         .jsonPath("$.locations[0].previousWorkingCapacity").isEqualTo(2)
+        .jsonPath("$.locations[0].appliedWorkingCapacity").isEqualTo(2)
         .jsonPath("$.locations[0].workingCapacity").isEqualTo(1)
         .jsonPath("$.discrepancyRecords").isEqualTo(1)
         .jsonPath("$.locations[0].workingCapacityMismatch").isEqualTo(true)

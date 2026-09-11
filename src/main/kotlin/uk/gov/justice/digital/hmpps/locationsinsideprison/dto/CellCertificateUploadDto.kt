@@ -102,6 +102,9 @@ data class CellCertificateUploadLocationDto(
   @param:Schema(description = "Working capacity before the change", example = "2")
   val previousWorkingCapacity: Int? = null,
 
+  @param:Schema(description = "Working capacity the location ended up with, which can differ from the certified value", example = "2")
+  val appliedWorkingCapacity: Int? = null,
+
   @param:Schema(description = "Certified normal accommodation before the change", example = "2")
   val previousCertifiedNormalAccommodation: Int? = null,
 

@@ -532,6 +532,9 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
         assertThat(workingCapacityMismatch).isFalse()
         assertThat(hasDiscrepancy()).isFalse()
         assertThat(previousWorkingCapacity).isEqualTo(0)
+        // the report shows the change and says why the location moved
+        assertThat(appliedWorkingCapacity).isEqualTo(2)
+        assertThat(message).isEqualTo(CellCertificateUploadProcessingService.WORKING_CAPACITY_TAKEN_FROM_CERTIFICATE_MESSAGE)
       }
     }
 
@@ -561,6 +564,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
         assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
         assertThat(hasDiscrepancy()).isFalse()
         assertThat(appliedMaxCapacity).isEqualTo(3)
+        assertThat(appliedWorkingCapacity).isEqualTo(2)
       }
     }
 
@@ -585,6 +589,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
       with(cellCertificateUploadRepository.findAll().first().locations.first()) {
         assertThat(workingCapacityMismatch).isTrue()
         assertThat(message).isEqualTo(CellCertificateUploadProcessingService.WORKING_CAPACITY_MISMATCH_MESSAGE)
+        assertThat(appliedWorkingCapacity).isEqualTo(0)
       }
     }
 
@@ -610,6 +615,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
       with(cellCertificateUploadRepository.findAll().first().locations.first()) {
         assertThat(workingCapacityMismatch).isTrue()
         assertThat(message).isEqualTo(CellCertificateUploadProcessingService.WORKING_CAPACITY_MISMATCH_MESSAGE)
+        assertThat(appliedWorkingCapacity).isEqualTo(2)
       }
     }
 
