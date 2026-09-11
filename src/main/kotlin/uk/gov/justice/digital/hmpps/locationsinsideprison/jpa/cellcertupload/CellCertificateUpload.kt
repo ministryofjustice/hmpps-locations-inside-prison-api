@@ -145,6 +145,13 @@ open class CellCertificateUploadLocation(
 
   open var previousWorkingCapacity: Int? = null,
 
+  /**
+   * The working capacity the location ended up with. It differs from the certified [workingCapacity] when the
+   * location kept the value it already held, and from [previousWorkingCapacity] when a cell that held none
+   * took the certified value.
+   */
+  open var appliedWorkingCapacity: Int? = null,
+
   open var previousCertifiedNormalAccommodation: Int? = null,
 
   open var previousCellMark: String? = null,
@@ -175,8 +182,10 @@ open class CellCertificateUploadLocation(
     previousCellMark: String?,
     previousInCellSanitation: Boolean?,
     appliedMaxCapacity: Int?,
+    appliedWorkingCapacity: Int?,
   ) {
     this.appliedMaxCapacity = appliedMaxCapacity
+    this.appliedWorkingCapacity = appliedWorkingCapacity
     this.previousMaxCapacity = previousMaxCapacity
     this.previousWorkingCapacity = previousWorkingCapacity
     this.previousCertifiedNormalAccommodation = previousCertifiedNormalAccommodation
@@ -236,6 +245,7 @@ open class CellCertificateUploadLocation(
     previousMaxCapacity = previousMaxCapacity,
     appliedMaxCapacity = appliedMaxCapacity,
     previousWorkingCapacity = previousWorkingCapacity,
+    appliedWorkingCapacity = appliedWorkingCapacity,
     previousCertifiedNormalAccommodation = previousCertifiedNormalAccommodation,
     previousCellMark = previousCellMark,
     previousInCellSanitation = previousInCellSanitation,
