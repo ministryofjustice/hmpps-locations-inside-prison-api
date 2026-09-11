@@ -78,7 +78,7 @@
                         <div class="col-md-12">
                             <div class="callout callout-info">
                                 <h4>SchemaSpy Analysis of locations_inside_prison.public</h4>
-                                <p>Generated on Thu Sep 10 15:16 UTC 2026</p>
+                                <p>Generated on Fri Sep 11 13:03 UTC 2026</p>
                             </div>
                         </div>
                     </div>
@@ -118,7 +118,7 @@
                                 <span class="info-box-icon bg-green"><span class="glyphicon glyphicon-list-alt" aria-hidden="true"></span></span>
                                 <div class="info-box-content">
                                     <span class="info-box-text">COLUMNS</span>
-                                    <span class="info-box-number">226</span>
+                                    <span class="info-box-number">227</span>
                                 </div>
                                 <!-- /.info-box-content -->
                             </div>
@@ -233,6 +233,15 @@
                                         <td class="comment detail" style="display: table-cell;"><p>Legacy NOMIS attributes of a residential location, retained for the NOMIS sync and for historic reporting. Superseded by specialist_cell and cell_used_for.</p></td>
                                     </tr>
                                     <tr class="tbl even" valign="top">
+                                        <td class="detail"><a href="tables/flyway_schema_history.html">flyway_schema_history</a></td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">0</td>
+                                        <td class="detail" align="right">10</td>
+                                        <td class="detail" align="right">106</td>
+                                        <td class="detail" align="right">Table</td>
+                                        <td class="comment detail" style="display: table-cell;"></td>
+                                    </tr>
+                                    <tr class="tbl even" valign="top">
                                         <td class="detail"><a href="tables/certification_approval_request_location.html">certification_approval_request_location</a></td>
                                         <td class="detail" align="right">1</td>
                                         <td class="detail" align="right">2</td>
@@ -240,15 +249,6 @@
                                         <td class="detail" align="right">-1</td>
                                         <td class="detail" align="right">Table</td>
                                         <td class="comment detail" style="display: table-cell;"><p>The locations covered by an approval request, held as a self-contained tree that is copied from the live locations when the request is raised. Kept separate from the location table so a request shows what was asked for even if the estate changes afterwards.</p></td>
-                                    </tr>
-                                    <tr class="tbl even" valign="top">
-                                        <td class="detail"><a href="tables/flyway_schema_history.html">flyway_schema_history</a></td>
-                                        <td class="detail" align="right">0</td>
-                                        <td class="detail" align="right">0</td>
-                                        <td class="detail" align="right">10</td>
-                                        <td class="detail" align="right">-1</td>
-                                        <td class="detail" align="right">Table</td>
-                                        <td class="comment detail" style="display: table-cell;"></td>
                                     </tr>
                                     <tr class="tbl even" valign="top">
                                         <td class="detail"><a href="tables/specialist_cell.html">specialist_cell</a></td>
@@ -335,7 +335,7 @@
                                         <td class="detail"><a href="tables/cell_certificate_upload_location.html">cell_certificate_upload_location</a></td>
                                         <td class="detail" align="right">0</td>
                                         <td class="detail" align="right">1</td>
-                                        <td class="detail" align="right">20</td>
+                                        <td class="detail" align="right">21</td>
                                         <td class="detail" align="right">-1</td>
                                         <td class="detail" align="right">Table</td>
                                         <td class="comment detail" style="display: table-cell;"><p>One row of a bulk certificate import: the values being imported for a location, the values the service already held, and what happened when the two were reconciled.</p></td>
