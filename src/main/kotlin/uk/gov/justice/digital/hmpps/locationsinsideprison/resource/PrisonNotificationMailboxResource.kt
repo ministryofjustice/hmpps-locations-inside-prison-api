@@ -36,6 +36,31 @@ class PrisonNotificationMailboxResource(
   private val prisonNotificationMailboxService: PrisonNotificationMailboxService,
 ) {
 
+  @GetMapping("/notification-mailboxes")
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_LOCATION_CONFIG_ADMIN')")
+  @Operation(
+    summary = "Get all notification mailbox email addresses for all prisons",
+    description = "Returns only prison-specific mailboxes, not default mailboxes. Requires role LOCATION_CONFIG_ADMIN",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns all notification mailboxes",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CONFIG_ADMIN role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getAllNotificationMailboxes() = prisonNotificationMailboxService.getAllPrisonMailboxes()
+
   @GetMapping("/notification-mailboxes/defaults/{notificationGroup}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_LOCATION_CONFIG_ADMIN')")

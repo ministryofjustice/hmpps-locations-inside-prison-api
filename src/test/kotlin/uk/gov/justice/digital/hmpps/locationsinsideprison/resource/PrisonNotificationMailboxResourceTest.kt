@@ -173,6 +173,102 @@ class PrisonNotificationMailboxResourceTest : SqsIntegrationTestBase() {
     }
   }
 
+  @DisplayName("GET /prison-configuration/notification-mailboxes")
+  @Nested
+  inner class GetAllNotificationMailboxesTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/prison-configuration/notification-mailboxes")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/prison-configuration/notification-mailboxes")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/prison-configuration/notification-mailboxes")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Test
+    fun `returns empty list when no mailboxes exist`() {
+      webTestClient.get().uri("/prison-configuration/notification-mailboxes")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().json("[]", JsonCompareMode.STRICT)
+    }
+
+    @Test
+    fun `can get all notification mailboxes for all prisons excluding defaults`() {
+      prisonNotificationMailboxRepository.save(
+        PrisonNotificationMailbox(
+          prisonId = null,
+          notificationGroup = NotificationGroup.CERT_VIEWER,
+          emailAddress = "default.viewer@justice.gov.uk",
+          whenUpdated = LocalDateTime.now(clock),
+          updatedBy = "TEST",
+        ),
+      )
+      prisonNotificationMailboxRepository.save(
+        PrisonNotificationMailbox(
+          prisonId = prisonId,
+          notificationGroup = NotificationGroup.CERT_ADMIN,
+          emailAddress = "cert.admin@justice.gov.uk",
+          whenUpdated = LocalDateTime.now(clock),
+          updatedBy = "TEST",
+        ),
+      )
+      prisonNotificationMailboxRepository.save(
+        PrisonNotificationMailbox(
+          prisonId = prisonId,
+          notificationGroup = NotificationGroup.CERT_VIEWER,
+          emailAddress = "cert.viewer@justice.gov.uk",
+          whenUpdated = LocalDateTime.now(clock),
+          updatedBy = "TEST",
+        ),
+      )
+
+      webTestClient.get().uri("/prison-configuration/notification-mailboxes")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().json(
+          """
+            [
+              {
+                "prisonId": "$prisonId",
+                "notificationGroup": "CERT_ADMIN",
+                "emailAddresses": ["cert.admin@justice.gov.uk"],
+                "source": "PRISON"
+              },
+              {
+                "prisonId": "$prisonId",
+                "notificationGroup": "CERT_VIEWER",
+                "emailAddresses": ["cert.viewer@justice.gov.uk"],
+                "source": "PRISON"
+              }
+            ]
+          """.trimIndent(),
+          JsonCompareMode.STRICT,
+        )
+    }
+  }
+
   @DisplayName("PUT /prison-configuration/{prisonId}/notification-mailboxes/{notificationGroup}")
   @Nested
   inner class ReplaceNotificationMailboxTest {

@@ -12,6 +12,8 @@ interface PrisonNotificationMailboxRepository : JpaRepository<PrisonNotification
 
   fun findByPrisonIdIsNullAndNotificationGroup(notificationGroup: NotificationGroup): List<PrisonNotificationMailbox>
 
+  fun findByPrisonIdIsNotNull(): List<PrisonNotificationMailbox>
+
   fun deleteByPrisonIdAndNotificationGroup(prisonId: String, notificationGroup: NotificationGroup): List<PrisonNotificationMailbox>
 
   fun deleteByPrisonIdIsNullAndNotificationGroup(notificationGroup: NotificationGroup): List<PrisonNotificationMailbox>

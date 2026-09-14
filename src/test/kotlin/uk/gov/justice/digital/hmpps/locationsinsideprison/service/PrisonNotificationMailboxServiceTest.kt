@@ -98,6 +98,33 @@ class PrisonNotificationMailboxServiceTest {
   }
 
   @Test
+  fun `getAllPrisonMailboxes returns empty list when no mailboxes exist`() {
+    whenever(prisonNotificationMailboxRepository.findByPrisonIdIsNotNull()).thenReturn(emptyList())
+
+    assertThat(service.getAllPrisonMailboxes()).isEmpty()
+  }
+
+  @Test
+  fun `getAllPrisonMailboxes groups by prison and notification group, sorted, excluding defaults`() {
+    whenever(prisonNotificationMailboxRepository.findByPrisonIdIsNotNull()).thenReturn(
+      listOf(
+        PrisonNotificationMailbox(prisonId = "MDI", notificationGroup = NotificationGroup.CERT_VIEWER, emailAddress = "mdi.viewer@justice.gov.uk", whenUpdated = LocalDateTime.now(clock), updatedBy = "TEST_USER"),
+        PrisonNotificationMailbox(prisonId = "LEI", notificationGroup = NotificationGroup.CERT_ADMIN, emailAddress = "lei.admin.1@justice.gov.uk", whenUpdated = LocalDateTime.now(clock), updatedBy = "TEST_USER"),
+        PrisonNotificationMailbox(prisonId = "LEI", notificationGroup = NotificationGroup.CERT_ADMIN, emailAddress = "lei.admin.2@justice.gov.uk", whenUpdated = LocalDateTime.now(clock), updatedBy = "TEST_USER"),
+      ),
+    )
+
+    val result = service.getAllPrisonMailboxes()
+
+    assertThat(result).hasSize(2)
+    assertThat(result[0].prisonId).isEqualTo("LEI")
+    assertThat(result[0].emailAddresses).containsExactly("lei.admin.1@justice.gov.uk", "lei.admin.2@justice.gov.uk")
+    assertThat(result[0].source).isEqualTo(NotificationMailboxSource.PRISON)
+    assertThat(result[1].prisonId).isEqualTo("MDI")
+    assertThat(result[1].emailAddresses).containsExactly("mdi.viewer@justice.gov.uk")
+  }
+
+  @Test
   fun `replace fails when prison does not exist`() {
     whenever(activePrisonService.getPrisonConfiguration(any())).thenReturn(null)
 
