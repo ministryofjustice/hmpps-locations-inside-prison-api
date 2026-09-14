@@ -65,6 +65,11 @@ class PrisonNotificationMailboxService(
     return mailboxes.toDto(null, notificationGroup, NotificationMailboxSource.DEFAULT)
   }
 
+  fun getAllPrisonMailboxes(): List<PrisonNotificationMailboxDto> = prisonNotificationMailboxRepository.findByPrisonIdIsNotNull()
+    .groupBy { it.prisonId to it.notificationGroup }
+    .map { (key, mailboxes) -> mailboxes.toDto(key.first, key.second, NotificationMailboxSource.PRISON) }
+    .sortedWith(compareBy({ it.prisonId }, { it.notificationGroup }))
+
   @Transactional
   fun replaceMailboxes(prisonId: String, notificationGroup: NotificationGroup, emailAddresses: List<String>): PrisonNotificationMailboxDto {
     activePrisonService.getPrisonConfiguration(prisonId) ?: throw PrisonNotFoundException(prisonId)
