@@ -195,7 +195,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
         )
       }
       cellCertificateUploadRepository.save(upload).id!!
-    }!!
+    }
 
     // Simulate the same SQS message being redelivered to several pods at once. Without the pessimistic
     // claim each run would create its own certificate (the bug); the lock must serialise them to one.
@@ -662,7 +662,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
         accommodationType = AccommodationType.CARE_AND_SEPARATION,
         linkedTransaction = linkedTransaction,
       ),
-    ) as Cell
+    )
     repository.save(landingZ2.addChildLocation(cell))
     return cell
   }
@@ -730,7 +730,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
           totalRecords = 4,
         ),
       ).id!!
-    }!!
+    }
 
     // each increment mirrors what processRow commits as a row completes - visible to a GET refresh mid-upload
     TransactionTemplate(transactionManager).execute {

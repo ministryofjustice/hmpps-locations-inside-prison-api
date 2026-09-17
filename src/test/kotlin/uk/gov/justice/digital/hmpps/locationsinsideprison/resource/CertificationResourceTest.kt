@@ -893,7 +893,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
           )
         }
 
-        assertThat((repository.findOneByKey(aCell.getKey()) as Cell).getCertifiedNormalAccommodation()).isEqualTo(2)
+        assertThat(cellRepository.findOneByKey(aCell.getKey())?.getCertifiedNormalAccommodation()).isEqualTo(2)
 
         webTestClient.get().uri("/locations/${aCell.id}?includeChildren=true")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
@@ -950,7 +950,7 @@ class CertificationResourceTest(@param:Autowired private val locationService: Lo
           )
         }
 
-        assertThat((repository.findOneByKey("MDI-Z-1-NEW") as Cell).getMaxCapacity()).isEqualTo(3)
+        assertThat(cellRepository.findOneByKey("MDI-Z-1-NEW")?.getMaxCapacity()).isEqualTo(3)
 
         webTestClient.get().uri("/locations/key/MDI-Z-1-NEW")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))

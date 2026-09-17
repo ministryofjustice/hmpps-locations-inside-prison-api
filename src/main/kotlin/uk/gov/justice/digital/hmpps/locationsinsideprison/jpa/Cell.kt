@@ -7,6 +7,9 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedEntityGraphs
 import jakarta.persistence.OneToMany
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
@@ -36,6 +39,22 @@ import java.time.LocalDateTime
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
+@NamedEntityGraphs(
+  value = [
+    NamedEntityGraph(
+      name = "cell.location.graph",
+      attributeNodes = [
+        NamedAttributeNode("parent"),
+        NamedAttributeNode("childLocations"),
+        NamedAttributeNode("capacity"),
+        NamedAttributeNode("approvalRequests"),
+        NamedAttributeNode("usedFor"),
+        NamedAttributeNode("specialistCellTypes"),
+        NamedAttributeNode("attributes"),
+      ],
+    ),
+  ],
+)
 @Entity
 @DiscriminatorValue("CELL")
 class Cell(
