@@ -96,7 +96,7 @@ class CellCertificateUploadProcessingService(
         .filter { !it.isDraft() }
         .distinctBy { it.id }
         .map { it.id!! to it.getKey() }
-    } ?: emptyList()
+    }
 
     locationsToAmend.forEach { (id, key) ->
       try {

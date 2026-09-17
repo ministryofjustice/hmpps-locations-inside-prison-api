@@ -17,7 +17,6 @@ import jakarta.persistence.ManyToOne
 import jakarta.persistence.NamedAttributeNode
 import jakarta.persistence.NamedEntityGraph
 import jakarta.persistence.NamedEntityGraphs
-import jakarta.persistence.NamedSubgraph
 import jakarta.persistence.OneToMany
 import org.hibernate.Hibernate
 import org.hibernate.annotations.SortNatural
@@ -51,36 +50,10 @@ val DATE_FORMAT: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 @NamedEntityGraphs(
   value = [
     NamedEntityGraph(
-      name = "resi.location.graph",
+      name = "location.graph",
       attributeNodes = [
         NamedAttributeNode("parent"),
         NamedAttributeNode(value = "childLocations"),
-      ],
-      subclassSubgraphs = [
-        NamedSubgraph(
-          name = "residential.subgraph",
-          type = ResidentialLocation::class,
-          attributeNodes = [
-            NamedAttributeNode("capacity"),
-          ],
-        ),
-        NamedSubgraph(
-          name = "non.residential.subgraph",
-          type = NonResidentialLocation::class,
-          attributeNodes = [
-            NamedAttributeNode("nonResidentialUsages"),
-            NamedAttributeNode("services"),
-          ],
-        ),
-        NamedSubgraph(
-          name = "cell.subgraph",
-          type = Cell::class,
-          attributeNodes = [
-            NamedAttributeNode("usedFor"),
-            NamedAttributeNode("specialistCellTypes"),
-            NamedAttributeNode("attributes"),
-          ],
-        ),
       ],
     ),
   ],

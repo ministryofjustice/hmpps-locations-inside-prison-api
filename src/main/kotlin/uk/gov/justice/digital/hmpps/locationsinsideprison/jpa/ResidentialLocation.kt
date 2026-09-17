@@ -6,6 +6,9 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.FetchType
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedEntityGraphs
 import jakarta.persistence.OneToMany
 import jakarta.persistence.OneToOne
 import org.hibernate.annotations.SortNatural
@@ -42,6 +45,19 @@ import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity as CapacityDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
+@NamedEntityGraphs(
+  value = [
+    NamedEntityGraph(
+      name = "residential.location.graph",
+      attributeNodes = [
+        NamedAttributeNode("parent"),
+        NamedAttributeNode("childLocations"),
+        NamedAttributeNode("capacity"),
+        NamedAttributeNode("approvalRequests"),
+      ],
+    ),
+  ],
+)
 @Entity
 @DiscriminatorValue("RESIDENTIAL")
 open class ResidentialLocation(

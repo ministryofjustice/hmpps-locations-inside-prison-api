@@ -29,7 +29,7 @@ fun excludeByStatus(status: LocationStatus) = NonResidentialLocation::status.bui
  */
 fun excludePropertyOnlyLocations(): Specification<NonResidentialLocation> = Specification { root, query, cb ->
   fun usageExists(propertyMatch: Boolean): Predicate {
-    val sub = query!!.subquery(Long::class.java)
+    val sub = query.subquery(Long::class.java)
     val usage = sub.from(NonResidentialUsage::class.java)
     sub.select(cb.literal(1L))
     val typeMatch = cb.equal(usage.get<NonResidentialUsageType>("usageType"), NonResidentialUsageType.PROPERTY)

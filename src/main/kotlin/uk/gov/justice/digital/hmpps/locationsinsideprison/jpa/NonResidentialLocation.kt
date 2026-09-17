@@ -4,6 +4,9 @@ import jakarta.persistence.CascadeType
 import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
+import jakarta.persistence.NamedAttributeNode
+import jakarta.persistence.NamedEntityGraph
+import jakarta.persistence.NamedEntityGraphs
 import jakarta.persistence.OneToMany
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LegacyLocation
@@ -21,6 +24,19 @@ import java.time.LocalDateTime
 import java.util.*
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location as LocationDto
 
+@NamedEntityGraphs(
+  value = [
+    NamedEntityGraph(
+      name = "non.residential.location.graph",
+      attributeNodes = [
+        NamedAttributeNode("parent"),
+        NamedAttributeNode("childLocations"),
+        NamedAttributeNode("nonResidentialUsages"),
+        NamedAttributeNode("services"),
+      ],
+    ),
+  ],
+)
 @Entity
 @DiscriminatorValue("NON_RESIDENTIAL")
 class NonResidentialLocation(

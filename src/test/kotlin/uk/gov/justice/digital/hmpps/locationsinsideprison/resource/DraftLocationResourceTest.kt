@@ -962,7 +962,7 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isCreated
 
-        val draftCell = repository.findOneByKey("${landingZ1.getKey()}-010") as Cell
+        val draftCell = cellRepository.findOneByKey("${landingZ1.getKey()}-010")!!
 
         // The request only carries the draft cell - the live cells are not editable here.
         val request = createCellDraftUpdateRequest(
@@ -1006,8 +1006,8 @@ class DraftLocationResourceTest : CommonDataTestBase() {
           .exchange()
           .expectStatus().isCreated
 
-        val lockedDraftCell = repository.findOneByKey("${landingZ1.getKey()}-010") as Cell
-        val editableDraftCell = repository.findOneByKey("${landingZ1.getKey()}-011") as Cell
+        val lockedDraftCell = cellRepository.findOneByKey("${landingZ1.getKey()}-010")!!
+        val editableDraftCell = cellRepository.findOneByKey("${landingZ1.getKey()}-011")!!
 
         // Lock one of the draft cells by requesting certification approval for it
         webTestClient.put().uri("/certification/location/request-approval")
