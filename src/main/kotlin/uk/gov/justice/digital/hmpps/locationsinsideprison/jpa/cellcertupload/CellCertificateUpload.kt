@@ -1,7 +1,9 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload
 
 import jakarta.persistence.CascadeType
+import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
+import jakarta.persistence.ElementCollection
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -63,6 +65,10 @@ open class CellCertificateUpload(
   @Column(nullable = false)
   open var discrepancyRecords: Int = 0,
 
+  /** Certifiable cells with no row in the upload, carried onto the new certificate at their current values. */
+  @Column(nullable = false)
+  open var notOnCertificateRecords: Int = 0,
+
   open var reasonForChange: String? = null,
 
   /** Set once the certificate has been generated from this upload (later step). */
@@ -78,6 +84,15 @@ open class CellCertificateUpload(
   @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "cell_certificate_upload_id", nullable = false)
   open var locations: SortedSet<CellCertificateUploadLocation> = sortedSetOf(),
+
+  /**
+   * Location keys of certifiable cells that had no row in this upload, so were carried onto the new
+   * certificate at their current values rather than the values the upload stated.
+   */
+  @ElementCollection(fetch = FetchType.LAZY)
+  @CollectionTable(name = "cell_certificate_upload_not_on_certificate", joinColumns = [JoinColumn(name = "cell_certificate_upload_id")])
+  @Column(name = "location_key", nullable = false)
+  open var locationsNotOnCertificate: MutableList<String> = mutableListOf(),
 ) {
   fun addLocation(location: CellCertificateUploadLocation) {
     locations.add(location)
@@ -94,6 +109,8 @@ open class CellCertificateUpload(
     skippedRecords = skippedRecords,
     failedRecords = failedRecords,
     discrepancyRecords = discrepancyRecords,
+    notOnCertificateRecords = notOnCertificateRecords,
+    locationsNotOnCertificate = locationsNotOnCertificate.toList(),
     requestedBy = requestedBy,
     requestedDate = requestedDate,
     startTime = startTime,

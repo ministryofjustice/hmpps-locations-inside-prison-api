@@ -38,6 +38,16 @@ data class CellCertificateUploadDto(
   )
   val discrepancyRecords: Int = 0,
 
+  @param:Schema(
+    description = "Number of certifiable cells with no row in the upload, carried onto the new certificate at their current values",
+    example = "0",
+    required = true,
+  )
+  val notOnCertificateRecords: Int = 0,
+
+  @param:Schema(description = "Location keys of certifiable cells that had no row in the upload, carried onto the new certificate at their current values", example = "[\"MDI-A-1-001\"]")
+  val locationsNotOnCertificate: List<String> = emptyList(),
+
   @param:Schema(description = "Who requested the upload", example = "MALEXANDER_GEN", required = true)
   val requestedBy: String,
 

@@ -367,6 +367,10 @@ class CellCertificateUploadProcessingService(
     upload.failedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.FAILED }
     upload.discrepancyRecords = upload.locations.count { it.hasDiscrepancy() }
 
+    val locationsNotOnCertificate = locationsNotOnCertificate(upload)
+    upload.locationsNotOnCertificate = locationsNotOnCertificate.toMutableList()
+    upload.notOnCertificateRecords = locationsNotOnCertificate.size
+
     val now = LocalDateTime.now(clock)
     val approvalRequest = certificationApprovalRequestRepository.save(
       CellCertificateUploadApprovalRequest(
@@ -393,7 +397,7 @@ class CellCertificateUploadProcessingService(
     upload.endTime = now
     linkedTransaction.txEndTime = now
 
-    log.info("Finished cell certificate upload ${upload.id}: processed=${upload.processedRecords}, skipped=${upload.skippedRecords}, failed=${upload.failedRecords}, needingReview=${upload.discrepancyRecords}, certificate=${cellCertificate.id}")
+    log.info("Finished cell certificate upload ${upload.id}: processed=${upload.processedRecords}, skipped=${upload.skippedRecords}, failed=${upload.failedRecords}, needingReview=${upload.discrepancyRecords}, notOnCertificate=${upload.notOnCertificateRecords}, certificate=${cellCertificate.id}")
   }
 
   /**
@@ -412,6 +416,22 @@ class CellCertificateUploadProcessingService(
         certifiedNormalAccommodation = row.certifiedNormalAccommodation ?: row.previousCertifiedNormalAccommodation ?: 0,
       )
     }
+
+  /**
+   * Certifiable cells (same filter [CellCertificateService.createCellCertificate] applies) whose path
+   * hierarchy has no row in the upload, in any status. These cells are still carried onto the new
+   * certificate at their current values - this list exists purely to disclose that to the user; it is
+   * not used to build the certificate itself. A FAILED row's location key never matches a live cell's
+   * path hierarchy (that is exactly why it failed to match), so those rows are naturally excluded here
+   * and remain reported only as failed rows.
+   */
+  private fun locationsNotOnCertificate(upload: CellCertificateUpload): List<String> {
+    val uploadedPathHierarchies = upload.locations.map { it.locationKey.removePrefix("${upload.prisonId}-") }.toSet()
+    return cellCertificateService.certifiableCellPathHierarchies(upload.prisonId)
+      .filterNot { uploadedPathHierarchies.contains(it) }
+      .sorted()
+      .map { "${upload.prisonId}-$it" }
+  }
 
   /**
    * A STARTED claim is considered stale (its consumer crashed) once its startTime is older than
