@@ -5,7 +5,12 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.test.web.reactive.server.expectBody
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ApproveCertificationRequestDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Capacity
@@ -48,6 +53,9 @@ import java.util.UUID
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 class CertificationApprovalResourceTest : CommonDataTestBase() {
+
+  @Autowired
+  private lateinit var jdbcTemplate: JdbcTemplate
 
   @BeforeEach
   fun beforeEach() {
@@ -1336,6 +1344,42 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .jsonPath("$..pathHierarchy").value<List<String>> { paths ->
           assertThat(paths).noneMatch { it == leedsWing.getPathHierarchy() || it.startsWith("${leedsWing.getPathHierarchy()}-") }
         }
+    }
+
+    /**
+     * The archive reason is free text with no length limit in the UI or the request DTO, and is stored as
+     * TEXT on the approval request. Approving copies it onto Location.archivedReason and records it in
+     * LocationHistory, both of which were bounded (varchar(200) and varchar(1024)) until V1_107 - so a long
+     * reason saved fine and only blew up at the point of approval (MAPA-312).
+     */
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CertificationApprovalResourceTest#longArchiveReasons")
+    fun `can approve an archive whose reason for change exceeds the old column limits`(description: String, reason: String) {
+      deactivateLocation(leedsWing, DeactivatedReason.DAMAGED)
+
+      val pendingApproval = requestPermanentDeactivation(leedsWing, reason)
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingApproval.id)))
+        .exchange()
+        .expectStatus().isOk
+
+      val archivedWing = getLocation(leedsWing.id!!)
+      assertThat(archivedWing.permanentlyInactive).isTrue()
+      // the reason is kept in full on the location (location.archived_reason)...
+      assertThat(archivedWing.permanentlyInactiveReason).isEqualTo(reason)
+
+      // ...and in the history row the same write records (location_history.new_value). Asserted against the
+      // table rather than the API: the archive history entry is not surfaced through the changeHistory DTO.
+      val recordedReason = jdbcTemplate.queryForObject(
+        "select new_value from location_history where location_id = ? and attribute_name = ?",
+        String::class.java,
+        leedsWing.id,
+        LocationAttribute.PERMANENT_DEACTIVATION.name,
+      )
+      assertThat(recordedReason).isEqualTo(reason)
     }
 
     @Test
@@ -4642,5 +4686,26 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(cellBInCert.locationType).isEqualTo(LocationType.ROOM)
       assertThat(cellBInCert.convertedCellType).isEqualTo(ConvertedCellType.OFFICE)
     }
+  }
+
+  companion object {
+    @JvmStatic
+    fun longArchiveReasons() = listOf(
+      // the reason actually submitted for NWI-E, which is what uncovered this
+      Arguments.of(
+        "over the old 200 character archived_reason limit",
+        """
+        This request should have been submitted some time ago.
+        This was due to E wing being renamed K wing
+        K wing was built on Nomis and activated, so this needs to be archived and off our numbers, this should have been completed when cell certificates moved to DPS.
+        D Rundle
+        """.trimIndent(),
+      ),
+      // location_history.new_value was varchar(1024), so widening archived_reason alone only moved the failure
+      Arguments.of(
+        "over the old 1024 character location_history limit",
+        "Wing demolished as part of the redevelopment programme. " + "Further detail. ".repeat(80),
+      ),
+    )
   }
 }
