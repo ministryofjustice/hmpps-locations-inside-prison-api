@@ -1339,6 +1339,30 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     }
 
     @Test
+    fun `can approve an archive whose reason for change is longer than the old 200 character column`() {
+      // The reason is free text with no length limit in the UI or the request DTO, and is stored as TEXT
+      // on the approval request. Approving copies it onto Location.archivedReason, which was varchar(200)
+      // until V1_107 - so a long reason saved fine and only blew up at the point of approval (MAPA-312).
+      deactivateLocation(leedsWing, DeactivatedReason.DAMAGED)
+
+      val longReason = "Wing demolished as part of the redevelopment programme. " + "Further detail. ".repeat(20)
+      assertThat(longReason.length).isGreaterThan(200)
+
+      val pendingApproval = requestPermanentDeactivation(leedsWing, longReason)
+
+      webTestClient.put().uri("/certification/location/approve")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(ApproveCertificationRequestDto(approvalRequestReference = pendingApproval.id)))
+        .exchange()
+        .expectStatus().isOk
+
+      val archivedWing = getLocation(leedsWing.id!!)
+      assertThat(archivedWing.permanentlyInactive).isTrue()
+      assertThat(archivedWing.permanentlyInactiveReason).isEqualTo(longReason)
+    }
+
+    @Test
     fun `rejecting permanent deactivation leaves the cell in its existing inactive status`() {
       val firstCell = leedsWing.findAllLeafLocations().first() as Cell
       deactivateLocation(firstCell, DeactivatedReason.DAMAGED)
