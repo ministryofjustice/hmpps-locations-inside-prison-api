@@ -1,6 +1,8 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationGroupDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
@@ -146,6 +148,234 @@ class LocationTest {
     // but it is pending below the wing
     assertThat(wing.findPendingApprovalRequestsBelowThisLevel()).hasSize(1)
   }
+
+  @Nested
+  @DisplayName("Archiving a location")
+  inner class ArchivingALocation {
+
+    @Test
+    fun `zeroes and de-certifies every cell below a wing`() {
+      val wing = wingWithTwoLandings()
+
+      wing.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+
+      assertThat(wing.findAllLeafLocations().filterIsInstance<Cell>()).allSatisfy { cell ->
+        assertThat(cell.getMaxCapacity()).isEqualTo(0)
+        assertThat(cell.getCurrentlyHeldWorkingCapacity()).isEqualTo(0)
+        assertThat(cell.getCertifiedNormalAccommodation()).isEqualTo(0)
+        assertThat(cell.isCertified()).isFalse()
+        assertThat(cell.temporarilyOffCellCert).isFalse()
+      }
+    }
+
+    @Test
+    fun `zeroes and de-certifies the cells on a landing`() {
+      val wing = wingWithTwoLandings()
+      val landings = wing.getResidentialLocationsBelowThisLevel()
+      val landing = landings.first()
+      val untouchedLanding = landings.last()
+
+      landing.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+
+      assertThat(landing.findAllLeafLocations().filterIsInstance<Cell>()).allSatisfy { cell ->
+        assertThat(cell.getMaxCapacity()).isEqualTo(0)
+        assertThat(cell.isCertified()).isFalse()
+      }
+      // the rest of the wing is untouched
+      assertThat(untouchedLanding.findAllLeafLocations().filterIsInstance<Cell>()).allSatisfy { cell ->
+        assertThat(cell.getMaxCapacity()).isEqualTo(2)
+        assertThat(cell.isCertified()).isTrue()
+      }
+    }
+
+    @Test
+    fun `zeroes and de-certifies a single cell archived on its own`() {
+      val cell = cell("001")
+
+      cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+
+      assertThat(cell.getMaxCapacity()).isEqualTo(0)
+      assertThat(cell.getCurrentlyHeldWorkingCapacity()).isEqualTo(0)
+      assertThat(cell.getCertifiedNormalAccommodation()).isEqualTo(0)
+      assertThat(cell.isCertified()).isFalse()
+      assertThat(cell.temporarilyOffCellCert).isFalse()
+    }
+
+    @Test
+    fun `leaves converted cells alone`() {
+      val landing = landing("1")
+      val cell = cell("001")
+      val convertedCell = cell("002").apply { convertedCellType = ConvertedCellType.OFFICE }
+      landing.addChildLocation(cell)
+      landing.addChildLocation(convertedCell)
+
+      landing.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+
+      assertThat(cell.getMaxCapacity()).isEqualTo(0)
+      assertThat(convertedCell.getMaxCapacity()).isEqualTo(2)
+      assertThat(convertedCell.isCertified()).isTrue()
+    }
+
+    @Test
+    fun `does not strip a cell already archived in its own right`() {
+      val landing = landing("1")
+      val alreadyArchived = cell("001")
+      val stillLive = cell("002")
+      landing.addChildLocation(alreadyArchived)
+      landing.addChildLocation(stillLive)
+      alreadyArchived.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+      val historyAfterOwnArchive = alreadyArchived.getHistoryAsList().size
+
+      landing.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+
+      assertThat(stillLive.getMaxCapacity()).isEqualTo(0)
+      // no second set of rows recording a strip that did not happen
+      assertThat(alreadyArchived.getHistoryAsList()).hasSize(historyAfterOwnArchive)
+    }
+
+    @Test
+    fun `records the capacity and certification it stripped, so an unarchive can read it back`() {
+      val cell = cell("001")
+      val archiveTransaction = transaction()
+
+      cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, archiveTransaction)
+
+      assertThat(historyFor(cell, archiveTransaction, LocationAttribute.MAX_CAPACITY)).isEqualTo("2" to "0")
+      assertThat(historyFor(cell, archiveTransaction, LocationAttribute.WORKING_CAPACITY)).isEqualTo("2" to "0")
+      // the cell's own CNA, not the aggregate over cellLocations(), which is empty once the cell is archived
+      assertThat(historyFor(cell, archiveTransaction, LocationAttribute.CERTIFIED_CAPACITY)).isEqualTo("2" to "0")
+      assertThat(historyFor(cell, archiveTransaction, LocationAttribute.CERTIFICATION)).isEqualTo("Certified" to "Uncertified")
+    }
+
+    @Test
+    fun `writes no certification history for a cell that was already uncertified`() {
+      val cell = cell("001").apply { certifiedCell = false }
+      val archiveTransaction = transaction()
+
+      cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, archiveTransaction)
+
+      assertThat(historyFor(cell, archiveTransaction, LocationAttribute.CERTIFICATION)).isNull()
+    }
+  }
+
+  @Nested
+  @DisplayName("Un-archiving a location")
+  inner class UnArchivingALocation {
+
+    @Test
+    fun `restores the capacity and certification the cells held before the archive`() {
+      val wing = wingWithTwoLandings()
+      wing.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+
+      wing.unarchive(DeactivatedReason.MOTHBALLED, null, "user", clock, transaction(TransactionType.REACTIVATION))
+
+      assertThat(wing.findAllLeafLocations().filterIsInstance<Cell>()).allSatisfy { cell ->
+        assertThat(cell.getMaxCapacity()).isEqualTo(2)
+        assertThat(cell.getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
+        assertThat(cell.getCertifiedNormalAccommodation()).isEqualTo(2)
+        assertThat(cell.isCertified()).isTrue()
+      }
+    }
+
+    @Test
+    fun `restores the capacity the archive recorded, not the value before an earlier change`() {
+      val cell = cell("001")
+      cell.setCapacity(3, 3, 3, "user", LocalDateTime.now(clock), transaction(TransactionType.CAPACITY_CHANGE))
+      cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+
+      cell.unarchive(DeactivatedReason.MOTHBALLED, null, "user", clock, transaction(TransactionType.REACTIVATION))
+
+      assertThat(cell.getMaxCapacity()).isEqualTo(3)
+      assertThat(cell.getCurrentlyHeldWorkingCapacity()).isEqualTo(3)
+      assertThat(cell.getCertifiedNormalAccommodation()).isEqualTo(3)
+    }
+
+    @Test
+    fun `leaves a cell that was uncertified before the archive uncertified`() {
+      val cell = cell("001").apply { certifiedCell = false }
+      cell.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+
+      cell.unarchive(DeactivatedReason.MOTHBALLED, null, "user", clock, transaction(TransactionType.REACTIVATION))
+
+      assertThat(cell.isCertified()).isFalse()
+      assertThat(cell.getMaxCapacity()).isEqualTo(2)
+    }
+
+    @Test
+    fun `restores a location archived before the archive recorded anything to the capacity it still holds`() {
+      // Reproduces a location archived before MAPA-391: the status is ARCHIVED but nothing was stripped and no
+      // capacity history was written, so the cell still holds its pre-archive values.
+      val cell = cell("001")
+      cell.status = LocationStatus.ARCHIVED
+
+      cell.unarchive(DeactivatedReason.MOTHBALLED, null, "user", clock, transaction(TransactionType.REACTIVATION))
+
+      assertThat(cell.getMaxCapacity()).isEqualTo(2)
+      assertThat(cell.getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
+      assertThat(cell.getCertifiedNormalAccommodation()).isEqualTo(2)
+      assertThat(cell.isCertified()).isTrue()
+    }
+  }
+
+  private fun transaction(type: TransactionType = TransactionType.PERMANENT_DEACTIVATION) = LinkedTransaction(
+    transactionId = UUID.randomUUID(),
+    prisonId = "MDI",
+    transactionType = type,
+    transactionDetail = "TEST",
+    transactionInvokedBy = "user",
+    txStartTime = LocalDateTime.now(clock),
+  )
+
+  private fun historyFor(cell: Cell, transaction: LinkedTransaction, attribute: LocationAttribute) = cell.getHistoryAsList()
+    .firstOrNull { it.attributeName == attribute && it.linkedTransaction?.transactionId == transaction.transactionId }
+    ?.let { it.oldValue to it.newValue }
+
+  /** An inactive wing of two landings, three certified 2/2/2 cells on each - the shape an archive is applied to. */
+  private fun wingWithTwoLandings(): ResidentialLocation {
+    val wing = ResidentialLocation(
+      id = UUID.randomUUID(),
+      code = "A",
+      prisonId = "MDI",
+      locationType = LocationType.WING,
+      status = LocationStatus.INACTIVE,
+      pathHierarchy = "A",
+      createdBy = "user",
+      whenCreated = LocalDateTime.now(clock),
+      childLocations = sortedSetOf(),
+    )
+    listOf("1", "2").forEach { landingCode ->
+      val landing = landing(landingCode)
+      (1..3).forEach { landing.addChildLocation(cell("00$it")) }
+      wing.addChildLocation(landing)
+    }
+    return wing
+  }
+
+  private fun landing(code: String) = ResidentialLocation(
+    id = UUID.randomUUID(),
+    code = code,
+    prisonId = "MDI",
+    locationType = LocationType.LANDING,
+    status = LocationStatus.INACTIVE,
+    pathHierarchy = code,
+    createdBy = "user",
+    whenCreated = LocalDateTime.now(clock),
+    childLocations = sortedSetOf(),
+  )
+
+  private fun cell(code: String) = Cell(
+    id = UUID.randomUUID(),
+    code = code,
+    prisonId = "MDI",
+    locationType = LocationType.CELL,
+    status = LocationStatus.INACTIVE,
+    pathHierarchy = code,
+    createdBy = "user",
+    whenCreated = LocalDateTime.now(clock),
+    childLocations = sortedSetOf(),
+    capacity = Capacity(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+    certifiedCell = true,
+  )
 
   private fun deactivationApprovalRequest(location: ResidentialLocation) = DeactivationApprovalRequest(
     location = location,

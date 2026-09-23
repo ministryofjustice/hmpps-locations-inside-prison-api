@@ -827,7 +827,8 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
                 "locationType":"CELL",
                 "accommodationTypes":[],
                 "permanentlyInactive":true,
-                "capacity":{"maxCapacity":0,"workingCapacity":0},
+                "capacity":{"maxCapacity":0,"workingCapacity":0,"certifiedNormalAccommodation":0},
+                "certifiedCell":false,
                 "status":"ARCHIVED",
                 "active":false,
                 "deactivatedByParent":false,
@@ -838,6 +839,9 @@ class LocationPrisonIdResourceTest : CommonDataTestBase() {
           """,
             JsonCompareMode.LENIENT,
           )
+
+        // archiving zeroed the columns too, not just the roll-up the API reports
+        assertCellStripped(archivedCell.id!!)
       }
     }
   }

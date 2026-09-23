@@ -94,6 +94,9 @@ class UnarchiveLocationResourceTest : CommonDataTestBase() {
         .exchange()
         .expectStatus().isOk
 
+      // archiving strips the cell: the API reports 0/0/0 for any archived cell, so check what it actually holds
+      assertCellStripped(cell1.id!!)
+
       purgeDomainEvents()
 
       webTestClient.put().uri("/locations/${cell1.id}/unarchive")
@@ -137,6 +140,7 @@ class UnarchiveLocationResourceTest : CommonDataTestBase() {
 
       // the archived cell has been removed from the current certificate
       assertCurrentCertificateContainsCell(cell, expected = false)
+      assertCellStripped(cell.id!!)
 
       purgeDomainEvents()
 

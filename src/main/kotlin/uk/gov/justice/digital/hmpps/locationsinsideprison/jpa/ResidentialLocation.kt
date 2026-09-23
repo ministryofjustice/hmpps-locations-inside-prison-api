@@ -956,7 +956,10 @@ open class ResidentialLocation(
         )
         addHistory(
           LocationAttribute.CERTIFIED_CAPACITY,
-          capacity?.certifiedNormalAccommodation?.let { calcCertifiedNormalAccommodation().toString() } ?: "None",
+          // The cell's own stored CNA, not calcCertifiedNormalAccommodation(): that aggregates over
+          // cellLocations(), which excludes a cell once it is permanently deactivated, so an archive would record
+          // an old value of zero and leave a later unarchive nothing to restore from (MAPA-391).
+          capacity?.certifiedNormalAccommodation?.toString() ?: "None",
           certifiedNormalAccommodation.toString(),
           userOrSystemInContext,
           amendedDate,
