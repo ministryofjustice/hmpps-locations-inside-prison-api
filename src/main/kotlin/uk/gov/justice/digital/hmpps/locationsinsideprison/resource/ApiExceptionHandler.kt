@@ -455,7 +455,7 @@ class ApiExceptionHandler {
         ErrorResponse(
           status = BAD_REQUEST,
           errorCode = ErrorCode.LocationCannotBeUnarchived,
-          userMessage = "Location cannot be un-archived as it is not archived: ${e.message}",
+          userMessage = "Location cannot be un-archived: ${e.message}",
           developerMessage = e.message,
         ),
       )
@@ -840,7 +840,7 @@ class SignedOperationCapacityNotFoundException(prisonId: String) : Exception("Th
 class LocationAlreadyExistsException(key: String) : Exception("Location already exists = $key")
 class ReasonForDeactivationMustBeProvidedException(key: String) : Exception("De-activating location $key requires a reason when using OTHER reason type")
 class LocationCannotBeReactivatedException(key: String) : Exception("Location cannot be reactivated if parent is deactivated = $key")
-class LocationCannotBeUnarchivedException(key: String) : Exception("Location is not archived so cannot be un-archived = $key")
+class LocationCannotBeUnarchivedException(key: String, reason: String = "it is not archived") : Exception("Location $key cannot be un-archived as $reason")
 class LocationCannotBeHiddenFromListException(key: String, reason: String) : Exception("Location $key cannot be hidden from the non-residential list: $reason")
 class NonResidentialParentCannotBeArchivedException(key: String) : Exception("Non-residential parent $key cannot be archived - remove it from the list (hide) instead")
 class AlreadyDeactivatedLocationException(key: String) : ValidationException("$key: Cannot deactivate an already deactivated location")

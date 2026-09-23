@@ -295,6 +295,24 @@ abstract class Location(
 
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>().filter { !it.isPermanentlyDeactivated() }
 
+  /**
+   * The cells at or below this location whose capacity and certification an archive strips and an unarchive
+   * restores. Converted cells hold neither, so they are left alone, as are cells already archived in their own right
+   * or under a different archived ancestor - those were stripped by their own archive and are restored by it.
+   *
+   * Draft cells are excluded, as they are from every capacity roll-up and from the certificate: they are proposals
+   * rather than live cells, and [addHistory] records nothing against a draft, so stripping one would take its
+   * capacity away with no way of putting it back.
+   *
+   * When this is evaluated is load-bearing (MAPA-391): before the ARCHIVED status is applied in
+   * [permanentlyDeactivate], and after the INACTIVE status is applied in [unarchive], so that in both cases the
+   * "already permanently deactivated" filter reflects the state the cells were in independently of this location.
+   */
+  fun cellsAffectedByArchiveState() = cellLocations().filter { !it.isConvertedCell() && !it.isDraft() }
+
+  /** True when a location above this one is archived, so this one is permanently deactivated by inheritance. */
+  fun hasArchivedParent() = getParent()?.isPermanentlyDeactivated() == true
+
   private fun leafResidentialLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>()
     .filter { !it.isPermanentlyDeactivated() && !it.isStructural() && !it.isArea() }
 
@@ -938,6 +956,12 @@ abstract class Location(
         linkedTransaction,
       )
 
+      // Resolved before the status flip below: once this location is ARCHIVED every cell at or below it reports
+      // isPermanentlyDeactivated(), so the list would come back empty and nothing would be stripped (MAPA-391).
+      // The stripping itself must still run after the flip - a max capacity of zero is only legal on a cell that is
+      // already permanently deactivated (see validateCapacity).
+      val cellsToStrip = if (this is ResidentialLocation) cellsAffectedByArchiveState() else emptyList()
+
       this.status = LocationStatus.ARCHIVED
       this.deactivatedDate = deactivatedDate
       this.deactivatedReason = null
@@ -949,12 +973,10 @@ abstract class Location(
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = amendedDate
 
-      if (this is ResidentialLocation) {
-        this.cellLocations().filter { !it.isConvertedCell() }.forEach { cellLocation ->
-          cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0, userOrSystemInContext, amendedDate = amendedDate, linkedTransaction)
-          cellLocation.deCertifyCell(userOrSystemInContext, clock, linkedTransaction)
-          cellLocation.temporarilyOffCellCert = false
-        }
+      cellsToStrip.forEach { cellLocation ->
+        cellLocation.setCapacity(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0, userOrSystemInContext, amendedDate = amendedDate, linkedTransaction)
+        cellLocation.deCertifyCell(userOrSystemInContext, clock, linkedTransaction)
+        cellLocation.temporarilyOffCellCert = false
       }
       log.info("Permanently Deactivated Location [${getKey()}]")
       return true
@@ -965,7 +987,8 @@ abstract class Location(
    * Reverses [permanentlyDeactivate] (an archive), restoring the location to a temporarily inactive
    * ([LocationStatus.INACTIVE]) state - visible again but not available for use until separately reactivated.
    * For residential locations the pre-archive capacity and certification of each cell (which archiving zeroed and
-   * de-certified) are restored from the cell's [LocationHistory]. Returns false if the location is not archived.
+   * de-certified) are restored from the [LocationHistory] rows the archive wrote. Returns false if the location is
+   * not archived.
    */
   open fun unarchive(
     deactivatedReason: DeactivatedReason,
@@ -978,6 +1001,12 @@ abstract class Location(
       log.warn("Location [${getKey()}] is not archived")
       return false
     }
+    // The transaction that archived this location. Each cell below recorded the capacity and certification it was
+    // holding as the old values of the rows written in that same transaction, so it is the key the restore reads by.
+    val archiveTransaction = getHistoryAsList()
+      .filter { it.attributeName == LocationAttribute.STATUS && it.newValue == LocationStatus.ARCHIVED.description }
+      .maxWithOrNull(compareBy({ it.amendedDate }, { it.linkedTransaction?.transactionId }))
+      ?.linkedTransaction
     val amendedDate = LocalDateTime.now(clock)
     addHistory(
       LocationAttribute.STATUS,
@@ -1014,11 +1043,11 @@ abstract class Location(
     this.whenUpdated = amendedDate
 
     // Now that this location is no longer archived its descendant cells are temporarily deactivated again, so restore
-    // the capacity + certification that archiving stripped from them (converted cells were left untouched by archive).
+    // the capacity + certification that archiving stripped from them. Resolved after the status flip above, so cells
+    // archived separately in their own right are correctly left as they are.
     if (this is ResidentialLocation) {
-      findAllLeafLocations().filterIsInstance<Cell>()
-        .filter { !it.isConvertedCell() }
-        .forEach { cell -> cell.restoreCapacityAndCertifyAfterUnarchive(userOrSystemInContext, amendedDate, linkedTransaction) }
+      cellsAffectedByArchiveState()
+        .forEach { cell -> cell.restoreCapacityAndCertifyAfterUnarchive(userOrSystemInContext, amendedDate, linkedTransaction, archiveTransaction) }
     }
 
     log.info("Un-archived Location [${getKey()}]")

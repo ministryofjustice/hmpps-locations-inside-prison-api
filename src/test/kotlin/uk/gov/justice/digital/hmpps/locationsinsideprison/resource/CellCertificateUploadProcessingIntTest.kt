@@ -6,7 +6,6 @@ import org.awaitility.kotlin.untilAsserted
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
@@ -37,9 +36,6 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
 
   @Autowired
   lateinit var hmppsQueueService: HmppsQueueService
-
-  @Autowired
-  lateinit var transactionManager: PlatformTransactionManager
 
   @Autowired
   lateinit var processingService: CellCertificateUploadProcessingService
