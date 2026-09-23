@@ -8,6 +8,7 @@ certification_approval_request_location
 cell_certificate_upload
 linked_transaction
 cell_certificate_upload_location
+cell_certificate_upload_not_on_certificate
 cell_used_for
 non_residential_usage
 prison_notification_mailbox

@@ -99,6 +99,7 @@
       <table name="cell_certificate_upload" remarks="One run of the bulk import that seeds or corrects a prison's cell certificate from a spreadsheet, with counts of how the run went." schema="public" type="TABLE">
          <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
             <child column="cell_certificate_upload_id" foreignKey="fk_cell_certificate_upload_location_upload" implied="false" onDeleteCascade="true" schema="public" table="cell_certificate_upload_location"/>
+            <child column="cell_certificate_upload_id" foreignKey="fk_cell_certificate_upload_not_on_certificate_upload" implied="false" onDeleteCascade="true" schema="public" table="cell_certificate_upload_not_on_certificate"/>
          </column>
          <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="prison_id" nullable="false" remarks="The prison being imported, as a NOMIS agency code. [Sensitivity: NONE]" size="5" type="varchar" typeCode="12">
             <parent column="prison_id" foreignKey="Implied Constraint" implied="true" onDeleteCascade="false" schema="public" table="prison_configuration"/>
@@ -116,6 +117,7 @@
          <column autoUpdated="false" defaultValue="null" digits="0" id="12" name="cell_certificate_id" nullable="true" remarks="The certificate produced by this run, once it has completed. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111"/>
          <column autoUpdated="false" defaultValue="0" digits="0" id="13" name="discrepancy_records" nullable="false" remarks="How many rows differed from what the service already held, and so needed review rather than straight application. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
          <column autoUpdated="false" defaultValue="null" digits="0" id="14" name="certification_approval_request_id" nullable="true" remarks="The approval request raised off the back of this import, where the discrepancies needed approving. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="0" digits="0" id="15" name="not_on_certificate_records" nullable="false" remarks="How many certifiable cells had no row in the upload and so were carried onto the new certificate at their current values. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
          <primaryKey column="id" sequenceNumberInPK="1"/>
          <index name="cell_certificate_upload_pkey" unique="true">
             <column ascending="true" name="id"/>
@@ -159,6 +161,24 @@
             <column ascending="true" name="id"/>
          </index>
          <index name="cell_certificate_upload_location_upload_id_idx" unique="false">
+            <column ascending="true" name="cell_certificate_upload_id"/>
+         </index>
+      </table>
+      <table name="cell_certificate_upload_not_on_certificate" remarks="Certifiable cells that had no row in a cell certificate upload and so were carried onto the new certificate at their current values. [Sensitivity: NONE]" schema="public" type="TABLE">
+         <column autoUpdated="false" defaultValue="null" digits="0" id="0" name="id" nullable="false" remarks="Primary key. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="1" name="cell_certificate_upload_id" nullable="false" remarks="The upload this cell was missing from. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111">
+            <parent column="id" foreignKey="fk_cell_certificate_upload_not_on_certificate_upload" implied="false" onDeleteCascade="true" schema="public" table="cell_certificate_upload"/>
+         </column>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="2" name="location_id" nullable="false" remarks="ID of the cell that was not on the uploaded certificate, so the report can link to it. [Sensitivity: NONE]" size="2147483647" type="uuid" typeCode="1111"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="3" name="location_key" nullable="false" remarks="Location key of the cell that was not on the uploaded certificate. [Sensitivity: OFFICIAL-SENSITIVE]" size="255" type="varchar" typeCode="12"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="4" name="max_capacity" nullable="false" remarks="The max capacity the cell was carried onto the new certificate at. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="5" name="working_capacity" nullable="false" remarks="The working capacity the cell was carried onto the new certificate at. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <column autoUpdated="false" defaultValue="null" digits="0" id="6" name="certified_normal_accommodation" nullable="false" remarks="The certified normal accommodation the cell was carried onto the new certificate at. [Sensitivity: NONE]" size="10" type="int4" typeCode="4"/>
+         <primaryKey column="id" sequenceNumberInPK="1"/>
+         <index name="cell_certificate_upload_not_on_certificate_pkey" unique="true">
+            <column ascending="true" name="id"/>
+         </index>
+         <index name="cell_certificate_upload_not_on_certificate_upload_id_idx" unique="false">
             <column ascending="true" name="cell_certificate_upload_id"/>
          </index>
       </table>

@@ -8,6 +8,7 @@ residential_attribute
 prison_notification_mailbox
 non_residential_usage
 cell_used_for
+cell_certificate_upload_not_on_certificate
 cell_certificate_upload_location
 linked_transaction
 cell_certificate_upload
