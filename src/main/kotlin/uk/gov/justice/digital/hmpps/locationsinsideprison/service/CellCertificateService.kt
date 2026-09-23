@@ -73,13 +73,13 @@ class CellCertificateService(
   }
 
   /**
-   * Path hierarchies of every cell in the prison that would be included on a certificate created now -
-   * i.e. the same top-level filter [createCellCertificate] applies, walked down to the leaf cells. Used to
-   * work out which certifiable cells a cell certificate upload did not cover.
+   * Every cell in the prison that would be included on a certificate created now - i.e. the same top-level
+   * filter [createCellCertificate] applies, walked down to the leaf cells. Used to work out which
+   * certifiable cells a cell certificate upload did not cover, without a lookup for each one.
    */
-  fun certifiableCellPathHierarchies(prisonId: String): List<String> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
+  fun certifiableCells(prisonId: String): List<Cell> = residentialLocationRepository.findAllByPrisonIdAndParentIsNull(prisonId)
     .filter { !it.isPermanentlyDeactivated() && !it.isDraft() && it.isStructural() }
-    .flatMap { it.certifiableCellPathHierarchies() }
+    .flatMap { it.certifiableCells() }
 
   fun getCellCertificate(id: UUID): CellCertificateDto {
     val cellCertificate = cellCertificateRepository.findById(id).orElseThrow { CellCertificateNotFoundException(id) }

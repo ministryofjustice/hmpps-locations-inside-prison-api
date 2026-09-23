@@ -438,10 +438,9 @@ class CellCertificateUploadProcessingService(
       .map { it.locationKey.removePrefix("${upload.prisonId}-") }
       .toSet()
 
-    return cellCertificateService.certifiableCellPathHierarchies(upload.prisonId)
-      .filterNot { coveredOrFailedPathHierarchies.contains(it) }
-      .sorted()
-      .mapNotNull { pathHierarchy -> cellLocationRepository.findOneByKey("${upload.prisonId}-$pathHierarchy") }
+    return cellCertificateService.certifiableCells(upload.prisonId)
+      .filterNot { coveredOrFailedPathHierarchies.contains(it.getPathHierarchy()) }
+      .sortedBy { it.getPathHierarchy() }
       .map { cell ->
         CellCertificateUploadOmittedLocation(
           locationId = cell.id!!,

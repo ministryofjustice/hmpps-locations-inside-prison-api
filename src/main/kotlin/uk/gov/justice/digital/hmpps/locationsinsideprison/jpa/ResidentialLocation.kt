@@ -649,13 +649,13 @@ open class ResidentialLocation(
   }
 
   /**
-   * Path hierarchies of the cells that [toCellCertificateLocation] would put on the certificate below this
-   * level - i.e. leaf locations, applying the same not-draft filter. Used to work out which certifiable
-   * cells a cell certificate upload did not cover.
+   * The cells that [toCellCertificateLocation] would put on the certificate below this level - i.e. leaf
+   * locations, applying the same not-draft filter. Used to work out which certifiable cells a cell
+   * certificate upload did not cover, without a separate lookup for each one.
    */
-  fun certifiableCellPathHierarchies(): List<String> = getResidentialLocationsBelowThisLevel()
+  fun certifiableCells(): List<Cell> = getResidentialLocationsBelowThisLevel()
     .filter { !it.isDraft() && (it.isStructural() || it.isCell() || it.isConvertedCell()) }
-    .flatMap { if (it.isStructural()) it.certifiableCellPathHierarchies() else listOf(it.getPathHierarchy()) }
+    .flatMap { if (it.isStructural()) it.certifiableCells() else listOf(it as Cell) }
 
   /**
    * [certifiedCapacityOverrides], keyed by cell path hierarchy, supplies the certified capacity for cells
