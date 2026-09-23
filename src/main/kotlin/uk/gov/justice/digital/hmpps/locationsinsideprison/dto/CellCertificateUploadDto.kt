@@ -38,6 +38,13 @@ data class CellCertificateUploadDto(
   )
   val discrepancyRecords: Int = 0,
 
+  @param:Schema(
+    description = "Number of certifiable cells with no row in the upload, carried onto the new certificate at their current values",
+    example = "0",
+    required = true,
+  )
+  val notOnCertificateRecords: Int = 0,
+
   @param:Schema(description = "Who requested the upload", example = "MALEXANDER_GEN", required = true)
   val requestedBy: String,
 
@@ -61,6 +68,28 @@ data class CellCertificateUploadDto(
 
   @param:Schema(description = "Per-cell results, only populated when drilling into a single upload")
   val locations: List<CellCertificateUploadLocationDto>? = null,
+
+  @param:Schema(description = "Certifiable cells with no row in the upload, only populated when drilling into a single upload")
+  val locationsNotOnCertificate: List<CellCertificateUploadOmittedLocationDto>? = null,
+)
+
+@Schema(description = "A certifiable cell that had no row in the upload, carried onto the new certificate at its current values")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class CellCertificateUploadOmittedLocationDto(
+  @param:Schema(description = "ID of the cell, so the report can link to it", example = "01912e1e-0000-7000-8000-000000000000", required = true)
+  val locationId: UUID,
+
+  @param:Schema(description = "Cell location key", example = "MDI-A-1-001", required = true)
+  val locationKey: String,
+
+  @param:Schema(description = "Max capacity the cell was carried onto the new certificate at", example = "2", required = true)
+  val maxCapacity: Int,
+
+  @param:Schema(description = "Working capacity the cell was carried onto the new certificate at", example = "2", required = true)
+  val workingCapacity: Int,
+
+  @param:Schema(description = "Certified normal accommodation the cell was carried onto the new certificate at", example = "2", required = true)
+  val certifiedNormalAccommodation: Int,
 )
 
 @Schema(description = "Result of processing a single uploaded cell")
