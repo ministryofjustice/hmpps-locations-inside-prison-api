@@ -300,11 +300,18 @@ abstract class Location(
    * restores. Converted cells hold neither, so they are left alone, as are cells already archived in their own right
    * or under a different archived ancestor - those were stripped by their own archive and are restored by it.
    *
+   * Draft cells are excluded, as they are from every capacity roll-up and from the certificate: they are proposals
+   * rather than live cells, and [addHistory] records nothing against a draft, so stripping one would take its
+   * capacity away with no way of putting it back.
+   *
    * When this is evaluated is load-bearing (MAPA-391): before the ARCHIVED status is applied in
    * [permanentlyDeactivate], and after the INACTIVE status is applied in [unarchive], so that in both cases the
    * "already permanently deactivated" filter reflects the state the cells were in independently of this location.
    */
-  fun cellsAffectedByArchiveState() = cellLocations().filter { !it.isConvertedCell() }
+  fun cellsAffectedByArchiveState() = cellLocations().filter { !it.isConvertedCell() && !it.isDraft() }
+
+  /** True when a location above this one is archived, so this one is permanently deactivated by inheritance. */
+  fun hasArchivedParent() = getParent()?.isPermanentlyDeactivated() == true
 
   private fun leafResidentialLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>()
     .filter { !it.isPermanentlyDeactivated() && !it.isStructural() && !it.isArea() }

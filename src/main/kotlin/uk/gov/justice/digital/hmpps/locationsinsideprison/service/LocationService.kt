@@ -1235,6 +1235,13 @@ class LocationService(
       throw LocationCannotBeUnarchivedException(location.getKey())
     }
 
+    // Un-archiving has to work from the top down. While a location above this one is still archived this one stays
+    // permanently deactivated whatever its own status says, so nothing would visibly change - and the cells below it
+    // cannot be restored yet, which would lose the capacity the archive recorded against them (MAPA-391).
+    if (location.hasArchivedParent()) {
+      throw LocationCannotBeUnarchivedException(location.getKey(), "a location above it is archived - un-archive that first")
+    }
+
     if (request.deactivationReason == DeactivatedReason.OTHER && request.deactivationReasonDescription.isNullOrBlank()) {
       throw ReasonForDeactivationMustBeProvidedException(location.getKey())
     }

@@ -234,6 +234,22 @@ class LocationTest {
     }
 
     @Test
+    fun `leaves draft cells alone`() {
+      val landing = landing("1")
+      val cell = cell("001")
+      val draftCell = cell("002").apply { status = LocationStatus.DRAFT }
+      landing.addChildLocation(cell)
+      landing.addChildLocation(draftCell)
+
+      landing.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+
+      assertThat(cell.getMaxCapacity()).isEqualTo(0)
+      // a draft records no history, so stripping it would take its capacity with no way of putting it back
+      assertThat(draftCell.getMaxCapacity()).isEqualTo(2)
+      assertThat(draftCell.isCertified()).isTrue()
+    }
+
+    @Test
     fun `records the capacity and certification it stripped, so an unarchive can read it back`() {
       val cell = cell("001")
       val archiveTransaction = transaction()
@@ -299,6 +315,30 @@ class LocationTest {
 
       assertThat(cell.isCertified()).isFalse()
       assertThat(cell.getMaxCapacity()).isEqualTo(2)
+    }
+
+    @Test
+    fun `restores cells stripped by a landing archive when the wing above it is un-archived first`() {
+      // Archived from the bottom up - the landing first, then the wing - so the wing's own archive stripped nothing
+      // below the landing and the cells must be restored from the landing's archive when it is un-archived.
+      val wing = wingWithTwoLandings()
+      val landing = wing.getResidentialLocationsBelowThisLevel().first()
+      landing.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+      wing.permanentlyDeactivate("Demolished", LocalDateTime.now(clock), "user", clock, transaction())
+
+      wing.unarchive(DeactivatedReason.MOTHBALLED, null, "user", clock, transaction(TransactionType.REACTIVATION))
+      // the landing is still archived, so its cells stay stripped at this point
+      assertThat(landing.findAllLeafLocations().filterIsInstance<Cell>()).allSatisfy { cell ->
+        assertThat(cell.getMaxCapacity()).isEqualTo(0)
+      }
+
+      landing.unarchive(DeactivatedReason.MOTHBALLED, null, "user", clock, transaction(TransactionType.REACTIVATION))
+
+      assertThat(landing.findAllLeafLocations().filterIsInstance<Cell>()).allSatisfy { cell ->
+        assertThat(cell.getMaxCapacity()).isEqualTo(2)
+        assertThat(cell.getCertifiedNormalAccommodation()).isEqualTo(2)
+        assertThat(cell.isCertified()).isTrue()
+      }
     }
 
     @Test
