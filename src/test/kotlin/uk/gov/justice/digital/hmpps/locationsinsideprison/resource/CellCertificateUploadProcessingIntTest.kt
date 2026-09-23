@@ -649,6 +649,60 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     }
   }
 
+  @Test
+  fun `live cells omitted from the upload are listed and still carried onto the certificate at their current values`() {
+    // cell2 and inactiveCellB3001 both exist on Residential locations but are left off this upload
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2)),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      assertThat(upload.notOnCertificateRecords).isEqualTo(2)
+      assertThat(upload.locationsNotOnCertificate.map { it.locationKey })
+        .containsExactlyInAnyOrder(cell2.getKey(), inactiveCellB3001.getKey())
+      with(upload.locationsNotOnCertificate.first { it.locationKey == cell2.getKey() }) {
+        assertThat(locationId).isEqualTo(cell2.id)
+        assertThat(maxCapacity).isEqualTo(2)
+        assertThat(workingCapacity).isEqualTo(2)
+        assertThat(certifiedNormalAccommodation).isEqualTo(2)
+      }
+      // the omitted cells did not have their own upload row, so they must not be counted as failures
+      assertThat(upload.failedRecords).isEqualTo(0)
+    }
+
+    // the certificate still contains cell2 - unchanged and at its current values, nothing on this ticket
+    // changes what is generated - only what is reported
+    with(currentCertificateFor(cell2)) {
+      assertThat(maxCapacity).isEqualTo(2)
+      assertThat(workingCapacity).isEqualTo(2)
+      assertThat(certifiedNormalAccommodation).isEqualTo(2)
+    }
+  }
+
+  @Test
+  fun `an upload covering every certifiable cell reports no omissions`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        inactiveCellB3001.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+      ),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      assertThat(upload.notOnCertificateRecords).isEqualTo(0)
+      assertThat(upload.locationsNotOnCertificate).isEmpty()
+    }
+  }
+
   /**
    * A cell that already holds no-one, mirroring the toilets, stores and offices prisons list on their cell
    * certificate spreadsheet with a max capacity of 0.
