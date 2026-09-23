@@ -662,7 +662,14 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     TransactionTemplate(transactionManager).execute {
       val upload = cellCertificateUploadRepository.findAll().first()
       assertThat(upload.notOnCertificateRecords).isEqualTo(2)
-      assertThat(upload.locationsNotOnCertificate).containsExactlyInAnyOrder(cell2.getKey(), inactiveCellB3001.getKey())
+      assertThat(upload.locationsNotOnCertificate.map { it.locationKey })
+        .containsExactlyInAnyOrder(cell2.getKey(), inactiveCellB3001.getKey())
+      with(upload.locationsNotOnCertificate.first { it.locationKey == cell2.getKey() }) {
+        assertThat(locationId).isEqualTo(cell2.id)
+        assertThat(maxCapacity).isEqualTo(2)
+        assertThat(workingCapacity).isEqualTo(2)
+        assertThat(certifiedNormalAccommodation).isEqualTo(2)
+      }
       // the omitted cells did not have their own upload row, so they must not be counted as failures
       assertThat(upload.failedRecords).isEqualTo(0)
     }

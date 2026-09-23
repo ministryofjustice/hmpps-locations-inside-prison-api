@@ -14,6 +14,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ce
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUpload
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadOmittedLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateUploadLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateUploadRepository
@@ -367,9 +368,12 @@ class CellCertificateUploadProcessingService(
     upload.failedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.FAILED }
     upload.discrepancyRecords = upload.locations.count { it.hasDiscrepancy() }
 
-    val locationsNotOnCertificate = locationsNotOnCertificate(upload)
-    upload.locationsNotOnCertificate = locationsNotOnCertificate.toMutableList()
-    upload.notOnCertificateRecords = locationsNotOnCertificate.size
+    val omittedLocations = locationsNotOnCertificate(upload)
+    // Mutate the managed collection in place - reassigning it trips Hibernate's orphan-removal check
+    // ("no longer referenced by the owning entity instance") because it replaces its persistent wrapper.
+    upload.locationsNotOnCertificate.clear()
+    upload.locationsNotOnCertificate.addAll(omittedLocations)
+    upload.notOnCertificateRecords = omittedLocations.size
 
     val now = LocalDateTime.now(clock)
     val approvalRequest = certificationApprovalRequestRepository.save(
@@ -418,19 +422,35 @@ class CellCertificateUploadProcessingService(
     }
 
   /**
-   * Certifiable cells (same filter [CellCertificateService.createCellCertificate] applies) whose path
-   * hierarchy has no row in the upload, in any status. These cells are still carried onto the new
-   * certificate at their current values - this list exists purely to disclose that to the user; it is
-   * not used to build the certificate itself. A FAILED row's location key never matches a live cell's
-   * path hierarchy (that is exactly why it failed to match), so those rows are naturally excluded here
-   * and remain reported only as failed rows.
+   * Certifiable cells (same filter [CellCertificateService.createCellCertificate] applies) that were not
+   * given a certified value by this upload, so they are still carried onto the new certificate at their
+   * current values - this list exists purely to disclose that to the user; it is not used to build the
+   * certificate itself. A cell whose row is FAILED already has its own explanation as a failed row - the
+   * location could not be matched, or was matched but the update itself failed - so it is excluded here
+   * regardless of which. A row can still be PENDING when this runs: [processRow]'s own transaction is what
+   * marks a row FAILED, and process()'s outer catch around it only logs, so a row whose commit itself failed
+   * is left PENDING with no certified value recorded anywhere - that cell must be disclosed here too, rather
+   * than being silently treated as covered.
    */
-  private fun locationsNotOnCertificate(upload: CellCertificateUpload): List<String> {
-    val uploadedPathHierarchies = upload.locations.map { it.locationKey.removePrefix("${upload.prisonId}-") }.toSet()
+  private fun locationsNotOnCertificate(upload: CellCertificateUpload): List<CellCertificateUploadOmittedLocation> {
+    val coveredOrFailedPathHierarchies = upload.locations
+      .filter { it.status != CellCertificateUploadLocationStatus.PENDING }
+      .map { it.locationKey.removePrefix("${upload.prisonId}-") }
+      .toSet()
+
     return cellCertificateService.certifiableCellPathHierarchies(upload.prisonId)
-      .filterNot { uploadedPathHierarchies.contains(it) }
+      .filterNot { coveredOrFailedPathHierarchies.contains(it) }
       .sorted()
-      .map { "${upload.prisonId}-$it" }
+      .mapNotNull { pathHierarchy -> cellLocationRepository.findOneByKey("${upload.prisonId}-$pathHierarchy") }
+      .map { cell ->
+        CellCertificateUploadOmittedLocation(
+          locationId = cell.id!!,
+          locationKey = cell.getKey(),
+          maxCapacity = cell.calcMaxCapacity(),
+          workingCapacity = cell.calcWorkingCapacityForCertificate(),
+          certifiedNormalAccommodation = cell.calcCertifiedNormalAccommodation(),
+        )
+      }
   }
 
   /**

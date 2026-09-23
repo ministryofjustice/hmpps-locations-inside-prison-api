@@ -1,9 +1,7 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload
 
 import jakarta.persistence.CascadeType
-import jakarta.persistence.CollectionTable
 import jakarta.persistence.Column
-import jakarta.persistence.ElementCollection
 import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
@@ -11,9 +9,11 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.JoinColumn
 import jakarta.persistence.OneToMany
+import jakarta.persistence.Table
 import org.hibernate.annotations.SortNatural
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadLocationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadOmittedLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
 import java.util.SortedSet
@@ -86,13 +86,13 @@ open class CellCertificateUpload(
   open var locations: SortedSet<CellCertificateUploadLocation> = sortedSetOf(),
 
   /**
-   * Location keys of certifiable cells that had no row in this upload, so were carried onto the new
-   * certificate at their current values rather than the values the upload stated.
+   * Certifiable cells that had no row in this upload, so were carried onto the new certificate at their
+   * current values rather than the values the upload stated.
    */
-  @ElementCollection(fetch = FetchType.LAZY)
-  @CollectionTable(name = "cell_certificate_upload_not_on_certificate", joinColumns = [JoinColumn(name = "cell_certificate_upload_id")])
-  @Column(name = "location_key", nullable = false)
-  open var locationsNotOnCertificate: MutableList<String> = mutableListOf(),
+  @SortNatural
+  @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
+  @JoinColumn(name = "cell_certificate_upload_id", nullable = false)
+  open var locationsNotOnCertificate: SortedSet<CellCertificateUploadOmittedLocation> = sortedSetOf(),
 ) {
   fun addLocation(location: CellCertificateUploadLocation) {
     locations.add(location)
@@ -110,7 +110,6 @@ open class CellCertificateUpload(
     failedRecords = failedRecords,
     discrepancyRecords = discrepancyRecords,
     notOnCertificateRecords = notOnCertificateRecords,
-    locationsNotOnCertificate = locationsNotOnCertificate.toList(),
     requestedBy = requestedBy,
     requestedDate = requestedDate,
     startTime = startTime,
@@ -119,6 +118,7 @@ open class CellCertificateUpload(
     certificationApprovalRequestId = certificationApprovalRequestId,
     reasonForChange = reasonForChange,
     locations = if (includeLocations) locations.map { it.toDto() } else null,
+    locationsNotOnCertificate = if (includeLocations) locationsNotOnCertificate.map { it.toDto() } else null,
   )
 }
 
@@ -272,4 +272,49 @@ open class CellCertificateUploadLocation(
   )
 
   override fun toString(): String = "CellCertificateUploadLocation(locationKey='$locationKey', status=$status)"
+}
+
+/**
+ * A certifiable cell that had no row in a cell certificate upload, recorded so the ingestion report can
+ * disclose that it was still carried onto the new certificate at these current values.
+ */
+@Entity
+@Table(name = "cell_certificate_upload_not_on_certificate")
+open class CellCertificateUploadOmittedLocation(
+  @Id
+  @GeneratedUuidV7
+  @Column(name = "id", updatable = false, nullable = false)
+  open val id: UUID? = null,
+
+  @Column(nullable = false)
+  open val locationId: UUID,
+
+  @Column(nullable = false)
+  open val locationKey: String,
+
+  @Column(nullable = false)
+  open val maxCapacity: Int,
+
+  @Column(nullable = false)
+  open val workingCapacity: Int,
+
+  @Column(nullable = false)
+  open val certifiedNormalAccommodation: Int,
+) : Comparable<CellCertificateUploadOmittedLocation> {
+
+  companion object {
+    private val COMPARATOR = compareBy<CellCertificateUploadOmittedLocation> { it.locationKey }
+  }
+
+  override fun compareTo(other: CellCertificateUploadOmittedLocation) = COMPARATOR.compare(this, other)
+
+  fun toDto(): CellCertificateUploadOmittedLocationDto = CellCertificateUploadOmittedLocationDto(
+    locationId = locationId,
+    locationKey = locationKey,
+    maxCapacity = maxCapacity,
+    workingCapacity = workingCapacity,
+    certifiedNormalAccommodation = certifiedNormalAccommodation,
+  )
+
+  override fun toString(): String = "CellCertificateUploadOmittedLocation(locationKey='$locationKey')"
 }
