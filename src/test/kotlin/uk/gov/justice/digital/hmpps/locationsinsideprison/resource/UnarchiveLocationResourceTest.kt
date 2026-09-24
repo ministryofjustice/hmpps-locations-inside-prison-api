@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.Ap
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PermanentDeactivationApprovalRequestDto
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
+import java.time.LocalDateTime
 
 @WithMockAuthUser(username = EXPECTED_USERNAME)
 @DisplayName("PUT /locations/{id}/unarchive")
@@ -78,6 +79,58 @@ class UnarchiveLocationResourceTest : CommonDataTestBase() {
         .expectBody()
         .jsonPath("$.errorCode").isEqualTo(ErrorCode.LocationCannotBeUnarchived.errorCode)
     }
+
+    @Test
+    fun `cannot un-archive a location while a location above it is still archived`() {
+      // archive the cell first, then the landing above it, so the cell's own status is ARCHIVED under an archived parent
+      landingZ1.temporarilyDeactivate(
+        deactivatedReason = DeactivatedReason.MOTHBALLED,
+        deactivatedDate = LocalDateTime.now(clock),
+        proposedReactivationDate = null,
+        userOrSystemInContext = EXPECTED_USERNAME,
+        linkedTransaction = linkedTransaction,
+      )
+      repository.save(landingZ1)
+
+      bulkArchive(cell1.getKey())
+      bulkArchive(landingZ1.getKey())
+
+      webTestClient.put().uri("/locations/${cell1.id}/unarchive")
+        .headers(setAuthorisation(roles = listOf("ROLE_UNARCHIVE_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(UnArchiveLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
+        .exchange()
+        .expectStatus().isBadRequest
+        .expectBody()
+        .jsonPath("$.errorCode").isEqualTo(ErrorCode.LocationCannotBeUnarchived.errorCode)
+
+      // un-archiving the landing first restores the cell the landing's own archive stripped
+      webTestClient.put().uri("/locations/${landingZ1.id}/unarchive")
+        .headers(setAuthorisation(roles = listOf("ROLE_UNARCHIVE_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(UnArchiveLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
+        .exchange()
+        .expectStatus().isOk
+
+      webTestClient.put().uri("/locations/${cell1.id}/unarchive")
+        .headers(setAuthorisation(roles = listOf("ROLE_UNARCHIVE_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(UnArchiveLocationRequest(deactivationReason = DeactivatedReason.MOTHBALLED)))
+        .exchange()
+        .expectStatus().isOk
+
+      assertThat(storedCellState(cell1.id!!).maxCapacity).isEqualTo(2)
+      assertThat(storedCellState(cell1.id!!).certified).isTrue()
+    }
+
+    private fun bulkArchive(key: String) {
+      webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(BulkPermanentDeactivationRequest(reason = "Demolished", locations = listOf(key))))
+        .exchange()
+        .expectStatus().isOk
+    }
   }
 
   @Nested
@@ -93,6 +146,9 @@ class UnarchiveLocationResourceTest : CommonDataTestBase() {
         .bodyValue(jsonString(PermanentDeactivationLocationRequest(reason = "Archived in error")))
         .exchange()
         .expectStatus().isOk
+
+      // archiving strips the cell: the API reports 0/0/0 for any archived cell, so check what it actually holds
+      assertCellStripped(cell1.id!!)
 
       purgeDomainEvents()
 
@@ -137,6 +193,7 @@ class UnarchiveLocationResourceTest : CommonDataTestBase() {
 
       // the archived cell has been removed from the current certificate
       assertCurrentCertificateContainsCell(cell, expected = false)
+      assertCellStripped(cell.id!!)
 
       purgeDomainEvents()
 

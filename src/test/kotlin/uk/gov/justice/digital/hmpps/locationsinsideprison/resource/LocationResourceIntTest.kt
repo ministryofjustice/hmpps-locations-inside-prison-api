@@ -2938,6 +2938,42 @@ class LocationResourceIntTest : CommonDataTestBase() {
             "location.inside.prison.amended" to "MDI-Z-1-002",
           )
         }
+
+        // archiving strips every cell it covers of its capacity and certification
+        assertCellStripped(cell1.id!!)
+        assertCellStripped(cell2.id!!)
+      }
+
+      @Test
+      fun `archiving a landing strips the cells below it`() {
+        landingZ1.temporarilyDeactivate(
+          deactivatedReason = DeactivatedReason.MOTHBALLED,
+          deactivatedDate = LocalDateTime.now(clock),
+          proposedReactivationDate = null,
+          userOrSystemInContext = EXPECTED_USERNAME,
+          linkedTransaction = linkedTransaction,
+        )
+        repository.save(landingZ1)
+
+        webTestClient.put().uri("/locations/bulk/deactivate/permanent")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(BulkPermanentDeactivationRequest(reason = "Demolished", locations = listOf(landingZ1.getKey()))))
+          .exchange()
+          .expectStatus().isOk
+
+        // the cells were never named in the request - they are stripped because the landing above them was archived
+        assertCellStripped(cell1.id!!)
+        assertCellStripped(cell2.id!!)
+
+        // and the change is recorded against each cell, so a later un-archive can put it back
+        webTestClient.get().uri("/locations/${cell1.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody().jsonPath("$.changeHistory[*].attribute").value<List<String>> { attributes ->
+            assertThat(attributes).contains("Maximum capacity", "Working capacity", "Certified normal accommodation", "Certification")
+          }
       }
     }
   }

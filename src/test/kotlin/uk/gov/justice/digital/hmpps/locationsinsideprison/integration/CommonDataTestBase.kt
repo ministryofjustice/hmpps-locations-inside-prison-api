@@ -1,7 +1,10 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.integration
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.transaction.PlatformTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateEntireWingRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
@@ -35,8 +38,22 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNo
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildVirtualResidentialLocation
 import java.time.LocalDateTime
+import java.util.UUID
 
 const val EXPECTED_USERNAME = "A_TEST_USER"
+
+/**
+ * A cell's stored capacity and certification, as opposed to what the API reports: an archived cell is excluded from
+ * the capacity roll-ups, so the API says 0/0/0 and uncertified whatever the columns hold. Archiving is meant to put
+ * that into the columns too (MAPA-391), which only a read of the entity can show.
+ */
+data class StoredCellState(
+  val maxCapacity: Int?,
+  val workingCapacity: Int?,
+  val certifiedNormalAccommodation: Int?,
+  val certified: Boolean,
+  val temporarilyOffCellCert: Boolean,
+)
 
 class CommonDataTestBase : SqsIntegrationTestBase() {
 
@@ -48,6 +65,9 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var cellRepository: CellLocationRepository
+
+  @Autowired
+  lateinit var transactionManager: PlatformTransactionManager
 
   @Autowired
   lateinit var certificationApprovalRequestRepository: CertificationApprovalRequestRepository
@@ -341,5 +361,30 @@ class CommonDataTestBase : SqsIntegrationTestBase() {
       .header("Content-Type", "application/json")
       .exchange()
       .expectStatus().isCreated
+  }
+
+  /** Reads what a cell actually holds. Capacity is lazily loaded, so this has to run inside a transaction. */
+  fun storedCellState(cellId: UUID): StoredCellState = TransactionTemplate(transactionManager).execute {
+    val cell = cellRepository.findById(cellId).orElseThrow { AssertionError("Cell $cellId not found") }
+    StoredCellState(
+      maxCapacity = cell.getMaxCapacity(),
+      workingCapacity = cell.getCurrentlyHeldWorkingCapacity(),
+      certifiedNormalAccommodation = cell.getCertifiedNormalAccommodation(),
+      certified = cell.isCertified(),
+      temporarilyOffCellCert = cell.temporarilyOffCellCert,
+    )
+  }!!
+
+  /** The state archiving is meant to leave every cell below the archived location in. */
+  fun assertCellStripped(cellId: UUID) {
+    assertThat(storedCellState(cellId)).isEqualTo(
+      StoredCellState(
+        maxCapacity = 0,
+        workingCapacity = 0,
+        certifiedNormalAccommodation = 0,
+        certified = false,
+        temporarilyOffCellCert = false,
+      ),
+    )
   }
 }

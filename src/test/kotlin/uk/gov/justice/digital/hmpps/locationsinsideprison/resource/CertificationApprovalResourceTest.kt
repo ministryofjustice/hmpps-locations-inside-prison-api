@@ -1288,6 +1288,8 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(archivedCell.pendingApprovalRequestId).isNull()
       // removed from the cell certificate
       assertThat(archivedCell.currentCellCertificate).isNull()
+      // and stripped of the capacity and certification it was holding
+      assertCellStripped(firstCell.id!!)
 
       // current certificate no longer contains the archived cell
       webTestClient.get().uri("/cell-certificates/prison/${leedsWing.prisonId}/current")
@@ -1334,6 +1336,9 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       val archivedCell = getLocation(firstCell.id!!)
       assertThat(archivedCell.permanentlyInactive).isTrue()
       assertThat(archivedCell.currentCellCertificate).isNull()
+
+      // every cell below the wing is stripped of its capacity and certification, not just the wing itself
+      leedsWing.findAllLeafLocations().filterIsInstance<Cell>().forEach { cell -> assertCellStripped(cell.id!!) }
 
       // current certificate no longer contains the wing or any location below it
       webTestClient.get().uri("/cell-certificates/prison/${leedsWing.prisonId}/current")

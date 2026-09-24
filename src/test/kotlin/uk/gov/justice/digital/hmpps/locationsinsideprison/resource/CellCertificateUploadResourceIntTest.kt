@@ -11,7 +11,6 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
-import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
@@ -34,9 +33,6 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
 
   @MockitoSpyBean
   lateinit var cellCertificateUploadListenerService: CellCertificateUploadListenerService
-
-  @Autowired
-  lateinit var transactionManager: PlatformTransactionManager
 
   @Autowired
   lateinit var hmppsQueueService: HmppsQueueService

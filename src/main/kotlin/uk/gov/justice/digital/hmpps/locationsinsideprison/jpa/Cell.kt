@@ -425,33 +425,58 @@ class Cell(
   }
 
   /**
-   * Reverses the effect of an archive on a single cell (see [Location.unarchive]): restores the pre-archive
-   * max / working / certified capacity - sourced from the cell's own [LocationHistory] (archive zeroed each, capturing
-   * the prior value as the history entry's old value) - and re-certifies the cell. No-ops the capacity restore if the
-   * cell has no usable capacity history.
+   * Reverses the effect of an archive on a single cell (see [Location.unarchive]): restores the max / working /
+   * certified capacity the cell held before the archive and re-certifies it if the archive de-certified it.
+   *
+   * The values come from the [LocationHistory] rows the archive itself wrote, identified by [archiveTransaction] -
+   * the transaction that set this location to ARCHIVED. Reading only that transaction's rows matters because a cell
+   * can have any number of earlier capacity changes: taking the most recent row for an attribute regardless of what
+   * wrote it would, for a location archived before the archive recorded anything (MAPA-391), silently roll the cell
+   * back to the value it held before its last ordinary edit.
+   *
+   * Where the archive recorded nothing - it predates the fix, or the value was already what the archive would have
+   * set - the cell keeps what it currently holds, which for those locations is the pre-archive value untouched.
    */
-  fun restoreCapacityAndCertifyAfterUnarchive(userOrSystemInContext: String, amendedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
-    val preArchiveMaxCapacity = latestCapacityHistoryValue(LocationAttribute.MAX_CAPACITY)
-    if (preArchiveMaxCapacity != null && preArchiveMaxCapacity > 0) {
+  fun restoreCapacityAndCertifyAfterUnarchive(
+    userOrSystemInContext: String,
+    amendedDate: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+    archiveTransaction: LinkedTransaction?,
+  ) {
+    val restoredMaxCapacity = preArchiveCapacity(LocationAttribute.MAX_CAPACITY, archiveTransaction)
+      ?: capacity?.maxCapacity ?: 0
+
+    // A max capacity of zero is only legal on a permanently deactivated cell, which this one no longer is by the time
+    // the restore runs, so leave a cell with nothing to restore alone rather than have setCapacity reject it.
+    if (restoredMaxCapacity > 0) {
       setCapacity(
-        maxCapacity = preArchiveMaxCapacity,
-        workingCapacity = latestCapacityHistoryValue(LocationAttribute.WORKING_CAPACITY) ?: 0,
-        certifiedNormalAccommodation = latestCapacityHistoryValue(LocationAttribute.CERTIFIED_CAPACITY) ?: 0,
+        maxCapacity = restoredMaxCapacity,
+        workingCapacity = preArchiveCapacity(LocationAttribute.WORKING_CAPACITY, archiveTransaction)
+          ?: getCurrentlyHeldWorkingCapacity() ?: 0,
+        certifiedNormalAccommodation = preArchiveCapacity(LocationAttribute.CERTIFIED_CAPACITY, archiveTransaction)
+          ?: capacity?.certifiedNormalAccommodation ?: 0,
         userOrSystemInContext = userOrSystemInContext,
         amendedDate = amendedDate,
         linkedTransaction = linkedTransaction,
       )
     }
-    certifyCell(userOrSystemInContext, amendedDate, linkedTransaction)
+
+    // Only re-certify a cell the archive actually de-certified - one that was already uncertified before it was
+    // archived should come back uncertified. An archive that recorded nothing tells us nothing either way, so those
+    // cells keep the long-standing behaviour of being certified on the way back.
+    if (archiveTransaction == null || wasDeCertifiedBy(archiveTransaction)) {
+      certifyCell(userOrSystemInContext, amendedDate, linkedTransaction)
+    }
   }
 
-  // The most recent history entry's old value for a capacity attribute - i.e. the value it held immediately before the
-  // archive zeroed it. Nothing changes a cell's capacity after it is archived, so the latest entry is the archive.
-  private fun latestCapacityHistoryValue(attribute: LocationAttribute): Int? = getHistoryAsList()
-    .filter { it.attributeName == attribute }
-    .maxByOrNull { it.amendedDate }
-    ?.oldValue
-    ?.toIntOrNull()
+  // The value the cell held immediately before [archiveTransaction] zeroed this attribute.
+  private fun preArchiveCapacity(attribute: LocationAttribute, archiveTransaction: LinkedTransaction?): Int? = historyFrom(archiveTransaction, attribute)?.oldValue?.toIntOrNull()
+
+  private fun wasDeCertifiedBy(archiveTransaction: LinkedTransaction) = historyFrom(archiveTransaction, LocationAttribute.CERTIFICATION) != null
+
+  private fun historyFrom(transaction: LinkedTransaction?, attribute: LocationAttribute): LocationHistory? = transaction?.transactionId?.let { transactionId ->
+    getHistoryAsList().firstOrNull { it.attributeName == attribute && it.linkedTransaction?.transactionId == transactionId }
+  }
 
   fun setCellDoorMark(newCellMark: String, amendedBy: String, amendedDate: LocalDateTime, linkedTransaction: LinkedTransaction) {
     addHistory(
