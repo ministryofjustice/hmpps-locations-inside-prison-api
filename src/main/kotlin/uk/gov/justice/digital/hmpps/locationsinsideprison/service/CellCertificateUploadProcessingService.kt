@@ -222,10 +222,12 @@ class CellCertificateUploadProcessingService(
     // records the uploaded value, the location keeps its own, and the difference is reported for a user to
     // resolve.
     val retainedWorkingCapacity = oldWorkingCapacity ?: 0
-    // The exception is a cell that has never held a working capacity at all. NOMIS never recorded one, so a
-    // prison migrating off it arrives with zero on every cell and the uploaded certificate is the only source
-    // that has the real value - there is nothing to weigh it against, so it wins. Temporarily deactivated
-    // cells are left alone: markAsTemporarilyOffCellCert below is how they keep a certified working capacity.
+    // The exception is a cell that currently holds a working capacity of zero. Only today's value is checked,
+    // not the cell's history, so a cell that once held a working capacity and was later set to zero is treated
+    // the same as one that never had one. NOMIS never recorded one, so a prison migrating off it arrives with
+    // zero on every cell and the uploaded certificate is the only source that has the real value - there is
+    // nothing to weigh it against, so it wins. Temporarily deactivated cells are left alone:
+    // markAsTemporarilyOffCellCert below is how they keep a certified working capacity.
     val requestedWorkingCapacity =
       if (!cell.isTemporarilyDeactivated() && retainedWorkingCapacity == 0 && row.workingCapacity > 0) {
         row.workingCapacity
@@ -485,7 +487,7 @@ class CellCertificateUploadProcessingService(
     /** Reported against a cell that kept its own working capacity while the certificate took the uploaded one. */
     const val WORKING_CAPACITY_MISMATCH_MESSAGE = "Working capacity and certified working capacity do not match"
 
-    /** Reported against a cell that held no working capacity and so took the certified one. */
+    /** Reported against a cell that held a working capacity of zero and so took the certified one. */
     const val WORKING_CAPACITY_TAKEN_FROM_CERTIFICATE_MESSAGE = "Working capacity changed to match certified working capacity"
 
     /** Reported when the max capacity or CNA on the certificate could not be applied to the location. */
