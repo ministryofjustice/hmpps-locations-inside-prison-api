@@ -4,7 +4,7 @@ import uk.gov.justice.digital.hmpps.gradle.PortForwardRedisTask
 import uk.gov.justice.digital.hmpps.gradle.RevealSecretsTask
 
 plugins {
-  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.9"
+  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.10"
   kotlin("plugin.spring") version "2.4.20"
   kotlin("plugin.jpa") version "2.4.20"
   id("org.jetbrains.kotlinx.kover") version "0.9.9"
@@ -16,7 +16,7 @@ configurations {
 }
 
 dependencies {
-  implementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter:3.0.1")
+  implementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter:3.0.2")
   implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:7.4.1")
   implementation("org.springframework.boot:spring-boot-starter-webflux")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -34,7 +34,7 @@ dependencies {
   implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
 
-  testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:3.0.1")
+  testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:3.0.2")
   testImplementation("org.springframework.boot:spring-boot-starter-webclient-test")
   testImplementation("org.springframework.boot:spring-boot-starter-webflux-test")
   testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
