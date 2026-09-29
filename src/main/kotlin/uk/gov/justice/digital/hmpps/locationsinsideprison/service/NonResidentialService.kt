@@ -349,6 +349,9 @@ class NonResidentialService(
    *   "Gym 2"), skipping any name already used in the prison. This runs first, so the step below then applies.
    * - where no live direct child has the parent's name, a child is created with the parent's name, status and all
    *   of its services.
+   * - where exactly one live direct child has the parent's name but is not used by all of the parent's services, the
+   *   missing services are added to it, so the services can move to that child rather than to a second one of the
+   *   same name.
    *
    * With [AlignChildrenToParentNameRequest.dryRun] set, nothing is changed and the report shows what would be done.
    */
@@ -365,7 +368,7 @@ class NonResidentialService(
 
     val results = mutableListOf<ParentAlignmentResult>()
     val created = mutableListOf<LocationDTO>()
-    val renamed = mutableListOf<LocationDTO>()
+    val amended = mutableListOf<LocationDTO>()
 
     request.parentLocationIds?.filter { id -> parentsInScope.none { it.id == id } }?.forEach { id ->
       results.add(ParentAlignmentResult(parentId = id, action = AlignmentAction.SKIPPED, reason = "Not a parent location used by a service in prison $prisonId"))
@@ -391,8 +394,38 @@ class NonResidentialService(
       val sameNamedChildren = liveChildren
         .filter { it.localName?.let(::normaliseName) == normaliseName(name) }
         .sortedBy { it.getPathHierarchy() }
+      val parentServices = parent.services.map { it.serviceType }.sorted()
+
       if (sameNamedChildren.size == 1) {
-        results.add(parent.toAlignmentResult(AlignmentAction.NO_ACTION))
+        val child = sameNamedChildren.single()
+        val childServices = child.services.map { it.serviceType }.toSet()
+        val missingServices = parentServices.filter { it !in childServices }
+        if (missingServices.isEmpty()) {
+          results.add(parent.toAlignmentResult(AlignmentAction.NO_ACTION))
+          return@forEach
+        }
+        if (!request.dryRun) {
+          val linkedTransaction = commonLocationService.createLinkedTransaction(
+            prisonId = prisonId,
+            TransactionType.LOCATION_UPDATE_NON_RESI,
+            "Add services ${missingServices.joinToString(", ")} to ${child.getKey()} to match its parent ${parent.getKey()}",
+          )
+          child.update(
+            PatchNonResidentialLocationRequest(servicesUsingLocation = childServices + missingServices),
+            commonLocationService.getUsername(),
+            clock,
+            linkedTransaction,
+          )
+          commonLocationService.trackLocationUpdate(child, "Added parent services to Non-Residential Location with parent name")
+          amended.add(child.toDto())
+          linkedTransaction.txEndTime = LocalDateTime.now(clock)
+        }
+        results.add(
+          parent.toAlignmentResult(
+            AlignmentAction.ADD_SERVICES_TO_CHILD,
+            servicesAddedToChild = ServicesAddedToChild(id = child.id!!, key = child.getKey(), name = child.localName!!, servicesAdded = missingServices),
+          ),
+        )
         return@forEach
       }
 
@@ -409,7 +442,6 @@ class NonResidentialService(
       } else {
         emptyList()
       }
-      val parentServices = parent.services.map { it.serviceType }.sorted()
       val action = if (renames.isEmpty()) AlignmentAction.CREATE_CHILD else AlignmentAction.RENAME_CHILDREN_AND_CREATE_CHILD
 
       if (request.dryRun) {
@@ -427,7 +459,7 @@ class NonResidentialService(
         val child = sameNamedChildren.first { it.id == rename.id }
         child.updateLocalName(rename.newName, username, clock, linkedTransaction)
         commonLocationService.trackLocationUpdate(child, "Renamed Non-Residential Location to align with parent name")
-        renamed.add(child.toDto())
+        amended.add(child.toDto())
       }
 
       val code = generateUniqueNonResidentialCode(prisonId, name, parent.getPathHierarchy())
@@ -449,7 +481,7 @@ class NonResidentialService(
     return AlignChildrenToParentNameResult(
       report = AlignChildrenToParentNameReport(prisonId = prisonId, dryRun = request.dryRun, parents = results),
       created = created,
-      renamed = renamed,
+      amended = amended,
     )
   }
 
@@ -468,6 +500,7 @@ class NonResidentialService(
     reason: String? = null,
     renamedChildren: List<ChildRename> = emptyList(),
     createdChild: CreatedChild? = null,
+    servicesAddedToChild: ServicesAddedToChild? = null,
   ) = ParentAlignmentResult(
     parentId = id!!,
     parentKey = getKey(),
@@ -476,6 +509,7 @@ class NonResidentialService(
     reason = reason,
     renamedChildren = renamedChildren,
     createdChild = createdChild,
+    servicesAddedToChild = servicesAddedToChild,
   )
 
   /**
@@ -854,6 +888,7 @@ data class AlignChildrenToParentNameRequest(
 enum class AlignmentAction {
   CREATE_CHILD,
   RENAME_CHILDREN_AND_CREATE_CHILD,
+  ADD_SERVICES_TO_CHILD,
   NO_ACTION,
   SKIPPED,
 }
@@ -875,6 +910,14 @@ data class CreatedChild(
   val services: List<ServiceType>,
 )
 
+@Schema(description = "The existing child with the parent's name, and the parent's services added to it")
+data class ServicesAddedToChild(
+  val id: UUID,
+  val key: String,
+  val name: String,
+  val servicesAdded: List<ServiceType>,
+)
+
 @Schema(description = "What was done, or would be done on a dry run, for one parent location")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class ParentAlignmentResult(
@@ -885,6 +928,7 @@ data class ParentAlignmentResult(
   val reason: String? = null,
   val renamedChildren: List<ChildRename> = emptyList(),
   val createdChild: CreatedChild? = null,
+  val servicesAddedToChild: ServicesAddedToChild? = null,
 )
 
 @Schema(description = "Report of aligning child locations to their parent's name in a prison")
@@ -899,12 +943,13 @@ data class AlignChildrenToParentNameReport(
 }
 
 /**
- * The [report] returned to the caller, plus the locations [created] and [renamed] so the caller can publish events.
+ * The [report] returned to the caller, plus the locations [created] and [amended] (renamed, or given the parent's
+ * services) so the caller can publish events.
  */
 data class AlignChildrenToParentNameResult(
   val report: AlignChildrenToParentNameReport,
   val created: List<LocationDTO>,
-  val renamed: List<LocationDTO>,
+  val amended: List<LocationDTO>,
 )
 
 @Schema(description = "Non Residential Summary")

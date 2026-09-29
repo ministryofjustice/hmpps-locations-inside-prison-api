@@ -240,7 +240,8 @@ class LocationNonResidentialResource(
     summary = "Gives each parent non-residential location one child with the same name",
     description = "For each parent used by a service that has live child locations: where several children share the " +
       "parent's name they are renamed with a number (e.g. Gym 1, Gym 2), then where no child has the parent's name one " +
-      "is created with the parent's services. Runs as a dry run unless dryRun is false. " +
+      "is created with the parent's services. Where one child has the parent's name but lacks some of its services, " +
+      "those services are added to it. Runs as a dry run unless dryRun is false. " +
       "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
@@ -273,7 +274,7 @@ class LocationNonResidentialResource(
     val result = nonResidentialService.alignChildrenToParentName(prisonId, request)
     eventPublish {
       mapOf(
-        InternalLocationDomainEventType.LOCATION_AMENDED to result.renamed,
+        InternalLocationDomainEventType.LOCATION_AMENDED to result.amended,
         InternalLocationDomainEventType.LOCATION_CREATED to result.created,
       )
     }
