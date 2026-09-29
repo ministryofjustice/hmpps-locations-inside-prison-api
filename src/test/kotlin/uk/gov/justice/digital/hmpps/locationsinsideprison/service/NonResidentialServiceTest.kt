@@ -204,6 +204,24 @@ class NonResidentialServiceTest {
     }
 
     @Test
+    fun `shortens a long parent name so numbered names still fit the local name column`() {
+      val longName = "L".repeat(79) + "x"
+      val parent = buildLocation(longName, code = "LONG").apply {
+        addService(ServiceType.APPOINTMENT)
+        addChildLocation(buildLocation(longName, code = "L1"))
+        addChildLocation(buildLocation(longName, code = "L2"))
+      }
+      givenParents(parent)
+
+      val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = false))
+
+      val newNames = result.report.parents.single().renamedChildren.map { it.newName }
+      Assertions.assertThat(newNames).containsExactly("L".repeat(78) + " 1", "L".repeat(78) + " 2")
+      Assertions.assertThat(newNames).allSatisfy { Assertions.assertThat(it).hasSizeLessThanOrEqualTo(80) }
+      Assertions.assertThat(result.created.single().localName).isEqualTo(longName)
+    }
+
+    @Test
     fun `ignores archived children and same-named grandchildren`() {
       val archivedChild = buildLocation("Gym", code = "G1", status = LocationStatus.ARCHIVED)
       val child = buildLocation("Gym Area 1", code = "A1").apply { addChildLocation(buildLocation("Gym", code = "G2")) }

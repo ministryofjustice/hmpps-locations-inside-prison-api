@@ -2511,6 +2511,25 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `saves numbered names for a parent whose name is at the maximum length`() {
+        val longName = "Multi-faith room and quiet reflection space next to the education block" + " (annexe)"
+        assertThat(longName).hasSize(80)
+        val longParent = repository.save(
+          buildNonResidentialLocation(prisonId = "MDI", localName = longName, pathHierarchy = "LONG", serviceTypes = setOf(ServiceType.APPOINTMENT)).also {
+            it.addChildLocation(buildNonResidentialLocation(prisonId = "MDI", localName = longName, pathHierarchy = "LNG1", serviceTypes = setOf(ServiceType.APPOINTMENT)))
+            it.addChildLocation(buildNonResidentialLocation(prisonId = "MDI", localName = longName, pathHierarchy = "LNG2", serviceTypes = setOf(ServiceType.APPOINTMENT)))
+          },
+        )
+
+        val report = align("""{ "dryRun": false, "parentLocationIds": ["${longParent.id}"] }""")
+
+        val renames = report.parents.single().renamedChildren
+        assertThat(renames.map { it.newName }).containsExactly("${longName.take(78)} 1", "${longName.take(78)} 2")
+        renames.forEach { assertThat(repository.findById(it.id).get().localName).isEqualTo(it.newName) }
+        purgeDomainEvents()
+      }
+
+      @Test
       fun `running again changes nothing`() {
         val firstRun = align("""{ "dryRun": false, "parentLocationIds": ["${sportsHall.id}", "${chapel.id}"] }""")
         assertThat(firstRun.parents.map { it.action }).doesNotContain(AlignmentAction.NO_ACTION)

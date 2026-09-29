@@ -401,7 +401,7 @@ class NonResidentialService(
         sameNamedChildren.map { child ->
           var newName: String
           do {
-            newName = "$name ${++suffix}"
+            newName = numberedName(name, ++suffix)
           } while (normaliseName(newName) in usedNames)
           usedNames.add(normaliseName(newName))
           ChildRename(id = child.id!!, key = child.getKey(), oldName = child.localName!!, newName = newName)
@@ -454,6 +454,14 @@ class NonResidentialService(
   }
 
   private fun normaliseName(name: String) = name.trim().lowercase()
+
+  /**
+   * "[name] [number]", shortening [name] where needed so the result still fits the local name column.
+   */
+  private fun numberedName(name: String, number: Int): String {
+    val suffix = " $number"
+    return name.take(MAX_LOCAL_NAME_LENGTH - suffix.length).trimEnd() + suffix
+  }
 
   private fun NonResidentialLocation.toAlignmentResult(
     action: AlignmentAction,
@@ -999,6 +1007,9 @@ data class NonResidentialLocationDTO(
   @Schema(description = "Key for a location", example = "MDI-ADJU", required = true)
   fun getKey(): String = "$prisonId-$pathHierarchy"
 }
+
+/** Size of the location.local_name column. */
+private const val MAX_LOCAL_NAME_LENGTH = 80
 
 /**
  * Generates a unique code from the local name by extracting consonants and adding a checksum.
