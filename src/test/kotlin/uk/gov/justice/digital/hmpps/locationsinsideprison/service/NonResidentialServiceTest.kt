@@ -2,11 +2,13 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import org.assertj.core.api.Assertions
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -126,30 +128,120 @@ class NonResidentialServiceTest {
     Assertions.assertThat(nonResLoc[2].localName).isEqualTo("Cc")
   }
 
-  @Test
-  fun `createChildLocationsForServicesWithParent should create single leaf location for multiple missing services`() {
-    val prisonId = "MDI"
-    val parent = buildLocation("Gym").apply {
+  @Nested
+  inner class AlignChildrenToParentName {
+    private val prisonId = "prisonId"
+
+    private fun givenParents(vararg parents: NonResidentialLocation, otherLocations: List<NonResidentialLocation> = emptyList()) {
+      whenever(nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId)).thenReturn(parents.toList())
+      val everyLocation = parents.flatMap { listOf(it) + it.findSubLocations().filterIsInstance<NonResidentialLocation>() } + otherLocations
+      whenever(nonResidentialLocationRepository.findAllByPrisonId(prisonId)).thenReturn(everyLocation)
+      whenever(sharedLocationService.getUsername()).thenReturn("test-user")
+      whenever(sharedLocationService.createLinkedTransaction(any(), any(), any(), anyOrNull())).thenReturn(mock())
+    }
+
+    private fun gymWithChildren(vararg children: NonResidentialLocation) = buildLocation("Gym", code = "GYM").apply {
       addService(ServiceType.APPOINTMENT)
       addService(ServiceType.PROGRAMMES_AND_ACTIVITIES)
+      children.forEach { addChildLocation(it) }
     }
-    val child = buildLocation("Gym - Area 1")
-    parent.addChildLocation(child)
 
-    whenever(nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId))
-      .thenReturn(listOf(parent))
-    whenever(sharedLocationService.getUsername()).thenReturn("test-user")
-    whenever(sharedLocationService.createLinkedTransaction(any(), any(), any(), anyOrNull())).thenReturn(mock())
+    @Test
+    fun `dry run reports a child to create and changes nothing`() {
+      givenParents(gymWithChildren(buildLocation("Gym Area 1", code = "A1")))
 
-    val results = service.createChildLocationsForServicesWithParent(prisonId)
+      val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = true))
 
-    Assertions.assertThat(results).hasSize(1)
-    Assertions.assertThat(results[0].localName).isEqualTo("Gym")
+      val parentResult = result.report.parents.single()
+      Assertions.assertThat(parentResult.action).isEqualTo(AlignmentAction.CREATE_CHILD)
+      Assertions.assertThat(parentResult.createdChild?.name).isEqualTo("Gym")
+      Assertions.assertThat(parentResult.createdChild?.id).isNull()
+      Assertions.assertThat(result.created).isEmpty()
+      Assertions.assertThat(result.renamed).isEmpty()
+      verify(nonResidentialLocationRepository, never()).save(any<NonResidentialLocation>())
+    }
 
-    val captor = argumentCaptor<NonResidentialLocation>()
-    verify(nonResidentialLocationRepository, times(1)).save(captor.capture())
-    val savedLocation = captor.firstValue
-    Assertions.assertThat(savedLocation.services.map { it.serviceType }).containsExactlyInAnyOrder(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
+    @Test
+    fun `creates a child with the parent name and all of its services`() {
+      givenParents(gymWithChildren(buildLocation("Gym Area 1", code = "A1")))
+
+      val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = false))
+
+      Assertions.assertThat(result.report.parents.single().action).isEqualTo(AlignmentAction.CREATE_CHILD)
+      Assertions.assertThat(result.created.single().localName).isEqualTo("Gym")
+      val captor = argumentCaptor<NonResidentialLocation>()
+      verify(nonResidentialLocationRepository).save(captor.capture())
+      Assertions.assertThat(captor.firstValue.services.map { it.serviceType })
+        .containsExactlyInAnyOrder(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
+    }
+
+    @Test
+    fun `leaves a parent alone when exactly one child has its name, ignoring case and spaces`() {
+      givenParents(gymWithChildren(buildLocation(" gym ", code = "G1"), buildLocation("Gym Area 1", code = "A1")))
+
+      val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = false))
+
+      Assertions.assertThat(result.report.parents.single().action).isEqualTo(AlignmentAction.NO_ACTION)
+      verify(nonResidentialLocationRepository, never()).save(any<NonResidentialLocation>())
+    }
+
+    @Test
+    fun `renames several same-named children with numbers, skipping names already used, then creates one`() {
+      val first = buildLocation("Gym", code = "G1")
+      val second = buildLocation("GYM", code = "G2")
+      givenParents(gymWithChildren(first, second), otherLocations = listOf(buildLocation("Gym 1", code = "OTHER")))
+
+      val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = false))
+
+      val parentResult = result.report.parents.single()
+      Assertions.assertThat(parentResult.action).isEqualTo(AlignmentAction.RENAME_CHILDREN_AND_CREATE_CHILD)
+      Assertions.assertThat(parentResult.renamedChildren.map { it.oldName to it.newName })
+        .containsExactly("Gym" to "Gym 2", "GYM" to "Gym 3")
+      Assertions.assertThat(first.localName).isEqualTo("Gym 2")
+      Assertions.assertThat(second.localName).isEqualTo("Gym 3")
+      Assertions.assertThat(result.renamed).hasSize(2)
+      Assertions.assertThat(result.created.single().localName).isEqualTo("Gym")
+    }
+
+    @Test
+    fun `ignores archived children and same-named grandchildren`() {
+      val archivedChild = buildLocation("Gym", code = "G1", status = LocationStatus.ARCHIVED)
+      val child = buildLocation("Gym Area 1", code = "A1").apply { addChildLocation(buildLocation("Gym", code = "G2")) }
+      givenParents(gymWithChildren(archivedChild, child))
+
+      val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = true))
+
+      Assertions.assertThat(result.report.parents.single().action).isEqualTo(AlignmentAction.CREATE_CHILD)
+    }
+
+    @Test
+    fun `skips an archived parent`() {
+      val parent = gymWithChildren(buildLocation("Gym Area 1", code = "A1")).apply { status = LocationStatus.ARCHIVED }
+      givenParents(parent)
+
+      val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = false))
+
+      Assertions.assertThat(result.report.parents.single().action).isEqualTo(AlignmentAction.SKIPPED)
+      Assertions.assertThat(result.report.parents.single().reason).isEqualTo("Parent is archived")
+      verify(nonResidentialLocationRepository, never()).save(any<NonResidentialLocation>())
+    }
+
+    @Test
+    fun `only considers the parents asked for, and reports ids that are not eligible parents`() {
+      val gym = gymWithChildren(buildLocation("Gym Area 1", code = "A1"))
+      val chapel = buildLocation("Chapel", code = "CHAPEL").apply {
+        addService(ServiceType.APPOINTMENT)
+        addChildLocation(buildLocation("Chapel Room", code = "R1"))
+      }
+      givenParents(gym, chapel)
+      val unknownId = UUID.randomUUID()
+
+      val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = true, parentLocationIds = setOf(gym.id!!, unknownId)))
+
+      Assertions.assertThat(result.report.parents.map { it.parentId to it.action })
+        .containsExactlyInAnyOrder(gym.id!! to AlignmentAction.CREATE_CHILD, unknownId to AlignmentAction.SKIPPED)
+      Assertions.assertThat(result.report.summary[AlignmentAction.CREATE_CHILD]).isEqualTo(1)
+    }
   }
 
   @Test
@@ -204,14 +296,18 @@ class NonResidentialServiceTest {
       .hasMessageContaining("already hidden")
   }
 
-  private fun buildLocation(localName: String): NonResidentialLocation = NonResidentialLocation(
+  private fun buildLocation(
+    localName: String,
+    code: String = "code",
+    status: LocationStatus = LocationStatus.ACTIVE,
+  ): NonResidentialLocation = NonResidentialLocation(
     id = UUID.randomUUID(),
     localName = localName,
-    code = "code",
-    pathHierarchy = "path-a",
+    code = code,
+    pathHierarchy = if (code == "code") "path-a" else code,
     locationType = LocationType.LOCATION,
     prisonId = "prisonId",
-    status = LocationStatus.ACTIVE,
+    status = status,
     whenCreated = LocalDateTime.now(),
     childLocations = sortedSetOf(),
     createdBy = "createdBy",

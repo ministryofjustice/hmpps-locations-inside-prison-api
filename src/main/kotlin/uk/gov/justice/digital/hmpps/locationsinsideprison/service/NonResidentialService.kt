@@ -338,70 +338,178 @@ class NonResidentialService(
     return location
   }
 
+  /**
+   * Makes sure each parent non-residential location has exactly one live direct child with the parent's name, so
+   * that Activities and Appointments can move bookings from the parent to that child without staff seeing a
+   * different location name.
+   *
+   * Only parents that are not archived, are used by at least one service and have at least one live direct child are
+   * considered. Names are compared ignoring case and surrounding spaces. For each parent:
+   * - where two or more live direct children share the parent's name, each is renamed with a number ("Gym 1",
+   *   "Gym 2"), skipping any name already used in the prison. This runs first, so the step below then applies.
+   * - where no live direct child has the parent's name, a child is created with the parent's name, status and all
+   *   of its services.
+   *
+   * With [AlignChildrenToParentNameRequest.dryRun] set, nothing is changed and the report shows what would be done.
+   */
   @Transactional
-  fun createChildLocationsForServicesWithParent(prisonId: String): List<LocationDTO> {
-    val allNonResLocations = nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId)
-    val locationsWithChildren = allNonResLocations.filter { it.findSubLocations().isNotEmpty() }
-    val createdLocations = mutableListOf<LocationDTO>()
+  fun alignChildrenToParentName(prisonId: String, request: AlignChildrenToParentNameRequest): AlignChildrenToParentNameResult {
+    val parentsInPrison = nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId)
+      .filter { it.findSubLocations().isNotEmpty() }
+    val parentsInScope = request.parentLocationIds?.let { ids -> parentsInPrison.filter { it.id in ids } } ?: parentsInPrison
 
-    locationsWithChildren.forEach { parent ->
-      val parentServices = parent.services.map { it.serviceType }.toSet()
-      if (parentServices.isNotEmpty()) {
-        val descendants = parent.findSubLocations()
-        val missingServices = parentServices.filter { serviceType ->
-          descendants.none { child ->
-            (child as? NonResidentialLocation)?.services?.any { it.serviceType == serviceType } == true
-          }
-        }
+    val usedNames = nonResidentialLocationRepository.findAllByPrisonId(prisonId)
+      .filter { !it.isPermanentlyDeactivated() }
+      .mapNotNull { it.localName?.let(::normaliseName) }
+      .toMutableSet()
 
-        if (missingServices.isNotEmpty()) {
-          val localName = parent.localName ?: parent.getLocationCode()
-          val code = generateUniqueNonResidentialCode(prisonId, localName)
+    val results = mutableListOf<ParentAlignmentResult>()
+    val created = mutableListOf<LocationDTO>()
+    val renamed = mutableListOf<LocationDTO>()
 
-          val linkedTransaction = commonLocationService.createLinkedTransaction(
-            prisonId = prisonId,
-            TransactionType.LOCATION_CREATE_NON_RESI,
-            "Create non-residential location $code as child of ${parent.getKey()} for services ${missingServices.joinToString(", ")}",
-          )
-
-          val username = commonLocationService.getUsername()
-          val newLocation = NonResidentialLocation(
-            id = null,
-            code = code,
-            pathHierarchy = code, // will be updated by setParent
-            locationType = parent.locationType,
-            prisonId = prisonId,
-            status = parent.status,
-            parent = parent,
-            localName = parent.localName,
-            childLocations = sortedSetOf(),
-            whenCreated = LocalDateTime.now(clock),
-            createdBy = username,
-            internalMovementAllowed = missingServices.contains(ServiceType.INTERNAL_MOVEMENTS),
-          ).apply {
-            parent.addChildLocation(this)
-            missingServices.forEach { serviceType ->
-              serviceType.nonResidentialUsageType?.let { addUsage(it, 99) }
-              addService(serviceType)
-            }
-            addHistory(
-              attributeName = LocationAttribute.LOCATION_CREATED,
-              oldValue = null,
-              newValue = getKey(),
-              amendedBy = username,
-              amendedDate = LocalDateTime.now(clock),
-              linkedTransaction = linkedTransaction,
-            )
-          }
-          val savedLocation = nonResidentialLocationRepository.save(newLocation)
-          commonLocationService.trackLocationUpdate(savedLocation, "Created Non-Residential Location for services ${missingServices.joinToString(", ")}")
-          linkedTransaction.txEndTime = LocalDateTime.now(clock)
-          createdLocations.add(savedLocation.toDto())
-        }
-      }
+    request.parentLocationIds?.filter { id -> parentsInScope.none { it.id == id } }?.forEach { id ->
+      results.add(ParentAlignmentResult(parentId = id, action = AlignmentAction.SKIPPED, reason = "Not a parent location used by a service in prison $prisonId"))
     }
-    log.info("Created ${createdLocations.size} child locations for services with parent")
-    return createdLocations
+
+    parentsInScope.sortedBy { it.getPathHierarchy() }.forEach { parent ->
+      val parentName = parent.localName
+      val liveChildren = parent.findSubLocations()
+        .filterIsInstance<NonResidentialLocation>()
+        .filter { it.getParent()?.id == parent.id && !it.isPermanentlyDeactivated() }
+      val skipReason = when {
+        parent.isPermanentlyDeactivated() -> "Parent is archived"
+        parentName.isNullOrBlank() -> "Parent has no name"
+        liveChildren.isEmpty() -> "Parent has no live child locations"
+        else -> null
+      }
+      if (skipReason != null) {
+        results.add(parent.toAlignmentResult(AlignmentAction.SKIPPED, reason = skipReason))
+        return@forEach
+      }
+      val name = parentName!!
+
+      val sameNamedChildren = liveChildren
+        .filter { it.localName?.let(::normaliseName) == normaliseName(name) }
+        .sortedBy { it.getPathHierarchy() }
+      if (sameNamedChildren.size == 1) {
+        results.add(parent.toAlignmentResult(AlignmentAction.NO_ACTION))
+        return@forEach
+      }
+
+      val renames = if (sameNamedChildren.size > 1) {
+        var suffix = 0
+        sameNamedChildren.map { child ->
+          var newName: String
+          do {
+            newName = "$name ${++suffix}"
+          } while (normaliseName(newName) in usedNames)
+          usedNames.add(normaliseName(newName))
+          ChildRename(id = child.id!!, key = child.getKey(), oldName = child.localName!!, newName = newName)
+        }
+      } else {
+        emptyList()
+      }
+      val parentServices = parent.services.map { it.serviceType }.sorted()
+      val action = if (renames.isEmpty()) AlignmentAction.CREATE_CHILD else AlignmentAction.RENAME_CHILDREN_AND_CREATE_CHILD
+
+      if (request.dryRun) {
+        results.add(parent.toAlignmentResult(action, renamedChildren = renames, createdChild = CreatedChild(id = null, key = null, name = name, services = parentServices)))
+        return@forEach
+      }
+
+      val username = commonLocationService.getUsername()
+      val linkedTransaction = commonLocationService.createLinkedTransaction(
+        prisonId = prisonId,
+        TransactionType.LOCATION_UPDATE_NON_RESI,
+        "Align child locations of ${parent.getKey()} to parent name '$name'",
+      )
+      renames.forEach { rename ->
+        val child = sameNamedChildren.first { it.id == rename.id }
+        child.updateLocalName(rename.newName, username, clock, linkedTransaction)
+        commonLocationService.trackLocationUpdate(child, "Renamed Non-Residential Location to align with parent name")
+        renamed.add(child.toDto())
+      }
+
+      val code = generateUniqueNonResidentialCode(prisonId, name, parent.getPathHierarchy())
+      val savedChild = createChildOfParent(parent, code, parentServices, linkedTransaction)
+      commonLocationService.trackLocationUpdate(savedChild, "Created Non-Residential Location with parent name")
+      created.add(savedChild.toDto())
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+
+      results.add(
+        parent.toAlignmentResult(
+          action,
+          renamedChildren = renames,
+          createdChild = CreatedChild(id = savedChild.id, key = savedChild.getKey(), name = name, services = parentServices),
+        ),
+      )
+    }
+
+    log.info("Aligned child locations to parent name in $prisonId (dryRun=${request.dryRun}): ${results.groupingBy { it.action }.eachCount()}")
+    return AlignChildrenToParentNameResult(
+      report = AlignChildrenToParentNameReport(prisonId = prisonId, dryRun = request.dryRun, parents = results),
+      created = created,
+      renamed = renamed,
+    )
+  }
+
+  private fun normaliseName(name: String) = name.trim().lowercase()
+
+  private fun NonResidentialLocation.toAlignmentResult(
+    action: AlignmentAction,
+    reason: String? = null,
+    renamedChildren: List<ChildRename> = emptyList(),
+    createdChild: CreatedChild? = null,
+  ) = ParentAlignmentResult(
+    parentId = id!!,
+    parentKey = getKey(),
+    parentName = localName,
+    action = action,
+    reason = reason,
+    renamedChildren = renamedChildren,
+    createdChild = createdChild,
+  )
+
+  /**
+   * Creates and saves a non-residential child of [parent] with the parent's name, type and status, used by
+   * [services]. The caller owns [linkedTransaction] and sets its end time.
+   */
+  private fun createChildOfParent(
+    parent: NonResidentialLocation,
+    code: String,
+    services: Collection<ServiceType>,
+    linkedTransaction: LinkedTransaction,
+  ): NonResidentialLocation {
+    val username = commonLocationService.getUsername()
+    val newLocation = NonResidentialLocation(
+      id = null,
+      code = code,
+      pathHierarchy = code, // will be updated by setParent
+      locationType = parent.locationType,
+      prisonId = parent.prisonId,
+      status = parent.status,
+      parent = parent,
+      localName = parent.localName,
+      childLocations = sortedSetOf(),
+      whenCreated = LocalDateTime.now(clock),
+      createdBy = username,
+      internalMovementAllowed = services.contains(ServiceType.INTERNAL_MOVEMENTS),
+    ).apply {
+      parent.addChildLocation(this)
+      services.forEach { serviceType ->
+        serviceType.nonResidentialUsageType?.let { addUsage(it, 99) }
+        addService(serviceType)
+      }
+      addHistory(
+        attributeName = LocationAttribute.LOCATION_CREATED,
+        oldValue = null,
+        newValue = getKey(),
+        amendedBy = username,
+        amendedDate = LocalDateTime.now(clock),
+        linkedTransaction = linkedTransaction,
+      )
+    }
+    return nonResidentialLocationRepository.save(newLocation)
   }
 
   @Transactional
@@ -431,7 +539,11 @@ class NonResidentialService(
     }
   }
 
-  private fun generateUniqueNonResidentialCode(prisonId: String, localName: String): String {
+  /**
+   * Generates a code for a new location that is not already taken. For a child location, pass [parentPath] so the
+   * check also covers the child's full path, which is what must be unique within the prison.
+   */
+  private fun generateUniqueNonResidentialCode(prisonId: String, localName: String, parentPath: String? = null): String {
     var checksumDigits = 2
     var code = generateNonResidentialCode(
       prisonId = prisonId,
@@ -440,7 +552,10 @@ class NonResidentialService(
       maxSize = 6 + checksumDigits,
     )
 
-    while (nonResidentialLocationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code) != null) {
+    fun isTaken(code: String) = nonResidentialLocationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, code) != null ||
+      (parentPath != null && nonResidentialLocationRepository.findOneByPrisonIdAndPathHierarchy(prisonId, "$parentPath-$code") != null)
+
+    while (isTaken(code)) {
       checksumDigits++
       if (checksumDigits > 6) {
         throw RuntimeException("Unable to generate unique code for non-residential location $localName in prison $prisonId")
@@ -718,6 +833,70 @@ data class PropertyLocationWriteResult(
   val propertyLocation: PropertyLocationDto,
   val location: NonResidentialLocationDTO,
   val reinstated: Boolean,
+)
+
+@Schema(description = "Request to give each parent non-residential location one child with the same name")
+data class AlignChildrenToParentNameRequest(
+  @param:Schema(description = "When true (the default), nothing is changed and the report shows what would be done", example = "true")
+  val dryRun: Boolean = true,
+  @param:Schema(description = "Limit the run to these parent location IDs. When omitted, every parent in the prison is considered")
+  val parentLocationIds: Set<UUID>? = null,
+)
+
+enum class AlignmentAction {
+  CREATE_CHILD,
+  RENAME_CHILDREN_AND_CREATE_CHILD,
+  NO_ACTION,
+  SKIPPED,
+}
+
+@Schema(description = "A child location renamed so that only one child has the parent's name")
+data class ChildRename(
+  val id: UUID,
+  val key: String,
+  val oldName: String,
+  val newName: String,
+)
+
+@Schema(description = "The child location created with the parent's name. Id and key are empty on a dry run")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class CreatedChild(
+  val id: UUID?,
+  val key: String?,
+  val name: String,
+  val services: List<ServiceType>,
+)
+
+@Schema(description = "What was done, or would be done on a dry run, for one parent location")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ParentAlignmentResult(
+  val parentId: UUID,
+  val parentKey: String? = null,
+  val parentName: String? = null,
+  val action: AlignmentAction,
+  val reason: String? = null,
+  val renamedChildren: List<ChildRename> = emptyList(),
+  val createdChild: CreatedChild? = null,
+)
+
+@Schema(description = "Report of aligning child locations to their parent's name in a prison")
+data class AlignChildrenToParentNameReport(
+  val prisonId: String,
+  val dryRun: Boolean,
+  val parents: List<ParentAlignmentResult>,
+) {
+  @get:Schema(description = "Number of parents for each action")
+  val summary: Map<AlignmentAction, Int>
+    get() = AlignmentAction.entries.associateWith { action -> parents.count { it.action == action } }
+}
+
+/**
+ * The [report] returned to the caller, plus the locations [created] and [renamed] so the caller can publish events.
+ */
+data class AlignChildrenToParentNameResult(
+  val report: AlignChildrenToParentNameReport,
+  val created: List<LocationDTO>,
+  val renamed: List<LocationDTO>,
 )
 
 @Schema(description = "Non Residential Summary")
