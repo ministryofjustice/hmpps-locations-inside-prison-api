@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
@@ -2527,6 +2528,36 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         assertThat(renames.map { it.newName }).containsExactly("${longName.take(78)} 1", "${longName.take(78)} 2")
         renames.forEach { assertThat(repository.findById(it.id).get().localName).isEqualTo(it.newName) }
         purgeDomainEvents()
+      }
+
+      @Test
+      fun `adds the parent's services to a same-named child that lacks them and publishes an amended event`() {
+        val library = repository.save(
+          buildNonResidentialLocation(prisonId = "MDI", localName = "Library", pathHierarchy = "LIBR", serviceTypes = setOf(ServiceType.APPOINTMENT)).also {
+            it.addChildLocation(buildNonResidentialLocation(prisonId = "MDI", localName = "Library", pathHierarchy = "LIBR1", serviceTypes = setOf(ServiceType.USE_OF_FORCE)))
+          },
+        )
+
+        val report = align("""{ "dryRun": false, "parentLocationIds": ["${library.id}"] }""")
+
+        val result = report.parents.single()
+        assertThat(result.action).isEqualTo(AlignmentAction.ADD_SERVICES_TO_CHILD)
+        assertThat(result.servicesAddedToChild!!.servicesAdded).containsExactly(ServiceType.APPOINTMENT)
+        assertThat(result.createdChild).isNull()
+
+        val childId = result.servicesAddedToChild.id
+        val child = webTestClient.get().uri("/locations/$childId")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(Location::class.java)
+          .returnResult().responseBody!!
+        assertThat(child.servicesUsingLocation?.map { it.serviceType }).containsExactlyInAnyOrder(ServiceType.USE_OF_FORCE, ServiceType.APPOINTMENT)
+
+        getDomainEvents(1).let { events ->
+          assertThat(events.single().eventType).isEqualTo("location.inside.prison.amended")
+          assertThat(events.single().additionalInformation?.id).isEqualTo(childId)
+        }
       }
 
       @Test

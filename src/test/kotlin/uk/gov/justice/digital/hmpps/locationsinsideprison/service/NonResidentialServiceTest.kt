@@ -157,7 +157,7 @@ class NonResidentialServiceTest {
       Assertions.assertThat(parentResult.createdChild?.name).isEqualTo("Gym")
       Assertions.assertThat(parentResult.createdChild?.id).isNull()
       Assertions.assertThat(result.created).isEmpty()
-      Assertions.assertThat(result.renamed).isEmpty()
+      Assertions.assertThat(result.amended).isEmpty()
       verify(nonResidentialLocationRepository, never()).save(any<NonResidentialLocation>())
     }
 
@@ -176,13 +176,48 @@ class NonResidentialServiceTest {
     }
 
     @Test
-    fun `leaves a parent alone when exactly one child has its name, ignoring case and spaces`() {
-      givenParents(gymWithChildren(buildLocation(" gym ", code = "G1"), buildLocation("Gym Area 1", code = "A1")))
+    fun `leaves a parent alone when exactly one child has its name and all its services, ignoring case and spaces`() {
+      val sameNamedChild = buildLocation(" gym ", code = "G1").apply {
+        addService(ServiceType.APPOINTMENT)
+        addService(ServiceType.PROGRAMMES_AND_ACTIVITIES)
+      }
+      givenParents(gymWithChildren(sameNamedChild, buildLocation("Gym Area 1", code = "A1")))
 
       val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = false))
 
       Assertions.assertThat(result.report.parents.single().action).isEqualTo(AlignmentAction.NO_ACTION)
+      Assertions.assertThat(result.amended).isEmpty()
       verify(nonResidentialLocationRepository, never()).save(any<NonResidentialLocation>())
+    }
+
+    @Test
+    fun `adds the parent's missing services to the one child with its name instead of creating another`() {
+      val sameNamedChild = buildLocation("Gym", code = "G1").apply { addService(ServiceType.USE_OF_FORCE) }
+      givenParents(gymWithChildren(sameNamedChild, buildLocation("Gym Area 1", code = "A1")))
+
+      val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = false))
+
+      val parentResult = result.report.parents.single()
+      Assertions.assertThat(parentResult.action).isEqualTo(AlignmentAction.ADD_SERVICES_TO_CHILD)
+      Assertions.assertThat(parentResult.servicesAddedToChild?.servicesAdded)
+        .containsExactlyInAnyOrder(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
+      Assertions.assertThat(sameNamedChild.services.map { it.serviceType })
+        .containsExactlyInAnyOrder(ServiceType.USE_OF_FORCE, ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
+      Assertions.assertThat(result.amended.single().id).isEqualTo(sameNamedChild.id)
+      Assertions.assertThat(result.created).isEmpty()
+      verify(nonResidentialLocationRepository, never()).save(any<NonResidentialLocation>())
+    }
+
+    @Test
+    fun `dry run reports the services it would add and changes nothing`() {
+      val sameNamedChild = buildLocation("Gym", code = "G1").apply { addService(ServiceType.USE_OF_FORCE) }
+      givenParents(gymWithChildren(sameNamedChild))
+
+      val result = service.alignChildrenToParentName(prisonId, AlignChildrenToParentNameRequest(dryRun = true))
+
+      Assertions.assertThat(result.report.parents.single().action).isEqualTo(AlignmentAction.ADD_SERVICES_TO_CHILD)
+      Assertions.assertThat(sameNamedChild.services.map { it.serviceType }).containsExactly(ServiceType.USE_OF_FORCE)
+      Assertions.assertThat(result.amended).isEmpty()
     }
 
     @Test
@@ -199,7 +234,7 @@ class NonResidentialServiceTest {
         .containsExactly("Gym" to "Gym 2", "GYM" to "Gym 3")
       Assertions.assertThat(first.localName).isEqualTo("Gym 2")
       Assertions.assertThat(second.localName).isEqualTo("Gym 3")
-      Assertions.assertThat(result.renamed).hasSize(2)
+      Assertions.assertThat(result.amended).hasSize(2)
       Assertions.assertThat(result.created.single().localName).isEqualTo("Gym")
     }
 
