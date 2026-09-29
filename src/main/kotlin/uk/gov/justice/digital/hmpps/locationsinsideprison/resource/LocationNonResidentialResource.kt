@@ -41,6 +41,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdatePropertyLoca
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceFamilyType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AlignChildrenToParentNameReport
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AlignChildrenToParentNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocationDomainEventType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialLocationDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialService
@@ -232,16 +234,18 @@ class LocationNonResidentialResource(
     nonResidentialService.createBasicNonResidentialLocation(prisonId = prisonId, createRequest)
   }
 
-  @PostMapping("/non-residential/prison/{prisonId}/generate-missing-children", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PostMapping("/non-residential/prison/{prisonId}/align-children-to-parent-name", produces = [MediaType.APPLICATION_JSON_VALUE])
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
-  @ResponseStatus(HttpStatus.CREATED)
   @Operation(
-    summary = "Generates missing child locations for services with parent",
-    description = "Requires role MAINTAIN_LOCATIONS and write scope",
+    summary = "Gives each parent non-residential location one child with the same name",
+    description = "For each parent used by a service that has live child locations: where several children share the " +
+      "parent's name they are renamed with a number (e.g. Gym 1, Gym 2), then where no child has the parent's name one " +
+      "is created with the parent's services. Runs as a dry run unless dryRun is false. " +
+      "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
-        responseCode = "201",
-        description = "Returns created locations",
+        responseCode = "200",
+        description = "Returns a report of what was done, or would be done on a dry run, for each parent",
       ),
       ApiResponse(
         responseCode = "401",
@@ -255,7 +259,7 @@ class LocationNonResidentialResource(
       ),
     ],
   )
-  fun generateMissingChildren(
+  fun alignChildrenToParentName(
     @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
     @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
     @NotBlank(message = "Prison ID cannot be blank")
@@ -263,10 +267,18 @@ class LocationNonResidentialResource(
     @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
     @PathVariable
     prisonId: String,
-  ): List<Location> = eventPublish {
-    val createdLocations = nonResidentialService.createChildLocationsForServicesWithParent(prisonId)
-    mapOf(InternalLocationDomainEventType.LOCATION_CREATED to createdLocations)
-  }[InternalLocationDomainEventType.LOCATION_CREATED] ?: emptyList()
+    @RequestBody
+    request: AlignChildrenToParentNameRequest,
+  ): AlignChildrenToParentNameReport {
+    val result = nonResidentialService.alignChildrenToParentName(prisonId, request)
+    eventPublish {
+      mapOf(
+        InternalLocationDomainEventType.LOCATION_AMENDED to result.renamed,
+        InternalLocationDomainEventType.LOCATION_CREATED to result.created,
+      )
+    }
+    return result.report
+  }
 
   @PutMapping("/non-residential/{id}")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
