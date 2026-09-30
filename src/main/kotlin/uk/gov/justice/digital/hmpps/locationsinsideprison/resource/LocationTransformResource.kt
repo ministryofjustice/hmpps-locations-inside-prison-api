@@ -171,6 +171,7 @@ class LocationTransformResource(
       workingCapacity = capacity.workingCapacity,
       certifiedNormalAccommodation = capacity.certifiedNormalAccommodation,
       temporaryWorkingCapacityChange = capacity.temporaryWorkingCapacityChange,
+      reasonForChange = capacity.reasonForChange,
     )
     if (approvalRequest == null) {
       eventPublishAndAudit(
@@ -185,6 +186,9 @@ class LocationTransformResource(
 @Schema(description = "Capacity change request")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CapacityChangeRequest(
+  @param:Schema(description = "The reason for the capacity change", example = "The cell capacity has changed", required = false)
+  val reasonForChange: String? = null,
+
   @param:Schema(description = "Temporary w/c change", example = "false", required = false, defaultValue = "false")
   val temporaryWorkingCapacityChange: Boolean = false,
 
