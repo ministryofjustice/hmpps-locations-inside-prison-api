@@ -128,15 +128,15 @@
         "tableName": "certification_approval_request_location",
         "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
-        "keyClass": "foreignKey",
-        "keyTitle": "Foreign Key",
-        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>certification_approval_request_id",
-        "type": "uuid",
-        "length": 2147483647,
-        "nullable": "√",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "location_type",
+        "type": "varchar",
+        "length": 40,
+        "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>The approval request this location belongs to. Deleted with the request. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": "<p>What kind of location this is. See LocationType in reference-data.csv. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "capacity",
@@ -153,18 +153,18 @@
         "comments": "<p>Primary key. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "flyway_schema_history",
-        "tableFileName": "flyway_schema_history",
+        "tableName": "certification_approval_request_location",
+        "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "installed_by",
-        "type": "varchar",
-        "length": 100,
+        "name": "level",
+        "type": "int4",
+        "length": 10,
         "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": ""
+        "comments": "<p>Depth of this location in the request&rsquo;s tree, with the top level location at the lowest number. Lets the tree be rendered without recursion. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "service_usage",
@@ -422,15 +422,15 @@
         "tableName": "certification_approval_request_location",
         "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
-        "keyClass": "",
-        "keyTitle": "",
-        "name": "local_name",
-        "type": "varchar",
-        "length": 255,
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>parent_location_id",
+        "type": "uuid",
+        "length": 2147483647,
         "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>The name the prison uses for this location. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": "<p>The location above this one within the request&rsquo;s own tree, not the live location tree. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "location",
@@ -601,18 +601,18 @@
         "comments": "<p>Proposed maximum capacity for the location. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
     },
     {
-        "tableName": "certification_approval_request_location",
-        "tableFileName": "certification_approval_request_location",
+        "tableName": "flyway_schema_history",
+        "tableFileName": "flyway_schema_history",
         "tableType": "Table",
-        "keyClass": "",
-        "keyTitle": "",
-        "name": "current_in_cell_sanitation",
+        "keyClass": "indexedColumn",
+        "keyTitle": "Indexed",
+        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>success",
         "type": "bool",
         "length": 1,
-        "nullable": "√",
+        "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>In-cell sanitation setting when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": ""
     },
     {
         "tableName": "cell_certificate_upload_location",
@@ -769,18 +769,18 @@
         "comments": "<p>When processing actually began. Null while the run is still queued. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "flyway_schema_history",
-        "tableFileName": "flyway_schema_history",
+        "tableName": "certification_approval_request_location",
+        "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "installed_on",
-        "type": "timestamp",
-        "length": 29,
-        "nullable": "",
+        "name": "certified_normal_accommodation",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
         "autoUpdated": "",
-        "defaultValue": "now()",
-        "comments": ""
+        "defaultValue": "null",
+        "comments": "<p>Proposed certified normal accommodation for this location. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
     },
     {
         "tableName": "cell_certificate_upload",
@@ -797,18 +797,18 @@
         "comments": "<p>The certificate produced by this run, once it has completed. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "flyway_schema_history",
-        "tableFileName": "flyway_schema_history",
+        "tableName": "certification_approval_request_location",
+        "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
-        "keyClass": "indexedColumn",
-        "keyTitle": "Indexed",
-        "name": "<i class='fa fa-sitemap fa-rotate-120' style='padding-right: 5px;'><\/i>success",
-        "type": "bool",
-        "length": 1,
-        "nullable": "",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "max_capacity",
+        "type": "int4",
+        "length": 10,
+        "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": ""
+        "comments": "<p>Proposed maximum capacity for this location. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
     },
     {
         "tableName": "cell_certificate_upload",
@@ -984,13 +984,13 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "specialist_cell_types",
+        "name": "current_cell_mark",
         "type": "varchar",
-        "length": 300,
+        "length": 255,
         "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Proposed specialist cell types, comma separated. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": "<p>The cell door number when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "location",
@@ -1110,13 +1110,13 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "cell_mark",
+        "name": "converted_cell_type",
         "type": "varchar",
-        "length": 255,
+        "length": 60,
         "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Proposed number on the cell door. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": "<p>Proposed non-residential use for a cell being converted. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "cell_certificate",
@@ -1161,18 +1161,18 @@
         "comments": "<p>Which role the mailbox is notified in - CERT_ADMIN, CERT_VIEWER or CERT_REVIEWER. See NotificationGroup in reference-data.csv. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "flyway_schema_history",
-        "tableFileName": "flyway_schema_history",
+        "tableName": "certification_approval_request_location",
+        "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "script",
+        "name": "local_name",
         "type": "varchar",
-        "length": 1000,
-        "nullable": "",
+        "length": 255,
+        "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": ""
+        "comments": "<p>The name the prison uses for this location. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "non_residential_usage",
@@ -1222,13 +1222,13 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "max_capacity",
+        "name": "current_certified_normal_accommodation",
         "type": "int4",
         "length": 10,
         "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Proposed maximum capacity for this location. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
+        "comments": "<p>Certified normal accommodation when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
     },
     {
         "tableName": "certification_approval_request",
@@ -1399,18 +1399,18 @@
         "comments": "<p>Accommodation types of the top level location above this one, so a reviewer can see the request in the context of the wing it sits in. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "certification_approval_request_location",
-        "tableFileName": "certification_approval_request_location",
+        "tableName": "flyway_schema_history",
+        "tableFileName": "flyway_schema_history",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "current_specialist_cell_types",
-        "type": "varchar",
-        "length": 300,
-        "nullable": "√",
+        "name": "installed_on",
+        "type": "timestamp",
+        "length": 29,
+        "nullable": "",
         "autoUpdated": "",
-        "defaultValue": "null",
-        "comments": "<p>Specialist cell types when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "defaultValue": "now()",
+        "comments": ""
     },
     {
         "tableName": "cell_certificate_upload_location",
@@ -1572,13 +1572,13 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "in_cell_sanitation",
+        "name": "reactivate_this_location",
         "type": "bool",
         "length": 1,
-        "nullable": "√",
+        "nullable": "",
         "autoUpdated": "",
-        "defaultValue": "null",
-        "comments": "<p>Proposed in-cell sanitation setting for this location. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "defaultValue": "false",
+        "comments": "<p>Whether this particular location should be brought back into use if the request is approved. A request can cover a tree in which only some locations are reactivated. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "location_history",
@@ -1595,18 +1595,18 @@
         "comments": "<p>The location that changed. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "certification_approval_request_location",
-        "tableFileName": "certification_approval_request_location",
+        "tableName": "flyway_schema_history",
+        "tableFileName": "flyway_schema_history",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "current_certified_normal_accommodation",
+        "name": "checksum",
         "type": "int4",
         "length": 10,
         "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Certified normal accommodation when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
+        "comments": ""
     },
     {
         "tableName": "certification_approval_request",
@@ -1693,18 +1693,18 @@
         "comments": "<p>DPS username of the person who last changed the configuration. <a href=\"./null\">Sensitivity: STAFF<\/a><\/p>"
     },
     {
-        "tableName": "certification_approval_request_location",
-        "tableFileName": "certification_approval_request_location",
+        "tableName": "flyway_schema_history",
+        "tableFileName": "flyway_schema_history",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "current_max_capacity",
-        "type": "int4",
-        "length": 10,
-        "nullable": "√",
+        "name": "script",
+        "type": "varchar",
+        "length": 1000,
+        "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Maximum capacity when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
+        "comments": ""
     },
     {
         "tableName": "cell_certificate",
@@ -1763,18 +1763,18 @@
         "comments": "<p>The number physically painted on the cell door, which can differ from the location code. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "flyway_schema_history",
-        "tableFileName": "flyway_schema_history",
+        "tableName": "certification_approval_request_location",
+        "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "description",
+        "name": "location_code",
         "type": "varchar",
-        "length": 200,
+        "length": 40,
         "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": ""
+        "comments": "<p>The location&rsquo;s own code within its parent, copied from the live location. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "location",
@@ -1973,18 +1973,18 @@
         "comments": "<p>The location the attribute applies to. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "flyway_schema_history",
-        "tableFileName": "flyway_schema_history",
+        "tableName": "certification_approval_request_location",
+        "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "type",
+        "name": "cell_mark",
         "type": "varchar",
-        "length": 20,
-        "nullable": "",
+        "length": 255,
+        "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": ""
+        "comments": "<p>Proposed number on the cell door. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "cell_certificate_upload_not_on_certificate",
@@ -2202,13 +2202,13 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "level",
-        "type": "int4",
-        "length": 10,
-        "nullable": "",
+        "name": "accommodation_types",
+        "type": "varchar",
+        "length": 120,
+        "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Depth of this location in the request&rsquo;s tree, with the top level location at the lowest number. Lets the tree be rendered without recursion. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": "<p>Proposed accommodation types, comma separated. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "constant_transaction_type",
@@ -2244,13 +2244,13 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "working_capacity",
+        "name": "current_max_capacity",
         "type": "int4",
         "length": 10,
         "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Proposed working capacity for this location. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
+        "comments": "<p>Maximum capacity when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
     },
     {
         "tableName": "cell_certificate_location",
@@ -2284,15 +2284,15 @@
         "tableName": "certification_approval_request_location",
         "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
-        "keyClass": "primaryKey",
-        "keyTitle": "Primary Key",
-        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>id",
-        "type": "uuid",
-        "length": 2147483647,
-        "nullable": "",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "in_cell_sanitation",
+        "type": "bool",
+        "length": 1,
+        "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Primary key. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": "<p>Proposed in-cell sanitation setting for this location. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "signed_operation_capacity",
@@ -2328,13 +2328,13 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "location_code",
+        "name": "specialist_cell_types",
         "type": "varchar",
-        "length": 40,
-        "nullable": "",
+        "length": 300,
+        "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>The location&rsquo;s own code within its parent, copied from the live location. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": "<p>Proposed specialist cell types, comma separated. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "cell_certificate_location",
@@ -2454,13 +2454,13 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "converted_cell_type",
-        "type": "varchar",
-        "length": 60,
+        "name": "current_in_cell_sanitation",
+        "type": "bool",
+        "length": 1,
         "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Proposed non-residential use for a cell being converted. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": "<p>In-cell sanitation setting when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "cell_used_for",
@@ -2491,18 +2491,18 @@
         "comments": "<p>Primary key. A UUIDv7 generated by the application, used as the location&rsquo;s permanent public identifier across DPS. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "flyway_schema_history",
-        "tableFileName": "flyway_schema_history",
+        "tableName": "certification_approval_request_location",
+        "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
-        "keyClass": "",
-        "keyTitle": "",
-        "name": "version",
-        "type": "varchar",
-        "length": 50,
+        "keyClass": "foreignKey",
+        "keyTitle": "Foreign Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>certification_approval_request_id",
+        "type": "uuid",
+        "length": 2147483647,
         "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": ""
+        "comments": "<p>The approval request this location belongs to. Deleted with the request. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "location_history",
@@ -2589,18 +2589,18 @@
         "comments": "<p>The non-residential location this usage applies to. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "flyway_schema_history",
-        "tableFileName": "flyway_schema_history",
+        "tableName": "certification_approval_request_location",
+        "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "execution_time",
+        "name": "working_capacity",
         "type": "int4",
         "length": 10,
-        "nullable": "",
+        "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": ""
+        "comments": "<p>Proposed working capacity for this location. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
     },
     {
         "tableName": "certification_approval_request",
@@ -2617,18 +2617,18 @@
         "comments": "<p>Proposed specialist cell types, as a comma separated list. Denormalised because the request is a snapshot rather than a live relationship. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "flyway_schema_history",
-        "tableFileName": "flyway_schema_history",
+        "tableName": "certification_approval_request_location",
+        "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "checksum",
-        "type": "int4",
-        "length": 10,
-        "nullable": "√",
+        "name": "path_hierarchy",
+        "type": "varchar",
+        "length": 255,
+        "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": ""
+        "comments": "<p>Full path of the location within the prison, copied when the request was raised. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "certification_approval_request",
@@ -2701,18 +2701,18 @@
         "comments": "<p>The certificate this location belongs to. Deleted with the certificate. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "certification_approval_request_location",
-        "tableFileName": "certification_approval_request_location",
+        "tableName": "flyway_schema_history",
+        "tableFileName": "flyway_schema_history",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "used_for_types",
+        "name": "version",
         "type": "varchar",
-        "length": 300,
+        "length": 50,
         "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Proposed list of what the cell is used for, comma separated. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": ""
     },
     {
         "tableName": "cell_certificate_location",
@@ -3014,13 +3014,13 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "certified_normal_accommodation",
+        "name": "current_working_capacity",
         "type": "int4",
         "length": 10,
         "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Proposed certified normal accommodation for this location. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
+        "comments": "<p>Working capacity when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
     },
     {
         "tableName": "location_history",
@@ -3056,41 +3056,41 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "path_hierarchy",
+        "name": "used_for_types",
         "type": "varchar",
-        "length": 255,
+        "length": 300,
+        "nullable": "√",
+        "autoUpdated": "",
+        "defaultValue": "null",
+        "comments": "<p>Proposed list of what the cell is used for, comma separated. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+    },
+    {
+        "tableName": "flyway_schema_history",
+        "tableFileName": "flyway_schema_history",
+        "tableType": "Table",
+        "keyClass": "",
+        "keyTitle": "",
+        "name": "type",
+        "type": "varchar",
+        "length": 20,
         "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Full path of the location within the prison, copied when the request was raised. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": ""
     },
     {
-        "tableName": "certification_approval_request_location",
-        "tableFileName": "certification_approval_request_location",
+        "tableName": "flyway_schema_history",
+        "tableFileName": "flyway_schema_history",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "current_working_capacity",
-        "type": "int4",
-        "length": 10,
-        "nullable": "√",
-        "autoUpdated": "",
-        "defaultValue": "null",
-        "comments": "<p>Working capacity when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: OFFICIAL-SENSITIVE<\/a><\/p>"
-    },
-    {
-        "tableName": "certification_approval_request_location",
-        "tableFileName": "certification_approval_request_location",
-        "tableType": "Table",
-        "keyClass": "",
-        "keyTitle": "",
-        "name": "accommodation_types",
+        "name": "description",
         "type": "varchar",
-        "length": 120,
-        "nullable": "√",
+        "length": 200,
+        "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>Proposed accommodation types, comma separated. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": ""
     },
     {
         "tableName": "capacity",
@@ -3177,18 +3177,18 @@
         "comments": "<p>When this location record was first created. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "certification_approval_request_location",
-        "tableFileName": "certification_approval_request_location",
+        "tableName": "flyway_schema_history",
+        "tableFileName": "flyway_schema_history",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "current_cell_mark",
-        "type": "varchar",
-        "length": 255,
-        "nullable": "√",
+        "name": "execution_time",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>The cell door number when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": ""
     },
     {
         "tableName": "certification_approval_request",
@@ -3233,18 +3233,18 @@
         "comments": "<p>How many rows the uploaded file contained. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "certification_approval_request_location",
-        "tableFileName": "certification_approval_request_location",
+        "tableName": "flyway_schema_history",
+        "tableFileName": "flyway_schema_history",
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "reactivate_this_location",
-        "type": "bool",
-        "length": 1,
+        "name": "installed_by",
+        "type": "varchar",
+        "length": 100,
         "nullable": "",
         "autoUpdated": "",
-        "defaultValue": "false",
-        "comments": "<p>Whether this particular location should be brought back into use if the request is approved. A request can cover a tree in which only some locations are reactivated. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "defaultValue": "null",
+        "comments": ""
     },
     {
         "tableName": "cell_certificate_upload",
@@ -3280,13 +3280,13 @@
         "tableType": "Table",
         "keyClass": "",
         "keyTitle": "",
-        "name": "location_type",
+        "name": "current_specialist_cell_types",
         "type": "varchar",
-        "length": 40,
-        "nullable": "",
+        "length": 300,
+        "nullable": "√",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>What kind of location this is. See LocationType in reference-data.csv. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": "<p>Specialist cell types when the request was raised, as a snapshot for comparison. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "location",
@@ -3303,18 +3303,18 @@
         "comments": "<p>When this location record was last changed. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "certification_approval_request_location",
-        "tableFileName": "certification_approval_request_location",
+        "tableName": "flyway_schema_history",
+        "tableFileName": "flyway_schema_history",
         "tableType": "Table",
-        "keyClass": "foreignKey",
-        "keyTitle": "Foreign Key",
-        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>parent_location_id",
-        "type": "uuid",
-        "length": 2147483647,
-        "nullable": "√",
+        "keyClass": "primaryKey",
+        "keyTitle": "Primary Key",
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>installed_rank",
+        "type": "int4",
+        "length": 10,
+        "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": "<p>The location above this one within the request&rsquo;s own tree, not the live location tree. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
+        "comments": ""
     },
     {
         "tableName": "location",
@@ -3345,18 +3345,18 @@
         "comments": "<p>The prison this certificate covers, as a NOMIS agency code. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
-        "tableName": "flyway_schema_history",
-        "tableFileName": "flyway_schema_history",
+        "tableName": "certification_approval_request_location",
+        "tableFileName": "certification_approval_request_location",
         "tableType": "Table",
         "keyClass": "primaryKey",
         "keyTitle": "Primary Key",
-        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>installed_rank",
-        "type": "int4",
-        "length": 10,
+        "name": "<i class='icon ion-key iconkey' style='padding-left: 5px;'><\/i>id",
+        "type": "uuid",
+        "length": 2147483647,
         "nullable": "",
         "autoUpdated": "",
         "defaultValue": "null",
-        "comments": ""
+        "comments": "<p>Primary key. <a href=\"./null\">Sensitivity: NONE<\/a><\/p>"
     },
     {
         "tableName": "linked_transaction",
