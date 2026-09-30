@@ -136,6 +136,9 @@ data class CellCertificateUploadOmittedLocationDto(
     required = true,
   )
   val onCurrentCertificate: Boolean = false,
+
+  @param:Schema(description = "The name a failed row most likely used for this cell, when it differs only by dropped leading zeros", example = "MDI-A-1-5")
+  val uploadedAsKey: String? = null,
 )
 
 @Schema(description = "Result of processing a single uploaded cell")
@@ -218,4 +221,10 @@ data class CellCertificateUploadLocationDto(
 
   @param:Schema(description = "CNA the prison's current certificate records for this cell; absent when the cell is not on it", example = "2")
   val currentCertifiedNormalAccommodation: Int? = null,
+
+  @param:Schema(
+    description = "For a row whose location was not found: the cell it most likely meant, when the name differs from exactly one cell not in the upload only by dropped leading zeros. A suggestion only.",
+    example = "MDI-A-1-005",
+  )
+  val suggestedLocationKey: String? = null,
 )

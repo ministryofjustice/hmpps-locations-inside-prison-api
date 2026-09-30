@@ -754,6 +754,58 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     }
   }
 
+  @Test
+  fun `a name with its leading zeros dropped points at the cell it meant, and nothing is applied`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    // "MDI-Z-1-2" is cell2 (MDI-Z-1-002) with its leading zeros dropped, and asks for a different working capacity
+    postCellCertificateUpdate(
+      mapOf(
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        "MDI-Z-1-2" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 1, certifiedNormalAccommodation = 2),
+        "MDI-Z-1-999" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+      ),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      val rows = upload.locations.associateBy { it.locationKey }
+      with(rows.getValue("MDI-Z-1-2")) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.FAILED)
+        assertThat(suggestedLocationKey).isEqualTo(cell2.getKey())
+      }
+      // a name that matches nothing gets no suggestion
+      assertThat(rows.getValue("MDI-Z-1-999").suggestedLocationKey).isNull()
+      assertThat(upload.locationsNotOnCertificate.first { it.locationKey == cell2.getKey() }.uploadedAsKey).isEqualTo("MDI-Z-1-2")
+    }
+
+    // the suggestion is not applied: cell2 goes on at the values it holds, not the mistyped row's
+    withReloadedCell(cell2) { assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2) }
+    assertThat(currentCertificateFor(cell2).workingCapacity).isEqualTo(2)
+  }
+
+  @Test
+  fun `no suggestion is made when two failed names could mean the same cell`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        "MDI-Z-1-2" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        "MDI-Z-1-02" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+      ),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      assertThat(upload.locations.filter { it.status == CellCertificateUploadLocationStatus.FAILED }).hasSize(2)
+        .allMatch { it.suggestedLocationKey == null }
+      assertThat(upload.locationsNotOnCertificate.first { it.locationKey == cell2.getKey() }.uploadedAsKey).isNull()
+    }
+  }
+
   private fun awaitUploadCount(finished: Int) {
     await untilAsserted {
       assertThat(cellCertificateUploadRepository.findAll().count { it.status == CellCertificateUploadStatus.FINISHED }).isEqualTo(finished)

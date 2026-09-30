@@ -261,6 +261,12 @@ open class CellCertificateUploadLocation(
   open var currentCertifiedWorkingCapacity: Int? = null,
   open var currentCertifiedNormalAccommodation: Int? = null,
 
+  /**
+   * For a row whose location could not be found: the cell it most likely meant, when its name differs from exactly
+   * one cell not in the upload only by dropped leading zeros (MAPA-403). A suggestion only - nothing is applied.
+   */
+  open var suggestedLocationKey: String? = null,
+
   open var message: String? = null,
 
   open var processedDate: LocalDateTime? = null,
@@ -394,6 +400,7 @@ open class CellCertificateUploadLocation(
     currentCertifiedMaxCapacity = currentCertifiedMaxCapacity,
     currentCertifiedWorkingCapacity = currentCertifiedWorkingCapacity,
     currentCertifiedNormalAccommodation = currentCertifiedNormalAccommodation,
+    suggestedLocationKey = suggestedLocationKey,
   )
 
   override fun toString(): String = "CellCertificateUploadLocation(locationKey='$locationKey', status=$status)"
@@ -449,6 +456,9 @@ open class CellCertificateUploadOmittedLocation(
   /** On the current certificate, so carried forward unchanged, rather than added to the certificate. */
   @Column(nullable = false)
   open val onCurrentCertificate: Boolean = false,
+
+  /** The name a failed row most likely used for this cell - see [CellCertificateUploadLocation.suggestedLocationKey]. */
+  open var uploadedAsKey: String? = null,
 ) : Comparable<CellCertificateUploadOmittedLocation> {
 
   companion object {
@@ -464,6 +474,7 @@ open class CellCertificateUploadOmittedLocation(
     workingCapacity = workingCapacity,
     certifiedNormalAccommodation = certifiedNormalAccommodation,
     onCurrentCertificate = onCurrentCertificate,
+    uploadedAsKey = uploadedAsKey,
   )
 
   override fun toString(): String = "CellCertificateUploadOmittedLocation(locationKey='$locationKey')"

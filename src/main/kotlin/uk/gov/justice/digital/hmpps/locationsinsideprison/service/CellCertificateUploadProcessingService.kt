@@ -464,6 +464,32 @@ class CellCertificateUploadProcessingService(
     upload.locationsNotOnCertificate.addAll(omittedLocations)
     upload.notOnCertificateRecords = omittedLocations.size
     upload.carriedForwardRecords = omittedLocations.count { it.onCurrentCertificate }
+    suggestMistypedLocations(upload)
+  }
+
+  /**
+   * A spreadsheet can drop the leading zeros from a cell number, so a row for "B-1-5" fails while the real cell
+   * "B-1-005" is reported as not in the upload - one mistake shown as two. Where a failed row's name matches exactly
+   * one cell not in the upload once leading zeros are ignored, and no other failed row matches that cell, point each
+   * at the other (MAPA-403). Nothing is applied: the row stays failed and the cell is certified as any other cell
+   * not in the upload.
+   */
+  private fun suggestMistypedLocations(upload: CellCertificateUpload) {
+    upload.locations.forEach { it.suggestedLocationKey = null }
+    upload.locationsNotOnCertificate.forEach { it.uploadedAsKey = null }
+
+    val notFound = upload.locations
+      .filter { it.status == CellCertificateUploadLocationStatus.FAILED && it.message == LOCATION_NOT_FOUND_MESSAGE }
+      .groupBy { normaliseLocationKey(it.locationKey) }
+    val omitted = upload.locationsNotOnCertificate.groupBy { normaliseLocationKey(it.locationKey) }
+
+    notFound.forEach { (key, rows) ->
+      val cells = omitted[key] ?: return@forEach
+      if (rows.size == 1 && cells.size == 1) {
+        rows.single().suggestedLocationKey = cells.single().locationKey
+        cells.single().uploadedAsKey = rows.single().locationKey
+      }
+    }
   }
 
   /**
@@ -695,6 +721,14 @@ class CellCertificateUploadProcessingService(
 
   companion object {
     private val log: Logger = LoggerFactory.getLogger(this::class.java)
+
+    /**
+     * A location key with the leading zeros removed from each all-digit part, so "MDI-B-1-5" and "MDI-B-1-005" compare
+     * equal. Parts with letters, such as "01S", are left as they are.
+     */
+    fun normaliseLocationKey(key: String): String = key.split("-").joinToString("-") { part ->
+      if (part.isNotEmpty() && part.all { it.isDigit() }) part.trimStart('0').ifEmpty { "0" } else part
+    }
 
     /** How long a STARTED upload can sit untouched before a redelivery is allowed to re-claim it. */
     private val STALE_CLAIM_THRESHOLD: Duration = Duration.ofMinutes(30)
