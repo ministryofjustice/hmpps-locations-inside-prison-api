@@ -714,6 +714,7 @@ class Cell(
     newWorkingCapacity: Int,
     newMaxCapacity: Int,
     newCna: Int,
+    reasonForChange: String? = null,
   ): LocationCertificationApprovalRequest {
     if (hasPendingCertificationApproval()) {
       throw PendingApprovalAlreadyExistsException(getKey())
@@ -727,6 +728,7 @@ class Cell(
         workingCapacity = newWorkingCapacity,
         maxCapacity = newMaxCapacity,
         certifiedNormalAccommodation = newCna,
+        reasonForChange = reasonForChange,
       ),
     ) as CapacityChangeApprovalRequest
   }

@@ -777,6 +777,7 @@ class LocationService(
     certifiedNormalAccommodation: Int? = null,
     linkedTransaction: LinkedTransaction? = null,
     temporaryWorkingCapacityChange: Boolean = false,
+    reasonForChange: String? = null,
   ): Pair<LocationDTO, CertificationApprovalRequestDto?> {
     val locCapChange = residentialLocationRepository.findById(id)
       .orElseThrow { LocationNotFoundException(id.toString()) }
@@ -849,6 +850,7 @@ class LocationService(
             newWorkingCapacity = workingCapacity,
             newMaxCapacity = maxCapacity,
             newCna = cna,
+            reasonForChange = reasonForChange,
           )
           approvalRequest.locations.forEach { subLocation ->
             // Current values come from the certificate when present; the requested values are always applied

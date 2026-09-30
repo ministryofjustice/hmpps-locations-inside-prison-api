@@ -248,7 +248,14 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     @Test
     fun `can change capacity a location and request approval`() {
       val firstCell = leedsWing.findAllLeafLocations().first()
-      val capacityChangedLocation = updateCapacity(cellInLeeds = firstCell.getPathHierarchy(), workingCapacity = 1, maxCapacity = 1, cna = 1, temporaryWorkingCapacityChange = false)
+      val capacityChangedLocation = updateCapacity(
+        cellInLeeds = firstCell.getPathHierarchy(),
+        workingCapacity = 1,
+        maxCapacity = 1,
+        cna = 1,
+        temporaryWorkingCapacityChange = false,
+        reasonForChange = "The cell capacity has changed",
+      )
 
       assertThat(capacityChangedLocation.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
       assertThat(capacityChangedLocation.pendingApprovalRequestId).isNotNull
@@ -265,6 +272,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .returnResult().responseBody!!
 
       assertThat(pendingApproval.approvalType).isEqualTo(ApprovalType.CAPACITY_CHANGE)
+      assertThat(pendingApproval.reasonForChange).isEqualTo("The cell capacity has changed")
       assertThat(pendingApproval.locationId).isEqualTo(firstCell.id)
       assertThat(pendingApproval.prisonId).isEqualTo(firstCell.prisonId)
       assertThat(pendingApproval.locationKey).isEqualTo(firstCell.getKey())
@@ -550,6 +558,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       maxCapacity: Int = 2,
       temporaryWorkingCapacityChange: Boolean = true,
       cna: Int = 1,
+      reasonForChange: String? = null,
     ): Location {
       // will return a prisoner for each location under the Leeds wing
       leedsWing.findAllLeafLocations().forEach {
@@ -570,6 +579,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
               maxCapacity = maxCapacity,
               certifiedNormalAccommodation = cna,
               temporaryWorkingCapacityChange = temporaryWorkingCapacityChange,
+              reasonForChange = reasonForChange,
             ),
           ),
         )
