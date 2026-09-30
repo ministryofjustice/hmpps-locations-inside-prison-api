@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.Cel
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadOmittedLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateUploadLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateUploadRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
@@ -32,6 +33,13 @@ import java.util.UUID
  * Asynchronously processes a stored cell certificate upload: applies the uploaded capacities/cell-marks/
  * sanitation to each cell (one transaction per row), identifies temporarily-inactive cells that should
  * stay on the certificate (INACTIVE_TEMP) and finally generates a new current cell certificate.
+ *
+ * A preview runs exactly the same code, but every change it makes is rolled back. The import rules work a
+ * row out by changing the cell - [applyToCell] tries each fallback with [Cell.setCapacity], which validates
+ * and then applies - so there is no side-effect-free way to ask what a row would do. Running the real code
+ * and undoing it means a preview can never disagree with the import. It gives the same answer row by row
+ * because rows are independent: a capacity is stored only on its own cell, and wing and landing totals are
+ * calculated rather than stored, so undoing one row cannot change the next row's outcome.
  */
 @Service
 class CellCertificateUploadProcessingService(
@@ -43,6 +51,7 @@ class CellCertificateUploadProcessingService(
   private val signedOperationCapacityRepository: SignedOperationCapacityRepository,
   private val sharedLocationService: SharedLocationService,
   private val cellCertificateService: CellCertificateService,
+  private val cellCertificateRepository: CellCertificateRepository,
   private val prisonerSearchService: PrisonerSearchService,
   private val snsService: SnsService,
   private val clock: Clock,
@@ -60,7 +69,7 @@ class CellCertificateUploadProcessingService(
     val context = startProcessing(uploadId) ?: return
 
     if (context.preview) {
-      processPreview(uploadId)
+      processPreview(uploadId, context)
       return
     }
     val linkedTransactionId = context.linkedTransactionId!!
@@ -165,6 +174,7 @@ class CellCertificateUploadProcessingService(
             .map { it.id!! },
           linkedTransactionId = linkedTransaction?.transactionId,
           requestedBy = upload.requestedBy,
+          prisonId = upload.prisonId,
           preview = upload.isPreview(),
         )
       }
@@ -174,9 +184,29 @@ class CellCertificateUploadProcessingService(
   /** @return the cell's location id when its capacity (max/working/CNA) changed, otherwise null. */
   private fun processRow(locationId: UUID, uploadId: UUID, linkedTransactionId: UUID, requestedBy: String): UUID? {
     val row = cellCertificateUploadLocationRepository.findById(locationId).orElse(null) ?: return null
-    val now = LocalDateTime.now(clock)
-    var capacityChangedLocationId: UUID? = null
+    val capacityChangedLocationId = evaluateRow(row, requestedBy, LocalDateTime.now(clock)) {
+      linkedTransactionRepository.findById(linkedTransactionId).orElseThrow()
+    }
+    recordRowResult(row, uploadId)
+    return capacityChangedLocationId
+  }
 
+  /**
+   * Works out and applies one row: fails it when the location cannot be found, skips it when the location is
+   * archived, and otherwise applies it to the cell. Shared by imports and previews so both follow the same rules.
+   * [flushChanges] makes a preview write its changes to the database before they are rolled back, so a change
+   * the database would refuse fails the row just as it would for an import.
+   *
+   * @return the cell's location id when its capacity (max/working/CNA) changed, otherwise null.
+   */
+  private fun evaluateRow(
+    row: CellCertificateUploadLocation,
+    requestedBy: String,
+    now: LocalDateTime,
+    flushChanges: Boolean = false,
+    linkedTransaction: () -> LinkedTransaction,
+  ): UUID? {
+    var capacityChangedLocationId: UUID? = null
     try {
       val cell = cellLocationRepository.findOneByKey(row.locationKey)
       if (cell == null) {
@@ -184,21 +214,24 @@ class CellCertificateUploadProcessingService(
       } else if (cell.isPermanentlyDeactivated()) {
         row.markSkipped(ARCHIVED_LOCATION_MESSAGE, now)
       } else {
-        val linkedTransaction = linkedTransactionRepository.findById(linkedTransactionId).orElseThrow()
-        if (applyToCell(cell, row, requestedBy, now, linkedTransaction)) {
+        if (applyToCell(cell, row, requestedBy, now, linkedTransaction())) {
           capacityChangedLocationId = cell.id
         }
+        if (flushChanges) cellLocationRepository.flush()
       }
     } catch (e: Exception) {
       log.warn("Failed to process upload row for ${row.locationKey}: ${e.message}")
       row.markFailed("Update failed: ${e.message}", now)
     }
+    return capacityChangedLocationId
+  }
+
+  private fun recordRowResult(row: CellCertificateUploadLocation, uploadId: UUID) {
     cellCertificateUploadLocationRepository.save(row)
     incrementRunningCount(uploadId, row.status)
     if (row.hasDiscrepancy()) {
       cellCertificateUploadRepository.incrementDiscrepancyRecords(uploadId)
     }
-    return capacityChangedLocationId
   }
 
   /**
@@ -377,17 +410,7 @@ class CellCertificateUploadProcessingService(
     val upload = cellCertificateUploadRepository.findByIdForUpdate(uploadId) ?: return
     if (upload.status == CellCertificateUploadStatus.FINISHED) return
 
-    upload.processedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.PROCESSED }
-    upload.skippedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.SKIPPED }
-    upload.failedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.FAILED }
-    upload.discrepancyRecords = upload.locations.count { it.hasDiscrepancy() }
-
-    val omittedLocations = locationsNotOnCertificate(upload)
-    // Mutate the managed collection in place - reassigning it trips Hibernate's orphan-removal check
-    // ("no longer referenced by the owning entity instance") because it replaces its persistent wrapper.
-    upload.locationsNotOnCertificate.clear()
-    upload.locationsNotOnCertificate.addAll(omittedLocations)
-    upload.notOnCertificateRecords = omittedLocations.size
+    recordResults(upload)
 
     val now = LocalDateTime.now(clock)
     val approvalRequest = certificationApprovalRequestRepository.save(
@@ -416,6 +439,21 @@ class CellCertificateUploadProcessingService(
     linkedTransaction.txEndTime = now
 
     log.info("Finished cell certificate upload ${upload.id}: processed=${upload.processedRecords}, skipped=${upload.skippedRecords}, failed=${upload.failedRecords}, needingReview=${upload.discrepancyRecords}, notOnCertificate=${upload.notOnCertificateRecords}, certificate=${cellCertificate.id}")
+  }
+
+  /** The authoritative totals and the cells not on the upload, recorded as an upload or a preview finishes. */
+  private fun recordResults(upload: CellCertificateUpload) {
+    upload.processedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.PROCESSED }
+    upload.skippedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.SKIPPED }
+    upload.failedRecords = upload.locations.count { it.status == CellCertificateUploadLocationStatus.FAILED }
+    upload.discrepancyRecords = upload.locations.count { it.hasDiscrepancy() }
+
+    val omittedLocations = locationsNotOnCertificate(upload)
+    // Mutate the managed collection in place - reassigning it trips Hibernate's orphan-removal check
+    // ("no longer referenced by the owning entity instance") because it replaces its persistent wrapper.
+    upload.locationsNotOnCertificate.clear()
+    upload.locationsNotOnCertificate.addAll(omittedLocations)
+    upload.notOnCertificateRecords = omittedLocations.size
   }
 
   /**
@@ -467,19 +505,131 @@ class CellCertificateUploadProcessingService(
   }
 
   /**
-   * Works out what a preview's import would do without changing anything. For now it only marks the preview
-   * finished, leaving every row PENDING, so the preview journey can be built end to end; the dry run itself
-   * follows in MAPA-406.
+   * Works out what a preview's import would do without changing anything: each row, and then the certificate,
+   * is worked out by the import code inside a transaction that is rolled back. No domain events are published.
    */
-  private fun processPreview(uploadId: UUID) {
+  private fun processPreview(uploadId: UUID, context: ProcessingContext) {
+    context.pendingLocationIds.forEach { rowId ->
+      try {
+        previewRow(rowId, uploadId, context.prisonId, context.requestedBy)
+      } catch (e: Exception) {
+        log.error("Failed to preview cell certificate upload row $rowId", e)
+      }
+    }
+    finishPreview(uploadId)
+  }
+
+  /**
+   * Works a row out as an import would - including any change to the cell and its history - then rolls all of it
+   * back, keeping only the outcome, which is written to the row in a second transaction.
+   */
+  private fun previewRow(rowId: UUID, uploadId: UUID, prisonId: String, requestedBy: String) {
+    val outcome = requiresNewTransaction.execute { status ->
+      try {
+        val row = cellCertificateUploadLocationRepository.findById(rowId).orElse(null) ?: return@execute null
+        evaluateRow(row, requestedBy, LocalDateTime.now(clock), flushChanges = true) {
+          sharedLocationService.createLinkedTransaction(
+            prisonId = prisonId,
+            type = TransactionType.CAPACITY_CHANGE,
+            detail = "Cell certificate preview $uploadId",
+            transactionInvokedBy = requestedBy,
+          )
+        }
+        row.outcome()
+      } finally {
+        status.setRollbackOnly()
+      }
+    } ?: return
+
+    requiresNewTransaction.executeWithoutResult {
+      val row = cellCertificateUploadLocationRepository.findById(rowId).orElse(null) ?: return@executeWithoutResult
+      row.applyOutcome(outcome)
+      recordRowResult(row, uploadId)
+    }
+  }
+
+  /**
+   * Finishes a preview. The new certificate is built as the import would build it and then rolled back, which
+   * gives its totals without creating it; the cells not on the upload and the counts are recorded as for an import.
+   */
+  private fun finishPreview(uploadId: UUID) {
+    val totals = try {
+      newTransaction.execute { status ->
+        try {
+          projectCertificateTotals(uploadId)
+        } finally {
+          status.setRollbackOnly()
+        }
+      }
+    } catch (e: Exception) {
+      log.error("Failed to work out the certificate totals for cell certificate preview $uploadId", e)
+      null
+    }
+
     newTransaction.executeWithoutResult {
       val preview = cellCertificateUploadRepository.findByIdForUpdate(uploadId) ?: return@executeWithoutResult
       if (preview.status == CellCertificateUploadStatus.FINISHED) return@executeWithoutResult
+
+      recordResults(preview)
+      totals?.current?.let {
+        preview.currentMaxCapacity = it.maxCapacity
+        preview.currentWorkingCapacity = it.workingCapacity
+        preview.currentCertifiedNormalAccommodation = it.certifiedNormalAccommodation
+      }
+      totals?.projected?.let {
+        preview.projectedMaxCapacity = it.maxCapacity
+        preview.projectedWorkingCapacity = it.workingCapacity
+        preview.projectedCertifiedNormalAccommodation = it.certifiedNormalAccommodation
+      }
       preview.status = CellCertificateUploadStatus.FINISHED
       preview.endTime = LocalDateTime.now(clock)
-      log.info("Finished cell certificate preview ${preview.id}")
+
+      log.info("Finished cell certificate preview ${preview.id}: willChange=${preview.processedRecords}, noChange=${preview.skippedRecords}, willFail=${preview.failedRecords}, needingReview=${preview.discrepancyRecords}, notOnCertificate=${preview.notOnCertificateRecords}")
     }
   }
+
+  /**
+   * Must run in a transaction that is rolled back: it raises and approves an approval request and creates the
+   * certificate exactly as [finish] does, to read the new certificate's totals.
+   */
+  private fun projectCertificateTotals(uploadId: UUID): PreviewTotals? {
+    val preview = cellCertificateUploadRepository.findById(uploadId).orElse(null) ?: return null
+    val current = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(preview.prisonId)?.let {
+      Totals(it.totalMaxCapacity, it.totalWorkingCapacity, it.totalCertifiedNormalAccommodation)
+    }
+
+    val now = LocalDateTime.now(clock)
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+      prisonId = preview.prisonId,
+      type = TransactionType.CAPACITY_CHANGE,
+      detail = "Cell certificate preview ${preview.id}",
+      transactionInvokedBy = preview.requestedBy,
+    )
+    val approvalRequest = certificationApprovalRequestRepository.save(
+      CellCertificateUploadApprovalRequest(
+        prisonId = preview.prisonId,
+        requestedBy = preview.requestedBy,
+        requestedDate = preview.requestedDate,
+        reasonForChange = UPLOAD_REASON_FOR_CHANGE,
+      ),
+    )
+    approvalRequest.approve(approvedBy = preview.requestedBy, approvedDate = now, linkedTransaction = linkedTransaction, clock = clock)
+    val certificate = cellCertificateService.createCellCertificate(
+      approvedBy = preview.requestedBy,
+      approvedDate = now,
+      approvalRequest = approvalRequest,
+      signedOperationCapacity = signedOperationCapacityRepository.findByPrisonId(preview.prisonId)?.signedOperationCapacity ?: 0,
+      certifiedCapacityOverrides = certifiedCapacityOverrides(preview),
+    )
+    return PreviewTotals(
+      current = current,
+      projected = Totals(certificate.totalMaxCapacity, certificate.totalWorkingCapacity, certificate.totalCertifiedNormalAccommodation),
+    )
+  }
+
+  data class Totals(val maxCapacity: Int, val workingCapacity: Int, val certifiedNormalAccommodation: Int)
+
+  data class PreviewTotals(val current: Totals?, val projected: Totals)
 
   /**
    * A STARTED claim is considered stale (its consumer crashed) once its startTime is older than
@@ -495,6 +645,7 @@ class CellCertificateUploadProcessingService(
     /** Null for a preview, which records no linked transaction. */
     val linkedTransactionId: UUID?,
     val requestedBy: String,
+    val prisonId: String,
     val preview: Boolean,
   )
 

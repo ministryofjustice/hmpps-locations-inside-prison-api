@@ -303,6 +303,42 @@ open class CellCertificateUploadLocation(
     this.processedDate = processedDate
   }
 
+  /**
+   * Everything processing worked out for this row. A preview works a row out inside a transaction that is then
+   * rolled back, so the outcome is copied out first and written back with [applyOutcome] afterwards.
+   */
+  fun outcome() = CellCertificateUploadLocationOutcome(
+    status = status,
+    message = message,
+    processedDate = processedDate,
+    previousMaxCapacity = previousMaxCapacity,
+    appliedMaxCapacity = appliedMaxCapacity,
+    previousWorkingCapacity = previousWorkingCapacity,
+    appliedWorkingCapacity = appliedWorkingCapacity,
+    previousCertifiedNormalAccommodation = previousCertifiedNormalAccommodation,
+    previousCellMark = previousCellMark,
+    previousInCellSanitation = previousInCellSanitation,
+    workingCapacityMismatch = workingCapacityMismatch,
+    maxCapacityMismatch = maxCapacityMismatch,
+    certifiedNormalAccommodationMismatch = certifiedNormalAccommodationMismatch,
+  )
+
+  fun applyOutcome(outcome: CellCertificateUploadLocationOutcome) {
+    status = outcome.status
+    message = outcome.message
+    processedDate = outcome.processedDate
+    previousMaxCapacity = outcome.previousMaxCapacity
+    appliedMaxCapacity = outcome.appliedMaxCapacity
+    previousWorkingCapacity = outcome.previousWorkingCapacity
+    appliedWorkingCapacity = outcome.appliedWorkingCapacity
+    previousCertifiedNormalAccommodation = outcome.previousCertifiedNormalAccommodation
+    previousCellMark = outcome.previousCellMark
+    previousInCellSanitation = outcome.previousInCellSanitation
+    workingCapacityMismatch = outcome.workingCapacityMismatch
+    maxCapacityMismatch = outcome.maxCapacityMismatch
+    certifiedNormalAccommodationMismatch = outcome.certifiedNormalAccommodationMismatch
+  }
+
   companion object {
     private val COMPARATOR = compareBy<CellCertificateUploadLocation> { it.locationKey }
   }
@@ -333,6 +369,23 @@ open class CellCertificateUploadLocation(
 
   override fun toString(): String = "CellCertificateUploadLocation(locationKey='$locationKey', status=$status)"
 }
+
+/** The result of processing one uploaded row - see [CellCertificateUploadLocation.outcome]. */
+data class CellCertificateUploadLocationOutcome(
+  val status: CellCertificateUploadLocationStatus,
+  val message: String?,
+  val processedDate: LocalDateTime?,
+  val previousMaxCapacity: Int?,
+  val appliedMaxCapacity: Int?,
+  val previousWorkingCapacity: Int?,
+  val appliedWorkingCapacity: Int?,
+  val previousCertifiedNormalAccommodation: Int?,
+  val previousCellMark: String?,
+  val previousInCellSanitation: Boolean?,
+  val workingCapacityMismatch: Boolean,
+  val maxCapacityMismatch: Boolean,
+  val certifiedNormalAccommodationMismatch: Boolean,
+)
 
 /**
  * A certifiable cell that had no row in a cell certificate upload, recorded so the ingestion report can
