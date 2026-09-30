@@ -191,6 +191,44 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
   }
 
   @Test
+  fun `a cell left off the file keeps its certified values, in the preview and in the import`() {
+    // cell2 is certified at working capacity 1 while the cell keeps its own 2
+    val baselineId = post(
+      "/locations/bulk/update-cell-certificate/MDI",
+      mapOf(
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 1, certifiedNormalAccommodation = 2),
+      ),
+    ).id
+    awaitFinished(baselineId)
+    val baseline = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue("MDI")!!
+
+    // a file listing only cell1, at the values it already has
+    val previewId = post(
+      "/locations/bulk/update-cell-certificate/MDI/preview",
+      mapOf(cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2)),
+    ).id
+    awaitFinished(previewId)
+    val preview = results(previewId)
+
+    // cell2 is carried forward at 1, not re-certified at the 2 it holds, so the totals do not move
+    assertThat(preview.locationsNotOnCertificate!!.first { it.locationKey == cell2.getKey() }.workingCapacity).isEqualTo(1)
+    assertThat(preview.projectedCertificateTotals).isEqualTo(preview.currentCertificateTotals)
+    assertThat(preview.currentCertificateTotals!!.workingCapacity).isEqualTo(baseline.totalWorkingCapacity)
+
+    val importId = post("/locations/bulk/update-cell-certificate/upload/$previewId/import", null).id
+    awaitFinished(importId)
+    val import = results(importId)
+
+    assertThat(import.locationsNotOnCertificate).containsExactlyInAnyOrderElementsOf(preview.locationsNotOnCertificate)
+    val certificate = cellCertificateRepository.findById(import.cellCertificateId!!).get()
+    assertThat(certificate.findLocationInCertificate(cell2.getPathHierarchy())!!.workingCapacity).isEqualTo(1)
+    assertThat(preview.projectedCertificateTotals).isEqualTo(
+      CellCertificateTotalsDto(certificate.totalMaxCapacity, certificate.totalWorkingCapacity, certificate.totalCertifiedNormalAccommodation),
+    )
+  }
+
+  @Test
   fun `a preview delivered twice is only worked out once`() {
     val previewId = post("/locations/bulk/update-cell-certificate/MDI/preview", changesFile()).id
     awaitFinished(previewId)

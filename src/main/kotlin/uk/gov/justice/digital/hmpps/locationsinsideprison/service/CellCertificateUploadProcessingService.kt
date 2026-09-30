@@ -457,49 +457,70 @@ class CellCertificateUploadProcessingService(
   }
 
   /**
-   * The certified capacity to record for each cell the upload covered, keyed by path hierarchy. These are the
-   * values the uploaded certificate stated, which are not necessarily the values the locations ended up with -
-   * the certificate must reflect the upload. Rows that could not be matched to a live cell (FAILED) contribute
-   * nothing and those cells fall back to their current state; archived locations are left out of the
-   * certificate altogether by [CellCertificateService.createCellCertificate].
+   * The certified capacity to record for each cell on the new certificate, keyed by path hierarchy.
+   *
+   * - A cell in the upload (PROCESSED or SKIPPED) takes the values the uploaded certificate stated, which are not
+   *   necessarily the values the location ended up with - the certificate must reflect the upload. These always win.
+   * - Any other certifiable cell on the prison's current certificate keeps the values it is certified at (MAPA-414):
+   *   a file changes only what it lists, so leaving a cell out never re-certifies it. That includes a cell whose row
+   *   FAILED, which was given no value.
+   * - A cell on no certificate has no entry, so it falls back to the values Residential locations holds (a cell
+   *   temporarily out of use therefore gets working capacity 0 unless a file says otherwise).
+   *
+   * Only cells are carried forward. The certificate also records wing and landing totals, and fixing those would
+   * stop them being added up from their cells. Archived locations are left out of the certificate altogether by
+   * [CellCertificateService.createCellCertificate]. Used by both the import and the preview, so they agree.
    */
-  private fun certifiedCapacityOverrides(upload: CellCertificateUpload): Map<String, CertifiedCapacity> = upload.locations
-    .filter { it.status == CellCertificateUploadLocationStatus.PROCESSED || it.status == CellCertificateUploadLocationStatus.SKIPPED }
-    .associate { row ->
-      row.locationKey.removePrefix("${upload.prisonId}-") to CertifiedCapacity(
-        maxCapacity = row.maxCapacity,
-        workingCapacity = row.workingCapacity,
-        certifiedNormalAccommodation = row.certifiedNormalAccommodation ?: row.previousCertifiedNormalAccommodation ?: 0,
-      )
-    }
+  private fun certifiedCapacityOverrides(upload: CellCertificateUpload): Map<String, CertifiedCapacity> {
+    val uploaded = upload.locations
+      .filter { it.status == CellCertificateUploadLocationStatus.PROCESSED || it.status == CellCertificateUploadLocationStatus.SKIPPED }
+      .associate { row ->
+        row.locationKey.removePrefix("${upload.prisonId}-") to CertifiedCapacity(
+          maxCapacity = row.maxCapacity,
+          workingCapacity = row.workingCapacity,
+          certifiedNormalAccommodation = row.certifiedNormalAccommodation ?: row.previousCertifiedNormalAccommodation ?: 0,
+        )
+      }
+    return carriedForwardCapacities(upload.prisonId).filterKeys { it !in uploaded } + uploaded
+  }
+
+  /** The certified values of every certifiable cell on the prison's current certificate, keyed by path hierarchy. */
+  private fun carriedForwardCapacities(prisonId: String): Map<String, CertifiedCapacity> {
+    val certified = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(prisonId)?.certifiedCapacitiesByPath()
+      ?: return emptyMap()
+    val cellPaths = cellCertificateService.certifiableCells(prisonId).map { it.getPathHierarchy() }.toSet()
+    return certified.filterKeys { it in cellPaths }
+  }
 
   /**
    * Certifiable cells (same filter [CellCertificateService.createCellCertificate] applies) that were not
-   * given a certified value by this upload, so they are still carried onto the new certificate at their
-   * current values - this list exists purely to disclose that to the user; it is not used to build the
-   * certificate itself. A cell whose row is FAILED already has its own explanation as a failed row - the
-   * location could not be matched, or was matched but the update itself failed - so it is excluded here
-   * regardless of which. A row can still be PENDING when this runs: [processRow]'s own transaction is what
-   * marks a row FAILED, and process()'s outer catch around it only logs, so a row whose commit itself failed
-   * is left PENDING with no certified value recorded anywhere - that cell must be disclosed here too, rather
-   * than being silently treated as covered.
+   * given a certified value by this upload. This list exists purely to disclose them to the user, with the values
+   * they go onto the new certificate at: their certified values when they are on the current certificate
+   * ([certifiedCapacityOverrides]), otherwise the values Residential locations holds. A cell whose row is FAILED
+   * already has its own explanation as a failed row - the location could not be matched, or was matched but the
+   * update itself failed - so it is excluded here regardless of which. A row can still be PENDING when this runs:
+   * [processRow]'s own transaction is what marks a row FAILED, and process()'s outer catch around it only logs, so
+   * a row whose commit itself failed is left PENDING with no certified value recorded anywhere - that cell must be
+   * disclosed here too, rather than being silently treated as covered.
    */
   private fun locationsNotOnCertificate(upload: CellCertificateUpload): List<CellCertificateUploadOmittedLocation> {
     val coveredOrFailedPathHierarchies = upload.locations
       .filter { it.status != CellCertificateUploadLocationStatus.PENDING }
       .map { it.locationKey.removePrefix("${upload.prisonId}-") }
       .toSet()
+    val carriedForward = carriedForwardCapacities(upload.prisonId)
 
     return cellCertificateService.certifiableCells(upload.prisonId)
       .filterNot { coveredOrFailedPathHierarchies.contains(it.getPathHierarchy()) }
       .sortedBy { it.getPathHierarchy() }
       .map { cell ->
+        val certified = carriedForward[cell.getPathHierarchy()]
         CellCertificateUploadOmittedLocation(
           locationId = cell.id!!,
           locationKey = cell.getKey(),
-          maxCapacity = cell.calcMaxCapacity(),
-          workingCapacity = cell.calcWorkingCapacityForCertificate(),
-          certifiedNormalAccommodation = cell.calcCertifiedNormalAccommodation(),
+          maxCapacity = certified?.maxCapacity ?: cell.calcMaxCapacity(),
+          workingCapacity = certified?.workingCapacity ?: cell.calcWorkingCapacityForCertificate(),
+          certifiedNormalAccommodation = certified?.certifiedNormalAccommodation ?: cell.calcCertifiedNormalAccommodation(),
         )
       }
   }
