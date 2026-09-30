@@ -20,6 +20,9 @@ interface CellCertificateUploadRepository : JpaRepository<CellCertificateUpload,
   /** The import a preview was continued as, if it has been continued. */
   fun findFirstByPreviewUploadId(previewUploadId: UUID): CellCertificateUpload?
 
+  /** The imports a set of previews were continued as, in one query rather than one per preview. */
+  fun findByPreviewUploadIdIn(previewUploadIds: Collection<UUID>): List<CellCertificateUpload>
+
   /** Whether an import for the prison finished after the given time, which makes an earlier preview out of date. */
   fun existsByPrisonIdAndModeAndStatusAndEndTimeAfter(
     prisonId: String,

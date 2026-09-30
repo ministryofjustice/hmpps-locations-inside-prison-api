@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
@@ -91,7 +92,7 @@ class CellCertificateUploadService(
       throw CellCertificatePreviewOutOfDateException(previewId, preview.prisonId)
     }
 
-    val import = cellCertificateUploadRepository.saveAndFlush(
+    val import = saveUpload(
       preview.copyAsImport(
         requestedBy = authenticationHolder.username ?: SYSTEM_USERNAME,
         requestedDate = LocalDateTime.now(clock),
@@ -138,7 +139,7 @@ class CellCertificateUploadService(
       )
     }
 
-    val saved = cellCertificateUploadRepository.saveAndFlush(upload)
+    val saved = saveUpload(upload)
 
     // The database changes MUST be committed before the message is sent so the listener can read them.
     sendMessageAfterCommit(
@@ -148,6 +149,20 @@ class CellCertificateUploadService(
 
     log.info("Stored cell certificate ${mode.name.lowercase()} ${saved.id} for prison $prisonId with ${saved.totalRecords} records")
     return saved
+  }
+
+  /**
+   * The in-progress check above runs before the save, so two imports started for a prison at the same moment can
+   * both pass it. The database's one-active-import-per-prison index then rejects the second, which is reported as
+   * the same "already in progress" error rather than a server error.
+   */
+  private fun saveUpload(upload: CellCertificateUpload): CellCertificateUpload = try {
+    cellCertificateUploadRepository.saveAndFlush(upload)
+  } catch (e: DataIntegrityViolationException) {
+    if (e.mostSpecificCause.message?.contains(ACTIVE_IMPORT_INDEX) == true) {
+      throw CellCertificateUploadAlreadyInProgressException(upload.prisonId)
+    }
+    throw e
   }
 
   private fun checkNoImportInProgress(prisonId: String) {
@@ -167,7 +182,14 @@ class CellCertificateUploadService(
     } else {
       cellCertificateUploadRepository.findByPrisonIdOrderByRequestedDateDesc(prisonId)
     }
-    return uploads.map { it.toDto(continuedAsUploadId = continuedAsUploadId(it)) }
+    // The history is unbounded, so the imports previews became are found in one query, not one per preview
+    val previewIds = uploads.filter { it.isPreview() }.map { it.id!! }
+    val continuedAs = if (previewIds.isEmpty()) {
+      emptyMap()
+    } else {
+      cellCertificateUploadRepository.findByPreviewUploadIdIn(previewIds).associate { it.previewUploadId!! to it.id!! }
+    }
+    return uploads.map { it.toDto(continuedAsUploadId = continuedAs[it.id]) }
   }
 
   /**
@@ -213,5 +235,8 @@ class CellCertificateUploadService(
   companion object {
     private val log: Logger = LoggerFactory.getLogger(this::class.java)
     private val ACTIVE_STATUSES = listOf(CellCertificateUploadStatus.PENDING, CellCertificateUploadStatus.STARTED)
+
+    /** The partial unique index allowing one active import per prison (V1_109). */
+    private const val ACTIVE_IMPORT_INDEX = "cell_certificate_upload_active_prison_idx"
   }
 }
