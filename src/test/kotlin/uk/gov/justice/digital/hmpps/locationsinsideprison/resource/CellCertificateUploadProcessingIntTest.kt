@@ -717,6 +717,19 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
       val omitted = second.locationsNotOnCertificate.associateBy { it.locationKey }
       assertThat(omitted.getValue(cell2.getKey()).workingCapacity).isEqualTo(1)
       assertThat(omitted.getValue(inactiveCellB3001.getKey()).workingCapacity).isEqualTo(2)
+
+      // MAPA-400: both were on the current certificate, so they are carried forward rather than added
+      assertThat(omitted.getValue(cell2.getKey()).onCurrentCertificate).isTrue()
+      assertThat(omitted.getValue(inactiveCellB3001.getKey()).onCurrentCertificate).isTrue()
+      assertThat(second.carriedForwardRecords).isEqualTo(second.locationsNotOnCertificate.count { it.onCurrentCertificate })
+      assertThat(second.carriedForwardRecords).isGreaterThanOrEqualTo(2)
+
+      // and the row for the cell in the file records what the current certificate held for it
+      with(second.locations.single()) {
+        assertThat(currentCertifiedMaxCapacity).isEqualTo(2)
+        assertThat(currentCertifiedWorkingCapacity).isEqualTo(2)
+        assertThat(currentCertifiedNormalAccommodation).isEqualTo(2)
+      }
     }
   }
 
@@ -732,7 +745,12 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     assertThat(currentCertificateFor(inactiveCellB3001).workingCapacity).isEqualTo(0)
     TransactionTemplate(transactionManager).execute {
       val upload = cellCertificateUploadRepository.findAll().first()
-      assertThat(upload.locationsNotOnCertificate.first { it.locationKey == inactiveCellB3001.getKey() }.workingCapacity).isEqualTo(0)
+      val omitted = upload.locationsNotOnCertificate.first { it.locationKey == inactiveCellB3001.getKey() }
+      assertThat(omitted.workingCapacity).isEqualTo(0)
+      // MAPA-400: with no current certificate, every cell not in the file is added and nothing is carried forward
+      assertThat(omitted.onCurrentCertificate).isFalse()
+      assertThat(upload.carriedForwardRecords).isZero()
+      assertThat(upload.locations.single().currentCertifiedWorkingCapacity).isNull()
     }
   }
 

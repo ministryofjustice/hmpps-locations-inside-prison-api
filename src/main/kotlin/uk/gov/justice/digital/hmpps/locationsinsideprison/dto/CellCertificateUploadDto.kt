@@ -65,6 +65,13 @@ data class CellCertificateUploadDto(
   )
   val notOnCertificateRecords: Int = 0,
 
+  @param:Schema(
+    description = "Of notOnCertificateRecords, the cells already on the current certificate, carried forward unchanged. The rest are added to the certificate.",
+    example = "0",
+    required = true,
+  )
+  val carriedForwardRecords: Int = 0,
+
   @param:Schema(description = "Who requested the upload", example = "MALEXANDER_GEN", required = true)
   val requestedBy: String,
 
@@ -122,6 +129,13 @@ data class CellCertificateUploadOmittedLocationDto(
 
   @param:Schema(description = "Certified normal accommodation the cell was carried onto the new certificate at", example = "2", required = true)
   val certifiedNormalAccommodation: Int,
+
+  @param:Schema(
+    description = "True when the cell is on the current certificate and is carried forward unchanged; false when it is added to the certificate",
+    example = "true",
+    required = true,
+  )
+  val onCurrentCertificate: Boolean = false,
 )
 
 @Schema(description = "Result of processing a single uploaded cell")
@@ -195,4 +209,13 @@ data class CellCertificateUploadLocationDto(
     required = true,
   )
   val certifiedNormalAccommodationMismatch: Boolean = false,
+
+  @param:Schema(description = "Max capacity the prison's current certificate records for this cell; absent when the cell is not on it", example = "2")
+  val currentCertifiedMaxCapacity: Int? = null,
+
+  @param:Schema(description = "Working capacity the prison's current certificate records for this cell; absent when the cell is not on it", example = "2")
+  val currentCertifiedWorkingCapacity: Int? = null,
+
+  @param:Schema(description = "CNA the prison's current certificate records for this cell; absent when the cell is not on it", example = "2")
+  val currentCertifiedNormalAccommodation: Int? = null,
 )

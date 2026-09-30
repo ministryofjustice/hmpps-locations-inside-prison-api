@@ -78,7 +78,7 @@ class CellCertificateUploadProcessingService(
     context.pendingLocationIds.forEach { locationId ->
       try {
         val changedId = requiresNewTransaction.execute {
-          processRow(locationId, uploadId, linkedTransactionId, context.requestedBy)
+          processRow(locationId, uploadId, linkedTransactionId, context.requestedBy, context.currentCertified)
         }
         if (changedId != null) capacityChangedLocationIds.add(changedId)
       } catch (e: Exception) {
@@ -176,14 +176,23 @@ class CellCertificateUploadProcessingService(
           requestedBy = upload.requestedBy,
           prisonId = upload.prisonId,
           preview = upload.isPreview(),
+          // read once for the whole run: every row records what the current certificate says for its cell
+          currentCertified = certifiedCellCapacities(upload.prisonId).mapKeys { (path, _) -> "${upload.prisonId}-$path" },
         )
       }
     }
   }
 
   /** @return the cell's location id when its capacity (max/working/CNA) changed, otherwise null. */
-  private fun processRow(locationId: UUID, uploadId: UUID, linkedTransactionId: UUID, requestedBy: String): UUID? {
+  private fun processRow(
+    locationId: UUID,
+    uploadId: UUID,
+    linkedTransactionId: UUID,
+    requestedBy: String,
+    currentCertified: Map<String, CertifiedCapacity>,
+  ): UUID? {
     val row = cellCertificateUploadLocationRepository.findById(locationId).orElse(null) ?: return null
+    row.recordCurrentCertified(currentCertified[row.locationKey])
     val capacityChangedLocationId = evaluateRow(row, requestedBy, LocalDateTime.now(clock)) {
       linkedTransactionRepository.findById(linkedTransactionId).orElseThrow()
     }
@@ -454,6 +463,7 @@ class CellCertificateUploadProcessingService(
     upload.locationsNotOnCertificate.clear()
     upload.locationsNotOnCertificate.addAll(omittedLocations)
     upload.notOnCertificateRecords = omittedLocations.size
+    upload.carriedForwardRecords = omittedLocations.count { it.onCurrentCertificate }
   }
 
   /**
@@ -481,11 +491,14 @@ class CellCertificateUploadProcessingService(
           certifiedNormalAccommodation = row.certifiedNormalAccommodation ?: row.previousCertifiedNormalAccommodation ?: 0,
         )
       }
-    return carriedForwardCapacities(upload.prisonId).filterKeys { it !in uploaded } + uploaded
+    return certifiedCellCapacities(upload.prisonId).filterKeys { it !in uploaded } + uploaded
   }
 
-  /** The certified values of every certifiable cell on the prison's current certificate, keyed by path hierarchy. */
-  private fun carriedForwardCapacities(prisonId: String): Map<String, CertifiedCapacity> {
+  /**
+   * The certified values of every certifiable cell on the prison's current certificate, keyed by path hierarchy.
+   * Empty when the prison has no current certificate.
+   */
+  private fun certifiedCellCapacities(prisonId: String): Map<String, CertifiedCapacity> {
     val certified = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(prisonId)?.certifiedCapacitiesByPath()
       ?: return emptyMap()
     val cellPaths = cellCertificateService.certifiableCells(prisonId).map { it.getPathHierarchy() }.toSet()
@@ -508,7 +521,7 @@ class CellCertificateUploadProcessingService(
       .filter { it.status != CellCertificateUploadLocationStatus.PENDING }
       .map { it.locationKey.removePrefix("${upload.prisonId}-") }
       .toSet()
-    val carriedForward = carriedForwardCapacities(upload.prisonId)
+    val carriedForward = certifiedCellCapacities(upload.prisonId)
 
     return cellCertificateService.certifiableCells(upload.prisonId)
       .filterNot { coveredOrFailedPathHierarchies.contains(it.getPathHierarchy()) }
@@ -521,6 +534,7 @@ class CellCertificateUploadProcessingService(
           maxCapacity = certified?.maxCapacity ?: cell.calcMaxCapacity(),
           workingCapacity = certified?.workingCapacity ?: cell.calcWorkingCapacityForCertificate(),
           certifiedNormalAccommodation = certified?.certifiedNormalAccommodation ?: cell.calcCertifiedNormalAccommodation(),
+          onCurrentCertificate = certified != null,
         )
       }
   }
@@ -532,7 +546,7 @@ class CellCertificateUploadProcessingService(
   private fun processPreview(uploadId: UUID, context: ProcessingContext) {
     context.pendingLocationIds.forEach { rowId ->
       try {
-        previewRow(rowId, uploadId, context.prisonId, context.requestedBy)
+        previewRow(rowId, uploadId, context.prisonId, context.requestedBy, context.currentCertified)
       } catch (e: Exception) {
         log.error("Failed to preview cell certificate upload row $rowId", e)
       }
@@ -544,10 +558,17 @@ class CellCertificateUploadProcessingService(
    * Works a row out as an import would - including any change to the cell and its history - then rolls all of it
    * back, keeping only the outcome, which is written to the row in a second transaction.
    */
-  private fun previewRow(rowId: UUID, uploadId: UUID, prisonId: String, requestedBy: String) {
+  private fun previewRow(
+    rowId: UUID,
+    uploadId: UUID,
+    prisonId: String,
+    requestedBy: String,
+    currentCertified: Map<String, CertifiedCapacity>,
+  ) {
     val outcome = requiresNewTransaction.execute { status ->
       try {
         val row = cellCertificateUploadLocationRepository.findById(rowId).orElse(null) ?: return@execute null
+        row.recordCurrentCertified(currentCertified[row.locationKey])
         evaluateRow(row, requestedBy, LocalDateTime.now(clock), flushChanges = true) {
           sharedLocationService.createLinkedTransaction(
             prisonId = prisonId,
@@ -668,6 +689,8 @@ class CellCertificateUploadProcessingService(
     val requestedBy: String,
     val prisonId: String,
     val preview: Boolean,
+    /** What the prison's current certificate records for each certifiable cell, keyed by location key. */
+    val currentCertified: Map<String, CertifiedCapacity> = emptyMap(),
   )
 
   companion object {
