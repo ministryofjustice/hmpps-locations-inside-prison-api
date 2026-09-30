@@ -296,6 +296,66 @@ class ApiExceptionHandler {
       )
   }
 
+  @ExceptionHandler(CellCertificatePreviewNotFoundException::class)
+  fun handleCellCertificatePreviewNotFoundException(e: CellCertificatePreviewNotFoundException): ResponseEntity<ErrorResponse> {
+    log.debug("Cell certificate preview not found: {}", e.message)
+    return ResponseEntity
+      .status(HttpStatus.NOT_FOUND)
+      .body(
+        ErrorResponse(
+          status = HttpStatus.NOT_FOUND,
+          errorCode = ErrorCode.CellCertificateUploadNotFound,
+          userMessage = "The cell certificate preview could not be found.",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(CellCertificatePreviewNotFinishedException::class)
+  fun handleCellCertificatePreviewNotFinishedException(e: CellCertificatePreviewNotFinishedException): ResponseEntity<ErrorResponse> {
+    log.debug("Cell certificate preview not finished: {}", e.message)
+    return ResponseEntity
+      .status(BAD_REQUEST)
+      .body(
+        ErrorResponse(
+          status = BAD_REQUEST,
+          errorCode = ErrorCode.CellCertificatePreviewNotFinished,
+          userMessage = "The preview has not finished yet. Wait for it to finish before continuing with the import.",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(CellCertificatePreviewAlreadyContinuedException::class)
+  fun handleCellCertificatePreviewAlreadyContinuedException(e: CellCertificatePreviewAlreadyContinuedException): ResponseEntity<ErrorResponse> {
+    log.debug("Cell certificate preview already continued: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.CellCertificatePreviewAlreadyContinued,
+          userMessage = "This preview has already been continued as an import.",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
+  @ExceptionHandler(CellCertificatePreviewOutOfDateException::class)
+  fun handleCellCertificatePreviewOutOfDateException(e: CellCertificatePreviewOutOfDateException): ResponseEntity<ErrorResponse> {
+    log.debug("Cell certificate preview out of date: {}", e.message)
+    return ResponseEntity
+      .status(CONFLICT)
+      .body(
+        ErrorResponse(
+          status = CONFLICT,
+          errorCode = ErrorCode.CellCertificatePreviewOutOfDate,
+          userMessage = "A cell certificate import has finished for this prison since this preview was run. Run the preview again before importing.",
+          developerMessage = e.message,
+        ),
+      )
+  }
+
   @ExceptionHandler(CellCertificateUploadAlreadyInProgressException::class)
   fun handleCellCertificateUploadAlreadyInProgressException(e: CellCertificateUploadAlreadyInProgressException): ResponseEntity<ErrorResponse> {
     log.debug("Cell certificate upload already in progress: {}", e.message)
@@ -876,3 +936,7 @@ class UsedForTypesOnlyForNormalAccommodationException(key: String) : Exception("
 class CellCertificateUploadAlreadyInProgressException(prisonId: String) : Exception("A cell certificate upload is already in progress for prison $prisonId")
 class CellCertificateUploadNotFoundException(id: UUID) : Exception("Cell certificate upload with id $id not found")
 class CellCertificateUploadForApprovalRequestNotFoundException(approvalRequestId: UUID) : Exception("No cell certificate upload was raised by approval request $approvalRequestId")
+class CellCertificatePreviewNotFoundException(id: UUID) : Exception("No cell certificate preview with id $id")
+class CellCertificatePreviewNotFinishedException(id: UUID) : Exception("Cell certificate preview $id has not finished")
+class CellCertificatePreviewAlreadyContinuedException(id: UUID, importId: UUID) : Exception("Cell certificate preview $id has already been continued as import $importId")
+class CellCertificatePreviewOutOfDateException(id: UUID, prisonId: String) : Exception("A cell certificate import finished for prison $prisonId after preview $id was run")

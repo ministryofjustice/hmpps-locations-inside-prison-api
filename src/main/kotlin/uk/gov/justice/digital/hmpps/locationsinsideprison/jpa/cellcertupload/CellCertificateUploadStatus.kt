@@ -18,3 +18,12 @@ enum class CellCertificateUploadLocationStatus(val description: String) {
   SKIPPED("Skipped, no change required or not applicable"),
   FAILED("Processing failed"),
 }
+
+/**
+ * Whether an upload is a preview (every change is worked out and then undone, so nothing is changed) or a
+ * real import. A preview is the only route to an import: continuing one copies its rows into a new import.
+ */
+enum class CellCertificateUploadMode(val description: String) {
+  PREVIEW("Works out what the import would do without changing anything"),
+  IMPORT("Changes the locations and creates a new cell certificate"),
+}

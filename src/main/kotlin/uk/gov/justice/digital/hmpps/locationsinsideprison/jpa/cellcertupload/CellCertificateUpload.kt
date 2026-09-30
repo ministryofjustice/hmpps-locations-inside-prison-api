@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import org.hibernate.annotations.SortNatural
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateTotalsDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadOmittedLocationDto
@@ -38,6 +39,14 @@ open class CellCertificateUpload(
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
   open var status: CellCertificateUploadStatus = CellCertificateUploadStatus.PENDING,
+
+  /** A preview works out what the import would do and then undoes it; an import changes the locations. */
+  @Column(nullable = false)
+  @Enumerated(EnumType.STRING)
+  open val mode: CellCertificateUploadMode = CellCertificateUploadMode.IMPORT,
+
+  /** On an import, the preview it was continued from. */
+  open val previewUploadId: UUID? = null,
 
   @Column(nullable = false)
   open val requestedBy: String,
@@ -80,6 +89,16 @@ open class CellCertificateUpload(
    */
   open var certificationApprovalRequestId: UUID? = null,
 
+  /** On a finished preview, the totals of the prison's current certificate, if it has one. */
+  open var currentMaxCapacity: Int? = null,
+  open var currentWorkingCapacity: Int? = null,
+  open var currentCertifiedNormalAccommodation: Int? = null,
+
+  /** On a finished preview, the totals the new certificate would have if the import went ahead. */
+  open var projectedMaxCapacity: Int? = null,
+  open var projectedWorkingCapacity: Int? = null,
+  open var projectedCertifiedNormalAccommodation: Int? = null,
+
   @SortNatural
   @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
   @JoinColumn(name = "cell_certificate_upload_id", nullable = false)
@@ -98,12 +117,47 @@ open class CellCertificateUpload(
     locations.add(location)
   }
 
-  override fun toString(): String = "CellCertificateUpload(id=$id, prisonId='$prisonId', status=$status, totalRecords=$totalRecords)"
+  fun isPreview() = mode == CellCertificateUploadMode.PREVIEW
 
-  fun toDto(includeLocations: Boolean = false): CellCertificateUploadDto = CellCertificateUploadDto(
+  /**
+   * A new PENDING import holding the same uploaded rows as this preview. Only the values the prison uploaded
+   * are copied - never the preview's outcomes - because the import works everything out again against the
+   * locations as they are when it runs.
+   */
+  fun copyAsImport(requestedBy: String, requestedDate: LocalDateTime): CellCertificateUpload = CellCertificateUpload(
+    prisonId = prisonId,
+    mode = CellCertificateUploadMode.IMPORT,
+    previewUploadId = id,
+    requestedBy = requestedBy,
+    requestedDate = requestedDate,
+    reasonForChange = reasonForChange,
+    totalRecords = totalRecords,
+  ).also { import ->
+    locations.forEach { row ->
+      import.addLocation(
+        CellCertificateUploadLocation(
+          locationKey = row.locationKey,
+          maxCapacity = row.maxCapacity,
+          workingCapacity = row.workingCapacity,
+          certifiedNormalAccommodation = row.certifiedNormalAccommodation,
+          cellMark = row.cellMark,
+          inCellSanitation = row.inCellSanitation,
+        ),
+      )
+    }
+  }
+
+  override fun toString(): String = "CellCertificateUpload(id=$id, prisonId='$prisonId', mode=$mode, status=$status, totalRecords=$totalRecords)"
+
+  fun toDto(includeLocations: Boolean = false, continuedAsUploadId: UUID? = null): CellCertificateUploadDto = CellCertificateUploadDto(
     id = id!!,
     prisonId = prisonId,
     status = status,
+    mode = mode,
+    previewUploadId = previewUploadId,
+    continuedAsUploadId = continuedAsUploadId,
+    currentCertificateTotals = totalsOrNull(currentMaxCapacity, currentWorkingCapacity, currentCertifiedNormalAccommodation),
+    projectedCertificateTotals = totalsOrNull(projectedMaxCapacity, projectedWorkingCapacity, projectedCertifiedNormalAccommodation),
     totalRecords = totalRecords,
     processedRecords = processedRecords,
     skippedRecords = skippedRecords,
@@ -120,6 +174,12 @@ open class CellCertificateUpload(
     locations = if (includeLocations) locations.map { it.toDto() } else null,
     locationsNotOnCertificate = if (includeLocations) locationsNotOnCertificate.map { it.toDto() } else null,
   )
+
+  private fun totalsOrNull(maxCapacity: Int?, workingCapacity: Int?, certifiedNormalAccommodation: Int?) = if (maxCapacity != null && workingCapacity != null && certifiedNormalAccommodation != null) {
+    CellCertificateTotalsDto(maxCapacity, workingCapacity, certifiedNormalAccommodation)
+  } else {
+    null
+  }
 }
 
 /**

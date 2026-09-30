@@ -59,11 +59,17 @@ class CellCertificateUploadProcessingService(
   fun process(uploadId: UUID) {
     val context = startProcessing(uploadId) ?: return
 
+    if (context.preview) {
+      processPreview(uploadId)
+      return
+    }
+    val linkedTransactionId = context.linkedTransactionId!!
+
     val capacityChangedLocationIds = mutableListOf<UUID>()
     context.pendingLocationIds.forEach { locationId ->
       try {
         val changedId = requiresNewTransaction.execute {
-          processRow(locationId, uploadId, context.linkedTransactionId, context.requestedBy)
+          processRow(locationId, uploadId, linkedTransactionId, context.requestedBy)
         }
         if (changedId != null) capacityChangedLocationIds.add(changedId)
       } catch (e: Exception) {
@@ -73,7 +79,7 @@ class CellCertificateUploadProcessingService(
     }
 
     newTransaction.executeWithoutResult {
-      finish(uploadId, context.linkedTransactionId)
+      finish(uploadId, linkedTransactionId)
     }
 
     // Capacity changes are committed - now raise LOCATION_AMENDED events for each changed location.
@@ -141,19 +147,25 @@ class CellCertificateUploadProcessingService(
         upload.status = CellCertificateUploadStatus.STARTED
         upload.startTime = now
 
-        val linkedTransaction = sharedLocationService.createLinkedTransaction(
-          prisonId = upload.prisonId,
-          type = TransactionType.CAPACITY_CHANGE,
-          detail = "Cell certificate upload ${upload.id}",
-          transactionInvokedBy = upload.requestedBy,
-        )
+        // A preview changes nothing, so it records no linked transaction against the prison.
+        val linkedTransaction = if (upload.isPreview()) {
+          null
+        } else {
+          sharedLocationService.createLinkedTransaction(
+            prisonId = upload.prisonId,
+            type = TransactionType.CAPACITY_CHANGE,
+            detail = "Cell certificate upload ${upload.id}",
+            transactionInvokedBy = upload.requestedBy,
+          )
+        }
 
         ProcessingContext(
           pendingLocationIds = upload.locations
             .filter { it.status == CellCertificateUploadLocationStatus.PENDING }
             .map { it.id!! },
-          linkedTransactionId = linkedTransaction.transactionId!!,
+          linkedTransactionId = linkedTransaction?.transactionId,
           requestedBy = upload.requestedBy,
+          preview = upload.isPreview(),
         )
       }
     }
@@ -455,6 +467,21 @@ class CellCertificateUploadProcessingService(
   }
 
   /**
+   * Works out what a preview's import would do without changing anything. For now it only marks the preview
+   * finished, leaving every row PENDING, so the preview journey can be built end to end; the dry run itself
+   * follows in MAPA-406.
+   */
+  private fun processPreview(uploadId: UUID) {
+    newTransaction.executeWithoutResult {
+      val preview = cellCertificateUploadRepository.findByIdForUpdate(uploadId) ?: return@executeWithoutResult
+      if (preview.status == CellCertificateUploadStatus.FINISHED) return@executeWithoutResult
+      preview.status = CellCertificateUploadStatus.FINISHED
+      preview.endTime = LocalDateTime.now(clock)
+      log.info("Finished cell certificate preview ${preview.id}")
+    }
+  }
+
+  /**
    * A STARTED claim is considered stale (its consumer crashed) once its startTime is older than
    * [STALE_CLAIM_THRESHOLD], allowing a redelivered message to re-claim and finish the upload.
    */
@@ -465,8 +492,10 @@ class CellCertificateUploadProcessingService(
 
   data class ProcessingContext(
     val pendingLocationIds: List<UUID>,
-    val linkedTransactionId: UUID,
+    /** Null for a preview, which records no linked transaction. */
+    val linkedTransactionId: UUID?,
     val requestedBy: String,
+    val preview: Boolean,
   )
 
   companion object {

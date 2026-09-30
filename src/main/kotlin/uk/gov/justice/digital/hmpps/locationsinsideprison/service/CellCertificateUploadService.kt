@@ -15,9 +15,14 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUpl
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadStatusFilter
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUpload
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateUploadRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ApprovalRequestRequiresReasonForChangeException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificatePreviewAlreadyContinuedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificatePreviewNotFinishedException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificatePreviewNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificatePreviewOutOfDateException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificateUploadAlreadyInProgressException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificateUploadForApprovalRequestNotFoundException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CellCertificateUploadNotFoundException
@@ -47,21 +52,74 @@ class CellCertificateUploadService(
    * START_PROCESSING message is sent (after commit) for a background listener to pick up.
    */
   @Transactional
-  fun requestCellCertificateUpload(prisonId: String, request: UpdateCapacityRequest): CellCertificateUploadDto {
+  fun requestCellCertificateUpload(prisonId: String, request: UpdateCapacityRequest): CellCertificateUploadDto = storeUpload(prisonId, request, CellCertificateUploadMode.IMPORT).toDto()
+
+  /**
+   * Stores an uploaded cell certificate as a preview and queues it. The preview is processed exactly as an
+   * import would be, but every change is undone, so it reports what the import would do without changing
+   * anything. Previews change nothing, so they do not wait for, or block, an import already running.
+   */
+  @Transactional
+  fun requestCellCertificatePreview(prisonId: String, request: UpdateCapacityRequest): CellCertificateUploadDto = storeUpload(prisonId, request, CellCertificateUploadMode.PREVIEW).toDto()
+
+  /**
+   * Continues a finished preview as a real import: its uploaded rows are copied into a new import, which is
+   * queued and then worked out afresh against the locations as they are when it runs. A preview can only be
+   * continued once, and not after another import has finished for the prison, because what it showed may
+   * no longer be what the import would do.
+   */
+  @Transactional
+  fun continuePreview(previewId: UUID): CellCertificateUploadDto {
+    val preview = cellCertificateUploadRepository.findByIdForUpdate(previewId)
+      ?.takeIf { it.isPreview() }
+      ?: throw CellCertificatePreviewNotFoundException(previewId)
+
+    if (preview.status != CellCertificateUploadStatus.FINISHED) {
+      throw CellCertificatePreviewNotFinishedException(previewId)
+    }
+    cellCertificateUploadRepository.findFirstByPreviewUploadId(previewId)?.let {
+      throw CellCertificatePreviewAlreadyContinuedException(previewId, it.id!!)
+    }
+    checkNoImportInProgress(preview.prisonId)
+    if (cellCertificateUploadRepository.existsByPrisonIdAndModeAndStatusAndEndTimeAfter(
+        prisonId = preview.prisonId,
+        mode = CellCertificateUploadMode.IMPORT,
+        status = CellCertificateUploadStatus.FINISHED,
+        endTime = preview.requestedDate,
+      )
+    ) {
+      throw CellCertificatePreviewOutOfDateException(previewId, preview.prisonId)
+    }
+
+    val import = cellCertificateUploadRepository.saveAndFlush(
+      preview.copyAsImport(
+        requestedBy = authenticationHolder.username ?: SYSTEM_USERNAME,
+        requestedDate = LocalDateTime.now(clock),
+      ),
+    )
+    sendMessageAfterCommit(import.id!!, CellCertificateUploadEventType.START_PROCESSING)
+
+    log.info("Continued cell certificate preview $previewId as import ${import.id} for prison ${import.prisonId}")
+    return import.toDto()
+  }
+
+  private fun storeUpload(prisonId: String, request: UpdateCapacityRequest, mode: CellCertificateUploadMode): CellCertificateUpload {
     activePrisonService.getPrisonConfiguration(prisonId) ?: throw PrisonNotFoundException(prisonId)
 
+    // Checked for a preview too, so that continuing it cannot then fail for a reason the preview could have shown.
     if (activePrisonService.isCertificationApprovalRequired(prisonId) && request.reasonForChange.isNullOrEmpty()) {
       throw ApprovalRequestRequiresReasonForChangeException(prisonId)
     }
 
-    cellCertificateUploadRepository.findFirstByPrisonIdAndStatusIn(prisonId, ACTIVE_STATUSES)?.let {
-      throw CellCertificateUploadAlreadyInProgressException(prisonId)
+    if (mode == CellCertificateUploadMode.IMPORT) {
+      checkNoImportInProgress(prisonId)
     }
 
     val now = LocalDateTime.now(clock)
     val upload = CellCertificateUpload(
       prisonId = prisonId,
       status = CellCertificateUploadStatus.PENDING,
+      mode = mode,
       requestedBy = authenticationHolder.username ?: SYSTEM_USERNAME,
       requestedDate = now,
       reasonForChange = request.reasonForChange,
@@ -83,10 +141,19 @@ class CellCertificateUploadService(
     val saved = cellCertificateUploadRepository.saveAndFlush(upload)
 
     // The database changes MUST be committed before the message is sent so the listener can read them.
-    sendStartProcessingMessageAfterCommit(saved.id!!)
+    sendMessageAfterCommit(
+      saved.id!!,
+      if (mode == CellCertificateUploadMode.PREVIEW) CellCertificateUploadEventType.START_PREVIEW else CellCertificateUploadEventType.START_PROCESSING,
+    )
 
-    log.info("Stored cell certificate upload ${saved.id} for prison $prisonId with ${saved.totalRecords} records")
-    return saved.toDto()
+    log.info("Stored cell certificate ${mode.name.lowercase()} ${saved.id} for prison $prisonId with ${saved.totalRecords} records")
+    return saved
+  }
+
+  private fun checkNoImportInProgress(prisonId: String) {
+    cellCertificateUploadRepository.findFirstByPrisonIdAndModeAndStatusIn(prisonId, CellCertificateUploadMode.IMPORT, ACTIVE_STATUSES)?.let {
+      throw CellCertificateUploadAlreadyInProgressException(prisonId)
+    }
   }
 
   /**
@@ -100,7 +167,7 @@ class CellCertificateUploadService(
     } else {
       cellCertificateUploadRepository.findByPrisonIdOrderByRequestedDateDesc(prisonId)
     }
-    return uploads.map { it.toDto() }
+    return uploads.map { it.toDto(continuedAsUploadId = continuedAsUploadId(it)) }
   }
 
   /**
@@ -109,7 +176,7 @@ class CellCertificateUploadService(
   @Transactional(readOnly = true)
   fun getCellCertificateUpload(uploadId: UUID): CellCertificateUploadDto = cellCertificateUploadRepository.findById(uploadId)
     .orElseThrow { CellCertificateUploadNotFoundException(uploadId) }
-    .toDto(includeLocations = true)
+    .let { it.toDto(includeLocations = true, continuedAsUploadId = continuedAsUploadId(it)) }
 
   /**
    * Returns the upload behind an approval request, with its per-cell results, so the cell certificate import
@@ -120,25 +187,27 @@ class CellCertificateUploadService(
     ?.toDto(includeLocations = true)
     ?: throw CellCertificateUploadForApprovalRequestNotFoundException(approvalRequestId)
 
-  private fun sendStartProcessingMessageAfterCommit(uploadId: UUID) {
+  private fun continuedAsUploadId(upload: CellCertificateUpload): UUID? = if (upload.isPreview()) cellCertificateUploadRepository.findFirstByPreviewUploadId(upload.id!!)?.id else null
+
+  private fun sendMessageAfterCommit(uploadId: UUID, eventType: CellCertificateUploadEventType) {
     TransactionSynchronizationManager.registerSynchronization(
       object : TransactionSynchronization {
         override fun afterCommit() {
-          sendStartProcessingMessage(uploadId)
+          sendMessage(uploadId, eventType)
         }
       },
     )
   }
 
-  private fun sendStartProcessingMessage(uploadId: UUID) {
-    val event = CellCertificateUploadEvent(eventType = CellCertificateUploadEventType.START_PROCESSING, uploadId = uploadId)
+  private fun sendMessage(uploadId: UUID, eventType: CellCertificateUploadEventType) {
+    val event = CellCertificateUploadEvent(eventType = eventType, uploadId = uploadId)
     queue.sqsClient.sendMessage(
       SendMessageRequest.builder()
         .queueUrl(queue.queueUrl)
         .messageBody(objectMapper.writeValueAsString(event))
         .build(),
     ).get()
-    log.info("Sent START_PROCESSING message for cell certificate upload $uploadId")
+    log.info("Sent $eventType message for cell certificate upload $uploadId")
   }
 
   companion object {
