@@ -483,6 +483,91 @@
                                     </td>
                                     <td><p>The working capacity actually applied to the location, which can differ from the uploaded value where the location kept the one it already held. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
                                 </tr>
+                                <tr>
+                                    <td><span id="current_certified_max_capacity">current_certified_max_capacity</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>The max capacity the prison&rsquo;s current certificate recorded for this cell when the upload was processed; null when the cell was not on it. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="current_certified_working_capacity">current_certified_working_capacity</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>The working capacity the prison&rsquo;s current certificate recorded for this cell when the upload was processed; null when the cell was not on it. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="current_certified_normal_accommodation">current_certified_normal_accommodation</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>The certified normal accommodation the prison&rsquo;s current certificate recorded for this cell when the upload was processed; null when the cell was not on it. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="suggested_location_key">suggested_location_key</span></td>
+                                    <td>varchar</td>
+                                    <td>255</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>For a row whose location was not found: the cell it most likely meant, when the names differ only by dropped leading zeros. A suggestion only. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="converted_cell_type">converted_cell_type</span></td>
+                                    <td>varchar</td>
+                                    <td>255</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Set when the cell is converted to another use, such as an office; it holds no capacity, so the import changed none and the certificate records 0. <a href="./../null">Sensitivity: NONE</a></p></td>
+                                </tr>
                                 </tbody>
                             </table>
                         </div>

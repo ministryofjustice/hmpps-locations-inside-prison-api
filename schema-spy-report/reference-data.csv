@@ -303,6 +303,8 @@ column_ref,code,description,notes
 "cell_certificate_upload_location.status","PROCESSED","Successfully processed",""
 "cell_certificate_upload_location.status","SKIPPED","Skipped, no change required or not applicable",""
 "cell_certificate_upload_location.status","FAILED","Processing failed",""
+"cell_certificate_upload.mode","PREVIEW","Works out what the import would do without changing anything",""
+"cell_certificate_upload.mode","IMPORT","Changes the locations and creates a new cell certificate",""
 "prison_notification_mailbox.notification_group","CERT_ADMIN","Notified of certification activity needing administration",""
 "prison_notification_mailbox.notification_group","CERT_VIEWER","Notified of certification activity for information only",""
 "prison_notification_mailbox.notification_group","CERT_REVIEWER","Notified when a certification approval request needs reviewing",""

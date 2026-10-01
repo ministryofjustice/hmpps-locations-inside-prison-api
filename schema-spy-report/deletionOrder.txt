@@ -11,8 +11,8 @@ cell_used_for
 cell_certificate_upload_not_on_certificate
 cell_certificate_upload_location
 linked_transaction
-cell_certificate_upload
 certification_approval_request_location
+cell_certificate_upload
 cell_certificate_location
 cell_certificate
 certification_approval_request

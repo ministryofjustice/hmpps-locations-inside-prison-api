@@ -4,8 +4,8 @@ location
 certification_approval_request
 cell_certificate
 cell_certificate_location
-certification_approval_request_location
 cell_certificate_upload
+certification_approval_request_location
 linked_transaction
 cell_certificate_upload_location
 cell_certificate_upload_not_on_certificate

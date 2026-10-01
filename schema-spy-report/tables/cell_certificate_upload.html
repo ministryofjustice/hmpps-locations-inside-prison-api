@@ -131,6 +131,11 @@
                                     <td>
                                         <table border='0' cellspacing='0' cellpadding='0'>
                                             <tr>
+                                                <td title="cell_certificate_upload.preview_upload_id references cell_certificate_upload.id via cell_certificate_upload_preview_upload_id_fkey"><a href='cell_certificate_upload.html'>cell_certificate_upload</a><span class='relatedKey'>.preview_upload_id</span></td>
+                                                <td class="constraint detail">cell_certificate_upload_preview_upload_id_fkey</td>
+                                                <td class="constraint detail"><span title='Null on delete:&#10;Foreign key to parent set to NULL when parent deleted'>N</span></td>
+                                            </tr>
+                                            <tr>
                                                 <td title="cell_certificate_upload_location.cell_certificate_upload_id references cell_certificate_upload.id via fk_cell_certificate_upload_location_upload"><a href='cell_certificate_upload_location.html'>cell_certificate_upload_location</a><span class='relatedKey'>.cell_certificate_upload_id</span></td>
                                                 <td class="constraint detail">fk_cell_certificate_upload_location_upload</td>
                                                 <td class="constraint detail"><span title='Cascade on delete:&#10;Deletion of parent deletes child'>C</span></td>
@@ -408,6 +413,164 @@
                                     </td>
                                     <td><p>How many certifiable cells had no row in the upload and so were carried onto the new certificate at their current values. <a href="./../null">Sensitivity: NONE</a></p></td>
                                 </tr>
+                                <tr>
+                                    <td><span id="mode">mode</span></td>
+                                    <td>varchar</td>
+                                    <td>20</td>
+                                    <td title=''></td>
+                                    <td title=''></td>
+                                    <td>&#39;IMPORT&#39;::character varying</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>PREVIEW works out what the import would do without changing anything; IMPORT changes the locations and creates a new cell certificate. See CellCertificateUploadMode in reference-data.csv. <a href="./../null">Sensitivity: NONE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td class='foreignKey' title='Foreign Key'><i class='icon ion-key iconkey' style='padding-left: 5px;'></i><span id="preview_upload_id">preview_upload_id</span></td>
+                                    <td>uuid</td>
+                                    <td>2147483647</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                            <tr>
+                                                <td title="cell_certificate_upload.preview_upload_id references cell_certificate_upload.id via cell_certificate_upload_preview_upload_id_fkey"><a href='cell_certificate_upload.html'>cell_certificate_upload</a><span class='relatedKey'>.id</span></td>
+                                                <td class="constraint detail">cell_certificate_upload_preview_upload_id_fkey</td>
+                                                <td class="constraint detail"><span title='Null on delete:&#10;Foreign key to parent set to NULL when parent deleted'>N</span></td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td><p>On an import, the preview it was continued from. Cleared if the preview is deleted. <a href="./../null">Sensitivity: NONE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="current_max_capacity">current_max_capacity</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>On a finished preview, the total max capacity on the prison&rsquo;s current cell certificate. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="current_working_capacity">current_working_capacity</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>On a finished preview, the total working capacity on the prison&rsquo;s current cell certificate. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="current_certified_normal_accommodation">current_certified_normal_accommodation</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>On a finished preview, the total certified normal accommodation on the prison&rsquo;s current cell certificate. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="projected_max_capacity">projected_max_capacity</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>On a finished preview, the total max capacity the new cell certificate would have if the import went ahead. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="projected_working_capacity">projected_working_capacity</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>On a finished preview, the total working capacity the new cell certificate would have if the import went ahead. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="projected_certified_normal_accommodation">projected_certified_normal_accommodation</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>On a finished preview, the total certified normal accommodation the new cell certificate would have if the import went ahead. <a href="./../null">Sensitivity: OFFICIAL-SENSITIVE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="carried_forward_records">carried_forward_records</span></td>
+                                    <td>int4</td>
+                                    <td>10</td>
+                                    <td title=''></td>
+                                    <td title=''></td>
+                                    <td>0</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Of the cells not in the upload, how many were already on the current certificate and carried forward unchanged. The rest were added to the certificate. <a href="./../null">Sensitivity: NONE</a></p></td>
+                                </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -455,6 +618,12 @@
                                     <td>Performance</td>
                                     <td><span title='Ascending'>Asc</span></td>
                                     <td>certification_approval_request_id</td>
+                                </tr>
+                                <tr>
+                                    <td title='Indexed'>cell_certificate_upload_preview_upload_id_idx</td>
+                                    <td>Performance</td>
+                                    <td><span title='Ascending'>Asc</span></td>
+                                    <td>preview_upload_id</td>
                                 </tr>
                                 <tr>
                                     <td title='Indexed'>cell_certificate_upload_prison_id_idx</td>
