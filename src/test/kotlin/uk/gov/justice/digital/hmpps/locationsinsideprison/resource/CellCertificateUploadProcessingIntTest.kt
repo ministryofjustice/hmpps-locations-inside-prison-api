@@ -10,9 +10,11 @@ import org.springframework.transaction.support.TransactionTemplate
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUpload
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocation
@@ -804,6 +806,86 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
         .allMatch { it.suggestedLocationKey == null }
       assertThat(upload.locationsNotOnCertificate.first { it.locationKey == cell2.getKey() }.uploadedAsKey).isNull()
     }
+  }
+
+  @Test
+  fun `a converted cell listed with no capacity is not flagged`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+    val office = saveConvertedCell("Z-2-020", ConvertedCellType.OFFICE)
+
+    postCellCertificateUpdate(
+      mapOf(
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        office.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0),
+      ),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      with(upload.locations.first { it.locationKey == office.getKey() }) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.SKIPPED)
+        assertThat(hasDiscrepancy()).isFalse()
+        assertThat(message).isEqualTo(CellCertificateUploadProcessingService.NO_CHANGES_REQUIRED_MESSAGE)
+        assertThat(convertedCellType).isEqualTo("Office")
+      }
+      assertThat(upload.discrepancyRecords).isZero()
+    }
+    with(currentCertificateFor(office)) {
+      assertThat(maxCapacity).isEqualTo(0)
+      assertThat(workingCapacity).isEqualTo(0)
+      assertThat(certifiedNormalAccommodation).isEqualTo(0)
+    }
+  }
+
+  @Test
+  fun `a converted cell given a capacity is flagged, changes nothing but its cell mark, and is certified at 0`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+    val office = saveConvertedCell("Z-2-021", ConvertedCellType.OFFICE)
+    purgeDomainEvents()
+
+    postCellCertificateUpdate(
+      mapOf(
+        office.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2, cellMark = "Z2-NEW"),
+      ),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      with(upload.locations.single()) {
+        // the cell mark was applied, so the row is processed - but no capacity was
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+        assertThat(maxCapacityMismatch).isTrue()
+        assertThat(workingCapacityMismatch).isTrue()
+        assertThat(certifiedNormalAccommodationMismatch).isTrue()
+        assertThat(appliedMaxCapacity).isEqualTo(0)
+        assertThat(appliedWorkingCapacity).isEqualTo(0)
+        assertThat(message).isEqualTo(CellCertificateUploadProcessingService.convertedCellMessage("Office"))
+      }
+      assertThat(upload.discrepancyRecords).isEqualTo(1)
+    }
+
+    withReloadedCell(office) {
+      assertThat(capacity).isNull()
+      assertThat(getDoorCellMark()).isEqualTo("Z2-NEW")
+    }
+    with(currentCertificateFor(office)) {
+      assertThat(maxCapacity).isEqualTo(0)
+      assertThat(workingCapacity).isEqualTo(0)
+      assertThat(certifiedNormalAccommodation).isEqualTo(0)
+    }
+    // no capacity changed, so no location-amended event
+    org.awaitility.Awaitility.await().during(java.time.Duration.ofSeconds(2)).atMost(java.time.Duration.ofSeconds(5))
+      .until { getNumberOfMessagesCurrentlyOnQueue() == 0 }
+  }
+
+  /** A cell converted to another use the way the service does it: its capacity removed and its certification taken off. */
+  private fun saveConvertedCell(pathHierarchy: String, type: ConvertedCellType): Cell {
+    val cell = repository.save(buildCell(pathHierarchy = pathHierarchy, linkedTransaction = linkedTransaction))
+    repository.save(landingZ2.addChildLocation(cell))
+    cell.convertToNonResidentialCell(type, null, EXPECTED_USERNAME, clock, linkedTransaction)
+    return repository.save(cell) as Cell
   }
 
   private fun awaitUploadCount(finished: Int) {

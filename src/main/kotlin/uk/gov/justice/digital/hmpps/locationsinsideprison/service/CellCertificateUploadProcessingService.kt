@@ -265,6 +265,8 @@ class CellCertificateUploadProcessingService(
     now: LocalDateTime,
     linkedTransaction: LinkedTransaction,
   ): Boolean {
+    if (cell.isConvertedCell()) return applyToConvertedCell(cell, row, requestedBy, now, linkedTransaction)
+
     val oldMaxCapacity = cell.getMaxCapacity()
     val oldWorkingCapacity = cell.getCurrentlyHeldWorkingCapacity()
     val oldCertifiedNormalAccommodation = cell.getCertifiedNormalAccommodation()
@@ -413,6 +415,56 @@ class CellCertificateUploadProcessingService(
     return capacityChanged
   }
 
+  /**
+   * A converted cell (an office, store, shower ...) holds no capacity: [ResidentialLocation.setCapacity] leaves it
+   * untouched. So the import makes no capacity change - trying one would either fail validation and raise a false
+   * alarm, or appear to succeed while changing nothing - and the certificate records 0 for it (MAPA-413). The cell
+   * mark and sanitation still apply. A file that gives the cell a capacity is flagged, so someone converts the cell
+   * back or corrects the file.
+   *
+   * @return false - a converted cell's capacity never changes.
+   */
+  private fun applyToConvertedCell(
+    cell: Cell,
+    row: CellCertificateUploadLocation,
+    requestedBy: String,
+    now: LocalDateTime,
+    linkedTransaction: LinkedTransaction,
+  ): Boolean {
+    val oldCellMark = cell.getDoorCellMark()
+    val oldInCellSanitation = cell.getSanitationOfCell()
+    var changed = false
+
+    if (row.cellMark != null && row.cellMark != oldCellMark) {
+      cell.setCellDoorMark(row.cellMark!!, requestedBy, now, linkedTransaction)
+      changed = true
+    }
+    if (row.inCellSanitation != null && row.inCellSanitation != oldInCellSanitation) {
+      cell.setSanitationOfCell(row.inCellSanitation!!, requestedBy, now, linkedTransaction)
+      changed = true
+    }
+
+    row.convertedCellType = cell.getConvertedCellTypeSummary()
+    row.recordPreviousValues(
+      previousMaxCapacity = cell.getMaxCapacity(),
+      previousWorkingCapacity = cell.getCurrentlyHeldWorkingCapacity(),
+      previousCertifiedNormalAccommodation = cell.getCertifiedNormalAccommodation(),
+      previousCellMark = oldCellMark,
+      previousInCellSanitation = oldInCellSanitation,
+      appliedMaxCapacity = 0,
+      appliedWorkingCapacity = 0,
+    )
+    row.recordDiscrepancy(
+      workingCapacityMismatch = row.workingCapacity > 0,
+      maxCapacityMismatch = row.maxCapacity > 0,
+      certifiedNormalAccommodationMismatch = (row.certifiedNormalAccommodation ?: 0) > 0,
+    )
+
+    if (changed) row.markProcessed(now) else row.markSkipped(NO_CHANGES_REQUIRED_MESSAGE, now)
+    if (row.hasDiscrepancy()) row.message = convertedCellMessage(row.convertedCellType)
+    return false
+  }
+
   private fun finish(uploadId: UUID, linkedTransactionId: UUID) {
     // Lock the row again so the FINISHED check-and-set is atomic - defence in depth against any concurrent
     // path slipping past the claim guard and double-creating a certificate.
@@ -517,8 +569,16 @@ class CellCertificateUploadProcessingService(
           certifiedNormalAccommodation = row.certifiedNormalAccommodation ?: row.previousCertifiedNormalAccommodation ?: 0,
         )
       }
-    return certifiedCellCapacities(upload.prisonId).filterKeys { it !in uploaded } + uploaded
+    return certifiedCellCapacities(upload.prisonId).filterKeys { it !in uploaded } + uploaded + convertedCellsAtZero(upload.prisonId)
   }
+
+  /**
+   * Every certifiable converted cell at 0: a converted cell holds no capacity, so it is certified at 0 whatever the
+   * file or the current certificate says (MAPA-413). Applied last, so it wins.
+   */
+  private fun convertedCellsAtZero(prisonId: String): Map<String, CertifiedCapacity> = cellCertificateService.certifiableCells(prisonId)
+    .filter { it.isConvertedCell() }
+    .associate { it.getPathHierarchy() to CertifiedCapacity(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0) }
 
   /**
    * The certified values of every certifiable cell on the prison's current certificate, keyed by path hierarchy.
@@ -548,19 +608,20 @@ class CellCertificateUploadProcessingService(
       .map { it.locationKey.removePrefix("${upload.prisonId}-") }
       .toSet()
     val carriedForward = certifiedCellCapacities(upload.prisonId)
+    val convertedAtZero = convertedCellsAtZero(upload.prisonId)
 
     return cellCertificateService.certifiableCells(upload.prisonId)
       .filterNot { coveredOrFailedPathHierarchies.contains(it.getPathHierarchy()) }
       .sortedBy { it.getPathHierarchy() }
       .map { cell ->
-        val certified = carriedForward[cell.getPathHierarchy()]
+        val certified = convertedAtZero[cell.getPathHierarchy()] ?: carriedForward[cell.getPathHierarchy()]
         CellCertificateUploadOmittedLocation(
           locationId = cell.id!!,
           locationKey = cell.getKey(),
           maxCapacity = certified?.maxCapacity ?: cell.calcMaxCapacity(),
           workingCapacity = certified?.workingCapacity ?: cell.calcWorkingCapacityForCertificate(),
           certifiedNormalAccommodation = certified?.certifiedNormalAccommodation ?: cell.calcCertifiedNormalAccommodation(),
-          onCurrentCertificate = certified != null,
+          onCurrentCertificate = carriedForward.containsKey(cell.getPathHierarchy()),
         )
       }
   }
@@ -747,6 +808,9 @@ class CellCertificateUploadProcessingService(
 
     /** Reported against a cell that held a working capacity of zero and so took the certified one. */
     const val WORKING_CAPACITY_TAKEN_FROM_CERTIFICATE_MESSAGE = "Working capacity changed to match certified working capacity"
+
+    /** Reported against a converted cell the file gives a capacity: it holds none, and is certified at 0. */
+    fun convertedCellMessage(convertedCellType: String?) = "Converted cell (${convertedCellType ?: "converted"}): it holds no capacity, so the capacity in the file was not applied or certified. Convert it back to a cell before certifying capacity for it."
 
     /** Reported when the max capacity or CNA on the certificate could not be applied to the location. */
     const val CERTIFIED_CAPACITY_MISMATCH_MESSAGE = "Certified capacity does not match the cell's capacity"

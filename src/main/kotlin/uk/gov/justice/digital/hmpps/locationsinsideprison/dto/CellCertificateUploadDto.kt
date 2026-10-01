@@ -227,4 +227,10 @@ data class CellCertificateUploadLocationDto(
     example = "MDI-A-1-005",
   )
   val suggestedLocationKey: String? = null,
+
+  @param:Schema(
+    description = "Set when the cell is converted to another use; it holds no capacity, so the import changes none and the certificate records 0",
+    example = "Office",
+  )
+  val convertedCellType: String? = null,
 )

@@ -267,6 +267,12 @@ open class CellCertificateUploadLocation(
    */
   open var suggestedLocationKey: String? = null,
 
+  /**
+   * Set when the cell is converted to another use (an office, store, shower ...). A converted cell holds no capacity,
+   * so the import changes none and the certificate records 0 for it, whatever the file says (MAPA-413).
+   */
+  open var convertedCellType: String? = null,
+
   open var message: String? = null,
 
   open var processedDate: LocalDateTime? = null,
@@ -350,6 +356,7 @@ open class CellCertificateUploadLocation(
     currentCertifiedMaxCapacity = currentCertifiedMaxCapacity,
     currentCertifiedWorkingCapacity = currentCertifiedWorkingCapacity,
     currentCertifiedNormalAccommodation = currentCertifiedNormalAccommodation,
+    convertedCellType = convertedCellType,
   )
 
   fun applyOutcome(outcome: CellCertificateUploadLocationOutcome) {
@@ -369,6 +376,7 @@ open class CellCertificateUploadLocation(
     currentCertifiedMaxCapacity = outcome.currentCertifiedMaxCapacity
     currentCertifiedWorkingCapacity = outcome.currentCertifiedWorkingCapacity
     currentCertifiedNormalAccommodation = outcome.currentCertifiedNormalAccommodation
+    convertedCellType = outcome.convertedCellType
   }
 
   companion object {
@@ -401,6 +409,7 @@ open class CellCertificateUploadLocation(
     currentCertifiedWorkingCapacity = currentCertifiedWorkingCapacity,
     currentCertifiedNormalAccommodation = currentCertifiedNormalAccommodation,
     suggestedLocationKey = suggestedLocationKey,
+    convertedCellType = convertedCellType,
   )
 
   override fun toString(): String = "CellCertificateUploadLocation(locationKey='$locationKey', status=$status)"
@@ -424,6 +433,7 @@ data class CellCertificateUploadLocationOutcome(
   val currentCertifiedMaxCapacity: Int?,
   val currentCertifiedWorkingCapacity: Int?,
   val currentCertifiedNormalAccommodation: Int?,
+  val convertedCellType: String?,
 )
 
 /**

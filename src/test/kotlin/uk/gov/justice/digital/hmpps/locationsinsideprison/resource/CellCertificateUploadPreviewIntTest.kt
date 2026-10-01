@@ -12,8 +12,10 @@ import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateTotalsDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
@@ -46,6 +48,9 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
   /** A cell arriving from NOMIS: it holds a CNA but has never held a working capacity. */
   private lateinit var cellWithoutWorkingCapacity: Cell
 
+  /** A cell converted to an office: it holds no capacity (MAPA-413). */
+  private lateinit var office: Cell
+
   @BeforeEach
   fun setUpPreviewData() {
     uploadQueue.sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(uploadQueue.queueUrl).build())
@@ -59,6 +64,11 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
       ),
     )
     repository.save(landingZ2.addChildLocation(cellWithoutWorkingCapacity))
+
+    office = repository.save(buildCell(pathHierarchy = "Z-2-020", linkedTransaction = linkedTransaction)) as Cell
+    repository.save(landingZ2.addChildLocation(office))
+    office.convertToNonResidentialCell(ConvertedCellType.OFFICE, null, EXPECTED_USERNAME, clock, linkedTransaction)
+    office = repository.save(office) as Cell
 
     listOf(cell1, inactiveCellB3001, cellWithoutWorkingCapacity).forEach {
       prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(it.getPathHierarchy()), false)
@@ -79,6 +89,8 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
     "MDI-Z-1-999" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
     inactiveCellB3001.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
     cellWithoutWorkingCapacity.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+    // a converted cell given a capacity: flagged, nothing applied, certified at 0
+    office.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
   )
 
   @Test
@@ -113,7 +125,7 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
       }
       assertThat(rows.getValue(inactiveCellB3001.getKey()).status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
 
-      assertThat(preview.processedRecords + preview.skippedRecords + preview.failedRecords).isEqualTo(5)
+      assertThat(preview.processedRecords + preview.skippedRecords + preview.failedRecords).isEqualTo(6)
       assertThat(preview.failedRecords).isEqualTo(1)
       assertThat(preview.discrepancyRecords).isGreaterThan(0)
       assertThat(preview.notOnCertificateRecords).isEqualTo(preview.locationsNotOnCertificate.size)
@@ -165,7 +177,7 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
     assertThat(import.previewUploadId).isEqualTo(previewId)
 
     // guard against comparing two empty results: the preview covered every row, and the import really changed cells
-    assertThat(preview.locations).hasSize(5)
+    assertThat(preview.locations).hasSize(6)
     assertThat(preview.locations!!.map { it.status }).contains(
       CellCertificateUploadLocationStatus.PROCESSED,
       CellCertificateUploadLocationStatus.FAILED,
