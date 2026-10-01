@@ -10,9 +10,11 @@ import org.springframework.transaction.support.TransactionTemplate
 import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
+import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUpload
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocation
@@ -676,6 +678,219 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
       assertThat(maxCapacity).isEqualTo(2)
       assertThat(workingCapacity).isEqualTo(2)
       assertThat(certifiedNormalAccommodation).isEqualTo(2)
+    }
+  }
+
+  @Test
+  fun `cells left off a later upload keep the values they are certified at`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell2.getPathHierarchy()), false)
+
+    // first upload certifies cell2 at working capacity 1 while the cell keeps its own 2, and keeps the temporarily
+    // inactive cell on the certificate at 2
+    postCellCertificateUpdate(
+      mapOf(
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        cell2.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 1, certifiedNormalAccommodation = 2),
+        inactiveCellB3001.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+      ),
+    )
+    awaitUploadCount(finished = 1)
+    withReloadedCell(cell2) { assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2) }
+    assertThat(currentCertificateFor(cell2).workingCapacity).isEqualTo(1)
+
+    // second upload lists only cell1
+    postCellCertificateUpdate(
+      mapOf(cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2)),
+    )
+    awaitUploadCount(finished = 2)
+
+    // a file changes only what it lists: cell2 stays certified at 1, although the cell holds 2
+    with(currentCertificateFor(cell2)) {
+      assertThat(workingCapacity).isEqualTo(1)
+      assertThat(maxCapacity).isEqualTo(2)
+      assertThat(certifiedNormalAccommodation).isEqualTo(2)
+    }
+    assertThat(currentCertificateFor(inactiveCellB3001).workingCapacity).isEqualTo(2)
+
+    // and the report discloses them at the values they were carried onto the certificate at
+    TransactionTemplate(transactionManager).execute {
+      val second = cellCertificateUploadRepository.findAll().maxBy { it.requestedDate.toString() + it.id }
+      val omitted = second.locationsNotOnCertificate.associateBy { it.locationKey }
+      assertThat(omitted.getValue(cell2.getKey()).workingCapacity).isEqualTo(1)
+      assertThat(omitted.getValue(inactiveCellB3001.getKey()).workingCapacity).isEqualTo(2)
+
+      // MAPA-400: both were on the current certificate, so they are carried forward rather than added
+      assertThat(omitted.getValue(cell2.getKey()).onCurrentCertificate).isTrue()
+      assertThat(omitted.getValue(inactiveCellB3001.getKey()).onCurrentCertificate).isTrue()
+      assertThat(second.carriedForwardRecords).isEqualTo(second.locationsNotOnCertificate.count { it.onCurrentCertificate })
+      assertThat(second.carriedForwardRecords).isGreaterThanOrEqualTo(2)
+
+      // and the row for the cell in the file records what the current certificate held for it
+      with(second.locations.single()) {
+        assertThat(currentCertifiedMaxCapacity).isEqualTo(2)
+        assertThat(currentCertifiedWorkingCapacity).isEqualTo(2)
+        assertThat(currentCertifiedNormalAccommodation).isEqualTo(2)
+      }
+    }
+  }
+
+  @Test
+  fun `a temporarily inactive cell on no certificate and left off the upload goes on at working capacity 0`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2)),
+    )
+    awaitUploadFinished()
+
+    assertThat(currentCertificateFor(inactiveCellB3001).workingCapacity).isEqualTo(0)
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      val omitted = upload.locationsNotOnCertificate.first { it.locationKey == inactiveCellB3001.getKey() }
+      assertThat(omitted.workingCapacity).isEqualTo(0)
+      // MAPA-400: with no current certificate, every cell not in the file is added and nothing is carried forward
+      assertThat(omitted.onCurrentCertificate).isFalse()
+      assertThat(upload.carriedForwardRecords).isZero()
+      assertThat(upload.locations.single().currentCertifiedWorkingCapacity).isNull()
+    }
+  }
+
+  @Test
+  fun `a name with its leading zeros dropped points at the cell it meant, and nothing is applied`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    // "MDI-Z-1-2" is cell2 (MDI-Z-1-002) with its leading zeros dropped, and asks for a different working capacity
+    postCellCertificateUpdate(
+      mapOf(
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        "MDI-Z-1-2" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 1, certifiedNormalAccommodation = 2),
+        "MDI-Z-1-999" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+      ),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      val rows = upload.locations.associateBy { it.locationKey }
+      with(rows.getValue("MDI-Z-1-2")) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.FAILED)
+        assertThat(suggestedLocationKey).isEqualTo(cell2.getKey())
+      }
+      // a name that matches nothing gets no suggestion
+      assertThat(rows.getValue("MDI-Z-1-999").suggestedLocationKey).isNull()
+      assertThat(upload.locationsNotOnCertificate.first { it.locationKey == cell2.getKey() }.uploadedAsKey).isEqualTo("MDI-Z-1-2")
+    }
+
+    // the suggestion is not applied: cell2 goes on at the values it holds, not the mistyped row's
+    withReloadedCell(cell2) { assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2) }
+    assertThat(currentCertificateFor(cell2).workingCapacity).isEqualTo(2)
+  }
+
+  @Test
+  fun `no suggestion is made when two failed names could mean the same cell`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        "MDI-Z-1-2" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        "MDI-Z-1-02" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+      ),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      assertThat(upload.locations.filter { it.status == CellCertificateUploadLocationStatus.FAILED }).hasSize(2)
+        .allMatch { it.suggestedLocationKey == null }
+      assertThat(upload.locationsNotOnCertificate.first { it.locationKey == cell2.getKey() }.uploadedAsKey).isNull()
+    }
+  }
+
+  @Test
+  fun `a converted cell listed with no capacity is not flagged`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+    val office = saveConvertedCell("Z-2-020", ConvertedCellType.OFFICE)
+
+    postCellCertificateUpdate(
+      mapOf(
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+        office.getKey() to CellCapacityUpdateDetail(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 0),
+      ),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      with(upload.locations.first { it.locationKey == office.getKey() }) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.SKIPPED)
+        assertThat(hasDiscrepancy()).isFalse()
+        assertThat(message).isEqualTo(CellCertificateUploadProcessingService.NO_CHANGES_REQUIRED_MESSAGE)
+        assertThat(convertedCellType).isEqualTo("Office")
+      }
+      assertThat(upload.discrepancyRecords).isZero()
+    }
+    with(currentCertificateFor(office)) {
+      assertThat(maxCapacity).isEqualTo(0)
+      assertThat(workingCapacity).isEqualTo(0)
+      assertThat(certifiedNormalAccommodation).isEqualTo(0)
+    }
+  }
+
+  @Test
+  fun `a converted cell given a capacity is flagged, changes nothing but its cell mark, and is certified at 0`() {
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+    val office = saveConvertedCell("Z-2-021", ConvertedCellType.OFFICE)
+    purgeDomainEvents()
+
+    postCellCertificateUpdate(
+      mapOf(
+        office.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2, cellMark = "Z2-NEW"),
+      ),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      val upload = cellCertificateUploadRepository.findAll().first()
+      with(upload.locations.single()) {
+        // the cell mark was applied, so the row is processed - but no capacity was
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+        assertThat(maxCapacityMismatch).isTrue()
+        assertThat(workingCapacityMismatch).isTrue()
+        assertThat(certifiedNormalAccommodationMismatch).isTrue()
+        assertThat(appliedMaxCapacity).isEqualTo(0)
+        assertThat(appliedWorkingCapacity).isEqualTo(0)
+        assertThat(message).isEqualTo(CellCertificateUploadProcessingService.convertedCellMessage("Office"))
+      }
+      assertThat(upload.discrepancyRecords).isEqualTo(1)
+    }
+
+    withReloadedCell(office) {
+      assertThat(capacity).isNull()
+      assertThat(getDoorCellMark()).isEqualTo("Z2-NEW")
+    }
+    with(currentCertificateFor(office)) {
+      assertThat(maxCapacity).isEqualTo(0)
+      assertThat(workingCapacity).isEqualTo(0)
+      assertThat(certifiedNormalAccommodation).isEqualTo(0)
+    }
+    // no capacity changed, so no location-amended event
+    org.awaitility.Awaitility.await().during(java.time.Duration.ofSeconds(2)).atMost(java.time.Duration.ofSeconds(5))
+      .until { getNumberOfMessagesCurrentlyOnQueue() == 0 }
+  }
+
+  /** A cell converted to another use the way the service does it: its capacity removed and its certification taken off. */
+  private fun saveConvertedCell(pathHierarchy: String, type: ConvertedCellType): Cell {
+    val cell = repository.save(buildCell(pathHierarchy = pathHierarchy, linkedTransaction = linkedTransaction))
+    repository.save(landingZ2.addChildLocation(cell))
+    cell.convertToNonResidentialCell(type, null, EXPECTED_USERNAME, clock, linkedTransaction)
+    return repository.save(cell) as Cell
+  }
+
+  private fun awaitUploadCount(finished: Int) {
+    await untilAsserted {
+      assertThat(cellCertificateUploadRepository.findAll().count { it.status == CellCertificateUploadStatus.FINISHED }).isEqualTo(finished)
     }
   }
 

@@ -53,4 +53,7 @@ enum class ErrorCode(val errorCode: Int) {
   LocationCannotBeHiddenFromList(144),
   NonResidentialParentCannotBeArchived(145),
   PrisonNotificationMailboxNotFound(146),
+  CellCertificatePreviewNotFinished(147),
+  CellCertificatePreviewAlreadyContinued(148),
+  CellCertificatePreviewOutOfDate(149),
 }

@@ -79,6 +79,58 @@ class CellCertificateUploadResource(
     @RequestBody @Validated updateCapacityRequest: UpdateCapacityRequest,
   ): CellCertificateUploadDto = cellCertificateUploadService.requestCellCertificateUpload(prisonId, updateCapacityRequest)
 
+  @PostMapping("update-cell-certificate/{prisonId}/preview")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Preview a cell certificate upload for a prison without changing anything",
+    description = "Stores the supplied cell capacities, cell marks and sanitation as a preview and queues it for " +
+      "background processing. The preview is processed exactly as an upload would be, but every change is undone, " +
+      "so it reports what the upload would do - per-cell results, cells not on the upload and certificate totals - " +
+      "without changing any location or creating a certificate. Continue it with " +
+      "POST /locations/bulk/update-cell-certificate/upload/{previewId}/import. " +
+      "Requires role MAINTAIN_LOCATIONS and write scope.",
+    responses = [
+      ApiResponse(responseCode = "202", description = "Preview accepted and queued for processing"),
+      ApiResponse(responseCode = "400", description = "Invalid Request", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]),
+      ApiResponse(responseCode = "401", description = "Unauthorized to access this endpoint", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]),
+      ApiResponse(responseCode = "403", description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]),
+      ApiResponse(responseCode = "404", description = "Prison not found", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]),
+    ],
+  )
+  fun previewCellCertificate(
+    @Schema(description = "Prison ID", example = "MDI", required = true)
+    @PathVariable prisonId: String,
+    @RequestBody @Validated updateCapacityRequest: UpdateCapacityRequest,
+  ): CellCertificateUploadDto = cellCertificateUploadService.requestCellCertificatePreview(prisonId, updateCapacityRequest)
+
+  @PostMapping("update-cell-certificate/upload/{previewId}/import")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Continue a finished cell certificate preview as a real upload",
+    description = "Copies the preview's uploaded rows into a new upload and queues it for background processing. " +
+      "The upload works everything out again against the locations as they are when it runs, so its results can " +
+      "differ from the preview's if anything has changed since. Requires role MAINTAIN_LOCATIONS and write scope.",
+    responses = [
+      ApiResponse(responseCode = "202", description = "Upload created from the preview and queued for processing"),
+      ApiResponse(responseCode = "400", description = "The preview has not finished", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]),
+      ApiResponse(responseCode = "401", description = "Unauthorized to access this endpoint", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]),
+      ApiResponse(responseCode = "403", description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]),
+      ApiResponse(responseCode = "404", description = "Preview not found", content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))]),
+      ApiResponse(
+        responseCode = "409",
+        description = "The preview has already been continued, an upload is already in progress for the prison, " +
+          "or an upload has finished for the prison since the preview was run",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun continueCellCertificatePreview(
+    @Schema(description = "ID of the finished preview", example = "01912e1e-0000-7000-8000-000000000000", required = true)
+    @PathVariable previewId: UUID,
+  ): CellCertificateUploadDto = cellCertificateUploadService.continuePreview(previewId)
+
   @GetMapping("update-cell-certificate/{prisonId}")
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS')")
   @Operation(

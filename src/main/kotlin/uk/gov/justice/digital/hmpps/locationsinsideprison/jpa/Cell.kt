@@ -207,7 +207,7 @@ class Cell(
 
   fun getOtherConvertedCellType(): String? = otherConvertedCellType
 
-  private fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
+  fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {
     if (hasPendingCertificationApproval()) {

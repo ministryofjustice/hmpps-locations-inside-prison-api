@@ -11,9 +11,11 @@ import jakarta.persistence.JoinColumn
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import org.hibernate.annotations.SortNatural
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateTotalsDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadOmittedLocationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CertifiedCapacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
 import java.util.SortedSet
@@ -38,6 +40,14 @@ open class CellCertificateUpload(
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
   open var status: CellCertificateUploadStatus = CellCertificateUploadStatus.PENDING,
+
+  /** A preview works out what the import would do and then undoes it; an import changes the locations. */
+  @Column(nullable = false)
+  @Enumerated(EnumType.STRING)
+  open val mode: CellCertificateUploadMode = CellCertificateUploadMode.IMPORT,
+
+  /** On an import, the preview it was continued from. */
+  open val previewUploadId: UUID? = null,
 
   @Column(nullable = false)
   open val requestedBy: String,
@@ -69,6 +79,10 @@ open class CellCertificateUpload(
   @Column(nullable = false)
   open var notOnCertificateRecords: Int = 0,
 
+  /** Of [notOnCertificateRecords], the cells already on the current certificate, carried forward unchanged. */
+  @Column(nullable = false)
+  open var carriedForwardRecords: Int = 0,
+
   open var reasonForChange: String? = null,
 
   /** Set once the certificate has been generated from this upload (later step). */
@@ -79,6 +93,16 @@ open class CellCertificateUpload(
    * details page find the ingestion behind it, which nothing else records.
    */
   open var certificationApprovalRequestId: UUID? = null,
+
+  /** On a finished preview, the totals of the prison's current certificate, if it has one. */
+  open var currentMaxCapacity: Int? = null,
+  open var currentWorkingCapacity: Int? = null,
+  open var currentCertifiedNormalAccommodation: Int? = null,
+
+  /** On a finished preview, the totals the new certificate would have if the import went ahead. */
+  open var projectedMaxCapacity: Int? = null,
+  open var projectedWorkingCapacity: Int? = null,
+  open var projectedCertifiedNormalAccommodation: Int? = null,
 
   @SortNatural
   @OneToMany(fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
@@ -98,18 +122,54 @@ open class CellCertificateUpload(
     locations.add(location)
   }
 
-  override fun toString(): String = "CellCertificateUpload(id=$id, prisonId='$prisonId', status=$status, totalRecords=$totalRecords)"
+  fun isPreview() = mode == CellCertificateUploadMode.PREVIEW
 
-  fun toDto(includeLocations: Boolean = false): CellCertificateUploadDto = CellCertificateUploadDto(
+  /**
+   * A new PENDING import holding the same uploaded rows as this preview. Only the values the prison uploaded
+   * are copied - never the preview's outcomes - because the import works everything out again against the
+   * locations as they are when it runs.
+   */
+  fun copyAsImport(requestedBy: String, requestedDate: LocalDateTime): CellCertificateUpload = CellCertificateUpload(
+    prisonId = prisonId,
+    mode = CellCertificateUploadMode.IMPORT,
+    previewUploadId = id,
+    requestedBy = requestedBy,
+    requestedDate = requestedDate,
+    reasonForChange = reasonForChange,
+    totalRecords = totalRecords,
+  ).also { import ->
+    locations.forEach { row ->
+      import.addLocation(
+        CellCertificateUploadLocation(
+          locationKey = row.locationKey,
+          maxCapacity = row.maxCapacity,
+          workingCapacity = row.workingCapacity,
+          certifiedNormalAccommodation = row.certifiedNormalAccommodation,
+          cellMark = row.cellMark,
+          inCellSanitation = row.inCellSanitation,
+        ),
+      )
+    }
+  }
+
+  override fun toString(): String = "CellCertificateUpload(id=$id, prisonId='$prisonId', mode=$mode, status=$status, totalRecords=$totalRecords)"
+
+  fun toDto(includeLocations: Boolean = false, continuedAsUploadId: UUID? = null): CellCertificateUploadDto = CellCertificateUploadDto(
     id = id!!,
     prisonId = prisonId,
     status = status,
+    mode = mode,
+    previewUploadId = previewUploadId,
+    continuedAsUploadId = continuedAsUploadId,
+    currentCertificateTotals = totalsOrNull(currentMaxCapacity, currentWorkingCapacity, currentCertifiedNormalAccommodation),
+    projectedCertificateTotals = totalsOrNull(projectedMaxCapacity, projectedWorkingCapacity, projectedCertifiedNormalAccommodation),
     totalRecords = totalRecords,
     processedRecords = processedRecords,
     skippedRecords = skippedRecords,
     failedRecords = failedRecords,
     discrepancyRecords = discrepancyRecords,
     notOnCertificateRecords = notOnCertificateRecords,
+    carriedForwardRecords = carriedForwardRecords,
     requestedBy = requestedBy,
     requestedDate = requestedDate,
     startTime = startTime,
@@ -120,6 +180,12 @@ open class CellCertificateUpload(
     locations = if (includeLocations) locations.map { it.toDto() } else null,
     locationsNotOnCertificate = if (includeLocations) locationsNotOnCertificate.map { it.toDto() } else null,
   )
+
+  private fun totalsOrNull(maxCapacity: Int?, workingCapacity: Int?, certifiedNormalAccommodation: Int?) = if (maxCapacity != null && workingCapacity != null && certifiedNormalAccommodation != null) {
+    CellCertificateTotalsDto(maxCapacity, workingCapacity, certifiedNormalAccommodation)
+  } else {
+    null
+  }
 }
 
 /**
@@ -187,6 +253,26 @@ open class CellCertificateUploadLocation(
   @Column(nullable = false)
   open var certifiedNormalAccommodationMismatch: Boolean = false,
 
+  /**
+   * What the prison's current certificate records for this cell when the upload was processed, so the report can
+   * show where the new certificate differs. All null when the cell is not on the current certificate.
+   */
+  open var currentCertifiedMaxCapacity: Int? = null,
+  open var currentCertifiedWorkingCapacity: Int? = null,
+  open var currentCertifiedNormalAccommodation: Int? = null,
+
+  /**
+   * For a row whose location could not be found: the cell it most likely meant, when its name differs from exactly
+   * one cell not in the upload only by dropped leading zeros (MAPA-403). A suggestion only - nothing is applied.
+   */
+  open var suggestedLocationKey: String? = null,
+
+  /**
+   * Set when the cell is converted to another use (an office, store, shower ...). A converted cell holds no capacity,
+   * so the import changes none and the certificate records 0 for it, whatever the file says (MAPA-413).
+   */
+  open var convertedCellType: String? = null,
+
   open var message: String? = null,
 
   open var processedDate: LocalDateTime? = null,
@@ -243,6 +329,56 @@ open class CellCertificateUploadLocation(
     this.processedDate = processedDate
   }
 
+  /**
+   * Everything processing worked out for this row. A preview works a row out inside a transaction that is then
+   * rolled back, so the outcome is copied out first and written back with [applyOutcome] afterwards.
+   */
+  fun recordCurrentCertified(certified: CertifiedCapacity?) {
+    currentCertifiedMaxCapacity = certified?.maxCapacity
+    currentCertifiedWorkingCapacity = certified?.workingCapacity
+    currentCertifiedNormalAccommodation = certified?.certifiedNormalAccommodation
+  }
+
+  fun outcome() = CellCertificateUploadLocationOutcome(
+    status = status,
+    message = message,
+    processedDate = processedDate,
+    previousMaxCapacity = previousMaxCapacity,
+    appliedMaxCapacity = appliedMaxCapacity,
+    previousWorkingCapacity = previousWorkingCapacity,
+    appliedWorkingCapacity = appliedWorkingCapacity,
+    previousCertifiedNormalAccommodation = previousCertifiedNormalAccommodation,
+    previousCellMark = previousCellMark,
+    previousInCellSanitation = previousInCellSanitation,
+    workingCapacityMismatch = workingCapacityMismatch,
+    maxCapacityMismatch = maxCapacityMismatch,
+    certifiedNormalAccommodationMismatch = certifiedNormalAccommodationMismatch,
+    currentCertifiedMaxCapacity = currentCertifiedMaxCapacity,
+    currentCertifiedWorkingCapacity = currentCertifiedWorkingCapacity,
+    currentCertifiedNormalAccommodation = currentCertifiedNormalAccommodation,
+    convertedCellType = convertedCellType,
+  )
+
+  fun applyOutcome(outcome: CellCertificateUploadLocationOutcome) {
+    status = outcome.status
+    message = outcome.message
+    processedDate = outcome.processedDate
+    previousMaxCapacity = outcome.previousMaxCapacity
+    appliedMaxCapacity = outcome.appliedMaxCapacity
+    previousWorkingCapacity = outcome.previousWorkingCapacity
+    appliedWorkingCapacity = outcome.appliedWorkingCapacity
+    previousCertifiedNormalAccommodation = outcome.previousCertifiedNormalAccommodation
+    previousCellMark = outcome.previousCellMark
+    previousInCellSanitation = outcome.previousInCellSanitation
+    workingCapacityMismatch = outcome.workingCapacityMismatch
+    maxCapacityMismatch = outcome.maxCapacityMismatch
+    certifiedNormalAccommodationMismatch = outcome.certifiedNormalAccommodationMismatch
+    currentCertifiedMaxCapacity = outcome.currentCertifiedMaxCapacity
+    currentCertifiedWorkingCapacity = outcome.currentCertifiedWorkingCapacity
+    currentCertifiedNormalAccommodation = outcome.currentCertifiedNormalAccommodation
+    convertedCellType = outcome.convertedCellType
+  }
+
   companion object {
     private val COMPARATOR = compareBy<CellCertificateUploadLocation> { it.locationKey }
   }
@@ -269,10 +405,36 @@ open class CellCertificateUploadLocation(
     workingCapacityMismatch = workingCapacityMismatch,
     maxCapacityMismatch = maxCapacityMismatch,
     certifiedNormalAccommodationMismatch = certifiedNormalAccommodationMismatch,
+    currentCertifiedMaxCapacity = currentCertifiedMaxCapacity,
+    currentCertifiedWorkingCapacity = currentCertifiedWorkingCapacity,
+    currentCertifiedNormalAccommodation = currentCertifiedNormalAccommodation,
+    suggestedLocationKey = suggestedLocationKey,
+    convertedCellType = convertedCellType,
   )
 
   override fun toString(): String = "CellCertificateUploadLocation(locationKey='$locationKey', status=$status)"
 }
+
+/** The result of processing one uploaded row - see [CellCertificateUploadLocation.outcome]. */
+data class CellCertificateUploadLocationOutcome(
+  val status: CellCertificateUploadLocationStatus,
+  val message: String?,
+  val processedDate: LocalDateTime?,
+  val previousMaxCapacity: Int?,
+  val appliedMaxCapacity: Int?,
+  val previousWorkingCapacity: Int?,
+  val appliedWorkingCapacity: Int?,
+  val previousCertifiedNormalAccommodation: Int?,
+  val previousCellMark: String?,
+  val previousInCellSanitation: Boolean?,
+  val workingCapacityMismatch: Boolean,
+  val maxCapacityMismatch: Boolean,
+  val certifiedNormalAccommodationMismatch: Boolean,
+  val currentCertifiedMaxCapacity: Int?,
+  val currentCertifiedWorkingCapacity: Int?,
+  val currentCertifiedNormalAccommodation: Int?,
+  val convertedCellType: String?,
+)
 
 /**
  * A certifiable cell that had no row in a cell certificate upload, recorded so the ingestion report can
@@ -300,6 +462,13 @@ open class CellCertificateUploadOmittedLocation(
 
   @Column(nullable = false)
   open val certifiedNormalAccommodation: Int,
+
+  /** On the current certificate, so carried forward unchanged, rather than added to the certificate. */
+  @Column(nullable = false)
+  open val onCurrentCertificate: Boolean = false,
+
+  /** The name a failed row most likely used for this cell - see [CellCertificateUploadLocation.suggestedLocationKey]. */
+  open var uploadedAsKey: String? = null,
 ) : Comparable<CellCertificateUploadOmittedLocation> {
 
   companion object {
@@ -314,6 +483,8 @@ open class CellCertificateUploadOmittedLocation(
     maxCapacity = maxCapacity,
     workingCapacity = workingCapacity,
     certifiedNormalAccommodation = certifiedNormalAccommodation,
+    onCurrentCertificate = onCurrentCertificate,
+    uploadedAsKey = uploadedAsKey,
   )
 
   override fun toString(): String = "CellCertificateUploadOmittedLocation(locationKey='$locationKey')"

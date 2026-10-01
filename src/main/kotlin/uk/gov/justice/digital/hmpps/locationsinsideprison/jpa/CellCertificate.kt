@@ -96,6 +96,18 @@ open class CellCertificate(
 
   fun findLocationInCertificate(pathHierarchy: String) = findAllLocations().firstOrNull { it.pathHierarchy == pathHierarchy }
 
+  /**
+   * The certified max capacity, working capacity and CNA of every location on this certificate that records all
+   * three, keyed by path hierarchy. Reads the certificate once, unlike [findLocationInCertificate], which walks it
+   * on every call. Includes wings and landings, whose values are totals - callers wanting cells must filter.
+   */
+  fun certifiedCapacitiesByPath(): Map<String, CertifiedCapacity> = findAllLocations().mapNotNull { location ->
+    val maxCapacity = location.maxCapacity ?: return@mapNotNull null
+    val workingCapacity = location.workingCapacity ?: return@mapNotNull null
+    val certifiedNormalAccommodation = location.certifiedNormalAccommodation ?: return@mapNotNull null
+    location.pathHierarchy to CertifiedCapacity(maxCapacity, workingCapacity, certifiedNormalAccommodation)
+  }.toMap()
+
   private fun findAllLocations(): List<CellCertificateLocation> {
     val subLocations = mutableListOf<CellCertificateLocation>()
 

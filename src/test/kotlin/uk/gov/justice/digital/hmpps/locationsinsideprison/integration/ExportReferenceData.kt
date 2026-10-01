@@ -21,6 +21,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualLocationCod
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NotificationGroup
 import java.io.File
@@ -72,6 +73,7 @@ class ExportReferenceData : SqsIntegrationTestBase() {
     rows += enumRows("certification_approval_request.approval_type", ApprovalType.entries) { it.description }
     rows += enumRows("cell_certificate_upload.status", CellCertificateUploadStatus.entries) { it.description }
     rows += enumRows("cell_certificate_upload_location.status", CellCertificateUploadLocationStatus.entries) { it.description }
+    rows += enumRows("cell_certificate_upload.mode", CellCertificateUploadMode.entries) { it.description }
     rows += enumRows("prison_notification_mailbox.notification_group", NotificationGroup.entries) { NOTIFICATION_GROUPS.getValue(it) }
 
     assertThat(rows.filter { it.description.isBlank() }.map { "${it.columnRef}.${it.code}" })

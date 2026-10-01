@@ -3,6 +3,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
 import java.time.LocalDateTime
 import java.util.UUID
@@ -18,6 +19,25 @@ data class CellCertificateUploadDto(
 
   @param:Schema(description = "Current status of the upload", example = "PENDING", required = true)
   val status: CellCertificateUploadStatus,
+
+  @param:Schema(
+    description = "PREVIEW works out what the import would do without changing anything; IMPORT changes the locations and creates a new cell certificate",
+    example = "PREVIEW",
+    required = true,
+  )
+  val mode: CellCertificateUploadMode = CellCertificateUploadMode.IMPORT,
+
+  @param:Schema(description = "On an import, the preview it was continued from")
+  val previewUploadId: UUID? = null,
+
+  @param:Schema(description = "On a preview, the import it was continued as, once the user has continued it")
+  val continuedAsUploadId: UUID? = null,
+
+  @param:Schema(description = "On a finished preview, the totals of the prison's current cell certificate, if it has one")
+  val currentCertificateTotals: CellCertificateTotalsDto? = null,
+
+  @param:Schema(description = "On a finished preview, the totals the new cell certificate would have if the import went ahead")
+  val projectedCertificateTotals: CellCertificateTotalsDto? = null,
 
   @param:Schema(description = "Total number of records to be processed", example = "240", required = true)
   val totalRecords: Int,
@@ -44,6 +64,13 @@ data class CellCertificateUploadDto(
     required = true,
   )
   val notOnCertificateRecords: Int = 0,
+
+  @param:Schema(
+    description = "Of notOnCertificateRecords, the cells already on the current certificate, carried forward unchanged. The rest are added to the certificate.",
+    example = "0",
+    required = true,
+  )
+  val carriedForwardRecords: Int = 0,
 
   @param:Schema(description = "Who requested the upload", example = "MALEXANDER_GEN", required = true)
   val requestedBy: String,
@@ -73,6 +100,18 @@ data class CellCertificateUploadDto(
   val locationsNotOnCertificate: List<CellCertificateUploadOmittedLocationDto>? = null,
 )
 
+@Schema(description = "Capacity totals across a whole cell certificate")
+data class CellCertificateTotalsDto(
+  @param:Schema(description = "Total max capacity", example = "240", required = true)
+  val maxCapacity: Int,
+
+  @param:Schema(description = "Total working capacity", example = "230", required = true)
+  val workingCapacity: Int,
+
+  @param:Schema(description = "Total certified normal accommodation", example = "220", required = true)
+  val certifiedNormalAccommodation: Int,
+)
+
 @Schema(description = "A certifiable cell that had no row in the upload, carried onto the new certificate at its current values")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CellCertificateUploadOmittedLocationDto(
@@ -90,6 +129,16 @@ data class CellCertificateUploadOmittedLocationDto(
 
   @param:Schema(description = "Certified normal accommodation the cell was carried onto the new certificate at", example = "2", required = true)
   val certifiedNormalAccommodation: Int,
+
+  @param:Schema(
+    description = "True when the cell is on the current certificate and is carried forward unchanged; false when it is added to the certificate",
+    example = "true",
+    required = true,
+  )
+  val onCurrentCertificate: Boolean = false,
+
+  @param:Schema(description = "The name a failed row most likely used for this cell, when it differs only by dropped leading zeros", example = "MDI-A-1-5")
+  val uploadedAsKey: String? = null,
 )
 
 @Schema(description = "Result of processing a single uploaded cell")
@@ -163,4 +212,25 @@ data class CellCertificateUploadLocationDto(
     required = true,
   )
   val certifiedNormalAccommodationMismatch: Boolean = false,
+
+  @param:Schema(description = "Max capacity the prison's current certificate records for this cell; absent when the cell is not on it", example = "2")
+  val currentCertifiedMaxCapacity: Int? = null,
+
+  @param:Schema(description = "Working capacity the prison's current certificate records for this cell; absent when the cell is not on it", example = "2")
+  val currentCertifiedWorkingCapacity: Int? = null,
+
+  @param:Schema(description = "CNA the prison's current certificate records for this cell; absent when the cell is not on it", example = "2")
+  val currentCertifiedNormalAccommodation: Int? = null,
+
+  @param:Schema(
+    description = "For a row whose location was not found: the cell it most likely meant, when the name differs from exactly one cell not in the upload only by dropped leading zeros. A suggestion only.",
+    example = "MDI-A-1-005",
+  )
+  val suggestedLocationKey: String? = null,
+
+  @param:Schema(
+    description = "Set when the cell is converted to another use; it holds no capacity, so the import changes none and the certificate records 0",
+    example = "Office",
+  )
+  val convertedCellType: String? = null,
 )

@@ -13,4 +13,7 @@ data class CellCertificateUploadEvent(
 
 enum class CellCertificateUploadEventType {
   START_PROCESSING,
+
+  /** Work out what the import would do without changing anything. */
+  START_PREVIEW,
 }

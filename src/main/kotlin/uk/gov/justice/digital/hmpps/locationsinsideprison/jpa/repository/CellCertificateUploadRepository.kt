@@ -8,12 +8,28 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUpload
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
+import java.time.LocalDateTime
 import java.util.UUID
 
 @Repository
 interface CellCertificateUploadRepository : JpaRepository<CellCertificateUpload, UUID> {
-  fun findFirstByPrisonIdAndStatusIn(prisonId: String, statuses: Collection<CellCertificateUploadStatus>): CellCertificateUpload?
+  fun findFirstByPrisonIdAndModeAndStatusIn(prisonId: String, mode: CellCertificateUploadMode, statuses: Collection<CellCertificateUploadStatus>): CellCertificateUpload?
+
+  /** The import a preview was continued as, if it has been continued. */
+  fun findFirstByPreviewUploadId(previewUploadId: UUID): CellCertificateUpload?
+
+  /** The imports a set of previews were continued as, in one query rather than one per preview. */
+  fun findByPreviewUploadIdIn(previewUploadIds: Collection<UUID>): List<CellCertificateUpload>
+
+  /** Whether an import for the prison finished after the given time, which makes an earlier preview out of date. */
+  fun existsByPrisonIdAndModeAndStatusAndEndTimeAfter(
+    prisonId: String,
+    mode: CellCertificateUploadMode,
+    status: CellCertificateUploadStatus,
+    endTime: LocalDateTime,
+  ): Boolean
 
   /**
    * Fetches the upload while taking a pessimistic write lock (SELECT ... FOR UPDATE) so that concurrent
