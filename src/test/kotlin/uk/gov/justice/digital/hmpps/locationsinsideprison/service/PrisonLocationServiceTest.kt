@@ -55,7 +55,7 @@ class PrisonLocationServiceTest {
   fun `Get prisoners in location by key`() {
     val cell: Cell = mock()
     whenever(cell.getPathHierarchy()).thenReturn("path")
-    whenever(cell.cellLocations()).thenReturn(listOf(cell))
+    whenever(cell.occupiableLocations()).thenReturn(listOf(cell))
     whenever(cell.prisonId).thenReturn("MDI")
     val prisoner = Prisoner(
       prisonerNumber = "P1",
@@ -100,7 +100,7 @@ class PrisonLocationServiceTest {
     )
 
     whenever(cell.getPathHierarchy()).thenReturn("path")
-    whenever(cell.cellLocations()).thenReturn(listOf(cell))
+    whenever(cell.occupiableLocations()).thenReturn(listOf(cell))
     whenever(cell.prisonId).thenReturn("MDI")
     val prisoner = Prisoner(
       prisonerNumber = "P1",

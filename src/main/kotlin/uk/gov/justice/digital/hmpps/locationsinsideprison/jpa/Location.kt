@@ -296,6 +296,14 @@ abstract class Location(
   fun cellLocations() = findAllLeafLocations().filterIsInstance<Cell>().filter { !it.isPermanentlyDeactivated() }
 
   /**
+   * The locations at or below this one that a prisoner's cell location can point at: its cells, plus virtual locations
+   * such as RECP, COURT and TAP. A virtual location is not a [Cell], so [cellLocations] alone drops it, and asking who is
+   * in reception returned nobody (MAPA-311).
+   */
+  fun occupiableLocations() = findAllLeafLocations().filterIsInstance<ResidentialLocation>()
+    .filter { (it is Cell || it is VirtualResidentialLocation) && !it.isPermanentlyDeactivated() }
+
+  /**
    * The cells at or below this location whose capacity and certification an archive strips and an unarchive
    * restores. Converted cells hold neither, so they are left alone, as are cells already archived in their own right
    * or under a different archived ancestor - those were stripped by their own archive and are restored by it.

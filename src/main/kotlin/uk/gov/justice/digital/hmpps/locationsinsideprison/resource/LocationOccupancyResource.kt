@@ -23,6 +23,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttribu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.LocationService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.Prisoner
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonerLocationService
 import java.util.*
 
 @RestController
@@ -34,6 +35,7 @@ import java.util.*
 )
 class LocationOccupancyResource(
   private val locationService: LocationService,
+  private val prisonerLocationService: PrisonerLocationService,
 ) {
 
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
@@ -85,6 +87,64 @@ class LocationOccupancyResource(
     specialistCellType = specialistCellType,
     includePrisonerInformation = includePrisonerInformation,
   )
+
+  @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
+  @GetMapping("/reception/{prisonId}")
+  @ResponseStatus(HttpStatus.OK)
+  @Operation(
+    summary = "Whether reception at a prison has space, and who is in reception.",
+    description = """Capacity, occupancy and space are for the RECP location only. The list of prisoners covers everyone
+      currently in the prison at RECP, COURT or TAP. CSWAP is not included. A prison without a RECP location
+      reports zero capacity and no space. Requires role VIEW_LOCATIONS""",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns reception capacity, occupancy and the prisoners in reception",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the VIEW_LOCATIONS role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getReceptionOccupancy(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
+    @PathVariable prisonId: String,
+  ): ReceptionOccupancy = prisonerLocationService.receptionOccupancy(prisonId)
+}
+
+@Schema(description = "Reception capacity and occupancy, with the prisoners currently in reception")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class ReceptionOccupancy(
+  @param:Schema(title = "RECP location identifier. Absent when the prison has no RECP location.", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0")
+  val id: UUID? = null,
+  @param:Schema(description = "Prison ID", example = "MDI", required = true)
+  val prisonId: String,
+  @param:Schema(description = "Path hierarchy of the reception location", example = "RECP", required = true)
+  val pathHierarchy: String,
+  @param:Schema(required = true, title = "Max capacity of RECP.", example = "40")
+  val maxCapacity: Int,
+  @param:Schema(required = true, title = "Working capacity of RECP. Zero means max capacity applies.", example = "0")
+  val workingCapacity: Int,
+  @param:Schema(required = true, title = "Number of prisoners currently in RECP.", example = "12")
+  val noOfOccupants: Int,
+  @param:Schema(title = "Prisoners currently in reception: those at RECP, COURT or TAP and in the prison", required = true)
+  val prisoners: List<Prisoner>,
+) {
+  @Schema(description = "Business Key for the reception location", example = "MDI-RECP", required = true)
+  fun getKey(): String = "$prisonId-$pathHierarchy"
+
+  @Schema(description = "True when RECP has fewer occupants than its capacity (working capacity, or max capacity when working capacity is zero)", required = true)
+  fun getHasSpace(): Boolean = noOfOccupants < (if (workingCapacity != 0) workingCapacity else maxCapacity)
 }
 
 @Schema(description = "Cell with specialist cell attributes details")

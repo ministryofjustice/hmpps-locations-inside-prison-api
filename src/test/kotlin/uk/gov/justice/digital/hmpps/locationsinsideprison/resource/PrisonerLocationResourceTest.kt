@@ -163,6 +163,52 @@ class PrisonerLocationResourceTest : CommonDataTestBase() {
     }
   }
 
+  @DisplayName("GET /prisoner-locations for a virtual location")
+  @Nested
+  inner class VirtualLocationTest {
+
+    @Test
+    fun `can retrieve the prisoners in a virtual location by key`() {
+      prisonerSearchMockServer.stubSearchByLocations(tap.prisonId, listOf("TAP"), true)
+
+      webTestClient.get().uri("/prisoner-locations/key/${tap.getKey()}")
+        .headers(setAuthorisation(roles = listOf("VIEW_PRISONER_LOCATIONS")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().json(
+          """
+          [
+            {
+              "cellLocation": "TAP",
+              "prisoners": [
+                {
+                  "prisonerNumber": "A0000AA",
+                  "prisonId": "MDI",
+                  "cellLocation": "TAP"
+                }
+              ]
+            }
+          ]
+          """,
+          JsonCompareMode.LENIENT,
+        )
+    }
+
+    @Test
+    fun `can retrieve the prisoners in a virtual location by id`() {
+      prisonerSearchMockServer.stubSearchByLocations(tap.prisonId, listOf("TAP"), true)
+
+      webTestClient.get().uri("/prisoner-locations/id/${tap.id}")
+        .headers(setAuthorisation(roles = listOf("VIEW_PRISONER_LOCATIONS")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody()
+        .jsonPath("$.length()").isEqualTo(1)
+        .jsonPath("$[0].cellLocation").isEqualTo("TAP")
+        .jsonPath("$[0].prisoners[0].prisonerNumber").isEqualTo("A0000AA")
+    }
+  }
+
   @Nested
   inner class PrisonerLocationKeyTest {
     @Nested
