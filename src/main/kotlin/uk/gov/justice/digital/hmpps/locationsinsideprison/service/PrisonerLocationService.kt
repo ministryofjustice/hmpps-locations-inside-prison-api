@@ -10,11 +10,16 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualLocationCode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.VirtualResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.getReceptionLocationCodes
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.CapacityException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ErrorCode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.LocationNotFoundException
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReceptionOccupancy
 import java.util.*
 import kotlin.jvm.optionals.getOrNull
 
@@ -39,25 +44,54 @@ class PrisonerLocationService(
     val location = locationRepository.findOneByKey(key)
       ?: throw LocationNotFoundException("Location $key not found")
 
-    return getPrisonersAndMap(prisonersInLocations(location.prisonId, location.cellLocations()))
+    return getPrisonersAndMap(prisonersInLocations(location.prisonId, location.occupiableLocations()))
   }
 
   fun prisonersInLocations(id: UUID): List<PrisonerLocation> {
     val location = locationRepository.findById(id).getOrNull()
       ?: throw LocationNotFoundException("Location $id not found")
 
-    return getPrisonersAndMap(prisonersInLocations(location.prisonId, location.cellLocations()))
+    return getPrisonersAndMap(prisonersInLocations(location.prisonId, location.occupiableLocations()))
   }
 
   fun prisonersInLocations(location: Location): List<Prisoner> = prisonersInLocations(location.prisonId, location.cellLocations())
 
-  fun prisonersInLocations(prisonId: String, locations: List<Cell>): List<Prisoner> {
+  fun prisonersInLocations(prisonId: String, locations: List<ResidentialLocation>): List<Prisoner> {
     val locationsToCheck = locations.map { it.getPathHierarchy() }.sorted()
     return if (locationsToCheck.isNotEmpty()) {
       prisonerSearchService.findPrisonersInLocations(prisonId, locationsToCheck)
     } else {
       listOf()
     }
+  }
+
+  /**
+   * Whether reception has room, and who is in reception (MAPA-311).
+   *
+   * Capacity, occupancy and space are for RECP only: it is the location people are moved into, and the only one
+   * prison-api's receptionsWithCapacity ever checked, so counting anywhere else would make reception look fuller than
+   * it is. The list of prisoners is wider - everyone IN at RECP, COURT or TAP ([getReceptionLocationCodes]), the same
+   * set the establishment roll counts as in reception. CSWAP is not reception and is left out.
+   *
+   * A prison with no RECP location reports no capacity and no space, which is what prison-api's empty list meant. An
+   * inactive RECP reports no space.
+   */
+  fun receptionOccupancy(prisonId: String): ReceptionOccupancy {
+    val reception = locationRepository.findOneByKey("$prisonId-${VirtualLocationCode.RECP.name}") as? VirtualResidentialLocation
+    val prisoners = prisonerSearchService.findPrisonersInLocations(prisonId, getReceptionLocationCodes())
+      .filter { it.inOutStatus == "IN" }
+      .sortedWith(compareBy({ it.cellLocation }, { it.lastName }, { it.firstName }))
+
+    return ReceptionOccupancy(
+      id = reception?.id,
+      prisonId = prisonId,
+      pathHierarchy = VirtualLocationCode.RECP.name,
+      maxCapacity = reception?.getMaxCapacity() ?: 0,
+      workingCapacity = reception?.getWorkingCapacity() ?: 0,
+      active = reception?.isActiveAndAllParentsActive() ?: false,
+      noOfOccupants = prisoners.count { it.cellLocation == VirtualLocationCode.RECP.name },
+      prisoners = prisoners,
+    )
   }
 
   private fun getPrisonersAndMap(prisonerLocations: List<Prisoner>) = prisonerLocations

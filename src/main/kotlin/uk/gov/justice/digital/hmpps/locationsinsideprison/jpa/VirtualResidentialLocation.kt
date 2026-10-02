@@ -107,13 +107,13 @@ open class VirtualResidentialLocation(
     0
   }
 
-  private fun getWorkingCapacity(): Int = if (isActiveAndAllParentsActive()) {
+  fun getWorkingCapacity(): Int = if (isActiveAndAllParentsActive()) {
     capacity?.workingCapacity ?: 0
   } else {
     0
   }
 
-  private fun getMaxCapacity(): Int = if (!isPermanentlyDeactivated()) {
+  fun getMaxCapacity(): Int = if (!isPermanentlyDeactivated()) {
     capacity?.maxCapacity ?: 0
   } else {
     0

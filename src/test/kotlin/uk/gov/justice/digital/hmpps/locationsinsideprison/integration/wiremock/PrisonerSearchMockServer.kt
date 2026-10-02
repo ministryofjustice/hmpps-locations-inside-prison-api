@@ -40,6 +40,7 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
     locations: List<String>,
     returnResult: Boolean = false,
     numberOfPrisonersInCell: Int = 1,
+    prisoners: List<Prisoner>? = null,
   ) {
     val requestBody = mapper.writeValueAsString(
       /* value = */
@@ -62,7 +63,9 @@ class PrisonerSearchMockServer : WireMockServer(WIREMOCK_PORT) {
     var result = SearchResult(
       content = mutableListOf(),
     )
-    if (returnResult) {
+    if (prisoners != null) {
+      result = result.copy(content = prisoners)
+    } else if (returnResult) {
       result = result.copy(
         content = locations.flatMapIndexed { index, location ->
           (0 until numberOfPrisonersInCell).map { prisonerIndex ->
