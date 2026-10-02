@@ -6,16 +6,19 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.CsvSource
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.info.BuildProperties
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.boot.webtestclient.autoconfigure.AutoConfigureWebTestClient
 import org.springframework.http.MediaType
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @AutoConfigureWebTestClient(timeout = "PT60S")
 class OpenApiDocsTest : SqsIntegrationTestBase() {
   @LocalServerPort
   private val port: Int = 0
+
+  @Autowired
+  private lateinit var buildProperties: BuildProperties
 
   @Test
   fun `open api docs are available`() {
@@ -60,9 +63,7 @@ class OpenApiDocsTest : SqsIntegrationTestBase() {
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
       .expectStatus().isOk
-      .expectBody().jsonPath("info.version").value<String> {
-        assertThat(it).startsWith(DateTimeFormatter.ISO_DATE.format(LocalDate.now()))
-      }
+      .expectBody().jsonPath("info.version").isEqualTo(buildProperties.version!!)
   }
 
   @ParameterizedTest
