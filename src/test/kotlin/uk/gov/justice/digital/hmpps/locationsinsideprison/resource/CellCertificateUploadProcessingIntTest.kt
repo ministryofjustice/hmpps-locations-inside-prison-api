@@ -7,7 +7,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.transaction.support.TransactionTemplate
-import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
@@ -46,7 +45,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
 
   @BeforeEach
   fun cleanUp() {
-    uploadQueue.sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(uploadQueue.queueUrl).build())
+    uploadQueue.sqsClient.purgeAndAwaitEmpty(uploadQueue.queueUrl)
     cellCertificateUploadRepository.deleteAll()
   }
 

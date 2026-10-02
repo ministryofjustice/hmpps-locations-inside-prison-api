@@ -8,7 +8,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.transaction.support.TransactionTemplate
-import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateTotalsDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
@@ -53,7 +52,7 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
 
   @BeforeEach
   fun setUpPreviewData() {
-    uploadQueue.sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(uploadQueue.queueUrl).build())
+    uploadQueue.sqsClient.purgeAndAwaitEmpty(uploadQueue.queueUrl)
     cellCertificateUploadRepository.deleteAll()
 
     cellWithoutWorkingCapacity = repository.save(

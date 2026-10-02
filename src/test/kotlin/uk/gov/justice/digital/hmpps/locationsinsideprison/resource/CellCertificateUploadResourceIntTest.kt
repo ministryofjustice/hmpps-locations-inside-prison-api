@@ -13,7 +13,6 @@ import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import org.springframework.transaction.support.TransactionTemplate
-import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUpload
@@ -44,7 +43,7 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
 
   @BeforeEach
   fun cleanUploads() {
-    uploadQueue.sqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(uploadQueue.queueUrl).build())
+    uploadQueue.sqsClient.purgeAndAwaitEmpty(uploadQueue.queueUrl)
     cellCertificateUploadRepository.deleteAll()
   }
 
