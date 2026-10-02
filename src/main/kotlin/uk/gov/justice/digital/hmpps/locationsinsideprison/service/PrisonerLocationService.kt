@@ -73,7 +73,8 @@ class PrisonerLocationService(
    * it is. The list of prisoners is wider - everyone IN at RECP, COURT or TAP ([getReceptionLocationCodes]), the same
    * set the establishment roll counts as in reception. CSWAP is not reception and is left out.
    *
-   * A prison with no RECP location reports no capacity and no space, which is what prison-api's empty list meant.
+   * A prison with no RECP location reports no capacity and no space, which is what prison-api's empty list meant. An
+   * inactive RECP reports no space.
    */
   fun receptionOccupancy(prisonId: String): ReceptionOccupancy {
     val reception = locationRepository.findOneByKey("$prisonId-${VirtualLocationCode.RECP.name}") as? VirtualResidentialLocation
@@ -87,6 +88,7 @@ class PrisonerLocationService(
       pathHierarchy = VirtualLocationCode.RECP.name,
       maxCapacity = reception?.getMaxCapacity() ?: 0,
       workingCapacity = reception?.getWorkingCapacity() ?: 0,
+      active = reception?.isActiveAndAllParentsActive() ?: false,
       noOfOccupants = prisoners.count { it.cellLocation == VirtualLocationCode.RECP.name },
       prisoners = prisoners,
     )

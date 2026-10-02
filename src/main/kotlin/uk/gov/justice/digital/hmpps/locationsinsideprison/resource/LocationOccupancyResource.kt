@@ -95,7 +95,7 @@ class LocationOccupancyResource(
     summary = "Whether reception at a prison has space, and who is in reception.",
     description = """Capacity, occupancy and space are for the RECP location only. The list of prisoners covers everyone
       currently in the prison at RECP, COURT or TAP. CSWAP is not included. A prison without a RECP location
-      reports zero capacity and no space. Requires role VIEW_LOCATIONS""",
+      reports zero capacity and no space, as does an inactive RECP. Requires role VIEW_LOCATIONS""",
     responses = [
       ApiResponse(
         responseCode = "200",
@@ -135,6 +135,8 @@ data class ReceptionOccupancy(
   val maxCapacity: Int,
   @param:Schema(required = true, title = "Working capacity of RECP. Zero means max capacity applies.", example = "0")
   val workingCapacity: Int,
+  @param:Schema(required = true, title = "Whether RECP and all its parents are active. An inactive reception never has space.", example = "true")
+  val active: Boolean,
   @param:Schema(required = true, title = "Number of prisoners currently in RECP.", example = "12")
   val noOfOccupants: Int,
   @param:Schema(title = "Prisoners currently in reception: those at RECP, COURT or TAP and in the prison", required = true)
@@ -143,8 +145,12 @@ data class ReceptionOccupancy(
   @Schema(description = "Business Key for the reception location", example = "MDI-RECP", required = true)
   fun getKey(): String = "$prisonId-$pathHierarchy"
 
-  @Schema(description = "True when RECP has fewer occupants than its capacity (working capacity, or max capacity when working capacity is zero)", required = true)
-  fun getHasSpace(): Boolean = noOfOccupants < (if (workingCapacity != 0) workingCapacity else maxCapacity)
+  /**
+   * An inactive RECP reports a working capacity of 0 but keeps its max capacity, so the capacity rule alone would fall
+   * back to max capacity and offer the inactive reception as a move destination.
+   */
+  @Schema(description = "True when RECP is active and has fewer occupants than its capacity (working capacity, or max capacity when working capacity is zero)", required = true)
+  fun getHasSpace(): Boolean = active && noOfOccupants < (if (workingCapacity != 0) workingCapacity else maxCapacity)
 }
 
 @Schema(description = "Cell with specialist cell attributes details")

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.wiremock.createPrisoner
@@ -18,8 +19,8 @@ class ReceptionOccupancyResourceTest : CommonDataTestBase() {
   // The search always asks for the whole reception set, sorted - never CSWAP
   private val receptionCodes = listOf("COURT", "RECP", "TAP")
 
-  private fun saveReception(capacity: Capacity): VirtualResidentialLocation = repository.save(
-    buildVirtualResidentialLocation(pathHierarchy = "RECP", localName = "Reception", capacity = capacity),
+  private fun saveReception(capacity: Capacity, status: LocationStatus = LocationStatus.ACTIVE): VirtualResidentialLocation = repository.save(
+    buildVirtualResidentialLocation(pathHierarchy = "RECP", localName = "Reception", capacity = capacity, status = status),
   )
 
   @DisplayName("GET /location-occupancy/reception/{prisonId}")
@@ -85,6 +86,7 @@ class ReceptionOccupancyResourceTest : CommonDataTestBase() {
               "key": "MDI-RECP",
               "maxCapacity": 10,
               "workingCapacity": 0,
+              "active": true,
               "noOfOccupants": 2,
               "hasSpace": true
             }
@@ -118,6 +120,23 @@ class ReceptionOccupancyResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `reports no space when RECP is inactive, even though it keeps its max capacity`() {
+        saveReception(Capacity(maxCapacity = 10, workingCapacity = 0), status = LocationStatus.INACTIVE)
+        prisonerSearchMockServer.stubSearchByLocations(prisonId = "MDI", locations = receptionCodes)
+
+        webTestClient.get().uri("/location-occupancy/reception/MDI")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$.active").isEqualTo(false)
+          .jsonPath("$.maxCapacity").isEqualTo(10)
+          .jsonPath("$.workingCapacity").isEqualTo(0)
+          .jsonPath("$.noOfOccupants").isEqualTo(0)
+          .jsonPath("$.hasSpace").isEqualTo(false)
+      }
+
+      @Test
       fun `reports no capacity and no space for a prison without a reception`() {
         prisonerSearchMockServer.stubSearchByLocations(prisonId = "BXI", locations = receptionCodes)
 
@@ -129,6 +148,7 @@ class ReceptionOccupancyResourceTest : CommonDataTestBase() {
           .jsonPath("$.id").doesNotExist()
           .jsonPath("$.key").isEqualTo("BXI-RECP")
           .jsonPath("$.maxCapacity").isEqualTo(0)
+          .jsonPath("$.active").isEqualTo(false)
           .jsonPath("$.noOfOccupants").isEqualTo(0)
           .jsonPath("$.hasSpace").isEqualTo(false)
           .jsonPath("$.prisoners.length()").isEqualTo(0)
