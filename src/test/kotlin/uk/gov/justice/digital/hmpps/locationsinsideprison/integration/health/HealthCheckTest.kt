@@ -1,13 +1,14 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.integration.health
 
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.info.BuildProperties
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.function.Consumer
 
 class HealthCheckTest : SqsIntegrationTestBase() {
+
+  @Autowired
+  private lateinit var buildProperties: BuildProperties
 
   @Test
   fun `Health page reports ok`() {
@@ -29,11 +30,7 @@ class HealthCheckTest : SqsIntegrationTestBase() {
     webTestClient.get().uri("/health")
       .exchange()
       .expectStatus().isOk
-      .expectBody().jsonPath("components.healthInfo.details.version").value(
-        Consumer<String> {
-          assertThat(it).startsWith(LocalDateTime.now().format(DateTimeFormatter.ISO_DATE))
-        },
-      )
+      .expectBody().jsonPath("components.healthInfo.details.version").isEqualTo(buildProperties.version!!)
   }
 
   private fun stubPings() {

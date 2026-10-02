@@ -18,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean
 import software.amazon.awssdk.services.sqs.SqsAsyncClient
-import software.amazon.awssdk.services.sqs.model.PurgeQueueRequest
 import software.amazon.awssdk.services.sqs.model.SendMessageRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateFromExternalSystemEvent
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.DeactivateLocationsRequest
@@ -59,8 +58,8 @@ class UpdateFromExternalSystemEventsTest : CommonDataTestBase() {
 
     whenever(hmppsAuthenticationHolder.username).thenReturn("User 1")
 
-    queueSqsClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(queueUrl).build())
-    queueSqsDlqClient.purgeQueue(PurgeQueueRequest.builder().queueUrl(dlqUrl).build())
+    queueSqsClient.purgeAndAwaitEmpty(queueUrl)
+    queueSqsDlqClient.purgeAndAwaitEmpty(dlqUrl)
   }
 
   @Nested
