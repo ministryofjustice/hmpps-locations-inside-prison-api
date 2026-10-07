@@ -143,7 +143,7 @@ class SyncService(
   }
 
   private fun createLocation(upsert: NomisSyncLocationRequest): LegacyLocation {
-    val linkedTransaction = sharedLocationService.createLinkedTransaction(prisonId = upsert.prisonId, if (upsert.residentialHousingType != null) TransactionType.SYNC_NON_RESIDENTIAL else TransactionType.SYNC, "<pending>", upsert.lastUpdatedBy)
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(prisonId = upsert.prisonId, if (upsert.residentialHousingType != null) TransactionType.SYNC else TransactionType.SYNC_NON_RESIDENTIAL, "<pending>", upsert.lastUpdatedBy)
 
     val locationToCreate = upsert.toNewEntity(clock, linkedTransaction)
     findParent(upsert)?.let { locationToCreate.setParent(it) }

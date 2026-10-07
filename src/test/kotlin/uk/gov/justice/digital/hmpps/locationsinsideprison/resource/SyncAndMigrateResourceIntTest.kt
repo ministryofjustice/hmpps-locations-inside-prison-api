@@ -65,6 +65,13 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var locationHistory: LocationHistory
   lateinit var linkedTransaction: LinkedTransaction
 
+  // Linked transactions are not cleared between tests, so match on the detail rather than taking the latest
+  private fun syncCreateTransactionType(pathHierarchy: String) = linkedTransactionRepository.findAll()
+    .filter { it.transactionDetail == "NOMIS Sync (Create) [$pathHierarchy] in prison ZZGHI" }
+    .map { it.transactionType }
+    .distinct()
+    .single()
+
   @BeforeEach
   fun setUp() {
     locationHistoryRepository.deleteAll()
@@ -364,6 +371,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           """,
             JsonCompareMode.LENIENT,
           )
+
+        assertThat(syncCreateTransactionType("B-1-003")).isEqualTo(TransactionType.SYNC)
       }
 
       @Test
@@ -750,6 +759,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           """,
             JsonCompareMode.LENIENT,
           )
+
+        assertThat(syncCreateTransactionType("VISIT")).isEqualTo(TransactionType.SYNC_NON_RESIDENTIAL)
       }
 
       @Test
