@@ -47,6 +47,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocati
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialLocationDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialSummary
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.TidyLocalNamesReport
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.TidyLocalNamesRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.buildEventsToPublishOnUpdate
 import java.util.*
 
@@ -277,6 +279,48 @@ class LocationNonResidentialResource(
         InternalLocationDomainEventType.LOCATION_AMENDED to result.amended,
         InternalLocationDomainEventType.LOCATION_CREATED to result.created,
       )
+    }
+    return result.report
+  }
+
+  @PostMapping("/non-residential/prison/{prisonId}/tidy-local-names", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Removes spaces from the start and end of non-residential location names in a prison",
+    description = "Tidies names such as ' Gym' or 'Gym ' to 'Gym'. A location is skipped when another location in the " +
+      "prison already has the tidied name. Runs as a dry run unless dryRun is false. " +
+      "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns a report of what was done, or would be done on a dry run, for each location",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun tidyLocalNames(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
+    @NotBlank(message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
+    @PathVariable
+    prisonId: String,
+    @RequestBody
+    request: TidyLocalNamesRequest,
+  ): TidyLocalNamesReport {
+    val result = nonResidentialService.tidyLocalNames(prisonId, request)
+    eventPublish {
+      mapOf(InternalLocationDomainEventType.LOCATION_AMENDED to result.amended)
     }
     return result.report
   }

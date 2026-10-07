@@ -21,6 +21,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AlignChildrenToParentNameReport
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AlignmentAction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.TidyLocalNameAction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.TidyLocalNamesReport
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.generateNonResidentialCode
 import uk.gov.justice.hmpps.test.kotlin.auth.WithMockAuthUser
 import java.util.UUID
@@ -2569,6 +2571,167 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         val report = align("""{ "dryRun": false, "parentLocationIds": ["${sportsHall.id}", "${chapel.id}"] }""")
 
         assertThat(report.parents.map { it.action }).containsOnly(AlignmentAction.NO_ACTION)
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+    }
+  }
+
+  @DisplayName("POST /locations/non-residential/prison/{prisonId}/tidy-local-names")
+  @Nested
+  inner class TidyLocalNamesTest {
+
+    private val url = "/locations/non-residential/prison/MDI/tidy-local-names"
+
+    lateinit var leadingSpace: NonResidentialLocation
+    lateinit var trailingSpace: NonResidentialLocation
+    lateinit var bothEnds: NonResidentialLocation
+    lateinit var sharedNames: List<NonResidentialLocation>
+    lateinit var clashing: NonResidentialLocation
+    lateinit var existingWorkshop: NonResidentialLocation
+    lateinit var alreadyTidy: NonResidentialLocation
+
+    private val tidiedLocations get() = listOf(leadingSpace, trailingSpace, bothEnds) + sharedNames
+    private val allIds get() = (tidiedLocations + clashing + alreadyTidy).joinToString(", ") { "\"${it.id}\"" }
+
+    @BeforeEach
+    fun setUp() {
+      leadingSpace = repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = " Leading Room", pathHierarchy = "TLEAD"))
+      trailingSpace = repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = "Trailing Room ", pathHierarchy = "TTRAIL"))
+      bothEnds = repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = "  Both Ends\t", pathHierarchy = "TBOTH"))
+      // Like the property boxes at Chelmsford: many locations that already share the same untidy name
+      sharedNames = (1..3).map { repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = "Supp Shelf ", pathHierarchy = "TSHELF$it")) }
+      clashing = repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = " Workshop 02B", pathHierarchy = "TWS02B"))
+      existingWorkshop = repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = "WORKSHOP 02B", pathHierarchy = "WS02B"))
+      alreadyTidy = repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = "Tidy Room", pathHierarchy = "TTIDY"))
+    }
+
+    private fun tidy(body: String) = webTestClient.post().uri(url)
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(body)
+      .exchange()
+      .expectStatus().isOk
+      .expectBody(TidyLocalNamesReport::class.java)
+      .returnResult().responseBody!!
+
+    private fun storedName(location: NonResidentialLocation) = repository.findById(location.id!!).get().localName
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.post().uri(url)
+          .header("Content-Type", "application/json")
+          .bodyValue("{}")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.post().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .header("Content-Type", "application/json")
+          .bodyValue("{}")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden without write scope`() {
+        webTestClient.post().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("read")))
+          .header("Content-Type", "application/json")
+          .bodyValue("{}")
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @Test
+      fun `a dry run is the default, reports what would be done and changes nothing`() {
+        val report = tidy("{}")
+
+        assertThat(report.dryRun).isTrue()
+        val byId = report.locations.associateBy { it.id }
+        assertThat(byId[leadingSpace.id]!!.action).isEqualTo(TidyLocalNameAction.TIDIED)
+        assertThat(byId[leadingSpace.id]!!.newName).isEqualTo("Leading Room")
+        assertThat(byId[bothEnds.id]!!.newName).isEqualTo("Both Ends")
+        assertThat(sharedNames.map { byId[it.id]!!.action }).containsOnly(TidyLocalNameAction.TIDIED)
+        assertThat(byId[clashing.id]!!.action).isEqualTo(TidyLocalNameAction.SKIPPED)
+        assertThat(byId).doesNotContainKeys(alreadyTidy.id, existingWorkshop.id)
+
+        assertThat(storedName(leadingSpace)).isEqualTo(" Leading Room")
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
+      fun `tidies names, records history and publishes an amended event for each location`() {
+        val report = tidy("""{ "dryRun": false, "locationIds": [$allIds] }""")
+
+        assertThat(report.dryRun).isFalse()
+        assertThat(report.summary).isEqualTo(mapOf(TidyLocalNameAction.TIDIED to 6, TidyLocalNameAction.SKIPPED to 2))
+
+        assertThat(storedName(leadingSpace)).isEqualTo("Leading Room")
+        assertThat(storedName(trailingSpace)).isEqualTo("Trailing Room")
+        assertThat(storedName(bothEnds)).isEqualTo("Both Ends")
+        assertThat(sharedNames.map { storedName(it) }).containsOnly("Supp Shelf")
+        assertThat(storedName(alreadyTidy)).isEqualTo("Tidy Room")
+
+        getDomainEvents(6).let { events ->
+          assertThat(events.map { it.eventType to it.additionalInformation?.id }).containsExactlyInAnyOrderElementsOf(
+            tidiedLocations.map { "location.inside.prison.amended" to it.id },
+          )
+        }
+
+        val history = webTestClient.get().uri("/locations/${leadingSpace.id}?includeHistory=true")
+          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody(Location::class.java)
+          .returnResult().responseBody!!
+          .changeHistory!!
+          .single { it.attribute == "Local name" }
+        assertThat(history.oldValues).containsExactly(" Leading Room")
+        assertThat(history.newValues).containsExactly("Leading Room")
+      }
+
+      @Test
+      fun `skips a location whose tidied name another location already has`() {
+        val report = tidy("""{ "dryRun": false, "locationIds": ["${clashing.id}"] }""")
+
+        val result = report.locations.single()
+        assertThat(result.action).isEqualTo(TidyLocalNameAction.SKIPPED)
+        assertThat(result.reason).isEqualTo("Another location in the prison is already called 'Workshop 02B'")
+        assertThat(storedName(clashing)).isEqualTo(" Workshop 02B")
+        assertThat(storedName(existingWorkshop)).isEqualTo("WORKSHOP 02B")
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
+      fun `only the requested locations are tidied, and ones that need no tidying are reported as skipped`() {
+        val report = tidy("""{ "dryRun": false, "locationIds": ["${trailingSpace.id}", "${alreadyTidy.id}"] }""")
+
+        val byId = report.locations.associateBy { it.id }
+        assertThat(byId.keys).containsExactlyInAnyOrder(trailingSpace.id, alreadyTidy.id)
+        assertThat(byId[trailingSpace.id]!!.action).isEqualTo(TidyLocalNameAction.TIDIED)
+        assertThat(byId[alreadyTidy.id]!!.action).isEqualTo(TidyLocalNameAction.SKIPPED)
+        assertThat(storedName(leadingSpace)).isEqualTo(" Leading Room")
+        getDomainEvents(1)
+      }
+
+      @Test
+      fun `running again changes nothing`() {
+        tidy("""{ "dryRun": false, "locationIds": [$allIds] }""")
+        purgeDomainEvents()
+
+        val report = tidy("""{ "dryRun": false, "locationIds": [$allIds] }""")
+
+        assertThat(report.summary[TidyLocalNameAction.TIDIED]).isZero()
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
     }

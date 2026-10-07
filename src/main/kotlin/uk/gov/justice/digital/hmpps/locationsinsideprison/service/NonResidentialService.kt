@@ -485,6 +485,83 @@ class NonResidentialService(
     )
   }
 
+  /**
+   * Removes spaces (and other whitespace) from the start and end of the local names of non-residential locations in
+   * [prisonId]. Names like these came across from NOMIS and break exact look-ups by name in other services.
+   *
+   * A location is skipped when another location in the prison is already called the tidied name, since tidying would
+   * create a duplicate; the prison has to decide which to keep. Locations that only share the same untidy name are all
+   * tidied together.
+   *
+   * With [TidyLocalNamesRequest.dryRun] set, nothing is changed and the report shows what would be done.
+   */
+  @Transactional
+  fun tidyLocalNames(prisonId: String, request: TidyLocalNamesRequest): TidyLocalNamesResult {
+    val locationsInPrison = nonResidentialLocationRepository.findAllByPrisonId(prisonId)
+    val candidates = locationsInPrison
+      .filter { it.localName?.let { name -> name != name.trim() } == true }
+      .filter { request.locationIds == null || it.id in request.locationIds }
+      .sortedBy { it.getPathHierarchy() }
+    val existingNames = locationsInPrison
+      .filter { !it.isPermanentlyDeactivated() }
+      .mapNotNull { it.localName?.lowercase() }
+      .toSet()
+
+    val results = mutableListOf<LocalNameTidyResult>()
+    request.locationIds?.filter { id -> candidates.none { it.id == id } }?.forEach { id ->
+      results.add(LocalNameTidyResult(id = id, action = TidyLocalNameAction.SKIPPED, reason = "Not a non-residential location in prison $prisonId with spaces at the start or end of its name"))
+    }
+
+    val toTidy = mutableListOf<Pair<NonResidentialLocation, String>>()
+    candidates.forEach { location ->
+      val oldName = location.localName!!
+      val newName = oldName.trim()
+      val skipReason = when {
+        newName.isEmpty() -> "Name would be empty"
+        newName.lowercase() in existingNames -> "Another location in the prison is already called '$newName'"
+        location.hasPendingCertificationApproval() -> "Location has a pending certification approval"
+        else -> null
+      }
+      if (skipReason != null) {
+        results.add(location.toTidyResult(TidyLocalNameAction.SKIPPED, newName = newName, reason = skipReason))
+      } else {
+        toTidy.add(location to newName)
+        results.add(location.toTidyResult(TidyLocalNameAction.TIDIED, newName = newName))
+      }
+    }
+
+    val amended = mutableListOf<LocationDTO>()
+    if (!request.dryRun && toTidy.isNotEmpty()) {
+      val username = commonLocationService.getUsername()
+      val linkedTransaction = commonLocationService.createLinkedTransaction(
+        prisonId = prisonId,
+        TransactionType.LOCATION_UPDATE_NON_RESI,
+        "Remove spaces from the start and end of ${toTidy.size} location names in prison $prisonId",
+      )
+      toTidy.forEach { (location, newName) ->
+        location.updateLocalName(newName, username, clock, linkedTransaction)
+        commonLocationService.trackLocationUpdate(location, "Removed spaces from the start and end of Non-Residential Location name")
+        amended.add(location.toDto())
+      }
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+
+    log.info("Tidied local names in $prisonId (dryRun=${request.dryRun}): ${results.groupingBy { it.action }.eachCount()}")
+    return TidyLocalNamesResult(
+      report = TidyLocalNamesReport(prisonId = prisonId, dryRun = request.dryRun, locations = results),
+      amended = amended,
+    )
+  }
+
+  private fun NonResidentialLocation.toTidyResult(action: TidyLocalNameAction, newName: String, reason: String? = null) = LocalNameTidyResult(
+    id = id!!,
+    key = getKey(),
+    oldName = localName,
+    newName = newName,
+    action = action,
+    reason = reason,
+  )
+
   private fun normaliseName(name: String) = name.trim().lowercase()
 
   /**
@@ -949,6 +1026,49 @@ data class AlignChildrenToParentNameReport(
 data class AlignChildrenToParentNameResult(
   val report: AlignChildrenToParentNameReport,
   val created: List<LocationDTO>,
+  val amended: List<LocationDTO>,
+)
+
+@Schema(description = "Request to remove spaces from the start and end of non-residential location names in a prison")
+data class TidyLocalNamesRequest(
+  @param:Schema(description = "When true (the default), nothing is changed and the report shows what would be done", example = "true")
+  val dryRun: Boolean = true,
+  @param:Schema(description = "Limit the run to these location IDs. When omitted, every location in the prison is considered")
+  val locationIds: Set<UUID>? = null,
+)
+
+enum class TidyLocalNameAction {
+  TIDIED,
+  SKIPPED,
+}
+
+@Schema(description = "What was done, or would be done on a dry run, for one location")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class LocalNameTidyResult(
+  val id: UUID,
+  val key: String? = null,
+  val oldName: String? = null,
+  val newName: String? = null,
+  val action: TidyLocalNameAction,
+  val reason: String? = null,
+)
+
+@Schema(description = "Report of removing spaces from the start and end of location names in a prison")
+data class TidyLocalNamesReport(
+  val prisonId: String,
+  val dryRun: Boolean,
+  val locations: List<LocalNameTidyResult>,
+) {
+  @get:Schema(description = "Number of locations for each action")
+  val summary: Map<TidyLocalNameAction, Int>
+    get() = TidyLocalNameAction.entries.associateWith { action -> locations.count { it.action == action } }
+}
+
+/**
+ * The [report] returned to the caller, plus the [amended] locations so the caller can publish events.
+ */
+data class TidyLocalNamesResult(
+  val report: TidyLocalNamesReport,
   val amended: List<LocationDTO>,
 )
 
