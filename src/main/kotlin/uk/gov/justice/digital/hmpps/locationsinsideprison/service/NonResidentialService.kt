@@ -498,14 +498,22 @@ class NonResidentialService(
   @Transactional
   fun tidyLocalNames(prisonId: String, request: TidyLocalNamesRequest): TidyLocalNamesResult {
     val locationsInPrison = nonResidentialLocationRepository.findAllByPrisonId(prisonId)
-    val candidates = locationsInPrison
-      .filter { it.localName?.let { name -> name != name.trim() } == true }
+    val untidyLocations = locationsInPrison.filter { it.localName?.let { name -> name != name.trim() } == true }
+    val candidates = untidyLocations
       .filter { request.locationIds == null || it.id in request.locationIds }
       .sortedBy { it.getPathHierarchy() }
     val existingNames = locationsInPrison
       .filter { !it.isPermanentlyDeactivated() }
       .mapNotNull { it.localName?.lowercase() }
       .toSet()
+    // Names that differently spaced locations would all be tidied to, such as " Room" and "Room ". Tidying them would
+    // create a duplicate, unlike locations that already share the same untidy name. Worked out across the whole prison
+    // so that a run limited to some locationIds treats them the same way.
+    val namesWithDifferentSpacing = untidyLocations
+      .filter { !it.isPermanentlyDeactivated() }
+      .groupBy { it.localName!!.trim().lowercase() }
+      .filterValues { group -> group.map { it.localName!!.lowercase() }.distinct().size > 1 }
+      .keys
 
     val results = mutableListOf<LocalNameTidyResult>()
     request.locationIds?.filter { id -> candidates.none { it.id == id } }?.forEach { id ->
@@ -519,6 +527,7 @@ class NonResidentialService(
       val skipReason = when {
         newName.isEmpty() -> "Name would be empty"
         newName.lowercase() in existingNames -> "Another location in the prison is already called '$newName'"
+        newName.lowercase() in namesWithDifferentSpacing -> "Other locations with different spacing would also be tidied to '$newName'"
         location.hasPendingCertificationApproval() -> "Location has a pending certification approval"
         else -> null
       }

@@ -2713,6 +2713,26 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `skips locations with different spacing that would be tidied to the same name`() {
+        val leading = repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = " Store Room", pathHierarchy = "TSTORE1"))
+        val trailing = repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = "store room  ", pathHierarchy = "TSTORE2"))
+
+        // Even when only one of them is requested, so batching cannot tidy one and leave the other
+        val oneRequested = tidy("""{ "dryRun": false, "locationIds": ["${leading.id}"] }""")
+        val bothRequested = tidy("""{ "dryRun": false, "locationIds": ["${leading.id}", "${trailing.id}"] }""")
+
+        assertThat(oneRequested.locations.single().action).isEqualTo(TidyLocalNameAction.SKIPPED)
+        assertThat(bothRequested.locations.map { it.action }).containsOnly(TidyLocalNameAction.SKIPPED)
+        assertThat(bothRequested.locations.map { it.reason }).containsOnly(
+          "Other locations with different spacing would also be tidied to 'Store Room'",
+          "Other locations with different spacing would also be tidied to 'store room'",
+        )
+        assertThat(storedName(leading)).isEqualTo(" Store Room")
+        assertThat(storedName(trailing)).isEqualTo("store room  ")
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
+      }
+
+      @Test
       fun `only the requested locations are tidied, and ones that need no tidying are reported as skipped`() {
         val report = tidy("""{ "dryRun": false, "locationIds": ["${trailingSpace.id}", "${alreadyTidy.id}"] }""")
 
