@@ -1027,6 +1027,21 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
       }
 
       @Test
+      fun `a local name is stored without surrounding or repeated spaces, and spaces alone clear it`() {
+        fun changeLocalName(localName: String) = webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(UpdateLocationLocalNameRequest(localName = localName)))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody<LocationTest>()
+          .returnResult().responseBody!!
+
+        assertThat(changeLocalName("  Landing \t Z1\u00A0").localName).isEqualTo("Landing Z1")
+        assertThat(changeLocalName("   ").localName).isNull()
+      }
+
+      @Test
       fun `can update details of a local name to null`() {
         val newLocalName = "A New Local Name"
         webTestClient.put().uri("/locations/${landingZ1.id}/change-local-name")

@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import com.jayway.jsonpath.JsonPath
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -2754,6 +2755,88 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         assertThat(report.summary[TidyLocalNameAction.TIDIED]).isZero()
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
+    }
+  }
+
+  @DisplayName("Local names are tidied when saved")
+  @Nested
+  inner class TidyLocalNameOnSaveTest {
+
+    lateinit var gym: NonResidentialLocation
+
+    @BeforeEach
+    fun setUp() {
+      gym = repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = "Main Gym", pathHierarchy = "TGYM", serviceTypes = setOf(ServiceType.APPOINTMENT)))
+    }
+
+    private fun createBasic(localName: String) = webTestClient.post().uri("/locations/non-residential/MDI")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(jsonString(CreateOrUpdateNonResidentialLocationRequest(localName = localName, servicesUsingLocation = setOf(ServiceType.APPOINTMENT))))
+      .exchange()
+
+    private fun storedName(id: UUID) = repository.findById(id).get().localName
+
+    private fun localNameHistoryCount(id: UUID) = webTestClient.get().uri("/locations/$id?includeHistory=true")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody(Location::class.java)
+      .returnResult().responseBody!!
+      .changeHistory.orEmpty().count { it.attribute == "Local name" }
+
+    @Test
+    fun `a new location's name is stored without surrounding or repeated spaces`() {
+      val response = createBasic("  Art \t  Room\u00A0")
+        .expectStatus().isCreated
+        .expectBody(String::class.java)
+        .returnResult().responseBody!!
+
+      assertThat(storedName(UUID.fromString(JsonPath.read(response, "$.id")))).isEqualTo("Art Room")
+    }
+
+    @Test
+    fun `a name made only of spaces is rejected, including a non-breaking space`() {
+      createBasic("\u00A0").expectStatus().isBadRequest
+    }
+
+    @Test
+    fun `a name that matches an existing one apart from spaces and case is a duplicate`() {
+      createBasic(" main  gym ").expectStatus().isEqualTo(409)
+    }
+
+    @Test
+    fun `an update stores the tidied name`() {
+      webTestClient.put().uri("/locations/non-residential/${gym.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(CreateOrUpdateNonResidentialLocationRequest(localName = " Sports  Hall ", servicesUsingLocation = setOf(ServiceType.APPOINTMENT))))
+        .exchange()
+        .expectStatus().isOk
+
+      assertThat(storedName(gym.id!!)).isEqualTo("Sports Hall")
+    }
+
+    @Test
+    fun `a patch that only adds spaces changes nothing`() {
+      webTestClient.patch().uri("/locations/non-residential/${gym.id}")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(PatchNonResidentialLocationRequest(localName = "  Main Gym ")))
+        .exchange()
+        .expectStatus().isOk
+
+      assertThat(storedName(gym.id!!)).isEqualTo("Main Gym")
+      assertThat(localNameHistoryCount(gym.id!!)).isZero()
+    }
+
+    @Test
+    fun `a look-up by name ignores surrounding spaces`() {
+      webTestClient.get().uri("/locations/non-residential/prison/MDI/local-name/ Main Gym ")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody().jsonPath("$[0].id").isEqualTo(gym.id.toString())
     }
   }
 }

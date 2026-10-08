@@ -35,6 +35,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.ResidentialStructu
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UnArchiveLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdateLocationLocalNameRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.addCellToParent
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.tidyLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CellCertificateLocation
@@ -383,7 +384,7 @@ class LocationService(
           }
         }
         // check that local-name is unique in this hierarchy
-        levelLocalName?.let { localName ->
+        levelLocalName.tidyLocalName()?.let { localName ->
           if (findAllByPrisonIdTopParentAndLocalName(
               prisonId = createCellsRequest.prisonId,
               localName = localName,
@@ -979,23 +980,25 @@ class LocationService(
     )
 
     with(updateLocationLocalNameRequest) {
-      if (localName != null) {
+      // A name made only of spaces clears the name, as null does
+      val tidiedLocalName = localName.tidyLocalName()
+      if (tidiedLocalName != null) {
         val topLevelLocation = location.findTopLevelLocation()
         if (findAllByPrisonIdTopParentAndLocalName(
             prisonId = location.prisonId,
-            localName = localName,
+            localName = tidiedLocalName,
             parentLocationId = location.getParent()?.id,
           ).any { it.id != id }
         ) {
           throw DuplicateLocalNameForSameHierarchyException(
-            localName = localName,
+            localName = tidiedLocalName,
             topLocationKey = topLevelLocation.getKey(),
           )
         }
       }
 
       location.updateLocalName(
-        localName = localName,
+        localName = tidiedLocalName,
         userOrSystemInContext = updatedBy ?: sharedLocationService.getUsername(),
         clock = clock,
         linkedTransaction,
@@ -1998,16 +2001,17 @@ class LocationService(
     localName: String,
     parentLocationId: UUID? = null,
   ): List<LocationDTO> {
+    val tidiedLocalName = localName.tidyLocalName() ?: localName
     val foundLocations =
       parentLocationId?.let {
         residentialLocationRepository.findAllByPrisonIdAndParentIdAndLocalName(
           prisonId = prisonId,
           parentId = parentLocationId,
-          localName = localName,
+          localName = tidiedLocalName,
         )
       } ?: residentialLocationRepository.findAllByPrisonIdAndParentIsNullAndLocalName(
         prisonId = prisonId,
-        localName = localName,
+        localName = tidiedLocalName,
       )
 
     return foundLocations

@@ -179,7 +179,7 @@ data class LevelAboveCells(
     locationType = LocationType.valueOf(locationType.name),
     status = LocationStatus.DRAFT,
     pathHierarchy = levelCode,
-    localName = levelLocalName,
+    localName = levelLocalName.tidyLocalName(),
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
     childLocations = sortedSetOf(),
