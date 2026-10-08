@@ -727,6 +727,30 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
+      fun `tidies the local name, and a re-sync of the same untidy name records no change`() {
+        fun sync(request: NomisSyncLocationRequest) = webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(request))
+          .exchange()
+          .expectStatus().is2xxSuccessful
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        fun localNameHistoryCount(id: UUID) = locationHistoryRepository.findAll()
+          .count { it.location.id == id && it.attributeName == LocationAttribute.LOCAL_NAME }
+
+        val untidyName = "  Visit \t Hall\u00A0"
+        val created = sync(syncNonResRequest.copy(localName = untidyName))
+        assertThat(created.localName).isEqualTo("Visit Hall")
+        val historyAfterCreate = localNameHistoryCount(created.id)
+
+        val updated = sync(syncNonResRequest.copy(id = created.id, localName = untidyName))
+        assertThat(updated.localName).isEqualTo("Visit Hall")
+        assertThat(localNameHistoryCount(created.id)).isEqualTo(historyAfterCreate)
+      }
+
+      @Test
       fun `can sync a new non-res location`() {
         webTestClient.post().uri("/sync/upsert")
           .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))

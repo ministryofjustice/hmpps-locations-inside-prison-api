@@ -16,6 +16,16 @@ fun formatLocation(locationDescription: String): String {
   return stringBuilder.toString()
 }
 
+// \s on its own does not match a non-breaking space, which NOMIS names sometimes contain
+private val WHITESPACE = Regex("[\\s\\p{Z}]+")
+
+/**
+ * Tidies a location name before it is saved: removes whitespace from the start and end and turns any run of
+ * whitespace inside it into a single space. Returns null when nothing is left. A name with a leading space sorts
+ * first and is missed by look-ups on the exact name (MAPA-422).
+ */
+fun String?.tidyLocalName(): String? = this?.replace(WHITESPACE, " ")?.trim()?.ifEmpty { null }
+
 /**
  * List of abbreviations
  */

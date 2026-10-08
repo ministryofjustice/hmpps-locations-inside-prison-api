@@ -40,7 +40,7 @@ data class CreateWingAndStructureRequest(
     locationType = LocationType.valueOf(wingStructure.first().name),
     status = LocationStatus.DRAFT,
     pathHierarchy = wingCode,
-    localName = wingDescription,
+    localName = wingDescription.tidyLocalName(),
     createdBy = createdBy,
     whenCreated = LocalDateTime.now(clock),
     childLocations = sortedSetOf(),

@@ -18,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PropertyLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdatePropertyLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.tidyLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -113,7 +114,7 @@ class NonResidentialService(
   }
 
   fun findByPrisonIdAndLocalName(prisonId: String, localName: String): List<LocationDTO> {
-    val locations = nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId, localName)
+    val locations = nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId, localName.tidyLocalName() ?: localName)
     val activeLocations = locations
       .filter { !it.isPermanentlyDeactivated() }
       .map { it.toDto() }
@@ -192,12 +193,15 @@ class NonResidentialService(
     prisonId: String,
     request: CreatePropertyLocationRequest,
   ): PropertyLocationWriteResult {
-    findReinstatablePropertyLocation(prisonId, request.localName)
+    // @NotBlank lets a non-breaking space through, so check again once tidied
+    val localName = request.localName.tidyLocalName() ?: throw ValidationException("Local name cannot be blank")
+
+    findReinstatablePropertyLocation(prisonId, localName)
       ?.let { return reinstatePropertyLocation(it, request) }
 
-    validateLocalNameNotDuplicated(prisonId, request.localName)
+    validateLocalNameNotDuplicated(prisonId, localName)
 
-    val code = generateUniqueNonResidentialCode(prisonId, request.localName)
+    val code = generateUniqueNonResidentialCode(prisonId, localName)
     val username = commonLocationService.getUsername()
 
     val linkedTransaction = commonLocationService.createLinkedTransaction(
@@ -212,7 +216,7 @@ class NonResidentialService(
       locationType = LocationType.BOX,
       prisonId = prisonId,
       status = LocationStatus.ACTIVE,
-      localName = request.localName,
+      localName = localName,
       childLocations = sortedSetOf(),
       whenCreated = LocalDateTime.now(clock),
       createdBy = username,
@@ -281,10 +285,11 @@ class NonResidentialService(
   ): Pair<PropertyLocationDto, NonResidentialLocationDTO> {
     val location = findPropertyLocationForUpdate(id)
     val username = commonLocationService.getUsername()
+    val localName = tidiedNameForUpdate(request.localName)
 
-    request.localName?.let { localName ->
-      if (localName.lowercase() != location.localName?.lowercase()) {
-        validateLocalNameNotDuplicated(location.prisonId, localName, location.id!!)
+    localName?.let {
+      if (it.lowercase() != location.localName?.lowercase()) {
+        validateLocalNameNotDuplicated(location.prisonId, it, location.id!!)
       }
     }
 
@@ -294,7 +299,7 @@ class NonResidentialService(
       "Update property location ${location.getKey()}",
     )
 
-    request.localName?.let { location.updateLocalName(it, username, clock, linkedTransaction) }
+    localName?.let { location.updateLocalName(it, username, clock, linkedTransaction) }
     request.capacity?.let { location.setPropertyCapacity(it, username, clock, linkedTransaction) }
 
     commonLocationService.trackLocationUpdate(location, "Updated Property Location")
@@ -642,13 +647,12 @@ class NonResidentialService(
 
   @Transactional
   fun createBasicNonResidentialLocation(prisonId: String, request: CreateOrUpdateNonResidentialLocationRequest): NonResidentialLocationDTO {
-    if (request.localName == null) {
-      throw ValidationException("localName must be provided when creating a non-residential location")
-    }
+    val localName = request.localName.tidyLocalName()
+      ?: throw ValidationException("localName must be provided when creating a non-residential location")
 
-    validateLocalNameNotDuplicated(prisonId, request.localName)
+    validateLocalNameNotDuplicated(prisonId, localName)
 
-    val code = generateUniqueNonResidentialCode(prisonId, request.localName)
+    val code = generateUniqueNonResidentialCode(prisonId, localName)
 
     val linkedTransaction = commonLocationService.createLinkedTransaction(
       prisonId = prisonId,
@@ -711,9 +715,10 @@ class NonResidentialService(
       throw PermanentlyDeactivatedUpdateNotAllowedException(nonResLocation.getKey())
     }
 
-    updateRequest.localName?.let { localName ->
-      if (localName.lowercase() != nonResLocation.localName?.lowercase()) {
-        validateLocalNameNotDuplicated(nonResLocation.prisonId, localName, nonResLocation.id!!)
+    val localName = tidiedNameForUpdate(updateRequest.localName)
+    localName?.let {
+      if (it.lowercase() != nonResLocation.localName?.lowercase()) {
+        validateLocalNameNotDuplicated(nonResLocation.prisonId, it, nonResLocation.id!!)
       }
     }
 
@@ -725,7 +730,7 @@ class NonResidentialService(
 
     nonResLocation.update(
       PatchNonResidentialLocationRequest(
-        localName = updateRequest.localName,
+        localName = localName,
         servicesUsingLocation = updateRequest.servicesUsingLocation,
       ),
       commonLocationService.getUsername(),
@@ -776,8 +781,16 @@ class NonResidentialService(
     return true
   }
 
+  /**
+   * The tidied name for an update, where no name means "leave it as it is". A name made only of spaces is
+   * rejected rather than taken as no change.
+   */
+  private fun tidiedNameForUpdate(localName: String?): String? = localName?.let {
+    it.tidyLocalName() ?: throw ValidationException("Local name cannot be blank")
+  }
+
   private fun validateLocalNameNotDuplicated(prisonId: String, localName: String, locationId: UUID? = null) {
-    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
+    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName.tidyLocalName() ?: localName)
         .any { !it.isPermanentlyDeactivated() && (locationId == null || it.id != locationId) }
     ) {
       throw DuplicateNonResidentialLocalNameInPrisonException(prisonId = prisonId, localName = localName)
