@@ -249,6 +249,29 @@ class NonResidentialServiceTest {
       }
 
       @Test
+      fun `among same-named children used by Activities or Appointments, keeps the one with most of the parent's services`() {
+        val firstByCode = child("Gym", "G1", ServiceType.APPOINTMENT)
+        val mostServices = child("Gym", "G2", ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
+        givenParents(gymWithChildren(firstByCode, mostServices))
+
+        val result = align(AlignmentStep.ALIGN, dryRun = true)
+
+        Assertions.assertThat(result.report.parents.single().keptChild?.id).isEqualTo(mostServices.id)
+      }
+
+      @Test
+      fun `reports the kept child's services from before the run on a real run`() {
+        val sameNamedChild = child("Gym", "G1", ServiceType.APPOINTMENT)
+        givenParents(gymWithChildren(sameNamedChild))
+
+        val result = align(AlignmentStep.ALIGN, dryRun = false)
+
+        Assertions.assertThat(result.report.parents.single().keptChild?.services).containsExactly(ServiceType.APPOINTMENT)
+        Assertions.assertThat(sameNamedChild.services.map { it.serviceType })
+          .containsExactlyInAnyOrder(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
+      }
+
+      @Test
       fun `when no same-named child is used by Activities or Appointments, keeps the first by code`() {
         val first = child("Gym", "G1")
         val second = child("Gym", "G2")

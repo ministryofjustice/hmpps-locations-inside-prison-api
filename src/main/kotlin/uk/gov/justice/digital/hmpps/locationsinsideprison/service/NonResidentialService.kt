@@ -440,11 +440,13 @@ class NonResidentialService(
     }
 
     val childToKeep = chooseChildToKeep(sameNamedChildren, parentServices)
+    // Taken before any update, so the report shows the kept child's services before this run on real and dry runs alike
+    val keptChild = childToKeep.toChildSummary()
     val duplicates = sameNamedChildren.filter { it.id != childToKeep.id }.map { it.toDuplicateChild(archived = false) }
     val childServices = childToKeep.services.map { it.serviceType }.toSet()
     val missingServices = parentServices.filter { it !in childServices }
     if (missingServices.isEmpty()) {
-      return parent.toAlignmentResult(AlignmentAction.NO_ACTION, keptChild = childToKeep.toChildSummary(), duplicateChildren = duplicates)
+      return parent.toAlignmentResult(AlignmentAction.NO_ACTION, keptChild = keptChild, duplicateChildren = duplicates)
     }
 
     if (!dryRun) {
@@ -465,7 +467,7 @@ class NonResidentialService(
     }
     return parent.toAlignmentResult(
       AlignmentAction.ADD_SERVICES_TO_CHILD,
-      keptChild = childToKeep.toChildSummary(),
+      keptChild = keptChild,
       servicesAddedToChild = missingServices,
       duplicateChildren = duplicates,
     )
