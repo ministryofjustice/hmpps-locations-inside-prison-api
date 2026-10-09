@@ -344,32 +344,28 @@ class NonResidentialService(
   }
 
   /**
-   * Makes sure each parent non-residential location has exactly one live direct child with the parent's name, so
-   * that Activities and Appointments can move bookings from the parent to that child without staff seeing a
-   * different location name.
+   * Gives each parent non-residential location one live direct child with the parent's name and services, so that
+   * Activities and Appointments can move bookings from the parent to that child without staff seeing a different
+   * location name. It runs in two steps, chosen by [AlignChildrenToParentNameRequest.step]:
+   *
+   * - [AlignmentStep.ALIGN]: where no live direct child has the parent's name, one is created with the parent's
+   *   name, status and services. Otherwise the child to keep is chosen (see [chooseChildToKeep]) and any of the
+   *   parent's services it lacks are added to it. Nothing is archived. Other children with the parent's name are
+   *   listed, with whether step 2 could archive them.
+   * - [AlignmentStep.ARCHIVE_DUPLICATES]: the other children with the parent's name are archived, unless a child is
+   *   used by a service other than Appointments or Activities, or has child locations of its own. Those are left
+   *   alone and reported. A parent is skipped if its kept child still lacks some of the parent's services, as step
+   *   1 has not been run for it.
    *
    * Only parents that are not archived, are used by at least one service and have at least one live direct child are
-   * considered. Names are compared ignoring case and surrounding spaces. For each parent:
-   * - where two or more live direct children share the parent's name, each is renamed with a number ("Gym 1",
-   *   "Gym 2"), skipping any name already used in the prison. This runs first, so the step below then applies.
-   * - where no live direct child has the parent's name, a child is created with the parent's name, status and all
-   *   of its services.
-   * - where exactly one live direct child has the parent's name but is not used by all of the parent's services, the
-   *   missing services are added to it, so the services can move to that child rather than to a second one of the
-   *   same name.
-   *
-   * With [AlignChildrenToParentNameRequest.dryRun] set, nothing is changed and the report shows what would be done.
+   * considered. Names are compared ignoring case and surrounding spaces. With [AlignChildrenToParentNameRequest.dryRun]
+   * set, nothing is changed and the report shows what would be done.
    */
   @Transactional
   fun alignChildrenToParentName(prisonId: String, request: AlignChildrenToParentNameRequest): AlignChildrenToParentNameResult {
     val parentsInPrison = nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId)
       .filter { it.findSubLocations().isNotEmpty() }
     val parentsInScope = request.parentLocationIds?.let { ids -> parentsInPrison.filter { it.id in ids } } ?: parentsInPrison
-
-    val usedNames = nonResidentialLocationRepository.findAllByPrisonId(prisonId)
-      .filter { !it.isPermanentlyDeactivated() }
-      .mapNotNull { it.localName?.let(::normaliseName) }
-      .toMutableSet()
 
     val results = mutableListOf<ParentAlignmentResult>()
     val created = mutableListOf<LocationDTO>()
@@ -395,98 +391,182 @@ class NonResidentialService(
         return@forEach
       }
       val name = parentName!!
-
-      val sameNamedChildren = liveChildren
-        .filter { it.localName?.let(::normaliseName) == normaliseName(name) }
-        .sortedBy { it.getPathHierarchy() }
       val parentServices = parent.services.map { it.serviceType }.sorted()
+      val sameNamedChildren = liveChildren.filter { it.localName?.let(::normaliseName) == normaliseName(name) }
 
-      if (sameNamedChildren.size == 1) {
-        val child = sameNamedChildren.single()
-        val childServices = child.services.map { it.serviceType }.toSet()
-        val missingServices = parentServices.filter { it !in childServices }
-        if (missingServices.isEmpty()) {
-          results.add(parent.toAlignmentResult(AlignmentAction.NO_ACTION))
-          return@forEach
-        }
-        if (!request.dryRun) {
-          val linkedTransaction = commonLocationService.createLinkedTransaction(
-            prisonId = prisonId,
-            TransactionType.LOCATION_UPDATE_NON_RESI,
-            "Add services ${missingServices.joinToString(", ")} to ${child.getKey()} to match its parent ${parent.getKey()}",
-          )
-          child.update(
-            PatchNonResidentialLocationRequest(servicesUsingLocation = childServices + missingServices),
-            commonLocationService.getUsername(),
-            clock,
-            linkedTransaction,
-          )
-          commonLocationService.trackLocationUpdate(child, "Added parent services to Non-Residential Location with parent name")
-          amended.add(child.toDto())
-          linkedTransaction.txEndTime = LocalDateTime.now(clock)
-        }
-        results.add(
-          parent.toAlignmentResult(
-            AlignmentAction.ADD_SERVICES_TO_CHILD,
-            servicesAddedToChild = ServicesAddedToChild(id = child.id!!, key = child.getKey(), name = child.localName!!, servicesAdded = missingServices),
-          ),
-        )
-        return@forEach
+      val result = when (request.step) {
+        AlignmentStep.ALIGN -> alignParent(parent, name, parentServices, sameNamedChildren, request.dryRun, created, amended)
+        AlignmentStep.ARCHIVE_DUPLICATES -> archiveDuplicateChildren(parent, name, parentServices, sameNamedChildren, request.dryRun, amended)
       }
+      results.add(result)
+    }
 
-      val renames = if (sameNamedChildren.size > 1) {
-        var suffix = 0
-        sameNamedChildren.map { child ->
-          var newName: String
-          do {
-            newName = numberedName(name, ++suffix)
-          } while (normaliseName(newName) in usedNames)
-          usedNames.add(normaliseName(newName))
-          ChildRename(id = child.id!!, key = child.getKey(), oldName = child.localName!!, newName = newName)
-        }
-      } else {
-        emptyList()
+    log.info("Aligned child locations to parent name in $prisonId (step=${request.step}, dryRun=${request.dryRun}): ${results.groupingBy { it.action }.eachCount()}")
+    return AlignChildrenToParentNameResult(
+      report = AlignChildrenToParentNameReport(prisonId = prisonId, step = request.step, dryRun = request.dryRun, parents = results),
+      created = created,
+      amended = amended,
+    )
+  }
+
+  /** Step 1 for one parent: create the same-named child, or give the kept one the parent's services. */
+  private fun alignParent(
+    parent: NonResidentialLocation,
+    name: String,
+    parentServices: List<ServiceType>,
+    sameNamedChildren: List<NonResidentialLocation>,
+    dryRun: Boolean,
+    created: MutableList<LocationDTO>,
+    amended: MutableList<LocationDTO>,
+  ): ParentAlignmentResult {
+    if (sameNamedChildren.isEmpty()) {
+      if (dryRun) {
+        return parent.toAlignmentResult(AlignmentAction.CREATE_CHILD, createdChild = CreatedChild(id = null, key = null, name = name, services = parentServices))
       }
-      val action = if (renames.isEmpty()) AlignmentAction.CREATE_CHILD else AlignmentAction.RENAME_CHILDREN_AND_CREATE_CHILD
-
-      if (request.dryRun) {
-        results.add(parent.toAlignmentResult(action, renamedChildren = renames, createdChild = CreatedChild(id = null, key = null, name = name, services = parentServices)))
-        return@forEach
-      }
-
-      val username = commonLocationService.getUsername()
       val linkedTransaction = commonLocationService.createLinkedTransaction(
-        prisonId = prisonId,
-        TransactionType.LOCATION_UPDATE_NON_RESI,
-        "Align child locations of ${parent.getKey()} to parent name '$name'",
+        prisonId = parent.prisonId,
+        TransactionType.LOCATION_CREATE_NON_RESI,
+        "Create child of ${parent.getKey()} with the parent's name '$name'",
       )
-      renames.forEach { rename ->
-        val child = sameNamedChildren.first { it.id == rename.id }
-        child.updateLocalName(rename.newName, username, clock, linkedTransaction)
-        commonLocationService.trackLocationUpdate(child, "Renamed Non-Residential Location to align with parent name")
-        amended.add(child.toDto())
-      }
-
-      val code = generateUniqueNonResidentialCode(prisonId, name, parent.getPathHierarchy())
+      val code = generateUniqueNonResidentialCode(parent.prisonId, name, parent.getPathHierarchy())
       val savedChild = createChildOfParent(parent, code, parentServices, linkedTransaction)
       commonLocationService.trackLocationUpdate(savedChild, "Created Non-Residential Location with parent name")
       created.add(savedChild.toDto())
       linkedTransaction.txEndTime = LocalDateTime.now(clock)
-
-      results.add(
-        parent.toAlignmentResult(
-          action,
-          renamedChildren = renames,
-          createdChild = CreatedChild(id = savedChild.id, key = savedChild.getKey(), name = name, services = parentServices),
-        ),
+      return parent.toAlignmentResult(
+        AlignmentAction.CREATE_CHILD,
+        createdChild = CreatedChild(id = savedChild.id, key = savedChild.getKey(), name = name, services = parentServices),
       )
     }
 
-    log.info("Aligned child locations to parent name in $prisonId (dryRun=${request.dryRun}): ${results.groupingBy { it.action }.eachCount()}")
-    return AlignChildrenToParentNameResult(
-      report = AlignChildrenToParentNameReport(prisonId = prisonId, dryRun = request.dryRun, parents = results),
-      created = created,
-      amended = amended,
+    val childToKeep = chooseChildToKeep(sameNamedChildren, parentServices)
+    val duplicates = sameNamedChildren.filter { it.id != childToKeep.id }.map { it.toDuplicateChild(archived = false) }
+    val childServices = childToKeep.services.map { it.serviceType }.toSet()
+    val missingServices = parentServices.filter { it !in childServices }
+    if (missingServices.isEmpty()) {
+      return parent.toAlignmentResult(AlignmentAction.NO_ACTION, keptChild = childToKeep.toChildSummary(), duplicateChildren = duplicates)
+    }
+
+    if (!dryRun) {
+      val linkedTransaction = commonLocationService.createLinkedTransaction(
+        prisonId = parent.prisonId,
+        TransactionType.LOCATION_UPDATE_NON_RESI,
+        "Add services ${missingServices.joinToString(", ")} to ${childToKeep.getKey()} to match its parent ${parent.getKey()}",
+      )
+      childToKeep.update(
+        PatchNonResidentialLocationRequest(servicesUsingLocation = childServices + missingServices),
+        commonLocationService.getUsername(),
+        clock,
+        linkedTransaction,
+      )
+      commonLocationService.trackLocationUpdate(childToKeep, "Added parent services to Non-Residential Location with parent name")
+      amended.add(childToKeep.toDto())
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+    return parent.toAlignmentResult(
+      AlignmentAction.ADD_SERVICES_TO_CHILD,
+      keptChild = childToKeep.toChildSummary(),
+      servicesAddedToChild = missingServices,
+      duplicateChildren = duplicates,
+    )
+  }
+
+  /** Step 2 for one parent: archive the same-named children other than the one kept, where that is allowed. */
+  private fun archiveDuplicateChildren(
+    parent: NonResidentialLocation,
+    name: String,
+    parentServices: List<ServiceType>,
+    sameNamedChildren: List<NonResidentialLocation>,
+    dryRun: Boolean,
+    amended: MutableList<LocationDTO>,
+  ): ParentAlignmentResult {
+    if (sameNamedChildren.size < 2) {
+      return parent.toAlignmentResult(AlignmentAction.NO_ACTION, reason = "No duplicate children with the parent's name")
+    }
+    val childToKeep = chooseChildToKeep(sameNamedChildren, parentServices)
+    val keptChildServices = childToKeep.services.map { it.serviceType }.toSet()
+    if (!keptChildServices.containsAll(parentServices)) {
+      return parent.toAlignmentResult(
+        AlignmentAction.SKIPPED,
+        reason = "Run step 1 first: the child to keep, ${childToKeep.getKey()}, is not yet used by all of the parent's services",
+        keptChild = childToKeep.toChildSummary(),
+      )
+    }
+
+    val duplicates = sameNamedChildren.filter { it.id != childToKeep.id }
+    val archivable = duplicates.filter { reasonCannotArchive(it) == null }
+    if (!dryRun && archivable.isNotEmpty()) {
+      val username = commonLocationService.getUsername()
+      val linkedTransaction = commonLocationService.createLinkedTransaction(
+        prisonId = parent.prisonId,
+        TransactionType.PERMANENT_DEACTIVATION,
+        "Archive duplicate children of ${parent.getKey()} named '$name', keeping ${childToKeep.getKey()}",
+      )
+      archivable.forEach { duplicate ->
+        duplicate.permanentlyDeactivate(
+          reason = "Duplicate of ${childToKeep.getKey()}, which keeps the parent's name".take(MAX_ARCHIVED_REASON_LENGTH),
+          deactivatedDate = LocalDateTime.now(clock),
+          userOrSystemInContext = username,
+          clock = clock,
+          linkedTransaction = linkedTransaction,
+          activeLocationCanBePermDeactivated = true,
+        )
+        commonLocationService.trackLocationUpdate(duplicate, "Archived duplicate Non-Residential Location with parent name")
+        amended.add(duplicate.toDto())
+      }
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+
+    val action = when (archivable.size) {
+      duplicates.size -> AlignmentAction.ARCHIVE_DUPLICATES
+      0 -> AlignmentAction.CANNOT_ARCHIVE_DUPLICATES
+      else -> AlignmentAction.ARCHIVE_SOME_DUPLICATES
+    }
+    return parent.toAlignmentResult(
+      action,
+      keptChild = childToKeep.toChildSummary(),
+      duplicateChildren = duplicates.map { it.toDuplicateChild(archived = !dryRun && it in archivable) },
+    )
+  }
+
+  /**
+   * The same-named child to keep: one used by Appointments or Activities if there is one, then the one used by most
+   * of the parent's services, then the first by code. Step 1 adds the parent's services to it, after which it still
+   * comes first, so step 2 picks the same child.
+   */
+  private fun chooseChildToKeep(sameNamedChildren: List<NonResidentialLocation>, parentServices: List<ServiceType>): NonResidentialLocation = sameNamedChildren.sortedWith(
+    compareByDescending<NonResidentialLocation> { child -> child.services.any { it.serviceType in ACTIVITIES_AND_APPOINTMENTS_SERVICES } }
+      .thenByDescending { child -> child.services.count { it.serviceType in parentServices } }
+      .thenBy { it.getPathHierarchy() },
+  ).first()
+
+  /** Why step 2 cannot archive a duplicate child, or null when it can. */
+  private fun reasonCannotArchive(child: NonResidentialLocation): String? {
+    val otherServices = child.services.map { it.serviceType }.filter { it !in ACTIVITIES_AND_APPOINTMENTS_SERVICES }.sorted()
+    return when {
+      otherServices.isNotEmpty() -> "Used by other services: ${otherServices.joinToString(", ")}"
+      !child.isLeafLevel() -> "Has child locations of its own"
+      else -> null
+    }
+  }
+
+  private fun NonResidentialLocation.toChildSummary() = ChildSummary(
+    id = id!!,
+    key = getKey(),
+    name = localName!!,
+    services = services.map { it.serviceType }.sorted(),
+  )
+
+  private fun NonResidentialLocation.toDuplicateChild(archived: Boolean): DuplicateChild {
+    val reason = reasonCannotArchive(this)
+    return DuplicateChild(
+      id = id!!,
+      key = getKey(),
+      name = localName!!,
+      services = services.map { it.serviceType }.sorted(),
+      canBeArchived = reason == null,
+      reasonCannotArchive = reason,
+      archived = archived,
     )
   }
 
@@ -578,29 +658,23 @@ class NonResidentialService(
 
   private fun normaliseName(name: String) = name.trim().lowercase()
 
-  /**
-   * "[name] [number]", shortening [name] where needed so the result still fits the local name column.
-   */
-  private fun numberedName(name: String, number: Int): String {
-    val suffix = " $number"
-    return name.take(MAX_LOCAL_NAME_LENGTH - suffix.length).trimEnd() + suffix
-  }
-
   private fun NonResidentialLocation.toAlignmentResult(
     action: AlignmentAction,
     reason: String? = null,
-    renamedChildren: List<ChildRename> = emptyList(),
     createdChild: CreatedChild? = null,
-    servicesAddedToChild: ServicesAddedToChild? = null,
+    keptChild: ChildSummary? = null,
+    servicesAddedToChild: List<ServiceType> = emptyList(),
+    duplicateChildren: List<DuplicateChild> = emptyList(),
   ) = ParentAlignmentResult(
     parentId = id!!,
     parentKey = getKey(),
     parentName = localName,
     action = action,
     reason = reason,
-    renamedChildren = renamedChildren,
     createdChild = createdChild,
+    keptChild = keptChild,
     servicesAddedToChild = servicesAddedToChild,
+    duplicateChildren = duplicateChildren,
   )
 
   /**
@@ -978,27 +1052,28 @@ data class PropertyLocationWriteResult(
 
 @Schema(description = "Request to give each parent non-residential location one child with the same name")
 data class AlignChildrenToParentNameRequest(
+  @param:Schema(description = "ALIGN (step 1) creates or prepares the child with the parent's name. ARCHIVE_DUPLICATES (step 2) archives the other children with that name where allowed", example = "ALIGN")
+  val step: AlignmentStep = AlignmentStep.ALIGN,
   @param:Schema(description = "When true (the default), nothing is changed and the report shows what would be done", example = "true")
   val dryRun: Boolean = true,
   @param:Schema(description = "Limit the run to these parent location IDs. When omitted, every parent in the prison is considered")
   val parentLocationIds: Set<UUID>? = null,
 )
 
+enum class AlignmentStep {
+  ALIGN,
+  ARCHIVE_DUPLICATES,
+}
+
 enum class AlignmentAction {
   CREATE_CHILD,
-  RENAME_CHILDREN_AND_CREATE_CHILD,
   ADD_SERVICES_TO_CHILD,
+  ARCHIVE_DUPLICATES,
+  ARCHIVE_SOME_DUPLICATES,
+  CANNOT_ARCHIVE_DUPLICATES,
   NO_ACTION,
   SKIPPED,
 }
-
-@Schema(description = "A child location renamed so that only one child has the parent's name")
-data class ChildRename(
-  val id: UUID,
-  val key: String,
-  val oldName: String,
-  val newName: String,
-)
 
 @Schema(description = "The child location created with the parent's name. Id and key are empty on a dry run")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -1009,12 +1084,26 @@ data class CreatedChild(
   val services: List<ServiceType>,
 )
 
-@Schema(description = "The existing child with the parent's name, and the parent's services added to it")
-data class ServicesAddedToChild(
+@Schema(description = "The existing child with the parent's name that is kept, with its services before this run")
+data class ChildSummary(
   val id: UUID,
   val key: String,
   val name: String,
-  val servicesAdded: List<ServiceType>,
+  val services: List<ServiceType>,
+)
+
+@Schema(description = "Another child with the parent's name, which step 2 archives where allowed")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class DuplicateChild(
+  val id: UUID,
+  val key: String,
+  val name: String,
+  val services: List<ServiceType>,
+  @param:Schema(description = "False when it is used by a service other than Appointments or Activities, or has child locations of its own")
+  val canBeArchived: Boolean,
+  val reasonCannotArchive: String? = null,
+  @param:Schema(description = "True when this run archived it")
+  val archived: Boolean,
 )
 
 @Schema(description = "What was done, or would be done on a dry run, for one parent location")
@@ -1025,25 +1114,36 @@ data class ParentAlignmentResult(
   val parentName: String? = null,
   val action: AlignmentAction,
   val reason: String? = null,
-  val renamedChildren: List<ChildRename> = emptyList(),
   val createdChild: CreatedChild? = null,
-  val servicesAddedToChild: ServicesAddedToChild? = null,
+  val keptChild: ChildSummary? = null,
+  @param:Schema(description = "The parent's services added to the kept child")
+  val servicesAddedToChild: List<ServiceType> = emptyList(),
+  val duplicateChildren: List<DuplicateChild> = emptyList(),
 )
 
 @Schema(description = "Report of aligning child locations to their parent's name in a prison")
 data class AlignChildrenToParentNameReport(
   val prisonId: String,
+  val step: AlignmentStep,
   val dryRun: Boolean,
   val parents: List<ParentAlignmentResult>,
 ) {
   @get:Schema(description = "Number of parents for each action")
   val summary: Map<AlignmentAction, Int>
     get() = AlignmentAction.entries.associateWith { action -> parents.count { it.action == action } }
+
+  @get:Schema(description = "Number of duplicate children that step 2 can archive")
+  val duplicatesThatCanBeArchived: Int
+    get() = parents.sumOf { parent -> parent.duplicateChildren.count { it.canBeArchived } }
+
+  @get:Schema(description = "Number of duplicate children that step 2 cannot archive")
+  val duplicatesThatCannotBeArchived: Int
+    get() = parents.sumOf { parent -> parent.duplicateChildren.count { !it.canBeArchived } }
 }
 
 /**
- * The [report] returned to the caller, plus the locations [created] and [amended] (renamed, or given the parent's
- * services) so the caller can publish events.
+ * The [report] returned to the caller, plus the locations [created] and [amended] (given the parent's services, or
+ * archived) so the caller can publish events.
  */
 data class AlignChildrenToParentNameResult(
   val report: AlignChildrenToParentNameReport,
@@ -1195,8 +1295,11 @@ data class NonResidentialLocationDTO(
   fun getKey(): String = "$prisonId-$pathHierarchy"
 }
 
-/** Size of the location.local_name column. */
-private const val MAX_LOCAL_NAME_LENGTH = 80
+/** Size of the location.archived_reason column. */
+private const val MAX_ARCHIVED_REASON_LENGTH = 200
+
+/** The services Activities and Appointments use. A duplicate child used only by these can be archived. */
+private val ACTIVITIES_AND_APPOINTMENTS_SERVICES = setOf(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
 
 /**
  * Generates a unique code from the local name by extracting consonants and adding a checksum.
