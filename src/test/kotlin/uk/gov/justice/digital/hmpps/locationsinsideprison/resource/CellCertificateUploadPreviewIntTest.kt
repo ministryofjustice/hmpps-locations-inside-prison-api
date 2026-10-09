@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_U
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
@@ -122,7 +123,14 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
         assertThat(appliedWorkingCapacity).isEqualTo(2)
         assertThat(message).isEqualTo(CellCertificateUploadProcessingService.WORKING_CAPACITY_TAKEN_FROM_CERTIFICATE_MESSAGE)
       }
-      assertThat(rows.getValue(inactiveCellB3001.getKey()).status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+      with(rows.getValue(inactiveCellB3001.getKey())) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+        // kept although the rest of the row's work was rolled back
+        assertThat(inactive).isTrue()
+        assertThat(deactivatedReason).isEqualTo(DeactivatedReason.DAMAGED)
+        assertThat(specialistCellTypes).isEqualTo("ACCESSIBLE_CELL")
+      }
+      assertThat(rows.getValue(cell1.getKey()).inactive).isFalse()
 
       assertThat(preview.processedRecords + preview.skippedRecords + preview.failedRecords).isEqualTo(6)
       assertThat(preview.failedRecords).isEqualTo(1)
