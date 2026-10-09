@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CreateOrUpdateNonResidentialLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.DerivedLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.Location
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
@@ -22,6 +23,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ServiceType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.buildNonResidentialLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AlignChildrenToParentNameReport
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AlignmentAction
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.AlignmentStep
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.TidyLocalNameAction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.TidyLocalNamesReport
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.generateNonResidentialCode
@@ -2403,26 +2405,27 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
     private val url = "/locations/non-residential/prison/MDI/align-children-to-parent-name"
 
     lateinit var sportsHall: NonResidentialLocation
-    lateinit var firstDuplicate: NonResidentialLocation
-    lateinit var secondDuplicate: NonResidentialLocation
+    lateinit var usedByAppointments: NonResidentialLocation
+    lateinit var noServices: NonResidentialLocation
+    lateinit var usedByOtherService: NonResidentialLocation
     lateinit var chapel: NonResidentialLocation
 
     @BeforeEach
     fun setUp() {
-      firstDuplicate = buildNonResidentialLocation(prisonId = "MDI", localName = "Sports Hall", pathHierarchy = "SHD1", serviceTypes = setOf(ServiceType.APPOINTMENT))
-      secondDuplicate = buildNonResidentialLocation(prisonId = "MDI", localName = "sports hall", pathHierarchy = "SHD2", serviceTypes = setOf(ServiceType.APPOINTMENT))
+      usedByAppointments = buildNonResidentialLocation(prisonId = "MDI", localName = "Sports Hall", pathHierarchy = "SHD1", serviceTypes = setOf(ServiceType.APPOINTMENT))
+      noServices = buildNonResidentialLocation(prisonId = "MDI", localName = "sports hall", pathHierarchy = "SHD2")
+      usedByOtherService = buildNonResidentialLocation(prisonId = "MDI", localName = "Sports Hall", pathHierarchy = "SHD3", serviceTypes = setOf(ServiceType.USE_OF_FORCE))
       sportsHall = repository.save(
         buildNonResidentialLocation(
           prisonId = "MDI",
           localName = "Sports Hall",
           serviceTypes = setOf(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES),
         ).also {
-          it.addChildLocation(firstDuplicate)
-          it.addChildLocation(secondDuplicate)
+          it.addChildLocation(usedByAppointments)
+          it.addChildLocation(noServices)
+          it.addChildLocation(usedByOtherService)
         },
       )
-      // Takes the first numbered name, so the renames must skip it
-      repository.save(buildNonResidentialLocation(prisonId = "MDI", localName = "Sports Hall 1", pathHierarchy = "SH1"))
 
       chapel = repository.save(
         buildNonResidentialLocation(
@@ -2435,6 +2438,8 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       )
     }
 
+    private val bothParents get() = """"parentLocationIds": ["${sportsHall.id}", "${chapel.id}"]"""
+
     private fun align(body: String) = webTestClient.post().uri(url)
       .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
       .header("Content-Type", "application/json")
@@ -2442,6 +2447,13 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
       .exchange()
       .expectStatus().isOk
       .expectBody(AlignChildrenToParentNameReport::class.java)
+      .returnResult().responseBody!!
+
+    private fun location(id: UUID) = webTestClient.get().uri("/locations/$id")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody(Location::class.java)
       .returnResult().responseBody!!
 
     @Nested
@@ -2471,107 +2483,102 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
     inner class HappyPath {
 
       @Test
-      fun `a dry run is the default, reports what would be done and changes nothing`() {
+      fun `a dry run of step 1 is the default, reports what would be done, including what step 2 could archive, and changes nothing`() {
         val locationsBefore = repository.count()
 
-        val report = align("""{ "parentLocationIds": ["${sportsHall.id}", "${chapel.id}"] }""")
+        val report = align("""{ $bothParents }""")
 
+        assertThat(report.step).isEqualTo(AlignmentStep.ALIGN)
         assertThat(report.dryRun).isTrue()
         val byParent = report.parents.associateBy { it.parentId }
         assertThat(byParent[chapel.id]!!.action).isEqualTo(AlignmentAction.CREATE_CHILD)
-        assertThat(byParent[sportsHall.id]!!.action).isEqualTo(AlignmentAction.RENAME_CHILDREN_AND_CREATE_CHILD)
-        assertThat(byParent[sportsHall.id]!!.renamedChildren.map { it.newName }).containsExactly("Sports Hall 2", "Sports Hall 3")
+        val sportsHallResult = byParent[sportsHall.id]!!
+        assertThat(sportsHallResult.action).isEqualTo(AlignmentAction.ADD_SERVICES_TO_CHILD)
+        assertThat(sportsHallResult.keptChild!!.id).isEqualTo(usedByAppointments.id)
+        assertThat(sportsHallResult.servicesAddedToChild).containsExactly(ServiceType.PROGRAMMES_AND_ACTIVITIES)
+        assertThat(sportsHallResult.duplicateChildren.map { it.id to it.canBeArchived })
+          .containsExactlyInAnyOrder(noServices.id!! to true, usedByOtherService.id!! to false)
+        assertThat(report.duplicatesThatCanBeArchived).isEqualTo(1)
+        assertThat(report.duplicatesThatCannotBeArchived).isEqualTo(1)
 
         assertThat(repository.count()).isEqualTo(locationsBefore)
-        assertThat(repository.findById(firstDuplicate.id!!).get().localName).isEqualTo("Sports Hall")
+        assertThat(location(usedByAppointments.id!!).servicesUsingLocation?.map { it.serviceType }).containsExactly(ServiceType.APPOINTMENT)
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
 
       @Test
-      fun `renames duplicates, creates a child with the parent name and publishes events`() {
-        val report = align("""{ "dryRun": false, "parentLocationIds": ["${sportsHall.id}"] }""")
+      fun `step 1 creates the missing child and gives the kept child the parent's services, without archiving or renaming`() {
+        val report = align("""{ "step": "ALIGN", "dryRun": false, $bothParents }""")
 
-        val result = report.parents.single()
-        assertThat(result.action).isEqualTo(AlignmentAction.RENAME_CHILDREN_AND_CREATE_CHILD)
-        assertThat(result.createdChild!!.name).isEqualTo("Sports Hall")
-        assertThat(result.createdChild.services).containsExactlyInAnyOrder(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
+        val createdChildId = report.parents.single { it.parentId == chapel.id }.createdChild!!.id!!
+        val createdChild = location(createdChildId)
+        assertThat(createdChild.localName).isEqualTo("Chapel")
+        assertThat(createdChild.parentId).isEqualTo(chapel.id)
 
-        assertThat(repository.findById(firstDuplicate.id!!).get().localName).isEqualTo("Sports Hall 2")
-        assertThat(repository.findById(secondDuplicate.id!!).get().localName).isEqualTo("Sports Hall 3")
-        val createdChild = repository.findById(result.createdChild.id!!).get()
-        assertThat(createdChild.localName).isEqualTo("Sports Hall")
-        assertThat(createdChild.getParent()?.id).isEqualTo(sportsHall.id)
+        assertThat(location(usedByAppointments.id!!).servicesUsingLocation?.map { it.serviceType })
+          .containsExactlyInAnyOrder(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
+        listOf(noServices, usedByOtherService).forEach { duplicate ->
+          val unchanged = location(duplicate.id!!)
+          assertThat(unchanged.status).isEqualTo(DerivedLocationStatus.ACTIVE)
+          assertThat(unchanged.localName).isEqualTo(duplicate.localName)
+        }
 
-        // Chapel was not in scope
-        assertThat(report.parents.map { it.parentId }).doesNotContain(chapel.id)
-
-        getDomainEvents(3).let { events ->
+        getDomainEvents(2).let { events ->
           assertThat(events.map { it.eventType to it.additionalInformation?.id }).containsExactlyInAnyOrder(
-            "location.inside.prison.amended" to firstDuplicate.id,
-            "location.inside.prison.amended" to secondDuplicate.id,
-            "location.inside.prison.created" to createdChild.id,
+            "location.inside.prison.amended" to usedByAppointments.id,
+            "location.inside.prison.created" to createdChildId,
           )
         }
       }
 
       @Test
-      fun `saves numbered names for a parent whose name is at the maximum length`() {
-        val longName = "Multi-faith room and quiet reflection space next to the education block" + " (annexe)"
-        assertThat(longName).hasSize(80)
-        val longParent = repository.save(
-          buildNonResidentialLocation(prisonId = "MDI", localName = longName, pathHierarchy = "LONG", serviceTypes = setOf(ServiceType.APPOINTMENT)).also {
-            it.addChildLocation(buildNonResidentialLocation(prisonId = "MDI", localName = longName, pathHierarchy = "LNG1", serviceTypes = setOf(ServiceType.APPOINTMENT)))
-            it.addChildLocation(buildNonResidentialLocation(prisonId = "MDI", localName = longName, pathHierarchy = "LNG2", serviceTypes = setOf(ServiceType.APPOINTMENT)))
-          },
-        )
+      fun `step 2 skips a parent until step 1 has prepared the kept child`() {
+        val report = align("""{ "step": "ARCHIVE_DUPLICATES", "dryRun": false, "parentLocationIds": ["${sportsHall.id}"] }""")
 
-        val report = align("""{ "dryRun": false, "parentLocationIds": ["${longParent.id}"] }""")
-
-        val renames = report.parents.single().renamedChildren
-        assertThat(renames.map { it.newName }).containsExactly("${longName.take(78)} 1", "${longName.take(78)} 2")
-        renames.forEach { assertThat(repository.findById(it.id).get().localName).isEqualTo(it.newName) }
-        purgeDomainEvents()
+        assertThat(report.parents.single().action).isEqualTo(AlignmentAction.SKIPPED)
+        assertThat(report.parents.single().reason).startsWith("Run step 1 first")
+        assertThat(location(noServices.id!!).status).isEqualTo(DerivedLocationStatus.ACTIVE)
+        assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
 
       @Test
-      fun `adds the parent's services to a same-named child that lacks them and publishes an amended event`() {
-        val library = repository.save(
-          buildNonResidentialLocation(prisonId = "MDI", localName = "Library", pathHierarchy = "LIBR", serviceTypes = setOf(ServiceType.APPOINTMENT)).also {
-            it.addChildLocation(buildNonResidentialLocation(prisonId = "MDI", localName = "Library", pathHierarchy = "LIBR1", serviceTypes = setOf(ServiceType.USE_OF_FORCE)))
-          },
-        )
+      fun `step 2 archives the duplicate it can and reports the one used by another service`() {
+        align("""{ "step": "ALIGN", "dryRun": false, $bothParents }""")
+        purgeDomainEvents()
 
-        val report = align("""{ "dryRun": false, "parentLocationIds": ["${library.id}"] }""")
+        val report = align("""{ "step": "ARCHIVE_DUPLICATES", "dryRun": false, "parentLocationIds": ["${sportsHall.id}"] }""")
 
         val result = report.parents.single()
-        assertThat(result.action).isEqualTo(AlignmentAction.ADD_SERVICES_TO_CHILD)
-        assertThat(result.servicesAddedToChild!!.servicesAdded).containsExactly(ServiceType.APPOINTMENT)
-        assertThat(result.createdChild).isNull()
+        assertThat(result.action).isEqualTo(AlignmentAction.ARCHIVE_SOME_DUPLICATES)
+        assertThat(result.keptChild!!.id).isEqualTo(usedByAppointments.id)
+        val blocked = result.duplicateChildren.single { it.id == usedByOtherService.id }
+        assertThat(blocked.archived).isFalse()
+        assertThat(blocked.reasonCannotArchive).isEqualTo("Used by other services: USE_OF_FORCE")
+        assertThat(result.duplicateChildren.single { it.id == noServices.id }.archived).isTrue()
 
-        val childId = result.servicesAddedToChild.id
-        val child = webTestClient.get().uri("/locations/$childId")
-          .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
-          .exchange()
-          .expectStatus().isOk
-          .expectBody(Location::class.java)
-          .returnResult().responseBody!!
-        assertThat(child.servicesUsingLocation?.map { it.serviceType }).containsExactlyInAnyOrder(ServiceType.USE_OF_FORCE, ServiceType.APPOINTMENT)
+        assertThat(location(noServices.id!!).status).isEqualTo(DerivedLocationStatus.ARCHIVED)
+        assertThat(location(usedByOtherService.id!!).status).isEqualTo(DerivedLocationStatus.ACTIVE)
+        assertThat(location(usedByAppointments.id!!).status).isEqualTo(DerivedLocationStatus.ACTIVE)
 
         getDomainEvents(1).let { events ->
           assertThat(events.single().eventType).isEqualTo("location.inside.prison.amended")
-          assertThat(events.single().additionalInformation?.id).isEqualTo(childId)
+          assertThat(events.single().additionalInformation?.id).isEqualTo(noServices.id)
         }
       }
 
       @Test
-      fun `running again changes nothing`() {
-        val firstRun = align("""{ "dryRun": false, "parentLocationIds": ["${sportsHall.id}", "${chapel.id}"] }""")
-        assertThat(firstRun.parents.map { it.action }).doesNotContain(AlignmentAction.NO_ACTION)
+      fun `running both steps again changes nothing`() {
+        align("""{ "step": "ALIGN", "dryRun": false, $bothParents }""")
+        align("""{ "step": "ARCHIVE_DUPLICATES", "dryRun": false, $bothParents }""")
         purgeDomainEvents()
 
-        val report = align("""{ "dryRun": false, "parentLocationIds": ["${sportsHall.id}", "${chapel.id}"] }""")
+        val step1 = align("""{ "step": "ALIGN", "dryRun": false, $bothParents }""")
+        val step2 = align("""{ "step": "ARCHIVE_DUPLICATES", "dryRun": false, $bothParents }""")
 
-        assertThat(report.parents.map { it.action }).containsOnly(AlignmentAction.NO_ACTION)
+        assertThat(step1.parents.map { it.action }).containsOnly(AlignmentAction.NO_ACTION)
+        assertThat(step2.parents.associate { it.parentId to it.action }).isEqualTo(
+          mapOf(sportsHall.id to AlignmentAction.CANNOT_ARCHIVE_DUPLICATES, chapel.id to AlignmentAction.NO_ACTION),
+        )
         assertThat(getNumberOfMessagesCurrentlyOnQueue()).isZero()
       }
     }
