@@ -15,7 +15,10 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateTot
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadOmittedLocationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.CertifiedCapacity
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import java.time.LocalDateTime
 import java.util.SortedSet
@@ -273,6 +276,20 @@ open class CellCertificateUploadLocation(
    */
   open var convertedCellType: String? = null,
 
+  /**
+   * The cell's state when the upload was processed, recorded with [recordCellState] so the report can show why a cell's
+   * capacity may differ from its certificate without the user opening each location (MAPA-428).
+   */
+  @Column(nullable = false)
+  open var inactive: Boolean = false,
+
+  @Enumerated(EnumType.STRING)
+  open var deactivatedReason: DeactivatedReason? = null,
+
+  open var deactivationReasonDescription: String? = null,
+
+  open var specialistCellTypes: String? = null,
+
   open var message: String? = null,
 
   open var processedDate: LocalDateTime? = null,
@@ -333,6 +350,13 @@ open class CellCertificateUploadLocation(
    * Everything processing worked out for this row. A preview works a row out inside a transaction that is then
    * rolled back, so the outcome is copied out first and written back with [applyOutcome] afterwards.
    */
+  fun recordCellState(state: CellStateAtImport) {
+    inactive = state.inactive
+    deactivatedReason = state.deactivatedReason
+    deactivationReasonDescription = state.deactivationReasonDescription
+    specialistCellTypes = state.specialistCellTypes
+  }
+
   fun recordCurrentCertified(certified: CertifiedCapacity?) {
     currentCertifiedMaxCapacity = certified?.maxCapacity
     currentCertifiedWorkingCapacity = certified?.workingCapacity
@@ -357,6 +381,7 @@ open class CellCertificateUploadLocation(
     currentCertifiedWorkingCapacity = currentCertifiedWorkingCapacity,
     currentCertifiedNormalAccommodation = currentCertifiedNormalAccommodation,
     convertedCellType = convertedCellType,
+    cellState = CellStateAtImport(inactive, deactivatedReason, deactivationReasonDescription, specialistCellTypes),
   )
 
   fun applyOutcome(outcome: CellCertificateUploadLocationOutcome) {
@@ -377,6 +402,7 @@ open class CellCertificateUploadLocation(
     currentCertifiedWorkingCapacity = outcome.currentCertifiedWorkingCapacity
     currentCertifiedNormalAccommodation = outcome.currentCertifiedNormalAccommodation
     convertedCellType = outcome.convertedCellType
+    recordCellState(outcome.cellState)
   }
 
   companion object {
@@ -410,6 +436,10 @@ open class CellCertificateUploadLocation(
     currentCertifiedNormalAccommodation = currentCertifiedNormalAccommodation,
     suggestedLocationKey = suggestedLocationKey,
     convertedCellType = convertedCellType,
+    inactive = inactive,
+    deactivatedReason = deactivatedReason,
+    deactivationReasonDescription = deactivationReasonDescription,
+    specialistCellTypes = specialistCellTypeList(specialistCellTypes),
   )
 
   override fun toString(): String = "CellCertificateUploadLocation(locationKey='$locationKey', status=$status)"
@@ -434,7 +464,35 @@ data class CellCertificateUploadLocationOutcome(
   val currentCertifiedWorkingCapacity: Int?,
   val currentCertifiedNormalAccommodation: Int?,
   val convertedCellType: String?,
+  val cellState: CellStateAtImport,
 )
+
+/**
+ * What a cell looked like when an upload was processed: whether it was out of use, and why, and its specialist cell
+ * types. Both commonly explain why a cell's capacity differs from its certificate. Recorded rather than looked up
+ * when the report is shown, so a preview still explains its results after the prison has changed the cell.
+ */
+data class CellStateAtImport(
+  val inactive: Boolean = false,
+  val deactivatedReason: DeactivatedReason? = null,
+  val deactivationReasonDescription: String? = null,
+  val specialistCellTypes: String? = null,
+) {
+  companion object {
+    fun of(cell: Cell): CellStateAtImport {
+      // A cell can be out of use because a landing or wing above it was deactivated; the reason is held there.
+      val deactivatedLocation = if (cell.isTemporarilyDeactivated()) cell.findDeactivatedLocationInHierarchy() else null
+      return CellStateAtImport(
+        inactive = cell.isTemporarilyDeactivated(),
+        deactivatedReason = deactivatedLocation?.deactivatedReason,
+        deactivationReasonDescription = deactivatedLocation?.deactivationReasonDescription,
+        specialistCellTypes = cell.getSpecialistCellTypesForCell().sortedBy { it.sequence }.takeIf { it.isNotEmpty() }?.joinToString(",") { it.name },
+      )
+    }
+  }
+}
+
+private fun specialistCellTypeList(specialistCellTypes: String?): List<SpecialistCellType>? = specialistCellTypes?.split(",")?.map { SpecialistCellType.valueOf(it.trim()) }
 
 /**
  * A certifiable cell that had no row in a cell certificate upload, recorded so the ingestion report can
@@ -469,6 +527,17 @@ open class CellCertificateUploadOmittedLocation(
 
   /** The name a failed row most likely used for this cell - see [CellCertificateUploadLocation.suggestedLocationKey]. */
   open var uploadedAsKey: String? = null,
+
+  /** The cell's state when the upload was processed - see [CellStateAtImport]. */
+  @Column(nullable = false)
+  open val inactive: Boolean = false,
+
+  @Enumerated(EnumType.STRING)
+  open val deactivatedReason: DeactivatedReason? = null,
+
+  open val deactivationReasonDescription: String? = null,
+
+  open val specialistCellTypes: String? = null,
 ) : Comparable<CellCertificateUploadOmittedLocation> {
 
   companion object {
@@ -485,6 +554,10 @@ open class CellCertificateUploadOmittedLocation(
     certifiedNormalAccommodation = certifiedNormalAccommodation,
     onCurrentCertificate = onCurrentCertificate,
     uploadedAsKey = uploadedAsKey,
+    inactive = inactive,
+    deactivatedReason = deactivatedReason,
+    deactivationReasonDescription = deactivationReasonDescription,
+    specialistCellTypes = specialistCellTypeList(specialistCellTypes),
   )
 
   override fun toString(): String = "CellCertificateUploadOmittedLocation(locationKey='$locationKey')"

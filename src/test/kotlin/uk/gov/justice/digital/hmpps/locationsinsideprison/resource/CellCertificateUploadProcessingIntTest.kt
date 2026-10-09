@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.transaction.support.TransactionTemplate
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.CellCertificateUploadDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
@@ -14,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUpload
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocation
@@ -624,6 +626,73 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
   }
 
   @Test
+  fun `the report records each cell's specialist cell types and whether it was inactive when the import ran`() {
+    val specialistCell = saveCellHoldingNoPrisoners("Z-2-014")
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(specialistCell.getPathHierarchy(), cell1.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(
+        specialistCell.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 0, certifiedNormalAccommodation = 0),
+        cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
+      ),
+    )
+    awaitUploadFinished()
+
+    val upload = webTestClient.get().uri("/locations/bulk/update-cell-certificate/upload/${cellCertificateUploadRepository.findAll().first().id}")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody(CellCertificateUploadDto::class.java)
+      .returnResult().responseBody!!
+    val rows = upload.locations!!.associateBy { it.locationKey }
+
+    with(rows.getValue(specialistCell.getKey())) {
+      assertThat(specialistCellTypes).containsExactly(SpecialistCellType.ACCESSIBLE_CELL)
+      assertThat(inactive).isFalse()
+      assertThat(deactivatedReason).isNull()
+    }
+    with(rows.getValue(cell1.getKey())) {
+      assertThat(specialistCellTypes).isNull()
+      assertThat(inactive).isFalse()
+    }
+    with(upload.locationsNotOnCertificate!!.first { it.locationKey == inactiveCellB3001.getKey() }) {
+      assertThat(inactive).isTrue()
+      assertThat(deactivatedReason).isEqualTo(DeactivatedReason.DAMAGED)
+      assertThat(specialistCellTypes).containsExactly(SpecialistCellType.ACCESSIBLE_CELL)
+    }
+  }
+
+  @Test
+  fun `a cell inactive because its landing was deactivated is reported with the landing's reason`() {
+    val cell = saveCellWithoutWorkingCapacity("Z-2-015", certifiedNormalAccommodation = 2)
+    TransactionTemplate(transactionManager).executeWithoutResult {
+      val landing = repository.findById(landingZ2.id!!).get()
+      landing.temporarilyDeactivate(
+        deactivatedReason = DeactivatedReason.OTHER,
+        deactivationReasonDescription = "Roof repairs",
+        deactivatedDate = LocalDateTime.now(clock),
+        userOrSystemInContext = EXPECTED_USERNAME,
+        linkedTransaction = linkedTransactionRepository.findById(linkedTransaction.transactionId!!).get(),
+      )
+      repository.save(landing)
+    }
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(cell.getKey() to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2)),
+    )
+    awaitUploadFinished()
+
+    TransactionTemplate(transactionManager).execute {
+      with(cellCertificateUploadRepository.findAll().first().locations.first()) {
+        assertThat(inactive).isTrue()
+        assertThat(deactivatedReason).isEqualTo(DeactivatedReason.OTHER)
+        assertThat(deactivationReasonDescription).isEqualTo("Roof repairs")
+      }
+    }
+  }
+
+  @Test
   fun `a temporarily deactivated cell is never raised, it is marked as off the cell certificate instead`() {
     val cell = saveCellWithoutWorkingCapacity("Z-2-013", status = LocationStatus.INACTIVE)
     prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell.getPathHierarchy()), false)
@@ -637,6 +706,9 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
       with(cellCertificateUploadRepository.findAll().first().locations.first()) {
         assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
         assertThat(workingCapacityMismatch).isFalse()
+        // the report says why: the cell was inactive when the import ran
+        assertThat(inactive).isTrue()
+        assertThat(deactivatedReason).isEqualTo(DeactivatedReason.DAMAGED)
       }
     }
 
@@ -666,6 +738,14 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
         assertThat(maxCapacity).isEqualTo(2)
         assertThat(workingCapacity).isEqualTo(2)
         assertThat(certifiedNormalAccommodation).isEqualTo(2)
+        assertThat(inactive).isFalse()
+        assertThat(deactivatedReason).isNull()
+        assertThat(specialistCellTypes).isEqualTo("ACCESSIBLE_CELL")
+      }
+      with(upload.locationsNotOnCertificate.first { it.locationKey == inactiveCellB3001.getKey() }) {
+        assertThat(inactive).isTrue()
+        assertThat(deactivatedReason).isEqualTo(DeactivatedReason.DAMAGED)
+        assertThat(specialistCellTypes).isEqualTo("ACCESSIBLE_CELL")
       }
       // the omitted cells did not have their own upload row, so they must not be counted as failures
       assertThat(upload.failedRecords).isEqualTo(0)

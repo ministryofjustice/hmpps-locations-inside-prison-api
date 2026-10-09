@@ -2,6 +2,8 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.dto
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import io.swagger.v3.oas.annotations.media.Schema
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
@@ -139,6 +141,18 @@ data class CellCertificateUploadOmittedLocationDto(
 
   @param:Schema(description = "The name a failed row most likely used for this cell, when it differs only by dropped leading zeros", example = "MDI-A-1-5")
   val uploadedAsKey: String? = null,
+
+  @param:Schema(description = "The cell was inactive (temporarily deactivated, itself or through a location above it) when the import ran", example = "false", required = true)
+  val inactive: Boolean = false,
+
+  @param:Schema(description = "Why the cell was inactive when the import ran, taken from the cell or the location above it that was deactivated", example = "REFURBISHMENT")
+  val deactivatedReason: DeactivatedReason? = null,
+
+  @param:Schema(description = "Free text expanding on the deactivation reason, and the only detail when the reason is OTHER", example = "Window repairs")
+  val deactivationReasonDescription: String? = null,
+
+  @param:Schema(description = "The cell's specialist cell types when the import ran", example = "[\"DRY\"]")
+  val specialistCellTypes: List<SpecialistCellType>? = null,
 )
 
 @Schema(description = "Result of processing a single uploaded cell")
@@ -233,4 +247,16 @@ data class CellCertificateUploadLocationDto(
     example = "Office",
   )
   val convertedCellType: String? = null,
+
+  @param:Schema(description = "The cell was inactive (temporarily deactivated, itself or through a location above it) when the import ran", example = "false", required = true)
+  val inactive: Boolean = false,
+
+  @param:Schema(description = "Why the cell was inactive when the import ran, taken from the cell or the location above it that was deactivated", example = "REFURBISHMENT")
+  val deactivatedReason: DeactivatedReason? = null,
+
+  @param:Schema(description = "Free text expanding on the deactivation reason, and the only detail when the reason is OTHER", example = "Window repairs")
+  val deactivationReasonDescription: String? = null,
+
+  @param:Schema(description = "The cell's specialist cell types when the import ran", example = "[\"DRY\"]")
+  val specialistCellTypes: List<SpecialistCellType>? = null,
 )
