@@ -568,6 +568,74 @@
                                     </td>
                                     <td><p>Set when the cell is converted to another use, such as an office; it holds no capacity, so the import changed none and the certificate records 0. <a href="./../null">Sensitivity: NONE</a></p></td>
                                 </tr>
+                                <tr>
+                                    <td><span id="inactive">inactive</span></td>
+                                    <td>bool</td>
+                                    <td>1</td>
+                                    <td title=''></td>
+                                    <td title=''></td>
+                                    <td>false</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>The cell was temporarily deactivated, itself or through a location above it, when the upload was processed. <a href="./../null">Sensitivity: NONE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="deactivated_reason">deactivated_reason</span></td>
+                                    <td>varchar</td>
+                                    <td>30</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Why the cell was inactive when the upload was processed. See DeactivatedReason in reference-data.csv. <a href="./../null">Sensitivity: NONE</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="deactivation_reason_description">deactivation_reason_description</span></td>
+                                    <td>varchar</td>
+                                    <td>255</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Free text expanding on deactivated_reason, copied from the location. Assume it can name a prisoner. <a href="./../null">Sensitivity: PERSONAL</a></p></td>
+                                </tr>
+                                <tr>
+                                    <td><span id="specialist_cell_types">specialist_cell_types</span></td>
+                                    <td>varchar</td>
+                                    <td>255</td>
+                                    <td title='nullable'>√</td>
+                                    <td title=''></td>
+                                    <td>null</td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td>
+                                        <table border='0' cellspacing='0' cellpadding='0'>
+                                        </table>
+                                    </td>
+                                    <td><p>Comma-separated specialist cell types the cell had when the upload was processed. See SpecialistCellType in reference-data.csv. <a href="./../null">Sensitivity: NONE</a></p></td>
+                                </tr>
                                 </tbody>
                             </table>
                         </div>
