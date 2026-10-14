@@ -534,6 +534,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           """,
             JsonCompareMode.LENIENT,
           )
+
+        // The change of type clears the session part way through, and the transaction must still be completed
+        assertThat(
+          linkedTransactionRepository.findAll().single { it.transactionDetail == "NOMIS Sync (Update) [B-1-001] in prison ZZGHI" }.txEndTime,
+        ).isNotNull()
       }
 
       @Test

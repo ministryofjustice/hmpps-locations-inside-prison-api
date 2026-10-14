@@ -43,11 +43,13 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationSummary
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialAttributeType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialHousingType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
@@ -86,6 +88,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReactivateLoc
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ReasonForDeactivationMustBeProvidedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.SpecialistCellTypeChangesRequireCertificationApprovalException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateCapacityRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UpdateNotAllowedAsConvertedCellException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.UsedForTypesOnlyForNormalAccommodationException
 import java.lang.Boolean.TRUE
 import java.time.Clock
@@ -619,16 +622,73 @@ class LocationService(
       throw PendingApprovalOnLocationCannotBeUpdatedException(residentialLocation.getKey())
     }
 
-    val linkedTransaction = sharedLocationService.createLinkedTransaction(
+    var linkedTransaction = sharedLocationService.createLinkedTransaction(
       prisonId = residentialLocation.prisonId,
       TransactionType.LOCATION_UPDATE,
       "Update residential location ${residentialLocation.getKey()}",
     )
+    var locationToPatch = residentialLocation
+    var patchToApply = patchLocationRequest
 
-    return sharedLocationService.patchLocation(residentialLocation, patchLocationRequest, linkedTransaction).also {
+    if (isBecomingOrLeavingCell(residentialLocation, patchLocationRequest)) {
+      changeStoredClass(residentialLocation, patchLocationRequest.locationType!!, linkedTransaction)
+      // The session has been cleared, so carry on with managed copies. The type is already changed and recorded,
+      // so it is not applied again.
+      locationToPatch = residentialLocationRepository.findById(residentialLocation.id!!)
+        .orElseThrow { LocationNotFoundException(residentialLocation.id.toString()) }
+      linkedTransaction = entityManager.find(LinkedTransaction::class.java, linkedTransaction.transactionId)
+      patchToApply = patchLocationRequest.copy(locationType = null)
+    }
+
+    return sharedLocationService.patchLocation(locationToPatch, patchToApply, linkedTransaction).also {
       sharedLocationService.trackLocationUpdate(it.location)
       linkedTransaction.txEndTime = now(clock)
     }
+  }
+
+  /**
+   * Whether a location is a cell is decided by its stored class (single-table inheritance), not by its location type.
+   * Changing the type alone would leave, say, an area typed as a cell but still loaded as a plain residential location,
+   * so capacity changes to it would be ignored (MAPB-999).
+   */
+  private fun isBecomingOrLeavingCell(location: ResidentialLocation, patchLocationRequest: PatchResidentialLocationRequest): Boolean {
+    val newType = patchLocationRequest.locationType?.baseType ?: return false
+    return (newType == LocationType.CELL) != (location is Cell)
+  }
+
+  /**
+   * Changes the stored class the same way the NOMIS sync does ([SyncService]), recording the type change first. This
+   * clears the session, so the caller must reload anything it still needs.
+   */
+  private fun changeStoredClass(
+    location: ResidentialLocation,
+    newType: ResidentialLocationType,
+    linkedTransaction: LinkedTransaction,
+  ) {
+    val id = location.id!!
+    location.addHistory(
+      LocationAttribute.LOCATION_TYPE,
+      location.locationType.description,
+      newType.description,
+      sharedLocationService.getUsername(),
+      now(clock),
+      linkedTransaction,
+    )
+    if (location is Cell) {
+      location.convertToNonCell()
+    }
+    locationRepository.updateLocationType(id, newType.baseType.name)
+    if (newType.baseType == LocationType.CELL) {
+      locationRepository.updateResidentialHousingType(
+        id,
+        location.residentialHousingType.name,
+        location.residentialHousingType.mapToAccommodationType().name,
+      )
+    }
+    entityManager.flush()
+    entityManager.clear()
+
+    log.info("${location.getKey()}: now stored as a ${if (newType.baseType == LocationType.CELL) "cell" else "residential location"} as its type is ${newType.baseType}")
   }
 
   @Transactional
@@ -789,6 +849,14 @@ class LocationService(
 
     if (locCapChange.isPermanentlyDeactivated()) {
       throw PermanentlyDeactivatedUpdateNotAllowedException(locCapChange.getKey())
+    }
+
+    // Capacity is only held by cells and virtual locations; anything else would ignore the change and still return it
+    if (locCapChange.isConvertedCell()) {
+      throw UpdateNotAllowedAsConvertedCellException(locCapChange.getKey())
+    }
+    if (!locCapChange.isCell() && !locCapChange.isVirtualResidentialLocation()) {
+      throw ValidationException("Location ${locCapChange.getKey()} is not a cell, so its capacity cannot be set")
     }
 
     val certificateValue = cellCertificateRepository.findByPrisonIdAndPathHierarchy(locCapChange.prisonId, locCapChange.getPathHierarchy())
