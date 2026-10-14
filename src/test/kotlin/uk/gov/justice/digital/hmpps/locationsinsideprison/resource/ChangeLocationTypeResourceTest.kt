@@ -8,6 +8,7 @@ import org.springframework.transaction.support.TransactionTemplate
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationAttribute
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ResidentialLocation
@@ -78,6 +79,30 @@ class ChangeLocationTypeResourceTest : CommonDataTestBase() {
 
     assertThat(cellRepository.findById(cell1.id!!)).isEmpty
     assertThat(resiRepository.findById(cell1.id!!).get().locationType).isEqualTo(LocationType.AREA)
+  }
+
+  @Test
+  fun `a cell changed to another type records the change once and completes its transaction`() {
+    patchLocationType(cell1.id!!, ResidentialLocationType.HOLDING_AREA)
+
+    val typeChanges = TransactionTemplate(transactionManager).execute {
+      resiRepository.findById(cell1.id!!).get().getHistoryAsList()
+        .filter { it.attributeName == LocationAttribute.LOCATION_TYPE }
+        .map { Triple(it.oldValue, it.newValue, it.linkedTransaction?.txEndTime) }
+    }!!
+    assertThat(typeChanges.map { it.first to it.second }).containsExactly("Cell" to "Holding Area")
+    assertThat(typeChanges.single().third).isNotNull()
+  }
+
+  @Test
+  fun `setting the capacity of a converted cell is rejected`() {
+    TransactionTemplate(transactionManager).executeWithoutResult {
+      cellRepository.save(cellRepository.findById(cell1.id!!).get().apply { convertedCellType = ConvertedCellType.HOLDING_ROOM })
+    }
+
+    putCapacity(cell1.id!!)
+      .expectStatus().isEqualTo(409)
+      .expectBody().jsonPath("$.developerMessage").isEqualTo("Location MDI-Z-1-001 cannot be updated as has been converted to non-res cell")
   }
 
   @Test
