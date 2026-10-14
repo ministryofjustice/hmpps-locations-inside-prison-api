@@ -987,9 +987,9 @@ open class ResidentialLocation(
 
         this.updatedBy = userOrSystemInContext
         this.whenUpdated = amendedDate
-      } else {
-        log.warn("Capacity cannot be set, not a cell or virtual location")
       }
+    } else {
+      log.warn("Capacity cannot be set on ${getKey()}, not a cell or virtual location")
     }
   }
 }
