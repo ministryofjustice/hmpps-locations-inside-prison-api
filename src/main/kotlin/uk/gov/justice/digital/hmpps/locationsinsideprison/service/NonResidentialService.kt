@@ -353,8 +353,8 @@ class NonResidentialService(
    *   parent's services it lacks are added to it. Nothing is archived. Other children with the parent's name are
    *   listed, with whether step 2 could archive them.
    * - [AlignmentStep.ARCHIVE_DUPLICATES]: the other children with the parent's name are archived, unless a child is
-   *   used by a service other than Appointments or Activities, or has child locations of its own. Those are left
-   *   alone and reported. A parent is skipped if its kept child still lacks some of the parent's services, as step
+   *   used by a service other than Appointments or Activities that the kept child is not also used by, or has child
+   *   locations of its own. Those are left alone and reported. A parent is skipped if its kept child still lacks some of the parent's services, as step
    *   1 has not been run for it.
    *
    * Only parents that are not archived, are used by at least one service and have at least one live direct child are
@@ -442,9 +442,11 @@ class NonResidentialService(
     val childToKeep = chooseChildToKeep(sameNamedChildren, parentServices)
     // Taken before any update, so the report shows the kept child's services before this run on real and dry runs alike
     val keptChild = childToKeep.toChildSummary()
-    val duplicates = sameNamedChildren.filter { it.id != childToKeep.id }.map { it.toDuplicateChild(archived = false) }
     val childServices = childToKeep.services.map { it.serviceType }.toSet()
     val missingServices = parentServices.filter { it !in childServices }
+    // Whether step 2 could archive each duplicate depends on the kept child's services once this step has run
+    val duplicates = sameNamedChildren.filter { it.id != childToKeep.id }
+      .map { it.toDuplicateChild(archived = false, keptChildServices = childServices + missingServices) }
     if (missingServices.isEmpty()) {
       return parent.toAlignmentResult(AlignmentAction.NO_ACTION, keptChild = keptChild, duplicateChildren = duplicates)
     }
@@ -496,7 +498,7 @@ class NonResidentialService(
     }
 
     val duplicates = sameNamedChildren.filter { it.id != childToKeep.id }
-    val archivable = duplicates.filter { reasonCannotArchive(it) == null }
+    val archivable = duplicates.filter { reasonCannotArchive(it, keptChildServices) == null }
     if (!dryRun && archivable.isNotEmpty()) {
       val username = commonLocationService.getUsername()
       val linkedTransaction = commonLocationService.createLinkedTransaction(
@@ -527,7 +529,7 @@ class NonResidentialService(
     return parent.toAlignmentResult(
       action,
       keptChild = childToKeep.toChildSummary(),
-      duplicateChildren = duplicates.map { it.toDuplicateChild(archived = !dryRun && it in archivable) },
+      duplicateChildren = duplicates.map { it.toDuplicateChild(archived = !dryRun && it in archivable, keptChildServices = keptChildServices) },
     )
   }
 
@@ -542,11 +544,17 @@ class NonResidentialService(
       .thenBy { it.getPathHierarchy() },
   ).first()
 
-  /** Why step 2 cannot archive a duplicate child, or null when it can. */
-  private fun reasonCannotArchive(child: NonResidentialLocation): String? {
-    val otherServices = child.services.map { it.serviceType }.filter { it !in ACTIVITIES_AND_APPOINTMENTS_SERVICES }.sorted()
+  /**
+   * Why step 2 cannot archive a duplicate child, or null when it can. Activities and Appointments move their bookings
+   * to the kept child before step 2, so their services never block it. Any other service blocks it only when the kept
+   * child is not also used by that service, as that service would then lose a location with this name.
+   */
+  private fun reasonCannotArchive(child: NonResidentialLocation, keptChildServices: Set<ServiceType>): String? {
+    val servicesNotOnKeptChild = child.services.map { it.serviceType }
+      .filter { it !in ACTIVITIES_AND_APPOINTMENTS_SERVICES && it !in keptChildServices }
+      .sorted()
     return when {
-      otherServices.isNotEmpty() -> "Used by other services: ${otherServices.joinToString(", ")}"
+      servicesNotOnKeptChild.isNotEmpty() -> "Used by other services the kept child is not used by: ${servicesNotOnKeptChild.joinToString(", ")}"
       !child.isLeafLevel() -> "Has child locations of its own"
       else -> null
     }
@@ -559,8 +567,8 @@ class NonResidentialService(
     services = services.map { it.serviceType }.sorted(),
   )
 
-  private fun NonResidentialLocation.toDuplicateChild(archived: Boolean): DuplicateChild {
-    val reason = reasonCannotArchive(this)
+  private fun NonResidentialLocation.toDuplicateChild(archived: Boolean, keptChildServices: Set<ServiceType>): DuplicateChild {
+    val reason = reasonCannotArchive(this, keptChildServices)
     return DuplicateChild(
       id = id!!,
       key = getKey(),
@@ -1101,7 +1109,7 @@ data class DuplicateChild(
   val key: String,
   val name: String,
   val services: List<ServiceType>,
-  @param:Schema(description = "False when it is used by a service other than Appointments or Activities, or has child locations of its own")
+  @param:Schema(description = "False when it is used by a service other than Appointments or Activities that the kept child is not used by, or has child locations of its own")
   val canBeArchived: Boolean,
   val reasonCannotArchive: String? = null,
   @param:Schema(description = "True when this run archived it")
