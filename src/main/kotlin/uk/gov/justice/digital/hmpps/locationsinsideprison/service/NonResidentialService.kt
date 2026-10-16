@@ -354,8 +354,8 @@ class NonResidentialService(
    *   listed, with whether step 2 could archive them.
    * - [AlignmentStep.ARCHIVE_DUPLICATES]: the other children with the parent's name are archived, unless a child is
    *   used by a service other than Appointments or Activities that the kept child is not also used by, or has child
-   *   locations of its own. Those are left alone and reported. A parent is skipped if its kept child still lacks some of the parent's services, as step
-   *   1 has not been run for it.
+   *   locations of its own. Those are left alone and reported. A parent is skipped if its kept child still lacks some
+   *   of the parent's services, as step 1 has not been run for it.
    *
    * Only parents that are not archived, are used by at least one service and have at least one live direct child are
    * considered. Names are compared ignoring case and surrounding spaces. With [AlignChildrenToParentNameRequest.dryRun]
@@ -554,8 +554,8 @@ class NonResidentialService(
       .filter { it !in ACTIVITIES_AND_APPOINTMENTS_SERVICES && it !in keptChildServices }
       .sorted()
     return when {
-      servicesNotOnKeptChild.isNotEmpty() -> "Used by other services the kept child is not used by: ${servicesNotOnKeptChild.joinToString(", ")}"
       !child.isLeafLevel() -> "Has child locations of its own"
+      servicesNotOnKeptChild.isNotEmpty() -> "Used by other services the kept child is not used by: ${servicesNotOnKeptChild.joinToString(", ")}"
       else -> null
     }
   }

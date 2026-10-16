@@ -387,8 +387,9 @@ class NonResidentialServiceTest {
         )
         val coveredDuplicate = child("Gym", "G2", ServiceType.PROGRAMMES_AND_ACTIVITIES, ServiceType.INTERNAL_MOVEMENTS, ServiceType.USE_OF_FORCE)
         val partlyCoveredDuplicate = child("Gym", "G3", ServiceType.INTERNAL_MOVEMENTS, ServiceType.OFFICIAL_VISITS)
-        val coveredWithChildren = child("Gym", "G4", ServiceType.INTERNAL_MOVEMENTS).apply { addChildLocation(child("Store", "S1")) }
-        givenParents(gymWithChildren(kept, coveredDuplicate, partlyCoveredDuplicate, coveredWithChildren))
+        // Has a service the kept child is not used by as well, but its child locations are the lasting blocker
+        val withChildren = child("Gym", "G4", ServiceType.OFFICIAL_VISITS).apply { addChildLocation(child("Store", "S1")) }
+        givenParents(gymWithChildren(kept, coveredDuplicate, partlyCoveredDuplicate, withChildren))
 
         val result = align(AlignmentStep.ARCHIVE_DUPLICATES, dryRun = false)
 
@@ -397,10 +398,10 @@ class NonResidentialServiceTest {
         Assertions.assertThat(parentResult.duplicateChildren.map { Triple(it.id!!, it.archived, it.reasonCannotArchive) }).containsExactlyInAnyOrder(
           Triple(coveredDuplicate.id!!, true, null),
           Triple(partlyCoveredDuplicate.id!!, false, "Used by other services the kept child is not used by: OFFICIAL_VISITS"),
-          Triple(coveredWithChildren.id!!, false, "Has child locations of its own"),
+          Triple(withChildren.id!!, false, "Has child locations of its own"),
         )
         Assertions.assertThat(coveredDuplicate.status).isEqualTo(LocationStatus.ARCHIVED)
-        Assertions.assertThat(listOf(kept, partlyCoveredDuplicate, coveredWithChildren).map { it.status }).containsOnly(LocationStatus.ACTIVE)
+        Assertions.assertThat(listOf(kept, partlyCoveredDuplicate, withChildren).map { it.status }).containsOnly(LocationStatus.ACTIVE)
         Assertions.assertThat(result.amended.map { it.id }).containsExactly(coveredDuplicate.id)
       }
 
