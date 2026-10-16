@@ -210,6 +210,21 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
   }
 
   @Test
+  fun `the preview and the import list the rows in the order of the file`() {
+    val fileOrder = changesFile().keys.toList()
+    // guard against the test passing by accident: the file is not in location key order
+    assertThat(fileOrder).isNotEqualTo(fileOrder.sorted())
+
+    val previewId = post("/locations/bulk/update-cell-certificate/MDI/preview", changesFile()).id
+    awaitFinished(previewId)
+    assertThat(results(previewId).locations!!.map { it.locationKey }).containsExactlyElementsOf(fileOrder)
+
+    val importId = post("/locations/bulk/update-cell-certificate/upload/$previewId/import", null).id
+    awaitFinished(importId)
+    assertThat(results(importId).locations!!.map { it.locationKey }).containsExactlyElementsOf(fileOrder)
+  }
+
+  @Test
   fun `a cell left off the file keeps its certified values, in the preview and in the import`() {
     // cell2 is certified at working capacity 1 while the cell keeps its own 2
     val baselineId = post(

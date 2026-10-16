@@ -126,7 +126,9 @@ class CellCertificateUploadService(
       reasonForChange = request.reasonForChange,
       totalRecords = request.locations.size,
     )
-    request.locations.forEach { (key, detail) ->
+    // The request map keeps the order the front end read the file in (Jackson builds a LinkedHashMap), so its
+    // position here is the row's position in the file.
+    request.locations.entries.forEachIndexed { index, (key, detail) ->
       upload.addLocation(
         CellCertificateUploadLocation(
           locationKey = key,
@@ -135,6 +137,7 @@ class CellCertificateUploadService(
           certifiedNormalAccommodation = detail.certifiedNormalAccommodation,
           cellMark = detail.cellMark,
           inCellSanitation = detail.inCellSanitation,
+          filePosition = index + 1,
         ),
       )
     }
