@@ -150,6 +150,7 @@ open class CellCertificateUpload(
           certifiedNormalAccommodation = row.certifiedNormalAccommodation,
           cellMark = row.cellMark,
           inCellSanitation = row.inCellSanitation,
+          filePosition = row.filePosition,
         ),
       )
     }
@@ -216,6 +217,12 @@ open class CellCertificateUploadLocation(
   open val cellMark: String? = null,
 
   open val inCellSanitation: Boolean? = null,
+
+  /**
+   * Where the row sat in the uploaded file, starting at 1, so the report lists the cells in the same order as the
+   * prison's certificate (MAPA-457). Null for uploads made before it was recorded.
+   */
+  open val filePosition: Int? = null,
 
   @Column(nullable = false)
   @Enumerated(EnumType.STRING)
@@ -406,7 +413,9 @@ open class CellCertificateUploadLocation(
   }
 
   companion object {
-    private val COMPARATOR = compareBy<CellCertificateUploadLocation> { it.locationKey }
+    // file order; uploads from before the position was recorded have none, so fall back to the location key
+    private val COMPARATOR = compareBy<CellCertificateUploadLocation, Int?>(nullsLast()) { it.filePosition }
+      .thenBy { it.locationKey }
   }
 
   override fun compareTo(other: CellCertificateUploadLocation) = COMPARATOR.compare(this, other)
