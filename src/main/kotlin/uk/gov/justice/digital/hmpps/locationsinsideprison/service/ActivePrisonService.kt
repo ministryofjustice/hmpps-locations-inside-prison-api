@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.service
 
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.locationsinsideprison.config.CacheConfiguration
@@ -17,25 +16,17 @@ class ActivePrisonService(
 ) {
   fun isAllPrisonsActive() = !resiServiceActivatedPerPrison
 
-  fun isActivePrison(prisonId: String): Boolean {
-    val config = getPrisonConfiguration(prisonId)
-    return isAllPrisonsActive() || (config?.resiLocationServiceActive ?: false) || (config?.nonResiServiceActive ?: false)
-  }
+  // Non-residential locations are active in every prison, so any prison with a configuration is active
+  fun isActivePrison(prisonId: String): Boolean = isAllPrisonsActive() || getPrisonConfiguration(prisonId) != null
 
   fun isCertificationApprovalRequired(prisonId: String) = getPrisonConfiguration(prisonId)?.certificationApprovalRequired == true
 
   fun getPrisonConfiguration(prisonId: String): PrisonConfiguration? = prisonConfigurationRepository.findById(prisonId).getOrNull()
 
   @Cacheable(CacheConfiguration.ACTIVE_PRISONS_CACHE_NAME)
-  fun getActivePrisons(): List<String> = prisonConfigurationRepository.findAll().filter { it.resiLocationServiceActive || it.nonResiServiceActive }.map { it.id }
+  fun getActivePrisons(): List<String> = prisonConfigurationRepository.findAll().map { it.id }
 
-  @CacheEvict(CacheConfiguration.ACTIVE_PRISONS_CACHE_NAME)
   fun setResiLocationServiceActive(prisonId: String, resiLocationServiceActive: Boolean) {
     getPrisonConfiguration(prisonId)?.resiLocationServiceActive = resiLocationServiceActive
-  }
-
-  @CacheEvict(CacheConfiguration.ACTIVE_PRISONS_CACHE_NAME)
-  fun setNonResiServiceActive(prisonId: String, nonResiServiceActive: Boolean) {
-    getPrisonConfiguration(prisonId)?.nonResiServiceActive = nonResiServiceActive
   }
 }
