@@ -258,9 +258,11 @@ The full handshake is drawn in the [Data Flow Diagram](data-flow-diagram.md#auth
 
 **API** — `ROLE_VIEW_LOCATIONS`, `ROLE_MAINTAIN_LOCATIONS`, `ROLE_UNARCHIVE_LOCATIONS`, `ROLE_SYNC_LOCATIONS`, `ROLE_MANAGE_PROPERTY_LOCATIONS`, `ROLE_READ_LOCATION_REFERENCE_DATA`, `ROLE_LOCATION_CERTIFICATION`, `ROLE_LOCATION_CONFIG_ADMIN`, `VIEW_PRISONER_LOCATIONS`, `ESTABLISHMENT_ROLL`. Writes also require the `SCOPE_write` authority.
 
-**Residential UI** — `VIEW_INTERNAL_LOCATION` (read only), `MANAGE_RESIDENTIAL_LOCATIONS` (cell status manager), `MANAGE_RES_LOCATIONS_OP_CAP` (certificate administrator), `MANAGE_RES_LOCATIONS_ADMIN` (central admin), `RESI__CERT_REVIEWER`, `RESI__CERT_VIEWER`, `REPORTING_LOCATION_INFORMATION`.
+Viewing locations in either UI needs no role: any user with the prison in their caseload can see them. The roles below give access to changes and to other features.
 
-**Non-Residential UI** — `VIEW_INTERNAL_LOCATION` → `view_non_resi`; `NONRESI__MAINTAIN_LOCATION` → `edit_non_resi`; `NONRESI__MAINTAIN_BVL_LOCS` → `edit_bvl`.
+**Residential UI** — `MANAGE_RESIDENTIAL_LOCATIONS` (cell status manager), `MANAGE_RES_LOCATIONS_OP_CAP` (certificate administrator), `MANAGE_RES_LOCATIONS_ADMIN` (central admin), `RESI__CERT_REVIEWER`, `RESI__CERT_VIEWER`, `REPORTING_LOCATION_INFORMATION`.
+
+**Non-Residential UI** — `NONRESI__MAINTAIN_LOCATION` → `edit_non_resi`; `NONRESI__MAINTAIN_BVL_LOCS` → `edit_bvl`.
 
 The UI and API role vocabularies are distinct and are not mapped to one another.
 
