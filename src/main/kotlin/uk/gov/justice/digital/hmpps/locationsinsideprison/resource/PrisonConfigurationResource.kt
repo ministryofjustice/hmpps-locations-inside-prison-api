@@ -165,6 +165,31 @@ class PrisonConfigurationResource(
     includeSegInRollCountStatus: ServiceStatus,
   ) = prisonConfigurationService.updateIncludeSegInRollCount(prisonId, includeSegInRollCountStatus)
 
+  @GetMapping
+  @ResponseStatus(HttpStatus.OK)
+  @PreAuthorize("hasRole('ROLE_LOCATION_CONFIG_ADMIN')")
+  @Operation(
+    summary = "Get the configuration of every prison",
+    description = "Returns every prison that has a configuration, with its name, sorted by prison name. Requires role LOCATION_CONFIG_ADMIN",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns configurations",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the LOCATION_CONFIG_ADMIN role",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun getAllPrisonConfigurations() = prisonConfigurationService.getAllPrisonConfigurations()
+
   @GetMapping("/{prisonId}")
   @ResponseStatus(HttpStatus.OK)
   @PreAuthorize("hasRole('ROLE_LOCATION_CONFIG_ADMIN')")

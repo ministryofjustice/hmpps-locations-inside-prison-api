@@ -1,20 +1,29 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.cache.CacheManager
 import org.springframework.test.json.JsonCompareMode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.config.CacheConfiguration
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.SqsIntegrationTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.PrisonConfiguration
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonConfigurationDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.PrisonDto
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ServiceStatus
 import java.time.LocalDateTime
 
 class PrisonConfigurationResourceTest : SqsIntegrationTestBase() {
 
   @Autowired
   lateinit var prisonConfigurationRepository: PrisonConfigurationRepository
+
+  @Autowired
+  lateinit var cacheManager: CacheManager
 
   val prisonId = "LEI"
 
@@ -27,6 +36,97 @@ class PrisonConfigurationResourceTest : SqsIntegrationTestBase() {
         updatedBy = "TEST",
       ),
     )
+  }
+
+  @DisplayName("GET /prison-configuration")
+  @Nested
+  inner class GetAllPrisonConfigurationsTest {
+
+    @Nested
+    inner class Security {
+
+      @Test
+      fun `access forbidden when no authority`() {
+        webTestClient.get().uri("/prison-configuration")
+          .exchange()
+          .expectStatus().isUnauthorized
+      }
+
+      @Test
+      fun `access forbidden when no role`() {
+        webTestClient.get().uri("/prison-configuration")
+          .headers(setAuthorisation(roles = listOf()))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+
+      @Test
+      fun `access forbidden with wrong role`() {
+        webTestClient.get().uri("/prison-configuration")
+          .headers(setAuthorisation(roles = listOf("ROLE_BANANAS")))
+          .exchange()
+          .expectStatus().isForbidden
+      }
+    }
+
+    @Nested
+    inner class HappyPath {
+
+      @BeforeEach
+      fun setUp() {
+        cacheManager.getCache(CacheConfiguration.PRISON_NAMES_CACHE_NAME)?.clear()
+        prisonConfigurationRepository.save(
+          PrisonConfiguration(
+            id = "BXI",
+            resiLocationServiceActive = true,
+            certificationApprovalRequired = true,
+            whenUpdated = LocalDateTime.now(clock),
+            updatedBy = "TEST",
+          ),
+        )
+      }
+
+      @Test
+      fun `lists every prison with its name, sorted by name`() {
+        prisonRegisterMockServer.stubGetAllPrisons(
+          listOf(
+            PrisonDto(prisonId = "LEI", prisonName = "Leeds (HMP)", active = true, male = true, female = false, contracted = false, lthse = false),
+            PrisonDto(prisonId = "BXI", prisonName = "Brixton (HMP)", active = true, male = true, female = false, contracted = false, lthse = false),
+          ),
+        )
+
+        val configurations = webTestClient.get().uri("/prison-configuration")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBodyList(PrisonConfigurationDto::class.java)
+          .returnResult().responseBody!!
+
+        assertThat(configurations.map { it.prisonName }).isSortedAccordingTo(compareBy { it!!.lowercase() })
+        assertThat(configurations.first { it.prisonId == "BXI" }).isEqualTo(
+          PrisonConfigurationDto(
+            prisonId = "BXI",
+            prisonName = "Brixton (HMP)",
+            resiLocationServiceActive = ServiceStatus.ACTIVE,
+            includeSegregationInRollCount = ServiceStatus.INACTIVE,
+            certificationApprovalRequired = ServiceStatus.ACTIVE,
+          ),
+        )
+        assertThat(configurations.first { it.prisonId == prisonId }.prisonName).isEqualTo("Leeds (HMP)")
+      }
+
+      @Test
+      fun `falls back to the prison ID when the prison register has no name`() {
+        prisonRegisterMockServer.stubGetAllPrisons(emptyList())
+
+        webTestClient.get().uri("/prison-configuration")
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CONFIG_ADMIN")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$[?(@.prisonId == 'BXI')].prisonName").isEqualTo("BXI")
+      }
+    }
   }
 
   @DisplayName("GET /prison-configuration/{prisonId}")
