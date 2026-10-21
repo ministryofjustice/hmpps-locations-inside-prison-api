@@ -348,10 +348,10 @@ class NonResidentialService(
    * Activities and Appointments can move bookings from the parent to that child without staff seeing a different
    * location name. It runs in two steps, chosen by [AlignChildrenToParentNameRequest.step]:
    *
-   * - [AlignmentStep.ALIGN]: where no live direct child has the parent's name, one is created with the parent's
-   *   name, status and services. Otherwise the child to keep is chosen (see [chooseChildToKeep]) and any of the
-   *   parent's services it lacks are added to it. Nothing is archived. Other children with the parent's name are
-   *   listed, with whether step 2 could archive them.
+   * - [AlignmentStep.ALIGN]: where no live direct child with the parent's name can be kept (see [chooseChildToKeep]),
+   *   one is created with the parent's name, status and services. Otherwise any of the parent's services the kept
+   *   child lacks are added to it. Nothing is archived. Other children with the parent's name are listed, with
+   *   whether step 2 could archive them.
    * - [AlignmentStep.ARCHIVE_DUPLICATES]: the other children with the parent's name are archived, unless a child is
    *   used by a service other than Appointments or Activities, or has child locations of its own. Those are left
    *   alone and reported. A parent is skipped if its kept child still lacks some of the parent's services, as step
@@ -419,9 +419,16 @@ class NonResidentialService(
     created: MutableList<LocationDTO>,
     amended: MutableList<LocationDTO>,
   ): ParentAlignmentResult {
-    if (sameNamedChildren.isEmpty()) {
+    val childToKeep = chooseChildToKeep(parent, sameNamedChildren, parentServices)
+    if (childToKeep == null) {
+      // Any same-named children are inactive, so are left for step 2 like other duplicates
+      val duplicates = sameNamedChildren.map { it.toDuplicateChild(archived = false) }
       if (dryRun) {
-        return parent.toAlignmentResult(AlignmentAction.CREATE_CHILD, createdChild = CreatedChild(id = null, key = null, name = name, services = parentServices))
+        return parent.toAlignmentResult(
+          AlignmentAction.CREATE_CHILD,
+          createdChild = CreatedChild(id = null, key = null, name = name, services = parentServices),
+          duplicateChildren = duplicates,
+        )
       }
       val linkedTransaction = commonLocationService.createLinkedTransaction(
         prisonId = parent.prisonId,
@@ -436,10 +443,10 @@ class NonResidentialService(
       return parent.toAlignmentResult(
         AlignmentAction.CREATE_CHILD,
         createdChild = CreatedChild(id = savedChild.id, key = savedChild.getKey(), name = name, services = parentServices),
+        duplicateChildren = duplicates,
       )
     }
 
-    val childToKeep = chooseChildToKeep(sameNamedChildren, parentServices)
     // Taken before any update, so the report shows the kept child's services before this run on real and dry runs alike
     val keptChild = childToKeep.toChildSummary()
     val duplicates = sameNamedChildren.filter { it.id != childToKeep.id }.map { it.toDuplicateChild(archived = false) }
@@ -482,10 +489,14 @@ class NonResidentialService(
     dryRun: Boolean,
     amended: MutableList<LocationDTO>,
   ): ParentAlignmentResult {
+    if (sameNamedChildren.isEmpty()) {
+      return parent.toAlignmentResult(AlignmentAction.NO_ACTION, reason = "No duplicate children with the parent's name")
+    }
+    val childToKeep = chooseChildToKeep(parent, sameNamedChildren, parentServices)
+      ?: return parent.toAlignmentResult(AlignmentAction.SKIPPED, reason = "Run step 1 first: no active child has the parent's name")
     if (sameNamedChildren.size < 2) {
       return parent.toAlignmentResult(AlignmentAction.NO_ACTION, reason = "No duplicate children with the parent's name")
     }
-    val childToKeep = chooseChildToKeep(sameNamedChildren, parentServices)
     val keptChildServices = childToKeep.services.map { it.serviceType }.toSet()
     if (!keptChildServices.containsAll(parentServices)) {
       return parent.toAlignmentResult(
@@ -532,15 +543,22 @@ class NonResidentialService(
   }
 
   /**
-   * The same-named child to keep: one used by Appointments or Activities if there is one, then the one used by most
-   * of the parent's services, then the first by code. Step 1 adds the parent's services to it, after which it still
-   * comes first, so step 2 picks the same child.
+   * The same-named child to keep, or null if there is none. An active parent only keeps an active child, as bookings
+   * moved to an inactive one could not be used. Of those: one used by Appointments or Activities if there is one, then
+   * the one used by most of the parent's services, then the first by code. Step 1 adds the parent's services to it,
+   * after which it still comes first, so step 2 picks the same child.
    */
-  private fun chooseChildToKeep(sameNamedChildren: List<NonResidentialLocation>, parentServices: List<ServiceType>): NonResidentialLocation = sameNamedChildren.sortedWith(
-    compareByDescending<NonResidentialLocation> { child -> child.services.any { it.serviceType in ACTIVITIES_AND_APPOINTMENTS_SERVICES } }
-      .thenByDescending { child -> child.services.count { it.serviceType in parentServices } }
-      .thenBy { it.getPathHierarchy() },
-  ).first()
+  private fun chooseChildToKeep(
+    parent: NonResidentialLocation,
+    sameNamedChildren: List<NonResidentialLocation>,
+    parentServices: List<ServiceType>,
+  ): NonResidentialLocation? = sameNamedChildren
+    .filter { !parent.isActive() || it.isActive() }
+    .sortedWith(
+      compareByDescending<NonResidentialLocation> { child -> child.services.any { it.serviceType in ACTIVITIES_AND_APPOINTMENTS_SERVICES } }
+        .thenByDescending { child -> child.services.count { it.serviceType in parentServices } }
+        .thenBy { it.getPathHierarchy() },
+    ).firstOrNull()
 
   /** Why step 2 cannot archive a duplicate child, or null when it can. */
   private fun reasonCannotArchive(child: NonResidentialLocation): String? {
