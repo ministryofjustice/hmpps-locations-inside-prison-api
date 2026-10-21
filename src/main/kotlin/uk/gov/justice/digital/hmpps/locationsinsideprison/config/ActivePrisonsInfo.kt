@@ -3,20 +3,11 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.config
 import org.springframework.boot.actuate.info.Info
 import org.springframework.boot.actuate.info.InfoContributor
 import org.springframework.stereotype.Component
-import uk.gov.justice.digital.hmpps.locationsinsideprison.service.ActivePrisonService
 
+// The service is live in every prison. Per-prison residential activation is held in prison configuration, not here.
 @Component
-class ActivePrisonsInfo(
-  private val activePrisonService: ActivePrisonService,
-) : InfoContributor {
+class ActivePrisonsInfo : InfoContributor {
   override fun contribute(builder: Info.Builder) {
-    builder.withDetail(
-      "activeAgencies",
-      if (activePrisonService.isAllPrisonsActive()) {
-        listOf("***")
-      } else {
-        activePrisonService.getActivePrisons()
-      },
-    )
+    builder.withDetail("activeAgencies", listOf("***"))
   }
 }
