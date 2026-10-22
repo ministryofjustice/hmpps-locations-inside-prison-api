@@ -241,8 +241,9 @@ class LocationNonResidentialResource(
   @Operation(
     summary = "Gives each parent non-residential location one child with the same name",
     description = "Runs in two steps. Step 1 (ALIGN): for each parent used by a service that has live child " +
-      "locations, creates a child with the parent's name and services where none exists, or adds the parent's " +
-      "missing services to the child kept with that name. Step 2 (ARCHIVE_DUPLICATES): archives the other children " +
+      "locations, creates a child with the parent's name and services where none can be kept, or adds the parent's " +
+      "missing services to the child kept with that name. An active parent only keeps an active child. " +
+      "Step 2 (ARCHIVE_DUPLICATES): archives the other children " +
       "with the parent's name, except those used by other services or with child locations of their own, which are " +
       "reported. Runs as a dry run unless dryRun is false. " +
       "Requires role MAINTAIN_LOCATIONS and write scope",
