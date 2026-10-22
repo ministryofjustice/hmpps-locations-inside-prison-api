@@ -2553,7 +2553,7 @@ class LocationNonResidentialResourceTest : CommonDataTestBase() {
         assertThat(result.keptChild!!.id).isEqualTo(usedByAppointments.id)
         val blocked = result.duplicateChildren.single { it.id == usedByOtherService.id }
         assertThat(blocked.archived).isFalse()
-        assertThat(blocked.reasonCannotArchive).isEqualTo("Used by other services: USE_OF_FORCE")
+        assertThat(blocked.reasonCannotArchive).isEqualTo("Used by other services the kept child is not used by: USE_OF_FORCE")
         assertThat(result.duplicateChildren.single { it.id == noServices.id }.archived).isTrue()
 
         assertThat(location(noServices.id!!).status).isEqualTo(DerivedLocationStatus.ARCHIVED)
