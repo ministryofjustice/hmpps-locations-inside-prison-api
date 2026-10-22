@@ -67,40 +67,6 @@ class PrisonConfigurationService(
   }
 
   @Transactional
-  fun updateNonResiLocationServiceActiveStatus(prisonId: String, nonResiStatus: ServiceStatus): PrisonConfigurationDto {
-    val prisonConfig = activePrisonService.getPrisonConfiguration(prisonId) ?: throw PrisonNotFoundException(prisonId)
-
-    val activeNonResi = nonResiStatus == ServiceStatus.ACTIVE
-    if (prisonConfig.nonResiServiceActive != activeNonResi) {
-      val tx = LinkedTransaction(
-        transactionType = TransactionType.NON_RESI_SERVICE_ACTIVATION,
-        prisonId = prisonId,
-        transactionDetail = "Non-resi service status changed to $nonResiStatus",
-        transactionInvokedBy = authenticationHolder.username ?: SYSTEM_USERNAME,
-        txStartTime = LocalDateTime.now(clock),
-      )
-      linkedTransactionRepository.save(tx)
-      activePrisonService.setNonResiServiceActive(prisonId, activeNonResi)
-
-      telemetryClient.trackEvent(
-        "Residential service configuration update",
-        mapOf(
-          "prisonId" to prisonId,
-          "nonResiStatus" to nonResiStatus.name,
-          "tx" to tx.transactionId.toString(),
-        ),
-        null,
-      )
-      log.info("Updated non-resi service status [$tx]")
-      tx.txEndTime = LocalDateTime.now(clock)
-    } else {
-      log.warn("No change applied to non-resi service already is $nonResiStatus")
-    }
-
-    return prisonConfig.toPrisonConfiguration()
-  }
-
-  @Transactional
   fun updateCertificationApprovalProcess(prisonId: String, certificationApprovalProcessStatus: ServiceStatus): PrisonConfigurationDto {
     val prisonConfig = activePrisonService.getPrisonConfiguration(prisonId) ?: throw PrisonNotFoundException(prisonId)
 
@@ -182,8 +148,8 @@ data class PrisonConfigurationDto(
   val prisonId: String,
   @param:Schema(description = "Indicates that the residential service is active", example = "ACTIVE", required = true)
   val resiLocationServiceActive: ServiceStatus,
-  @param:Schema(description = "Indicates that the non-resi service is active", example = "ACTIVE", required = true)
-  val nonResiServiceActive: ServiceStatus,
+  @param:Schema(description = "Always ACTIVE: non-residential locations are active in every prison", example = "ACTIVE", required = true, deprecated = true)
+  val nonResiServiceActive: ServiceStatus = ServiceStatus.ACTIVE,
   @param:Schema(description = "Indicates that roll count should include segregation in its calculations for net vacancies", example = "INACTIVE", required = true)
   val includeSegregationInRollCount: ServiceStatus,
   @param:Schema(description = "Indicates that this prison must go through the certification process to create or change cells", example = "INACTIVE", required = true)

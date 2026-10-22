@@ -14,6 +14,7 @@ class PrisonConfiguration(
   @Column(name = "prison_id", updatable = false, nullable = false)
   val id: String,
   var resiLocationServiceActive: Boolean = false,
+  // No longer read: non-residential locations are active in every prison
   var nonResiServiceActive: Boolean = false,
   var includeSegregationInRollCount: Boolean = false,
   var certificationApprovalRequired: Boolean = false,
@@ -32,7 +33,6 @@ class PrisonConfiguration(
   fun toPrisonConfiguration() = PrisonConfigurationDto(
     prisonId = id,
     resiLocationServiceActive = convertToStatus(resiLocationServiceActive),
-    nonResiServiceActive = convertToStatus(nonResiServiceActive),
     includeSegregationInRollCount = convertToStatus(includeSegregationInRollCount),
     certificationApprovalRequired = convertToStatus(certificationApprovalRequired),
   )
