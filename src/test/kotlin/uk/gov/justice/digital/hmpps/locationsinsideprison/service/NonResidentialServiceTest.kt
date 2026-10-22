@@ -315,6 +315,49 @@ class NonResidentialServiceTest {
       }
 
       @Test
+      fun `creates an active child for an active parent whose only same-named child is inactive, and lists the inactive one`() {
+        val inactiveChild = child("Gym", "G1", ServiceType.APPOINTMENT).apply { status = LocationStatus.INACTIVE }
+        givenParents(gymWithChildren(inactiveChild))
+
+        val result = align(AlignmentStep.ALIGN, dryRun = false)
+
+        val parentResult = result.report.parents.single()
+        Assertions.assertThat(parentResult.action).isEqualTo(AlignmentAction.CREATE_CHILD)
+        Assertions.assertThat(parentResult.keptChild).isNull()
+        Assertions.assertThat(parentResult.duplicateChildren.map { it.id to it.canBeArchived }).containsExactly(inactiveChild.id!! to true)
+        val captor = argumentCaptor<NonResidentialLocation>()
+        verify(nonResidentialLocationRepository).save(captor.capture())
+        Assertions.assertThat(captor.firstValue.status).isEqualTo(LocationStatus.ACTIVE)
+        Assertions.assertThat(inactiveChild.services.map { it.serviceType }).containsExactly(ServiceType.APPOINTMENT)
+      }
+
+      @Test
+      fun `for an active parent, keeps an active same-named child over an inactive one used by Activities or Appointments`() {
+        val inactiveUsedByAppointments = child("Gym", "G1", ServiceType.APPOINTMENT).apply { status = LocationStatus.INACTIVE }
+        val active = child("Gym", "G2", ServiceType.INTERNAL_MOVEMENTS)
+        givenParents(gymWithChildren(inactiveUsedByAppointments, active))
+
+        val result = align(AlignmentStep.ALIGN, dryRun = true)
+
+        val parentResult = result.report.parents.single()
+        Assertions.assertThat(parentResult.action).isEqualTo(AlignmentAction.ADD_SERVICES_TO_CHILD)
+        Assertions.assertThat(parentResult.keptChild?.id).isEqualTo(active.id)
+        Assertions.assertThat(parentResult.duplicateChildren.map { it.id }).containsExactly(inactiveUsedByAppointments.id)
+      }
+
+      @Test
+      fun `for an inactive parent, keeps an inactive same-named child`() {
+        val inactiveChild = child("Gym", "G1").apply { status = LocationStatus.INACTIVE }
+        givenParents(gymWithChildren(inactiveChild).apply { status = LocationStatus.INACTIVE })
+
+        val result = align(AlignmentStep.ALIGN, dryRun = true)
+
+        val parentResult = result.report.parents.single()
+        Assertions.assertThat(parentResult.action).isEqualTo(AlignmentAction.ADD_SERVICES_TO_CHILD)
+        Assertions.assertThat(parentResult.keptChild?.id).isEqualTo(inactiveChild.id)
+      }
+
+      @Test
       fun `skips an archived parent`() {
         val parent = gymWithChildren(child("Gym Area 1", "A1")).apply { status = LocationStatus.ARCHIVED }
         givenParents(parent)
@@ -443,6 +486,34 @@ class NonResidentialServiceTest {
         Assertions.assertThat(parentResult.action).isEqualTo(AlignmentAction.SKIPPED)
         Assertions.assertThat(parentResult.reason).startsWith("Run step 1 first")
         Assertions.assertThat(duplicate.status).isEqualTo(LocationStatus.ACTIVE)
+      }
+
+      @Test
+      fun `skips an active parent whose same-named children are all inactive`() {
+        val inactiveChild = child("Gym", "G1", ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES).apply { status = LocationStatus.INACTIVE }
+        givenParents(gymWithChildren(inactiveChild))
+
+        val result = align(AlignmentStep.ARCHIVE_DUPLICATES, dryRun = false)
+
+        val parentResult = result.report.parents.single()
+        Assertions.assertThat(parentResult.action).isEqualTo(AlignmentAction.SKIPPED)
+        Assertions.assertThat(parentResult.reason).isEqualTo("Run step 1 first: no active child has the parent's name")
+        Assertions.assertThat(inactiveChild.status).isEqualTo(LocationStatus.INACTIVE)
+      }
+
+      @Test
+      fun `archives an inactive same-named child once an active one is kept`() {
+        val kept = child("Gym", "G2", ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
+        val inactiveChild = child("Gym", "G1", ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES).apply { status = LocationStatus.INACTIVE }
+        givenParents(gymWithChildren(inactiveChild, kept))
+
+        val result = align(AlignmentStep.ARCHIVE_DUPLICATES, dryRun = false)
+
+        val parentResult = result.report.parents.single()
+        Assertions.assertThat(parentResult.action).isEqualTo(AlignmentAction.ARCHIVE_DUPLICATES)
+        Assertions.assertThat(parentResult.keptChild?.id).isEqualTo(kept.id)
+        Assertions.assertThat(inactiveChild.status).isEqualTo(LocationStatus.ARCHIVED)
+        Assertions.assertThat(kept.status).isEqualTo(LocationStatus.ACTIVE)
       }
 
       @Test
