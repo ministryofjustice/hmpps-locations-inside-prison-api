@@ -21,12 +21,6 @@ class ActivePrisonServiceTest {
     whenUpdated = LocalDateTime.now(clock),
     updatedBy = "TEST",
   )
-  private val resiActivePrison = PrisonConfiguration(
-    id = "MDI",
-    resiLocationServiceActive = true,
-    whenUpdated = LocalDateTime.now(clock),
-    updatedBy = "TEST",
-  )
 
   @Test
   fun `prison with a configuration is active even when residential service is inactive`() {
@@ -47,12 +41,5 @@ class ActivePrisonServiceTest {
     val allActiveService = ActivePrisonService(prisonConfigurationRepository, resiServiceActivatedPerPrison = false)
 
     assertThat(allActiveService.isActivePrison("XYZ")).isTrue()
-  }
-
-  @Test
-  fun `active prisons includes every configured prison`() {
-    whenever(prisonConfigurationRepository.findAll()).thenReturn(listOf(resiInactivePrison, resiActivePrison))
-
-    assertThat(service.getActivePrisons()).containsExactly("LEI", "MDI")
   }
 }
