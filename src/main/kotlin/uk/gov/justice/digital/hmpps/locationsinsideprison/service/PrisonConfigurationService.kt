@@ -11,6 +11,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.SYSTEM_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LinkedTransactionRepository
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.PrisonConfigurationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PrisonNotFoundException
 import uk.gov.justice.hmpps.kotlin.auth.HmppsAuthenticationHolder
 import java.time.Clock
@@ -20,6 +21,8 @@ import java.time.LocalDateTime
 @Transactional(readOnly = true)
 class PrisonConfigurationService(
   private val activePrisonService: ActivePrisonService,
+  private val prisonConfigurationRepository: PrisonConfigurationRepository,
+  private val prisonService: PrisonService,
   private val linkedTransactionRepository: LinkedTransactionRepository,
   private val authenticationHolder: HmppsAuthenticationHolder,
   private val approvalDecisionService: ApprovalDecisionService,
@@ -139,6 +142,17 @@ class PrisonConfigurationService(
   }
 
   fun getPrisonConfiguration(prisonId: String) = activePrisonService.getPrisonConfiguration(prisonId)?.toPrisonConfiguration() ?: throw PrisonNotFoundException(prisonId)
+
+  /**
+   * Every prison's configuration, named from the prison register (falling back to the prison ID) and sorted by name,
+   * so the admin screen can list all prisons in one call rather than one call per prison.
+   */
+  fun getAllPrisonConfigurations(): List<PrisonConfigurationDto> {
+    val prisonNames = prisonService.getPrisonNames()
+    return prisonConfigurationRepository.findAll()
+      .map { it.toPrisonConfiguration().copy(prisonName = prisonNames[it.id] ?: it.id) }
+      .sortedBy { it.prisonName?.lowercase() }
+  }
 }
 
 @Schema(description = "Prison configuration")
@@ -146,6 +160,8 @@ class PrisonConfigurationService(
 data class PrisonConfigurationDto(
   @param:Schema(description = "Prison ID", example = "MDI", required = true)
   val prisonId: String,
+  @param:Schema(description = "Prison name from the prison register, or the prison ID if it has none. Only returned when listing all prisons", example = "Moorland (HMP & YOI)", required = false)
+  val prisonName: String? = null,
   @param:Schema(description = "Indicates that the residential service is active", example = "ACTIVE", required = true)
   val resiLocationServiceActive: ServiceStatus,
   @param:Schema(description = "Always ACTIVE: non-residential locations are active in every prison", example = "ACTIVE", required = true, deprecated = true)
