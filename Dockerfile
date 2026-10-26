@@ -19,6 +19,4 @@ COPY --from=builder --chown=appuser:appgroup /app/build/libs/applicationinsights
 COPY --from=builder --chown=appuser:appgroup /app/applicationinsights.json /app
 COPY --from=builder --chown=appuser:appgroup /app/applicationinsights.dev.json /app
 
-USER 2000
-
 ENTRYPOINT ["java", "-XX:+AlwaysActAsServerClassMachine", "-javaagent:/app/agent.jar", "-jar", "/app/app.jar"]
