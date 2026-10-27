@@ -88,6 +88,18 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
       }
 
       @Test
+      fun `includes the type of the location each request is for, without the locations`() {
+        webTestClient.get().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+          .exchange()
+          .expectStatus().isOk
+          .expectBody()
+          .jsonPath("$[0].id").isEqualTo(approvalRequestId.toString())
+          .jsonPath("$[0].locationType").isEqualTo("WING")
+          .jsonPath("$[0].locations").doesNotExist()
+      }
+
+      @Test
       fun `can filter approval requests by status`() {
         webTestClient.get().uri("$url?status=PENDING")
           .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
@@ -160,6 +172,7 @@ class ApprovalRequestResourceTest : CommonDataTestBase() {
                 "prisonId": "LEI",
                 "status": "PENDING",
                 "locationKey": "LEI-G",
+                "locationType": "WING",
                 "maxCapacityChange": 6,
                 "workingCapacityChange": 6,
                 "certifiedNormalAccommodationChange": 6,
