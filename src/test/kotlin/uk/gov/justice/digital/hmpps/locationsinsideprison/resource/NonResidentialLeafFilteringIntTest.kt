@@ -167,7 +167,7 @@ class NonResidentialLeafFilteringIntTest : CommonDataTestBase() {
   }
 
   @Test
-  fun `boxes and shelves with a usage of their own, and other locations with none, are still returned`() {
+  fun `boxes and shelves with a usage or service of their own, and other locations with neither, are still returned`() {
     repository.save(
       buildNonResidentialLocation(
         prisonId = "MDI",
@@ -175,6 +175,16 @@ class NonResidentialLeafFilteringIntTest : CommonDataTestBase() {
         localName = "Used Shelf",
         locationType = LocationType.SHELF,
         usageTypes = setOf(NonResidentialUsageType.OCCURRENCE),
+      ),
+    )
+    // VIDEO_ENABLED has no matching usage type, so this box has a service but no usage.
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "VIDEOBOX",
+        localName = "Video Box",
+        locationType = LocationType.BOX,
+        serviceTypes = setOf(ServiceType.VIDEO_ENABLED),
       ),
     )
     // Only boxes and shelves are taken to be property storage; any other type with no usage is left alone.
@@ -193,6 +203,7 @@ class NonResidentialLeafFilteringIntTest : CommonDataTestBase() {
       .expectStatus().isOk
       .expectBody()
       .jsonPath("$.locations.content[?(@.localName == 'Used Shelf')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Video Box')]").exists()
       .jsonPath("$.locations.content[?(@.localName == 'Unused Room')]").exists()
   }
 
