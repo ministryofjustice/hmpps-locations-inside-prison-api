@@ -9,6 +9,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_USERNAME
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.TestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.CellMarkChangeApprovalRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.DeactivationApprovalRequest
 import java.time.Clock
 import java.time.Instant
@@ -394,16 +395,48 @@ class LocationTest {
     }
 
     @Test
-    fun `counts a converted room in the pending totals while an approval request for it is pending`() {
+    fun `leaves a converted room out of the pending totals while converting it back to a cell is pending`() {
       val landing = landing("1")
       landing.addChildLocation(cell("001"))
-      val room = convertedRoom("002", Capacity(maxCapacity = 1, workingCapacity = 1, certifiedNormalAccommodation = 1))
+      val room = convertedRoom("002", Capacity(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 1))
       landing.addChildLocation(room)
-      room.approvalRequests.add(deactivationApprovalRequest(room))
+      room.requestApprovalForConvertToCell(
+        requestedDate = LocalDateTime.now(clock),
+        requestedBy = "user",
+        accommodationType = AccommodationType.NORMAL_ACCOMMODATION,
+        specialistCellTypes = null,
+        certifiedNormalAccommodation = 3,
+        maxCapacity = 4,
+        workingCapacity = 3,
+        usedForTypes = null,
+        reasonForChange = null,
+      )
 
-      assertThat(landing.calcCertifiedNormalAccommodation()).isEqualTo(2)
-      assertThat(landing.calcCertifiedNormalAccommodation(includePendingOrDraft = true)).isEqualTo(3)
-      assertThat(landing.calcMaxCapacity(includePendingOrDraft = true)).isEqualTo(3)
+      // The request records the room as it stands; its proposed figures count once the conversion is approved
+      assertThat(room.hasPendingCertificationApproval()).isTrue()
+      assertThat(landing.calcCertifiedNormalAccommodation(includePendingOrDraft = true)).isEqualTo(2)
+      assertThat(landing.calcMaxCapacity(includePendingOrDraft = true)).isEqualTo(2)
+    }
+
+    @Test
+    fun `leaves a converted room out of the pending totals while a door number change for it is pending`() {
+      val landing = landing("1")
+      landing.addChildLocation(cell("001"))
+      val room = convertedRoom("002", Capacity(maxCapacity = 15, workingCapacity = 15, certifiedNormalAccommodation = 15))
+      landing.addChildLocation(room)
+      room.addApprovalToLocation(
+        CellMarkChangeApprovalRequest(
+          location = room,
+          requestedBy = "user",
+          requestedDate = LocalDateTime.now(clock),
+          cellMark = "A-2",
+        ),
+      )
+
+      assertThat(room.hasPendingCertificationApproval()).isTrue()
+      assertThat(landing.calcCertifiedNormalAccommodation(includePendingOrDraft = true)).isEqualTo(2)
+      assertThat(landing.calcMaxCapacity(includePendingOrDraft = true)).isEqualTo(2)
+      assertThat(landing.calcWorkingCapacity(includePendingOrDraft = true)).isEqualTo(landing.calcWorkingCapacity())
     }
   }
 

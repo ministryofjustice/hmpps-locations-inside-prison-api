@@ -143,16 +143,16 @@ open class ResidentialLocation(
   fun calcOldWorkingCapacity() = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft()) && it.countsTowardsCapacity() }
     .sumOf { it.getOldWorkingCapacity() ?: 0 }
 
-  fun calcWorkingCapacity(includePendingOrDraft: Boolean = false) = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) && it.countsTowardsCapacity(includePendingOrDraft) }
+  fun calcWorkingCapacity(includePendingOrDraft: Boolean = false) = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) && it.countsTowardsCapacity() }
     .sumOf { it.getWorkingCapacity(includePendingOrDraft) ?: 0 }
 
   fun calcWorkingCapacityForCertificate(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && !it.isDraft() && it.countsTowardsCapacity() }
     .sumOf { it.getWorkingCapacityForCertificate() ?: 0 }
 
-  fun calcMaxCapacity(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) && it.countsTowardsCapacity(includePendingOrDraft) }
+  fun calcMaxCapacity(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) && it.countsTowardsCapacity() }
     .sumOf { it.getMaxCapacity(includePendingOrDraft) ?: 0 }
 
-  fun calcCertifiedNormalAccommodation(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) && it.countsTowardsCapacity(includePendingOrDraft) }
+  fun calcCertifiedNormalAccommodation(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) && it.countsTowardsCapacity() }
     .sumOf { it.getCertifiedNormalAccommodation(includePendingOrDraft) ?: 0 }
 
   private fun hasCertifiedCells(): Boolean = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
