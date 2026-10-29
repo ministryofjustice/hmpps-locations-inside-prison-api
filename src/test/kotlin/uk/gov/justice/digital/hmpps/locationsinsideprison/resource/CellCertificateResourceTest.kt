@@ -255,6 +255,9 @@ class CellCertificateResourceTest(
           .jsonPath("$[0].locations").doesNotExist()
           .jsonPath("$[1].approvedRequest.id").exists()
           .jsonPath("$[1].locations").doesNotExist()
+          // The type of the location each approved request was for, so the history page needs no lookup per row
+          .jsonPath("$[0].approvedRequest.locationType").isEqualTo("CELL")
+          .jsonPath("$[1].approvedRequest.locationType").isEqualTo("WING")
       }
 
       @Test

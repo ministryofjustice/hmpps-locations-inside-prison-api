@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.locationsinsideprison.resource
 
 import org.junit.jupiter.api.Test
 import org.springframework.test.json.JsonCompareMode
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.CommonDataTestBase
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.NonResidentialUsageType
@@ -114,6 +115,96 @@ class NonResidentialLeafFilteringIntTest : CommonDataTestBase() {
       .expectStatus().isOk
       .expectBody()
       .jsonPath("$.locations.content[?(@.localName == 'Plain Box')]").exists()
+  }
+
+  @Test
+  fun `boxes and shelves with no usage or service are property storage and excluded unless includeProperty is set`() {
+    // Property stores that have lost their PROPERTY usage - NOMIS drops usages on deactivation, and many
+    // legacy property boxes never had one (MAPB-923). Active and inactive alike.
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PROP_BOXES-PB1",
+        localName = "Property Box 1",
+        locationType = LocationType.BOX,
+      ),
+    )
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PROP_BOXES-PB2",
+        localName = "Property Box 2",
+        locationType = LocationType.BOX,
+        status = LocationStatus.INACTIVE,
+      ),
+    )
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "PROP_BOXES-VAL1",
+        localName = "Valuables 1",
+        locationType = LocationType.SHELF,
+      ),
+    )
+
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?status=ACTIVE,INACTIVE,ARCHIVED")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Property Box 1')]").doesNotExist()
+      .jsonPath("$.locations.content[?(@.localName == 'Property Box 2')]").doesNotExist()
+      .jsonPath("$.locations.content[?(@.localName == 'Valuables 1')]").doesNotExist()
+
+    webTestClient.get().uri("/locations/non-residential/summary/MDI?status=ACTIVE,INACTIVE,ARCHIVED&includeProperty=true")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Property Box 1')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Property Box 2')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Valuables 1')]").exists()
+  }
+
+  @Test
+  fun `boxes and shelves with a usage or service of their own, and other locations with neither, are still returned`() {
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "SHELF1",
+        localName = "Used Shelf",
+        locationType = LocationType.SHELF,
+        usageTypes = setOf(NonResidentialUsageType.OCCURRENCE),
+      ),
+    )
+    // VIDEO_ENABLED has no matching usage type, so this box has a service but no usage.
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "VIDEOBOX",
+        localName = "Video Box",
+        locationType = LocationType.BOX,
+        serviceTypes = setOf(ServiceType.VIDEO_ENABLED),
+      ),
+    )
+    // Only boxes and shelves are taken to be property storage; any other type with no usage is left alone.
+    repository.save(
+      buildNonResidentialLocation(
+        prisonId = "MDI",
+        pathHierarchy = "ROOM1",
+        localName = "Unused Room",
+        locationType = LocationType.ROOM,
+      ),
+    )
+
+    webTestClient.get().uri("/locations/non-residential/summary/MDI")
+      .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody()
+      .jsonPath("$.locations.content[?(@.localName == 'Used Shelf')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Video Box')]").exists()
+      .jsonPath("$.locations.content[?(@.localName == 'Unused Room')]").exists()
   }
 
   @Test
