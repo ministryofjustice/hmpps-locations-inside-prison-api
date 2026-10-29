@@ -7,8 +7,7 @@
 -- puts the affected rooms back to the same state.
 --
 -- Only rooms matching the V1_74 pattern (max 0, working 0, CNA above 0) are touched. Converted rooms holding
--- real max or working capacity, such as the reception rooms at Five Wells, are a separate question and are
--- deliberately left alone.
+-- real max or working capacity are left alone. The Five Wells reception locations are handled separately by V1_116.
 --
 -- Each change is recorded in location_history under one linked transaction per prison, so it shows in the
 -- location's history. Times are London local time, matching what the application writes. A migration
