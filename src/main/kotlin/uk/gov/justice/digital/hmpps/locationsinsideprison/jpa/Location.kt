@@ -31,6 +31,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.NomisSyncLocationR
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PrisonHierarchyDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.formatLocation
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.tidyLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.helper.GeneratedUuidV7
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.ActiveLocationCannotBePermanentlyDeactivatedException
 import uk.gov.justice.digital.hmpps.locationsinsideprison.resource.PendingApprovalOnLocationCannotBeUpdatedException
@@ -612,15 +613,16 @@ abstract class Location(
       throw PendingApprovalOnLocationCannotBeUpdatedException(getKey())
     }
     if (!isCell()) {
+      val tidiedLocalName = localName.tidyLocalName()
       addHistory(
         LocationAttribute.LOCAL_NAME,
         this.localName,
-        localName,
+        tidiedLocalName,
         userOrSystemInContext,
         LocalDateTime.now(clock),
         linkedTransaction,
       )
-      this.localName = localName
+      this.localName = tidiedLocalName
       this.updatedBy = userOrSystemInContext
       this.whenUpdated = LocalDateTime.now(clock)
     }
@@ -659,15 +661,17 @@ abstract class Location(
     )
     this.locationType = upsert.locationType
 
+    // Tidied before the history entry, so a re-sync of the same untidy NOMIS name records no change
+    val tidiedLocalName = upsert.localName.tidyLocalName()
     addHistory(
       LocationAttribute.LOCAL_NAME,
       this.localName,
-      upsert.localName,
+      tidiedLocalName,
       upsert.lastUpdatedBy,
       LocalDateTime.now(clock),
       linkedTransaction,
     )
-    this.localName = upsert.localName
+    this.localName = tidiedLocalName
 
     addHistory(
       LocationAttribute.COMMENTS,
@@ -852,7 +856,7 @@ abstract class Location(
     approvalRequired: Boolean = false,
   ): Location {
     updateCode(upsert.code, userOrSystemInContext, clock, linkedTransaction)
-    if (upsert.localName != null && this.localName != upsert.localName) {
+    if (upsert.localName != null && this.localName != upsert.localName.tidyLocalName()) {
       updateLocalName(upsert.localName, userOrSystemInContext, clock, linkedTransaction)
     }
     if (upsert.comments != null && this.comments != upsert.comments) {

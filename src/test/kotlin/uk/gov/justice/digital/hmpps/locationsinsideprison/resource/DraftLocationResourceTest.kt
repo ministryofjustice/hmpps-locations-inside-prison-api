@@ -292,6 +292,20 @@ class DraftLocationResourceTest : CommonDataTestBase() {
     @Nested
     inner class HappyPath {
       @Test
+      fun `the new landing's name is stored without surrounding or repeated spaces`() {
+        val request = createCellInitialisationRequest(parentLocation = wingZ.id).let {
+          it.copy(newLevelAboveCells = it.newLevelAboveCells!!.copy(levelLocalName = "  Landing \t J "))
+        }
+        webTestClient.post().uri(url)
+          .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(request)
+          .exchange()
+          .expectStatus().isCreated
+          .expectBody().jsonPath("$.localName").isEqualTo("Landing J")
+      }
+
+      @Test
       fun `can create a landing and a cell`() {
         val request = createCellInitialisationRequest(parentLocation = wingZ.id)
         webTestClient.post().uri(url)

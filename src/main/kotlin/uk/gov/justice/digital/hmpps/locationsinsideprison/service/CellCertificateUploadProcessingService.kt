@@ -16,6 +16,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.Cel
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadOmittedLocation
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellStateAtImport
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateUploadLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.CellCertificateUploadRepository
@@ -223,6 +224,8 @@ class CellCertificateUploadProcessingService(
       } else if (cell.isPermanentlyDeactivated()) {
         row.markSkipped(ARCHIVED_LOCATION_MESSAGE, now)
       } else {
+        // Recorded before the row is applied, as the cell stood when the prison's certificate was compared with it
+        row.recordCellState(CellStateAtImport.of(cell))
         if (applyToCell(cell, row, requestedBy, now, linkedTransaction())) {
           capacityChangedLocationId = cell.id
         }
@@ -615,6 +618,7 @@ class CellCertificateUploadProcessingService(
       .sortedBy { it.getPathHierarchy() }
       .map { cell ->
         val certified = convertedAtZero[cell.getPathHierarchy()] ?: carriedForward[cell.getPathHierarchy()]
+        val state = CellStateAtImport.of(cell)
         CellCertificateUploadOmittedLocation(
           locationId = cell.id!!,
           locationKey = cell.getKey(),
@@ -622,6 +626,10 @@ class CellCertificateUploadProcessingService(
           workingCapacity = certified?.workingCapacity ?: cell.calcWorkingCapacityForCertificate(),
           certifiedNormalAccommodation = certified?.certifiedNormalAccommodation ?: cell.calcCertifiedNormalAccommodation(),
           onCurrentCertificate = carriedForward.containsKey(cell.getPathHierarchy()),
+          inactive = state.inactive,
+          deactivatedReason = state.deactivatedReason,
+          deactivationReasonDescription = state.deactivationReasonDescription,
+          specialistCellTypes = state.specialistCellTypes,
         )
       }
   }

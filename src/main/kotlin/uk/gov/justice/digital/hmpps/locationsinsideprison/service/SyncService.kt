@@ -81,9 +81,12 @@ class SyncService(
       TransactionType.SYNC
     }
 
-    val linkedTransaction = sharedLocationService.createLinkedTransaction(prisonId = upsert.prisonId, txType, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()}] in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
+    var linkedTransaction = sharedLocationService.createLinkedTransaction(prisonId = upsert.prisonId, txType, "NOMIS Sync (Update) [${locationToUpdate.getPathHierarchy()}] in prison ${locationToUpdate.prisonId}", upsert.lastUpdatedBy)
 
     locationToUpdate = handleChangeOfType(id, locationToUpdate, upsert, linkedTransaction)
+    // A change of type clears the session, which detaches the transaction, so carry on with a managed copy or its end
+    // time is never saved
+    linkedTransaction = entityManager.find(LinkedTransaction::class.java, linkedTransaction.transactionId)
 
     findParent(upsert)?.let { parent ->
       if (parent.id == id) throw ValidationException("Cannot set parent to self")
@@ -143,7 +146,7 @@ class SyncService(
   }
 
   private fun createLocation(upsert: NomisSyncLocationRequest): LegacyLocation {
-    val linkedTransaction = sharedLocationService.createLinkedTransaction(prisonId = upsert.prisonId, if (upsert.residentialHousingType != null) TransactionType.SYNC_NON_RESIDENTIAL else TransactionType.SYNC, "<pending>", upsert.lastUpdatedBy)
+    val linkedTransaction = sharedLocationService.createLinkedTransaction(prisonId = upsert.prisonId, if (upsert.residentialHousingType != null) TransactionType.SYNC else TransactionType.SYNC_NON_RESIDENTIAL, "<pending>", upsert.lastUpdatedBy)
 
     val locationToCreate = upsert.toNewEntity(clock, linkedTransaction)
     findParent(upsert)?.let { locationToCreate.setParent(it) }

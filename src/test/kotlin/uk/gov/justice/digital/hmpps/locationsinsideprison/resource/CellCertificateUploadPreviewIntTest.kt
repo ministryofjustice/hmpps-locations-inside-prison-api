@@ -15,6 +15,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.integration.EXPECTED_U
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Capacity
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Cell
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadLocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadMode
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.cellcertupload.CellCertificateUploadStatus
@@ -122,7 +123,14 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
         assertThat(appliedWorkingCapacity).isEqualTo(2)
         assertThat(message).isEqualTo(CellCertificateUploadProcessingService.WORKING_CAPACITY_TAKEN_FROM_CERTIFICATE_MESSAGE)
       }
-      assertThat(rows.getValue(inactiveCellB3001.getKey()).status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+      with(rows.getValue(inactiveCellB3001.getKey())) {
+        assertThat(status).isEqualTo(CellCertificateUploadLocationStatus.PROCESSED)
+        // kept although the rest of the row's work was rolled back
+        assertThat(inactive).isTrue()
+        assertThat(deactivatedReason).isEqualTo(DeactivatedReason.DAMAGED)
+        assertThat(specialistCellTypes).isEqualTo("ACCESSIBLE_CELL")
+      }
+      assertThat(rows.getValue(cell1.getKey()).inactive).isFalse()
 
       assertThat(preview.processedRecords + preview.skippedRecords + preview.failedRecords).isEqualTo(6)
       assertThat(preview.failedRecords).isEqualTo(1)
@@ -199,6 +207,21 @@ class CellCertificateUploadPreviewIntTest : CommonDataTestBase() {
     assertThat(preview.projectedCertificateTotals).isEqualTo(
       CellCertificateTotalsDto(certificate.totalMaxCapacity, certificate.totalWorkingCapacity, certificate.totalCertifiedNormalAccommodation),
     )
+  }
+
+  @Test
+  fun `the preview and the import list the rows in the order of the file`() {
+    val fileOrder = changesFile().keys.toList()
+    // guard against the test passing by accident: the file is not in location key order
+    assertThat(fileOrder).isNotEqualTo(fileOrder.sorted())
+
+    val previewId = post("/locations/bulk/update-cell-certificate/MDI/preview", changesFile()).id
+    awaitFinished(previewId)
+    assertThat(results(previewId).locations!!.map { it.locationKey }).containsExactlyElementsOf(fileOrder)
+
+    val importId = post("/locations/bulk/update-cell-certificate/upload/$previewId/import", null).id
+    awaitFinished(importId)
+    assertThat(results(importId).locations!!.map { it.locationKey }).containsExactlyElementsOf(fileOrder)
   }
 
   @Test

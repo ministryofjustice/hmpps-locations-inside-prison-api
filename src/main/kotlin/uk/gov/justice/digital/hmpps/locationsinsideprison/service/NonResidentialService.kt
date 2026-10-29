@@ -18,6 +18,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.LocationStatus
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PatchNonResidentialLocationRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.PropertyLocationDto
 import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.UpdatePropertyLocationRequest
+import uk.gov.justice.digital.hmpps.locationsinsideprison.dto.tidyLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LinkedTransaction
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.Location
@@ -33,7 +34,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludeByCode
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludePropertyOnlyLocations
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludePropertyStorage
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByIsLeaf
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByPrisonId
@@ -113,7 +114,7 @@ class NonResidentialService(
   }
 
   fun findByPrisonIdAndLocalName(prisonId: String, localName: String): List<LocationDTO> {
-    val locations = nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId, localName)
+    val locations = nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId, localName.tidyLocalName() ?: localName)
     val activeLocations = locations
       .filter { !it.isPermanentlyDeactivated() }
       .map { it.toDto() }
@@ -192,12 +193,15 @@ class NonResidentialService(
     prisonId: String,
     request: CreatePropertyLocationRequest,
   ): PropertyLocationWriteResult {
-    findReinstatablePropertyLocation(prisonId, request.localName)
+    // @NotBlank lets a non-breaking space through, so check again once tidied
+    val localName = request.localName.tidyLocalName() ?: throw ValidationException("Local name cannot be blank")
+
+    findReinstatablePropertyLocation(prisonId, localName)
       ?.let { return reinstatePropertyLocation(it, request) }
 
-    validateLocalNameNotDuplicated(prisonId, request.localName)
+    validateLocalNameNotDuplicated(prisonId, localName)
 
-    val code = generateUniqueNonResidentialCode(prisonId, request.localName)
+    val code = generateUniqueNonResidentialCode(prisonId, localName)
     val username = commonLocationService.getUsername()
 
     val linkedTransaction = commonLocationService.createLinkedTransaction(
@@ -212,7 +216,7 @@ class NonResidentialService(
       locationType = LocationType.BOX,
       prisonId = prisonId,
       status = LocationStatus.ACTIVE,
-      localName = request.localName,
+      localName = localName,
       childLocations = sortedSetOf(),
       whenCreated = LocalDateTime.now(clock),
       createdBy = username,
@@ -281,10 +285,11 @@ class NonResidentialService(
   ): Pair<PropertyLocationDto, NonResidentialLocationDTO> {
     val location = findPropertyLocationForUpdate(id)
     val username = commonLocationService.getUsername()
+    val localName = tidiedNameForUpdate(request.localName)
 
-    request.localName?.let { localName ->
-      if (localName.lowercase() != location.localName?.lowercase()) {
-        validateLocalNameNotDuplicated(location.prisonId, localName, location.id!!)
+    localName?.let {
+      if (it.lowercase() != location.localName?.lowercase()) {
+        validateLocalNameNotDuplicated(location.prisonId, it, location.id!!)
       }
     }
 
@@ -294,7 +299,7 @@ class NonResidentialService(
       "Update property location ${location.getKey()}",
     )
 
-    request.localName?.let { location.updateLocalName(it, username, clock, linkedTransaction) }
+    localName?.let { location.updateLocalName(it, username, clock, linkedTransaction) }
     request.capacity?.let { location.setPropertyCapacity(it, username, clock, linkedTransaction) }
 
     commonLocationService.trackLocationUpdate(location, "Updated Property Location")
@@ -339,32 +344,28 @@ class NonResidentialService(
   }
 
   /**
-   * Makes sure each parent non-residential location has exactly one live direct child with the parent's name, so
-   * that Activities and Appointments can move bookings from the parent to that child without staff seeing a
-   * different location name.
+   * Gives each parent non-residential location one live direct child with the parent's name and services, so that
+   * Activities and Appointments can move bookings from the parent to that child without staff seeing a different
+   * location name. It runs in two steps, chosen by [AlignChildrenToParentNameRequest.step]:
+   *
+   * - [AlignmentStep.ALIGN]: where no live direct child with the parent's name can be kept (see [chooseChildToKeep]),
+   *   one is created with the parent's name, status and services. Otherwise any of the parent's services the kept
+   *   child lacks are added to it. Nothing is archived. Other children with the parent's name are listed, with
+   *   whether step 2 could archive them.
+   * - [AlignmentStep.ARCHIVE_DUPLICATES]: the other children with the parent's name are archived, unless a child is
+   *   used by a service other than Appointments or Activities that the kept child is not also used by, or has child
+   *   locations of its own. Those are left alone and reported. A parent is skipped if its kept child still lacks some
+   *   of the parent's services, as step 1 has not been run for it.
    *
    * Only parents that are not archived, are used by at least one service and have at least one live direct child are
-   * considered. Names are compared ignoring case and surrounding spaces. For each parent:
-   * - where two or more live direct children share the parent's name, each is renamed with a number ("Gym 1",
-   *   "Gym 2"), skipping any name already used in the prison. This runs first, so the step below then applies.
-   * - where no live direct child has the parent's name, a child is created with the parent's name, status and all
-   *   of its services.
-   * - where exactly one live direct child has the parent's name but is not used by all of the parent's services, the
-   *   missing services are added to it, so the services can move to that child rather than to a second one of the
-   *   same name.
-   *
-   * With [AlignChildrenToParentNameRequest.dryRun] set, nothing is changed and the report shows what would be done.
+   * considered. Names are compared ignoring case and surrounding spaces. With [AlignChildrenToParentNameRequest.dryRun]
+   * set, nothing is changed and the report shows what would be done.
    */
   @Transactional
   fun alignChildrenToParentName(prisonId: String, request: AlignChildrenToParentNameRequest): AlignChildrenToParentNameResult {
     val parentsInPrison = nonResidentialLocationRepository.findAllByPrisonIdWithNonResidentialServices(prisonId)
       .filter { it.findSubLocations().isNotEmpty() }
     val parentsInScope = request.parentLocationIds?.let { ids -> parentsInPrison.filter { it.id in ids } } ?: parentsInPrison
-
-    val usedNames = nonResidentialLocationRepository.findAllByPrisonId(prisonId)
-      .filter { !it.isPermanentlyDeactivated() }
-      .mapNotNull { it.localName?.let(::normaliseName) }
-      .toMutableSet()
 
     val results = mutableListOf<ParentAlignmentResult>()
     val created = mutableListOf<LocationDTO>()
@@ -390,126 +391,318 @@ class NonResidentialService(
         return@forEach
       }
       val name = parentName!!
-
-      val sameNamedChildren = liveChildren
-        .filter { it.localName?.let(::normaliseName) == normaliseName(name) }
-        .sortedBy { it.getPathHierarchy() }
       val parentServices = parent.services.map { it.serviceType }.sorted()
+      val sameNamedChildren = liveChildren.filter { it.localName?.let(::normaliseName) == normaliseName(name) }
 
-      if (sameNamedChildren.size == 1) {
-        val child = sameNamedChildren.single()
-        val childServices = child.services.map { it.serviceType }.toSet()
-        val missingServices = parentServices.filter { it !in childServices }
-        if (missingServices.isEmpty()) {
-          results.add(parent.toAlignmentResult(AlignmentAction.NO_ACTION))
-          return@forEach
-        }
-        if (!request.dryRun) {
-          val linkedTransaction = commonLocationService.createLinkedTransaction(
-            prisonId = prisonId,
-            TransactionType.LOCATION_UPDATE_NON_RESI,
-            "Add services ${missingServices.joinToString(", ")} to ${child.getKey()} to match its parent ${parent.getKey()}",
-          )
-          child.update(
-            PatchNonResidentialLocationRequest(servicesUsingLocation = childServices + missingServices),
-            commonLocationService.getUsername(),
-            clock,
-            linkedTransaction,
-          )
-          commonLocationService.trackLocationUpdate(child, "Added parent services to Non-Residential Location with parent name")
-          amended.add(child.toDto())
-          linkedTransaction.txEndTime = LocalDateTime.now(clock)
-        }
-        results.add(
-          parent.toAlignmentResult(
-            AlignmentAction.ADD_SERVICES_TO_CHILD,
-            servicesAddedToChild = ServicesAddedToChild(id = child.id!!, key = child.getKey(), name = child.localName!!, servicesAdded = missingServices),
-          ),
-        )
-        return@forEach
+      val result = when (request.step) {
+        AlignmentStep.ALIGN -> alignParent(parent, name, parentServices, sameNamedChildren, request.dryRun, created, amended)
+        AlignmentStep.ARCHIVE_DUPLICATES -> archiveDuplicateChildren(parent, name, parentServices, sameNamedChildren, request.dryRun, amended)
       }
-
-      val renames = if (sameNamedChildren.size > 1) {
-        var suffix = 0
-        sameNamedChildren.map { child ->
-          var newName: String
-          do {
-            newName = numberedName(name, ++suffix)
-          } while (normaliseName(newName) in usedNames)
-          usedNames.add(normaliseName(newName))
-          ChildRename(id = child.id!!, key = child.getKey(), oldName = child.localName!!, newName = newName)
-        }
-      } else {
-        emptyList()
-      }
-      val action = if (renames.isEmpty()) AlignmentAction.CREATE_CHILD else AlignmentAction.RENAME_CHILDREN_AND_CREATE_CHILD
-
-      if (request.dryRun) {
-        results.add(parent.toAlignmentResult(action, renamedChildren = renames, createdChild = CreatedChild(id = null, key = null, name = name, services = parentServices)))
-        return@forEach
-      }
-
-      val username = commonLocationService.getUsername()
-      val linkedTransaction = commonLocationService.createLinkedTransaction(
-        prisonId = prisonId,
-        TransactionType.LOCATION_UPDATE_NON_RESI,
-        "Align child locations of ${parent.getKey()} to parent name '$name'",
-      )
-      renames.forEach { rename ->
-        val child = sameNamedChildren.first { it.id == rename.id }
-        child.updateLocalName(rename.newName, username, clock, linkedTransaction)
-        commonLocationService.trackLocationUpdate(child, "Renamed Non-Residential Location to align with parent name")
-        amended.add(child.toDto())
-      }
-
-      val code = generateUniqueNonResidentialCode(prisonId, name, parent.getPathHierarchy())
-      val savedChild = createChildOfParent(parent, code, parentServices, linkedTransaction)
-      commonLocationService.trackLocationUpdate(savedChild, "Created Non-Residential Location with parent name")
-      created.add(savedChild.toDto())
-      linkedTransaction.txEndTime = LocalDateTime.now(clock)
-
-      results.add(
-        parent.toAlignmentResult(
-          action,
-          renamedChildren = renames,
-          createdChild = CreatedChild(id = savedChild.id, key = savedChild.getKey(), name = name, services = parentServices),
-        ),
-      )
+      results.add(result)
     }
 
-    log.info("Aligned child locations to parent name in $prisonId (dryRun=${request.dryRun}): ${results.groupingBy { it.action }.eachCount()}")
+    log.info("Aligned child locations to parent name in $prisonId (step=${request.step}, dryRun=${request.dryRun}): ${results.groupingBy { it.action }.eachCount()}")
     return AlignChildrenToParentNameResult(
-      report = AlignChildrenToParentNameReport(prisonId = prisonId, dryRun = request.dryRun, parents = results),
+      report = AlignChildrenToParentNameReport(prisonId = prisonId, step = request.step, dryRun = request.dryRun, parents = results),
       created = created,
       amended = amended,
     )
   }
 
-  private fun normaliseName(name: String) = name.trim().lowercase()
+  /** Step 1 for one parent: create the same-named child, or give the kept one the parent's services. */
+  private fun alignParent(
+    parent: NonResidentialLocation,
+    name: String,
+    parentServices: List<ServiceType>,
+    sameNamedChildren: List<NonResidentialLocation>,
+    dryRun: Boolean,
+    created: MutableList<LocationDTO>,
+    amended: MutableList<LocationDTO>,
+  ): ParentAlignmentResult {
+    val childToKeep = chooseChildToKeep(parent, sameNamedChildren, parentServices)
+    if (childToKeep == null) {
+      // Any same-named children are inactive, so are left for step 2 like other duplicates of the created child
+      val duplicates = sameNamedChildren.map { it.toDuplicateChild(archived = false, keptChildServices = parentServices.toSet()) }
+      if (dryRun) {
+        return parent.toAlignmentResult(
+          AlignmentAction.CREATE_CHILD,
+          createdChild = CreatedChild(id = null, key = null, name = name, services = parentServices),
+          duplicateChildren = duplicates,
+        )
+      }
+      val linkedTransaction = commonLocationService.createLinkedTransaction(
+        prisonId = parent.prisonId,
+        TransactionType.LOCATION_CREATE_NON_RESI,
+        "Create child of ${parent.getKey()} with the parent's name '$name'",
+      )
+      val code = generateUniqueNonResidentialCode(parent.prisonId, name, parent.getPathHierarchy())
+      val savedChild = createChildOfParent(parent, code, parentServices, linkedTransaction)
+      commonLocationService.trackLocationUpdate(savedChild, "Created Non-Residential Location with parent name")
+      created.add(savedChild.toDto())
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+      return parent.toAlignmentResult(
+        AlignmentAction.CREATE_CHILD,
+        createdChild = CreatedChild(id = savedChild.id, key = savedChild.getKey(), name = name, services = parentServices),
+        duplicateChildren = duplicates,
+      )
+    }
+
+    // Taken before any update, so the report shows the kept child's services before this run on real and dry runs alike
+    val keptChild = childToKeep.toChildSummary()
+    val childServices = childToKeep.services.map { it.serviceType }.toSet()
+    val missingServices = parentServices.filter { it !in childServices }
+    // Whether step 2 could archive each duplicate depends on the kept child's services once this step has run
+    val duplicates = sameNamedChildren.filter { it.id != childToKeep.id }
+      .map { it.toDuplicateChild(archived = false, keptChildServices = childServices + missingServices) }
+    if (missingServices.isEmpty()) {
+      return parent.toAlignmentResult(AlignmentAction.NO_ACTION, keptChild = keptChild, duplicateChildren = duplicates)
+    }
+
+    if (!dryRun) {
+      val linkedTransaction = commonLocationService.createLinkedTransaction(
+        prisonId = parent.prisonId,
+        TransactionType.LOCATION_UPDATE_NON_RESI,
+        "Add services ${missingServices.joinToString(", ")} to ${childToKeep.getKey()} to match its parent ${parent.getKey()}",
+      )
+      childToKeep.update(
+        PatchNonResidentialLocationRequest(servicesUsingLocation = childServices + missingServices),
+        commonLocationService.getUsername(),
+        clock,
+        linkedTransaction,
+      )
+      commonLocationService.trackLocationUpdate(childToKeep, "Added parent services to Non-Residential Location with parent name")
+      amended.add(childToKeep.toDto())
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+    return parent.toAlignmentResult(
+      AlignmentAction.ADD_SERVICES_TO_CHILD,
+      keptChild = keptChild,
+      servicesAddedToChild = missingServices,
+      duplicateChildren = duplicates,
+    )
+  }
+
+  /** Step 2 for one parent: archive the same-named children other than the one kept, where that is allowed. */
+  private fun archiveDuplicateChildren(
+    parent: NonResidentialLocation,
+    name: String,
+    parentServices: List<ServiceType>,
+    sameNamedChildren: List<NonResidentialLocation>,
+    dryRun: Boolean,
+    amended: MutableList<LocationDTO>,
+  ): ParentAlignmentResult {
+    if (sameNamedChildren.isEmpty()) {
+      return parent.toAlignmentResult(AlignmentAction.NO_ACTION, reason = "No duplicate children with the parent's name")
+    }
+    val childToKeep = chooseChildToKeep(parent, sameNamedChildren, parentServices)
+      ?: return parent.toAlignmentResult(AlignmentAction.SKIPPED, reason = "Run step 1 first: no active child has the parent's name")
+    if (sameNamedChildren.size < 2) {
+      return parent.toAlignmentResult(AlignmentAction.NO_ACTION, reason = "No duplicate children with the parent's name")
+    }
+    val keptChildServices = childToKeep.services.map { it.serviceType }.toSet()
+    if (!keptChildServices.containsAll(parentServices)) {
+      return parent.toAlignmentResult(
+        AlignmentAction.SKIPPED,
+        reason = "Run step 1 first: the child to keep, ${childToKeep.getKey()}, is not yet used by all of the parent's services",
+        keptChild = childToKeep.toChildSummary(),
+      )
+    }
+
+    val duplicates = sameNamedChildren.filter { it.id != childToKeep.id }
+    val archivable = duplicates.filter { reasonCannotArchive(it, keptChildServices) == null }
+    if (!dryRun && archivable.isNotEmpty()) {
+      val username = commonLocationService.getUsername()
+      val linkedTransaction = commonLocationService.createLinkedTransaction(
+        prisonId = parent.prisonId,
+        TransactionType.PERMANENT_DEACTIVATION,
+        "Archive duplicate children of ${parent.getKey()} named '$name', keeping ${childToKeep.getKey()}",
+      )
+      archivable.forEach { duplicate ->
+        duplicate.permanentlyDeactivate(
+          reason = "Duplicate of ${childToKeep.getKey()}, which keeps the parent's name".take(MAX_ARCHIVED_REASON_LENGTH),
+          deactivatedDate = LocalDateTime.now(clock),
+          userOrSystemInContext = username,
+          clock = clock,
+          linkedTransaction = linkedTransaction,
+          activeLocationCanBePermDeactivated = true,
+        )
+        commonLocationService.trackLocationUpdate(duplicate, "Archived duplicate Non-Residential Location with parent name")
+        amended.add(duplicate.toDto())
+      }
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+
+    val action = when (archivable.size) {
+      duplicates.size -> AlignmentAction.ARCHIVE_DUPLICATES
+      0 -> AlignmentAction.CANNOT_ARCHIVE_DUPLICATES
+      else -> AlignmentAction.ARCHIVE_SOME_DUPLICATES
+    }
+    return parent.toAlignmentResult(
+      action,
+      keptChild = childToKeep.toChildSummary(),
+      duplicateChildren = duplicates.map { it.toDuplicateChild(archived = !dryRun && it in archivable, keptChildServices = keptChildServices) },
+    )
+  }
 
   /**
-   * "[name] [number]", shortening [name] where needed so the result still fits the local name column.
+   * The same-named child to keep, or null if there is none. An active parent only keeps an active child, as bookings
+   * moved to an inactive one could not be used. Of those: one used by Appointments or Activities if there is one, then
+   * the one used by most of the parent's services, then the first by code. Step 1 adds the parent's services to it,
+   * after which it still comes first, so step 2 picks the same child.
    */
-  private fun numberedName(name: String, number: Int): String {
-    val suffix = " $number"
-    return name.take(MAX_LOCAL_NAME_LENGTH - suffix.length).trimEnd() + suffix
+  private fun chooseChildToKeep(
+    parent: NonResidentialLocation,
+    sameNamedChildren: List<NonResidentialLocation>,
+    parentServices: List<ServiceType>,
+  ): NonResidentialLocation? = sameNamedChildren
+    .filter { !parent.isActive() || it.isActive() }
+    .sortedWith(
+      compareByDescending<NonResidentialLocation> { child -> child.services.any { it.serviceType in ACTIVITIES_AND_APPOINTMENTS_SERVICES } }
+        .thenByDescending { child -> child.services.count { it.serviceType in parentServices } }
+        .thenBy { it.getPathHierarchy() },
+    ).firstOrNull()
+
+  /**
+   * Why step 2 cannot archive a duplicate child, or null when it can. Activities and Appointments move their bookings
+   * to the kept child before step 2, so their services never block it. Any other service blocks it only when the kept
+   * child is not also used by that service, as that service would then lose a location with this name.
+   */
+  private fun reasonCannotArchive(child: NonResidentialLocation, keptChildServices: Set<ServiceType>): String? {
+    val servicesNotOnKeptChild = child.services.map { it.serviceType }
+      .filter { it !in ACTIVITIES_AND_APPOINTMENTS_SERVICES && it !in keptChildServices }
+      .sorted()
+    return when {
+      !child.isLeafLevel() -> "Has child locations of its own"
+      servicesNotOnKeptChild.isNotEmpty() -> "Used by other services the kept child is not used by: ${servicesNotOnKeptChild.joinToString(", ")}"
+      else -> null
+    }
   }
+
+  private fun NonResidentialLocation.toChildSummary() = ChildSummary(
+    id = id!!,
+    key = getKey(),
+    name = localName!!,
+    services = services.map { it.serviceType }.sorted(),
+  )
+
+  private fun NonResidentialLocation.toDuplicateChild(archived: Boolean, keptChildServices: Set<ServiceType>): DuplicateChild {
+    val reason = reasonCannotArchive(this, keptChildServices)
+    return DuplicateChild(
+      id = id!!,
+      key = getKey(),
+      name = localName!!,
+      services = services.map { it.serviceType }.sorted(),
+      canBeArchived = reason == null,
+      reasonCannotArchive = reason,
+      archived = archived,
+    )
+  }
+
+  /**
+   * Removes spaces (and other whitespace) from the start and end of the local names of non-residential locations in
+   * [prisonId]. Names like these came across from NOMIS and break exact look-ups by name in other services.
+   *
+   * A location is skipped when another location in the prison is already called the tidied name, since tidying would
+   * create a duplicate; the prison has to decide which to keep. Locations that only share the same untidy name are all
+   * tidied together.
+   *
+   * With [TidyLocalNamesRequest.dryRun] set, nothing is changed and the report shows what would be done.
+   */
+  @Transactional
+  fun tidyLocalNames(prisonId: String, request: TidyLocalNamesRequest): TidyLocalNamesResult {
+    val locationsInPrison = nonResidentialLocationRepository.findAllByPrisonId(prisonId)
+    val untidyLocations = locationsInPrison.filter { it.localName?.let { name -> name != name.trim() } == true }
+    val candidates = untidyLocations
+      .filter { request.locationIds == null || it.id in request.locationIds }
+      .sortedBy { it.getPathHierarchy() }
+    val existingNames = locationsInPrison
+      .filter { !it.isPermanentlyDeactivated() }
+      .mapNotNull { it.localName?.lowercase() }
+      .toSet()
+    // Names that differently spaced locations would all be tidied to, such as " Room" and "Room ". Tidying them would
+    // create a duplicate, unlike locations that already share the same untidy name. Worked out across the whole prison
+    // so that a run limited to some locationIds treats them the same way.
+    val namesWithDifferentSpacing = untidyLocations
+      .filter { !it.isPermanentlyDeactivated() }
+      .groupBy { it.localName!!.trim().lowercase() }
+      .filterValues { group -> group.map { it.localName!!.lowercase() }.distinct().size > 1 }
+      .keys
+
+    val results = mutableListOf<LocalNameTidyResult>()
+    request.locationIds?.filter { id -> candidates.none { it.id == id } }?.forEach { id ->
+      results.add(LocalNameTidyResult(id = id, action = TidyLocalNameAction.SKIPPED, reason = "Not a non-residential location in prison $prisonId with spaces at the start or end of its name"))
+    }
+
+    val toTidy = mutableListOf<Pair<NonResidentialLocation, String>>()
+    candidates.forEach { location ->
+      val oldName = location.localName!!
+      val newName = oldName.trim()
+      val skipReason = when {
+        newName.isEmpty() -> "Name would be empty"
+        newName.lowercase() in existingNames -> "Another location in the prison is already called '$newName'"
+        newName.lowercase() in namesWithDifferentSpacing -> "Other locations with different spacing would also be tidied to '$newName'"
+        location.hasPendingCertificationApproval() -> "Location has a pending certification approval"
+        else -> null
+      }
+      if (skipReason != null) {
+        results.add(location.toTidyResult(TidyLocalNameAction.SKIPPED, newName = newName, reason = skipReason))
+      } else {
+        toTidy.add(location to newName)
+        results.add(location.toTidyResult(TidyLocalNameAction.TIDIED, newName = newName))
+      }
+    }
+
+    val amended = mutableListOf<LocationDTO>()
+    if (!request.dryRun && toTidy.isNotEmpty()) {
+      val username = commonLocationService.getUsername()
+      val linkedTransaction = commonLocationService.createLinkedTransaction(
+        prisonId = prisonId,
+        TransactionType.LOCATION_UPDATE_NON_RESI,
+        "Remove spaces from the start and end of ${toTidy.size} location names in prison $prisonId",
+      )
+      toTidy.forEach { (location, newName) ->
+        location.updateLocalName(newName, username, clock, linkedTransaction)
+        commonLocationService.trackLocationUpdate(location, "Removed spaces from the start and end of Non-Residential Location name")
+        amended.add(location.toDto())
+      }
+      linkedTransaction.txEndTime = LocalDateTime.now(clock)
+    }
+
+    log.info("Tidied local names in $prisonId (dryRun=${request.dryRun}): ${results.groupingBy { it.action }.eachCount()}")
+    return TidyLocalNamesResult(
+      report = TidyLocalNamesReport(prisonId = prisonId, dryRun = request.dryRun, locations = results),
+      amended = amended,
+    )
+  }
+
+  private fun NonResidentialLocation.toTidyResult(action: TidyLocalNameAction, newName: String, reason: String? = null) = LocalNameTidyResult(
+    id = id!!,
+    key = getKey(),
+    oldName = localName,
+    newName = newName,
+    action = action,
+    reason = reason,
+  )
+
+  private fun normaliseName(name: String) = name.trim().lowercase()
 
   private fun NonResidentialLocation.toAlignmentResult(
     action: AlignmentAction,
     reason: String? = null,
-    renamedChildren: List<ChildRename> = emptyList(),
     createdChild: CreatedChild? = null,
-    servicesAddedToChild: ServicesAddedToChild? = null,
+    keptChild: ChildSummary? = null,
+    servicesAddedToChild: List<ServiceType> = emptyList(),
+    duplicateChildren: List<DuplicateChild> = emptyList(),
   ) = ParentAlignmentResult(
     parentId = id!!,
     parentKey = getKey(),
     parentName = localName,
     action = action,
     reason = reason,
-    renamedChildren = renamedChildren,
     createdChild = createdChild,
+    keptChild = keptChild,
     servicesAddedToChild = servicesAddedToChild,
+    duplicateChildren = duplicateChildren,
   )
 
   /**
@@ -556,13 +749,12 @@ class NonResidentialService(
 
   @Transactional
   fun createBasicNonResidentialLocation(prisonId: String, request: CreateOrUpdateNonResidentialLocationRequest): NonResidentialLocationDTO {
-    if (request.localName == null) {
-      throw ValidationException("localName must be provided when creating a non-residential location")
-    }
+    val localName = request.localName.tidyLocalName()
+      ?: throw ValidationException("localName must be provided when creating a non-residential location")
 
-    validateLocalNameNotDuplicated(prisonId, request.localName)
+    validateLocalNameNotDuplicated(prisonId, localName)
 
-    val code = generateUniqueNonResidentialCode(prisonId, request.localName)
+    val code = generateUniqueNonResidentialCode(prisonId, localName)
 
     val linkedTransaction = commonLocationService.createLinkedTransaction(
       prisonId = prisonId,
@@ -625,9 +817,10 @@ class NonResidentialService(
       throw PermanentlyDeactivatedUpdateNotAllowedException(nonResLocation.getKey())
     }
 
-    updateRequest.localName?.let { localName ->
-      if (localName.lowercase() != nonResLocation.localName?.lowercase()) {
-        validateLocalNameNotDuplicated(nonResLocation.prisonId, localName, nonResLocation.id!!)
+    val localName = tidiedNameForUpdate(updateRequest.localName)
+    localName?.let {
+      if (it.lowercase() != nonResLocation.localName?.lowercase()) {
+        validateLocalNameNotDuplicated(nonResLocation.prisonId, it, nonResLocation.id!!)
       }
     }
 
@@ -639,7 +832,7 @@ class NonResidentialService(
 
     nonResLocation.update(
       PatchNonResidentialLocationRequest(
-        localName = updateRequest.localName,
+        localName = localName,
         servicesUsingLocation = updateRequest.servicesUsingLocation,
       ),
       commonLocationService.getUsername(),
@@ -690,8 +883,16 @@ class NonResidentialService(
     return true
   }
 
+  /**
+   * The tidied name for an update, where no name means "leave it as it is". A name made only of spaces is
+   * rejected rather than taken as no change.
+   */
+  private fun tidiedNameForUpdate(localName: String?): String? = localName?.let {
+    it.tidyLocalName() ?: throw ValidationException("Local name cannot be blank")
+  }
+
   private fun validateLocalNameNotDuplicated(prisonId: String, localName: String, locationId: UUID? = null) {
-    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName)
+    if (nonResidentialLocationRepository.findAllByPrisonIdAndLocalName(prisonId = prisonId, localName = localName.tidyLocalName() ?: localName)
         .any { !it.isPermanentlyDeactivated() && (locationId == null || it.id != locationId) }
     ) {
       throw DuplicateNonResidentialLocalNameInPrisonException(prisonId = prisonId, localName = localName)
@@ -835,7 +1036,7 @@ class NonResidentialService(
         }
         add(excludeByCode("RTU"))
         if (!includeProperty) {
-          add(excludePropertyOnlyLocations())
+          add(excludePropertyStorage())
         }
 
         searchByLocalName?.let {
@@ -879,27 +1080,28 @@ data class PropertyLocationWriteResult(
 
 @Schema(description = "Request to give each parent non-residential location one child with the same name")
 data class AlignChildrenToParentNameRequest(
+  @param:Schema(description = "ALIGN (step 1) creates or prepares the child with the parent's name. ARCHIVE_DUPLICATES (step 2) archives the other children with that name where allowed", example = "ALIGN")
+  val step: AlignmentStep = AlignmentStep.ALIGN,
   @param:Schema(description = "When true (the default), nothing is changed and the report shows what would be done", example = "true")
   val dryRun: Boolean = true,
   @param:Schema(description = "Limit the run to these parent location IDs. When omitted, every parent in the prison is considered")
   val parentLocationIds: Set<UUID>? = null,
 )
 
+enum class AlignmentStep {
+  ALIGN,
+  ARCHIVE_DUPLICATES,
+}
+
 enum class AlignmentAction {
   CREATE_CHILD,
-  RENAME_CHILDREN_AND_CREATE_CHILD,
   ADD_SERVICES_TO_CHILD,
+  ARCHIVE_DUPLICATES,
+  ARCHIVE_SOME_DUPLICATES,
+  CANNOT_ARCHIVE_DUPLICATES,
   NO_ACTION,
   SKIPPED,
 }
-
-@Schema(description = "A child location renamed so that only one child has the parent's name")
-data class ChildRename(
-  val id: UUID,
-  val key: String,
-  val oldName: String,
-  val newName: String,
-)
 
 @Schema(description = "The child location created with the parent's name. Id and key are empty on a dry run")
 @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -910,12 +1112,26 @@ data class CreatedChild(
   val services: List<ServiceType>,
 )
 
-@Schema(description = "The existing child with the parent's name, and the parent's services added to it")
-data class ServicesAddedToChild(
+@Schema(description = "The existing child with the parent's name that is kept, with its services before this run")
+data class ChildSummary(
   val id: UUID,
   val key: String,
   val name: String,
-  val servicesAdded: List<ServiceType>,
+  val services: List<ServiceType>,
+)
+
+@Schema(description = "Another child with the parent's name, which step 2 archives where allowed")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class DuplicateChild(
+  val id: UUID,
+  val key: String,
+  val name: String,
+  val services: List<ServiceType>,
+  @param:Schema(description = "False when it is used by a service other than Appointments or Activities that the kept child is not used by, or has child locations of its own")
+  val canBeArchived: Boolean,
+  val reasonCannotArchive: String? = null,
+  @param:Schema(description = "True when this run archived it")
+  val archived: Boolean,
 )
 
 @Schema(description = "What was done, or would be done on a dry run, for one parent location")
@@ -926,29 +1142,83 @@ data class ParentAlignmentResult(
   val parentName: String? = null,
   val action: AlignmentAction,
   val reason: String? = null,
-  val renamedChildren: List<ChildRename> = emptyList(),
   val createdChild: CreatedChild? = null,
-  val servicesAddedToChild: ServicesAddedToChild? = null,
+  val keptChild: ChildSummary? = null,
+  @param:Schema(description = "The parent's services added to the kept child")
+  val servicesAddedToChild: List<ServiceType> = emptyList(),
+  val duplicateChildren: List<DuplicateChild> = emptyList(),
 )
 
 @Schema(description = "Report of aligning child locations to their parent's name in a prison")
 data class AlignChildrenToParentNameReport(
   val prisonId: String,
+  val step: AlignmentStep,
   val dryRun: Boolean,
   val parents: List<ParentAlignmentResult>,
 ) {
   @get:Schema(description = "Number of parents for each action")
   val summary: Map<AlignmentAction, Int>
     get() = AlignmentAction.entries.associateWith { action -> parents.count { it.action == action } }
+
+  @get:Schema(description = "Number of duplicate children that step 2 can archive")
+  val duplicatesThatCanBeArchived: Int
+    get() = parents.sumOf { parent -> parent.duplicateChildren.count { it.canBeArchived } }
+
+  @get:Schema(description = "Number of duplicate children that step 2 cannot archive")
+  val duplicatesThatCannotBeArchived: Int
+    get() = parents.sumOf { parent -> parent.duplicateChildren.count { !it.canBeArchived } }
 }
 
 /**
- * The [report] returned to the caller, plus the locations [created] and [amended] (renamed, or given the parent's
- * services) so the caller can publish events.
+ * The [report] returned to the caller, plus the locations [created] and [amended] (given the parent's services, or
+ * archived) so the caller can publish events.
  */
 data class AlignChildrenToParentNameResult(
   val report: AlignChildrenToParentNameReport,
   val created: List<LocationDTO>,
+  val amended: List<LocationDTO>,
+)
+
+@Schema(description = "Request to remove spaces from the start and end of non-residential location names in a prison")
+data class TidyLocalNamesRequest(
+  @param:Schema(description = "When true (the default), nothing is changed and the report shows what would be done", example = "true")
+  val dryRun: Boolean = true,
+  @param:Schema(description = "Limit the run to these location IDs. When omitted, every location in the prison is considered")
+  val locationIds: Set<UUID>? = null,
+)
+
+enum class TidyLocalNameAction {
+  TIDIED,
+  SKIPPED,
+}
+
+@Schema(description = "What was done, or would be done on a dry run, for one location")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+data class LocalNameTidyResult(
+  val id: UUID,
+  val key: String? = null,
+  val oldName: String? = null,
+  val newName: String? = null,
+  val action: TidyLocalNameAction,
+  val reason: String? = null,
+)
+
+@Schema(description = "Report of removing spaces from the start and end of location names in a prison")
+data class TidyLocalNamesReport(
+  val prisonId: String,
+  val dryRun: Boolean,
+  val locations: List<LocalNameTidyResult>,
+) {
+  @get:Schema(description = "Number of locations for each action")
+  val summary: Map<TidyLocalNameAction, Int>
+    get() = TidyLocalNameAction.entries.associateWith { action -> locations.count { it.action == action } }
+}
+
+/**
+ * The [report] returned to the caller, plus the [amended] locations so the caller can publish events.
+ */
+data class TidyLocalNamesResult(
+  val report: TidyLocalNamesReport,
   val amended: List<LocationDTO>,
 )
 
@@ -1053,8 +1323,11 @@ data class NonResidentialLocationDTO(
   fun getKey(): String = "$prisonId-$pathHierarchy"
 }
 
-/** Size of the location.local_name column. */
-private const val MAX_LOCAL_NAME_LENGTH = 80
+/** Size of the location.archived_reason column. */
+private const val MAX_ARCHIVED_REASON_LENGTH = 200
+
+/** The services Activities and Appointments use. A duplicate child used only by these can be archived. */
+private val ACTIVITIES_AND_APPOINTMENTS_SERVICES = setOf(ServiceType.APPOINTMENT, ServiceType.PROGRAMMES_AND_ACTIVITIES)
 
 /**
  * Generates a unique code from the local name by extracting consonants and adding a checksum.

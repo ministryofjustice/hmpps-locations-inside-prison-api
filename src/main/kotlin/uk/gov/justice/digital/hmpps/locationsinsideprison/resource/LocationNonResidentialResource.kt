@@ -47,6 +47,8 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.service.InternalLocati
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialLocationDTO
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialService
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.NonResidentialSummary
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.TidyLocalNamesReport
+import uk.gov.justice.digital.hmpps.locationsinsideprison.service.TidyLocalNamesRequest
 import uk.gov.justice.digital.hmpps.locationsinsideprison.service.buildEventsToPublishOnUpdate
 import java.util.*
 
@@ -238,10 +240,13 @@ class LocationNonResidentialResource(
   @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
   @Operation(
     summary = "Gives each parent non-residential location one child with the same name",
-    description = "For each parent used by a service that has live child locations: where several children share the " +
-      "parent's name they are renamed with a number (e.g. Gym 1, Gym 2), then where no child has the parent's name one " +
-      "is created with the parent's services. Where one child has the parent's name but lacks some of its services, " +
-      "those services are added to it. Runs as a dry run unless dryRun is false. " +
+    description = "Runs in two steps. Step 1 (ALIGN): for each parent used by a service that has live child " +
+      "locations, creates a child with the parent's name and services where none can be kept, or adds the parent's " +
+      "missing services to the child kept with that name. An active parent only keeps an active child. " +
+      "Step 2 (ARCHIVE_DUPLICATES): archives the other children " +
+      "with the parent's name, except those used by a service the kept child is not used by (other than Appointments " +
+      "and Activities) or with child locations of their own, which are reported. " +
+      "Runs as a dry run unless dryRun is false. " +
       "Requires role MAINTAIN_LOCATIONS and write scope",
     responses = [
       ApiResponse(
@@ -277,6 +282,48 @@ class LocationNonResidentialResource(
         InternalLocationDomainEventType.LOCATION_AMENDED to result.amended,
         InternalLocationDomainEventType.LOCATION_CREATED to result.created,
       )
+    }
+    return result.report
+  }
+
+  @PostMapping("/non-residential/prison/{prisonId}/tidy-local-names", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasRole('ROLE_MAINTAIN_LOCATIONS') and hasAuthority('SCOPE_write')")
+  @Operation(
+    summary = "Removes spaces from the start and end of non-residential location names in a prison",
+    description = "Tidies names such as ' Gym' or 'Gym ' to 'Gym'. A location is skipped when another location in the " +
+      "prison already has the tidied name. Runs as a dry run unless dryRun is false. " +
+      "Requires role MAINTAIN_LOCATIONS and write scope",
+    responses = [
+      ApiResponse(
+        responseCode = "200",
+        description = "Returns a report of what was done, or would be done on a dry run, for each location",
+      ),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Missing required role. Requires the MAINTAIN_LOCATIONS role with write scope.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  fun tidyLocalNames(
+    @Schema(description = "Prison Id", example = "MDI", required = true, minLength = 3, maxLength = 5, pattern = "^[A-Z]{2}I|ZZGHI$")
+    @Size(min = 3, message = "Prison ID must be a minimum of 3 characters")
+    @NotBlank(message = "Prison ID cannot be blank")
+    @Size(max = 5, message = "Prison ID cannot be more than 5 characters")
+    @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters ending in an I or ZZGHI")
+    @PathVariable
+    prisonId: String,
+    @RequestBody
+    request: TidyLocalNamesRequest,
+  ): TidyLocalNamesReport {
+    val result = nonResidentialService.tidyLocalNames(prisonId, request)
+    eventPublish {
+      mapOf(InternalLocationDomainEventType.LOCATION_AMENDED to result.amended)
     }
     return result.report
   }
@@ -888,7 +935,7 @@ class LocationNonResidentialResource(
   @GetMapping("/non-residential/summary/{prisonId}")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @Operation(
-    summary = "Get a paged list of non-residential locations for a prison (excluding RTU and property-only locations)",
+    summary = "Get a paged list of non-residential locations for a prison (excluding RTU and property storage)",
     description = "Requires role VIEW_LOCATIONS",
     responses = [
       ApiResponse(
@@ -950,14 +997,15 @@ class LocationNonResidentialResource(
     @RequestParam(required = false)
     filterParents: Boolean = false,
     @Schema(
-      description = "Include locations that can only store property (sole usage of PROPERTY). " +
-        "Locations used for property alongside another service are always returned.",
+      description = "Include property storage: locations that can only store property (sole usage of PROPERTY), " +
+        "and boxes and shelves with no usage or service at all, which are property stores that have lost their " +
+        "PROPERTY usage. Locations used for property alongside another service are always returned.",
       example = "false",
       required = false,
       defaultValue = "false",
     )
     @Parameter(
-      description = "Include property-only locations",
+      description = "Include property storage",
       example = "false",
     )
     @RequestParam(required = false)

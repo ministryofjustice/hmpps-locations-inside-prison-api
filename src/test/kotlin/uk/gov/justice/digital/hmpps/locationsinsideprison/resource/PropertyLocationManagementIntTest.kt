@@ -224,4 +224,21 @@ class PropertyLocationManagementIntTest : CommonDataTestBase() {
       .exchange()
       .expectStatus().isNotFound
   }
+
+  @Test
+  fun `a property location name is stored without surrounding or repeated spaces`() {
+    val created = createPropertyLocation("  Reception    store ", 10)
+
+    assertThat(created.localName).isEqualTo("Reception Store")
+  }
+
+  @Test
+  fun `a property location name made only of spaces is rejected, including a non-breaking space`() {
+    webTestClient.post().uri("/locations/prison/MDI/property")
+      .headers(manageHeaders())
+      .contentType(MediaType.APPLICATION_JSON)
+      .bodyValue("""{ "localName": "\u00A0", "capacity": 10 }""")
+      .exchange()
+      .expectStatus().isBadRequest
+  }
 }

@@ -23,23 +23,48 @@ fun excludeByLocationType(locationType: LocationType) = NonResidentialLocation::
 fun excludeByStatus(status: LocationStatus) = NonResidentialLocation::status.buildSpecForNotEqualTo(status)
 
 /**
- * Excludes locations that can only store property, i.e. those whose sole non-residential usage is
- * [NonResidentialUsageType.PROPERTY]. A location is kept when it has no PROPERTY usage, or when it has
- * a PROPERTY usage alongside at least one other usage (used for property *and* another service).
+ * Excludes property storage, which is managed in the prisoner property service rather than as a
+ * non-residential location. Two kinds of location are left out:
+ *
+ *  - those that can only store property, i.e. whose sole non-residential usage is
+ *    [NonResidentialUsageType.PROPERTY] (MAPB-647). A location with a PROPERTY usage alongside at least
+ *    one other usage (used for property *and* another service) is kept;
+ *  - boxes and shelves with no usage and no service at all (MAPB-923). These are property boxes and
+ *    valuables shelves that have lost their PROPERTY usage - NOMIS drops a location's usages when it is
+ *    deactivated, and many legacy property boxes never had one - so the rule above cannot recognise them.
+ *    In preprod they were over 3,000 "PROPERTY BOX", "BULK" and "VALUABLES" locations, most of them
+ *    active. A box or shelf used for anything else is kept.
  */
-fun excludePropertyOnlyLocations(): Specification<NonResidentialLocation> = Specification { root, query, cb ->
-  fun usageExists(propertyMatch: Boolean): Predicate {
+fun excludePropertyStorage(): Specification<NonResidentialLocation> = Specification { root, query, cb ->
+  fun usageExists(propertyMatch: Boolean?): Predicate {
     val sub = query.subquery(Long::class.java)
     val usage = sub.from(NonResidentialUsage::class.java)
     sub.select(cb.literal(1L))
     val typeMatch = cb.equal(usage.get<NonResidentialUsageType>("usageType"), NonResidentialUsageType.PROPERTY)
+    val forThisLocation = cb.equal(usage.get<Location>("location"), root)
     sub.where(
-      cb.equal(usage.get<Location>("location"), root),
-      if (propertyMatch) typeMatch else cb.not(typeMatch),
+      when (propertyMatch) {
+        null -> forThisLocation
+        true -> cb.and(forThisLocation, typeMatch)
+        false -> cb.and(forThisLocation, cb.not(typeMatch))
+      },
     )
     return cb.exists(sub)
   }
-  cb.or(cb.not(usageExists(propertyMatch = true)), usageExists(propertyMatch = false))
+  fun serviceExists(): Predicate {
+    val sub = query.subquery(Long::class.java)
+    val service = sub.from(ServiceUsage::class.java)
+    sub.select(cb.literal(1L))
+    sub.where(cb.equal(service.get<Location>("location"), root))
+    return cb.exists(sub)
+  }
+  val propertyOnly = cb.and(usageExists(propertyMatch = true), cb.not(usageExists(propertyMatch = false)))
+  val unusedPropertyStore = cb.and(
+    root.get<LocationType>("locationType").`in`(LocationType.BOX, LocationType.SHELF),
+    cb.not(usageExists(propertyMatch = null)),
+    cb.not(serviceExists()),
+  )
+  cb.not(cb.or(propertyOnly, unusedPropertyStore))
 }
 
 fun filterByStatuses(statuses: Collection<LocationStatus>) = NonResidentialLocation::status.buildSpecForIn(statuses)

@@ -207,6 +207,14 @@ class Cell(
 
   fun getOtherConvertedCellType(): String? = otherConvertedCellType
 
+  /**
+   * A room converted from a cell holds no capacity, so it is left out of every capacity and CNA total. Rooms
+   * converted before MAP-3056 could still carry a CNA, which was counted in wing and prison totals (MAPA-476).
+   * This holds while an approval for the room is pending: a request to convert it back to a cell records the
+   * room as it stands, so its proposed figures only count once the conversion is approved.
+   */
+  fun countsTowardsCapacity() = !isConvertedCell()
+
   fun getConvertedCellTypeSummary() = listOfNotBlank(convertedCellType?.description, otherConvertedCellType).joinToString(" - ")
 
   fun convertToNonResidentialCell(convertedCellType: ConvertedCellType, otherConvertedCellType: String? = null, userOrSystemInContext: String, clock: Clock, linkedTransaction: LinkedTransaction) {

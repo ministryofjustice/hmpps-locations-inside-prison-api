@@ -17,13 +17,7 @@ import java.util.concurrent.TimeUnit
 class CacheConfiguration {
 
   @Bean
-  fun cacheManager(): CacheManager = ConcurrentMapCacheManager(ACTIVE_PRISONS_CACHE_NAME, PRISON_NAMES_CACHE_NAME)
-
-  @CacheEvict(value = [ACTIVE_PRISONS_CACHE_NAME], allEntries = true)
-  @Scheduled(fixedDelay = TTL_ACTIVE_PRISONS, timeUnit = TimeUnit.HOURS)
-  fun cacheEvictActivePrisons() {
-    log.info("Evicting cache: $ACTIVE_PRISONS_CACHE_NAME after $TTL_ACTIVE_PRISONS hours")
-  }
+  fun cacheManager(): CacheManager = ConcurrentMapCacheManager(PRISON_NAMES_CACHE_NAME)
 
   @CacheEvict(value = [PRISON_NAMES_CACHE_NAME], allEntries = true)
   @Scheduled(fixedDelay = TTL_PRISON_NAMES, timeUnit = TimeUnit.HOURS)
@@ -33,8 +27,6 @@ class CacheConfiguration {
 
   companion object {
     val log: org.slf4j.Logger = LoggerFactory.getLogger(this::class.java)
-    const val ACTIVE_PRISONS_CACHE_NAME: String = "activePrisons"
-    const val TTL_ACTIVE_PRISONS: Long = 1
     const val PRISON_NAMES_CACHE_NAME: String = "prisonNames"
     const val TTL_PRISON_NAMES: Long = 24
   }

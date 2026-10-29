@@ -65,6 +65,13 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
   lateinit var locationHistory: LocationHistory
   lateinit var linkedTransaction: LinkedTransaction
 
+  // Linked transactions are not cleared between tests, so match on the detail rather than taking the latest
+  private fun syncCreateTransactionType(pathHierarchy: String) = linkedTransactionRepository.findAll()
+    .filter { it.transactionDetail == "NOMIS Sync (Create) [$pathHierarchy] in prison ZZGHI" }
+    .map { it.transactionType }
+    .distinct()
+    .single()
+
   @BeforeEach
   fun setUp() {
     locationHistoryRepository.deleteAll()
@@ -364,6 +371,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           """,
             JsonCompareMode.LENIENT,
           )
+
+        assertThat(syncCreateTransactionType("B-1-003")).isEqualTo(TransactionType.SYNC)
       }
 
       @Test
@@ -525,6 +534,11 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           """,
             JsonCompareMode.LENIENT,
           )
+
+        // The change of type clears the session part way through, and the transaction must still be completed
+        assertThat(
+          linkedTransactionRepository.findAll().single { it.transactionDetail == "NOMIS Sync (Update) [B-1-001] in prison ZZGHI" }.txEndTime,
+        ).isNotNull()
       }
 
       @Test
@@ -718,6 +732,30 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
       }
 
       @Test
+      fun `tidies the local name, and a re-sync of the same untidy name records no change`() {
+        fun sync(request: NomisSyncLocationRequest) = webTestClient.post().uri("/sync/upsert")
+          .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
+          .header("Content-Type", "application/json")
+          .bodyValue(jsonString(request))
+          .exchange()
+          .expectStatus().is2xxSuccessful
+          .expectBody(LegacyLocation::class.java)
+          .returnResult().responseBody!!
+
+        fun localNameHistoryCount(id: UUID) = locationHistoryRepository.findAll()
+          .count { it.location.id == id && it.attributeName == LocationAttribute.LOCAL_NAME }
+
+        val untidyName = "  Visit \t Hall\u00A0"
+        val created = sync(syncNonResRequest.copy(localName = untidyName))
+        assertThat(created.localName).isEqualTo("Visit Hall")
+        val historyAfterCreate = localNameHistoryCount(created.id)
+
+        val updated = sync(syncNonResRequest.copy(id = created.id, localName = untidyName))
+        assertThat(updated.localName).isEqualTo("Visit Hall")
+        assertThat(localNameHistoryCount(created.id)).isEqualTo(historyAfterCreate)
+      }
+
+      @Test
       fun `can sync a new non-res location`() {
         webTestClient.post().uri("/sync/upsert")
           .headers(setAuthorisation(roles = listOf("ROLE_SYNC_LOCATIONS"), scopes = listOf("write")))
@@ -750,6 +788,8 @@ class SyncAndMigrateResourceIntTest : SqsIntegrationTestBase() {
           """,
             JsonCompareMode.LENIENT,
           )
+
+        assertThat(syncCreateTransactionType("VISIT")).isEqualTo(TransactionType.SYNC_NON_RESIDENTIAL)
       }
 
       @Test
