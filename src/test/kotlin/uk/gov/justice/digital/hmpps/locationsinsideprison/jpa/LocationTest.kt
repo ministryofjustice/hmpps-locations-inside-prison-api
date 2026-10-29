@@ -357,6 +357,56 @@ class LocationTest {
     }
   }
 
+  @Nested
+  @DisplayName("Capacity totals with a converted room")
+  inner class CapacityTotalsWithAConvertedRoom {
+
+    @Test
+    fun `leaves out the CNA a room converted before MAP-3056 still holds`() {
+      // The state V1_74 left these rooms in (MAPA-476): no max or working capacity, but the old CNA
+      val landing = landing("1")
+      landing.addChildLocation(cell("001"))
+      landing.addChildLocation(convertedRoom("002", Capacity(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 1)))
+
+      assertThat(landing.calcCertifiedNormalAccommodation()).isEqualTo(2)
+      assertThat(landing.calcCertifiedNormalAccommodation(includePendingOrDraft = true)).isEqualTo(2)
+    }
+
+    @Test
+    fun `leaves out the max and working capacity a converted room holds`() {
+      val wing = wingWithTwoLandings()
+      val certificateWorkingCapacityWithoutRoom = wing.calcWorkingCapacityForCertificate()
+      wing.getResidentialLocationsBelowThisLevel().first()
+        .addChildLocation(convertedRoom("004", Capacity(maxCapacity = 15, workingCapacity = 15, certifiedNormalAccommodation = 15)))
+
+      assertThat(wing.calcMaxCapacity()).isEqualTo(12)
+      assertThat(wing.calcCertifiedNormalAccommodation()).isEqualTo(12)
+      assertThat(wing.getWorkingCapacityIgnoringInactiveStatus()).isEqualTo(12)
+      assertThat(wing.calcWorkingCapacityForCertificate()).isEqualTo(certificateWorkingCapacityWithoutRoom)
+    }
+
+    @Test
+    fun `gives a converted room no capacity of its own`() {
+      val room = convertedRoom("001", Capacity(maxCapacity = 0, workingCapacity = 0, certifiedNormalAccommodation = 1))
+
+      assertThat(room.calcMaxCapacity()).isEqualTo(0)
+      assertThat(room.calcCertifiedNormalAccommodation()).isEqualTo(0)
+    }
+
+    @Test
+    fun `counts a converted room in the pending totals while an approval request for it is pending`() {
+      val landing = landing("1")
+      landing.addChildLocation(cell("001"))
+      val room = convertedRoom("002", Capacity(maxCapacity = 1, workingCapacity = 1, certifiedNormalAccommodation = 1))
+      landing.addChildLocation(room)
+      room.approvalRequests.add(deactivationApprovalRequest(room))
+
+      assertThat(landing.calcCertifiedNormalAccommodation()).isEqualTo(2)
+      assertThat(landing.calcCertifiedNormalAccommodation(includePendingOrDraft = true)).isEqualTo(3)
+      assertThat(landing.calcMaxCapacity(includePendingOrDraft = true)).isEqualTo(3)
+    }
+  }
+
   private fun transaction(type: TransactionType = TransactionType.PERMANENT_DEACTIVATION) = LinkedTransaction(
     transactionId = UUID.randomUUID(),
     prisonId = "MDI",
@@ -416,6 +466,12 @@ class LocationTest {
     capacity = Capacity(maxCapacity = 2, workingCapacity = 2, certifiedNormalAccommodation = 2),
     certifiedCell = true,
   )
+
+  private fun convertedRoom(code: String, capacity: Capacity) = cell(code).apply {
+    this.capacity = capacity
+    certifiedCell = false
+    convertedCellType = ConvertedCellType.STORE
+  }
 
   private fun deactivationApprovalRequest(location: ResidentialLocation) = DeactivationApprovalRequest(
     location = location,

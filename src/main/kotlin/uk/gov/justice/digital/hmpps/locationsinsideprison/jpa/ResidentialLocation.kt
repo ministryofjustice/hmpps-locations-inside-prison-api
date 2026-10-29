@@ -134,25 +134,25 @@ open class ResidentialLocation(
 
   fun getCurrentlyHeldWorkingCapacity(): Int? = capacity?.workingCapacity
 
-  fun getWorkingCapacityIgnoreParent(): Int = cellLocations().filter { it.isActive() }
+  fun getWorkingCapacityIgnoreParent(): Int = cellLocations().filter { it.isActive() && it.countsTowardsCapacity() }
     .sumOf { it.getCurrentlyHeldWorkingCapacity() ?: 0 }
 
-  fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
+  fun getWorkingCapacityIgnoringInactiveStatus(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && it.countsTowardsCapacity() }
     .sumOf { it.getCurrentlyHeldWorkingCapacity() ?: 0 }
 
-  fun calcOldWorkingCapacity() = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft()) }
+  fun calcOldWorkingCapacity() = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft()) && it.countsTowardsCapacity() }
     .sumOf { it.getOldWorkingCapacity() ?: 0 }
 
-  fun calcWorkingCapacity(includePendingOrDraft: Boolean = false) = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
+  fun calcWorkingCapacity(includePendingOrDraft: Boolean = false) = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) && it.countsTowardsCapacity(includePendingOrDraft) }
     .sumOf { it.getWorkingCapacity(includePendingOrDraft) ?: 0 }
 
-  fun calcWorkingCapacityForCertificate(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && !it.isDraft() }
+  fun calcWorkingCapacityForCertificate(): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && !it.isDraft() && it.countsTowardsCapacity() }
     .sumOf { it.getWorkingCapacityForCertificate() ?: 0 }
 
-  fun calcMaxCapacity(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
+  fun calcMaxCapacity(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) && it.countsTowardsCapacity(includePendingOrDraft) }
     .sumOf { it.getMaxCapacity(includePendingOrDraft) ?: 0 }
 
-  fun calcCertifiedNormalAccommodation(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) }
+  fun calcCertifiedNormalAccommodation(includePendingOrDraft: Boolean = false): Int = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) && (!it.isDraft() || includePendingOrDraft) && it.countsTowardsCapacity(includePendingOrDraft) }
     .sumOf { it.getCertifiedNormalAccommodation(includePendingOrDraft) ?: 0 }
 
   private fun hasCertifiedCells(): Boolean = cellLocations().filter { isCurrentCellOrNotPermanentlyInactive(it) }
