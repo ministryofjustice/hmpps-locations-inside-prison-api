@@ -296,6 +296,11 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
   fun `an ingestion never moves the working capacity but the certificate takes the uploaded value`() {
     // Jira scenario 1: occupancy would allow the reduction, but ingestion must not make it anyway
     prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), true, numberOfPrisonersInCell = 1)
+    val previousMark = "P".repeat(30)
+    val newMark = "N".repeat(30)
+    TransactionTemplate(transactionManager).executeWithoutResult {
+      cellRepository.findById(cell1.id!!).get().cellMark = previousMark
+    }
 
     postCellCertificateUpdate(
       mapOf(
@@ -303,7 +308,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
           maxCapacity = 2,
           workingCapacity = 1,
           certifiedNormalAccommodation = 1,
-          cellMark = "Z1-NEW",
+          cellMark = newMark,
           inCellSanitation = true,
         ),
       ),
@@ -319,6 +324,8 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
         assertThat(maxCapacityMismatch).isFalse()
         assertThat(certifiedNormalAccommodationMismatch).isFalse()
         assertThat(previousWorkingCapacity).isEqualTo(2)
+        assertThat(cellMark).isEqualTo(newMark)
+        assertThat(previousCellMark).isEqualTo(previousMark)
         assertThat(message).isEqualTo(CellCertificateUploadProcessingService.WORKING_CAPACITY_MISMATCH_MESSAGE)
       }
     }
@@ -327,7 +334,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
     withReloadedCell1 {
       assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
       assertThat(getCertifiedNormalAccommodation()).isEqualTo(1)
-      assertThat(getDoorCellMark()).isEqualTo("Z1-NEW")
+      assertThat(getDoorCellMark()).isEqualTo(newMark)
       assertThat(getSanitationOfCell()).isTrue()
     }
 
@@ -335,6 +342,7 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
       assertThat(workingCapacity).isEqualTo(1)
       assertThat(maxCapacity).isEqualTo(2)
       assertThat(certifiedNormalAccommodation).isEqualTo(1)
+      assertThat(toDto(traverseDown = false).cellMark).isEqualTo(newMark)
     }
   }
 

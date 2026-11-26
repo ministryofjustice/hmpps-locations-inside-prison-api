@@ -132,6 +132,26 @@ class CellCertificateUploadResourceIntTest : CommonDataTestBase() {
   @Nested
   inner class Failures {
     @Test
+    fun `returns 400 when a cell mark exceeds 30 characters`() {
+      webTestClient.post().uri("/locations/bulk/update-cell-certificate/MDI")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(
+          jsonString(
+            UpdateCapacityRequest(
+              locations = mapOf(
+                "MDI-Z-1-001" to CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = 1, cellMark = "A".repeat(31)),
+              ),
+            ),
+          ),
+        )
+        .exchange()
+        .expectStatus().isBadRequest
+
+      assertThat(cellCertificateUploadRepository.findAll()).isEmpty()
+    }
+
+    @Test
     fun `returns 404 when prison does not exist`() {
       webTestClient.post().uri("/locations/bulk/update-cell-certificate/XXX")
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
