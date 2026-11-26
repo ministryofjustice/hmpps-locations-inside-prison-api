@@ -261,8 +261,8 @@ class LocationResource(
     @Size(max = 5, message = "Prison ID must be 3 characters or ZZGHI")
     @Pattern(regexp = "^[A-Z]{2}I|ZZGHI$", message = "Prison ID must be 3 characters or ZZGHI")
     @PathVariable prisonId: String,
-    @Schema(description = "Cell mark / cell door number", example = "DR-01", required = true)
-    @Size(max = 12, message = "Cell mark cannot be more than 12 characters long")
+    @Schema(description = "Cell mark / cell door number", example = "DR-01", required = true, maxLength = 30)
+    @Size(max = 30, message = "Cell mark cannot be more than 30 characters long")
     @PathVariable cellMark: String,
     @Schema(description = "The level above in this hierarchy to look below, empty will check prison level", example = "de91dfa7-821f-4552-a427-bf2f32eafeb0", required = false)
     @RequestParam(name = "parentLocationId", required = false)

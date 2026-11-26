@@ -636,9 +636,9 @@ class LocationResidentialResource(
     val workingCapacity: Int = 0,
     @param:Schema(description = "Used For list", example = "[ \"STANDARD_ACCOMMODATION\", \"PERSONALITY_DISORDER\" ]", required = false)
     val usedForTypes: List<UsedForType>? = null,
-    @param:Schema(description = "Cell mark (door number) to apply to the converted cell", example = "A1", required = false, minLength = 1, maxLength = 12)
+    @param:Schema(description = "Cell mark (door number) to apply to the converted cell", example = "A1", required = false, minLength = 1, maxLength = 30)
     @field:Size(min = 1, message = "Mark cannot be blank")
-    @field:Size(max = 12, message = "Mark can be up to 12 characters")
+    @field:Size(max = 30, message = "Mark can be up to 30 characters")
     val cellMark: String? = null,
     @param:Schema(description = "Whether the converted cell supports in-cell sanitation", example = "true", required = false)
     val inCellSanitation: Boolean? = null,

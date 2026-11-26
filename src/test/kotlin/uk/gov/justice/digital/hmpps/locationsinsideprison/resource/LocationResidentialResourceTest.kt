@@ -1332,8 +1332,8 @@ class LocationResidentialResourceTest(@param:Autowired private val locationServi
     @Nested
     inner class Validation {
       @Test
-      fun `access client error bad local name data`() {
-        webTestClient.get().uri("/locations/${cell1.prisonId}/cell-mark/1234567890123")
+      fun `access client error when cell mark exceeds 30 characters`() {
+        webTestClient.get().uri("/locations/${cell1.prisonId}/cell-mark/${"A".repeat(31)}")
           .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
           .header("Content-Type", "application/json")
           .exchange()

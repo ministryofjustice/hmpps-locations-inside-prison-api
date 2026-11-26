@@ -221,6 +221,10 @@ data class UpdateCapacityRequest(
   @JsonIgnore
   @AssertTrue(message = "Working capacity cannot be greater than max capacity")
   fun isEveryWorkingCapacityWithinMaxCapacity() = locations.values.all { it.workingCapacity <= it.maxCapacity }
+
+  @JsonIgnore
+  @AssertTrue(message = "Cell mark cannot be more than 30 characters")
+  fun isEveryCellMarkWithinLengthLimit() = locations.values.all { it.cellMark == null || it.cellMark.length <= 30 }
 }
 
 @Schema(description = "Bulk permanent deactivation request")
@@ -326,8 +330,8 @@ data class CellCapacityUpdateDetail(
   @field:PositiveOrZero(message = "CNA cannot be less than 0")
   val certifiedNormalAccommodation: Int? = null,
 
-  @param:Schema(description = "Working capacity of the location", example = "A1-03", required = false)
-  @field:Size(max = 12, message = "Cell mark cannot be more than 12 characters")
+  @param:Schema(description = "Cell mark of the location", example = "A1-03", required = false, maxLength = 30)
+  @field:Size(max = 30, message = "Cell mark cannot be more than 30 characters")
   val cellMark: String? = null,
 
   @param:Schema(description = "Indicate that the cell as in-cell sanitation", example = "true", required = false)

@@ -2412,6 +2412,18 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
   inner class CellMarkChangeTest {
 
     @Test
+    fun `cannot change a cell mark to more than 30 characters`() {
+      val cellToUpdate = leedsWing.findAllLeafLocations().first() as Cell
+
+      webTestClient.put().uri("/locations/residential/${cellToUpdate.id}/cell-mark-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(CellMarkChangeRequest(cellMark = "N".repeat(31), reasonForChange = "The door number is wrong")))
+        .exchange()
+        .expectStatus().isBadRequest
+    }
+
+    @Test
     fun `cannot change a cell mark to an existing cell mark at same level`() {
       val cellToUpdate = leedsWing.findAllLeafLocations().first() as Cell
       val existingCell = leedsWing.findAllLeafLocations().last() as Cell
@@ -2438,6 +2450,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
     @Test
     fun `can change a cell mark on a location and request approval`() {
       val cellToUpdate = leedsWing.findAllLeafLocations().first() as Cell
+      val newMark = "N".repeat(30)
       val pendingCell = webTestClient.put().uri("/locations/residential/${cellToUpdate.id}/cell-mark-change")
         .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
         .header("Content-Type", "application/json")
@@ -2445,7 +2458,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
           jsonString(
             CellMarkChangeRequest(
               reasonForChange = "The door number is wrong",
-              cellMark = "CM-001",
+              cellMark = newMark,
             ),
           ),
         )
@@ -2456,7 +2469,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
 
       assertThat(pendingCell.status).isEqualTo(DerivedLocationStatus.LOCKED_ACTIVE)
       assertThat(pendingCell.cellMark).isEqualTo(cellToUpdate.cellMark)
-      assertThat(pendingCell.pendingChanges?.cellMark).isEqualTo("CM-001")
+      assertThat(pendingCell.pendingChanges?.cellMark).isEqualTo(newMark)
       assertThat(pendingCell.pendingApprovalRequestId).isNotNull
 
       val pendingApprovalRequestId = pendingCell.pendingApprovalRequestId!!
@@ -2477,12 +2490,12 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
       assertThat(pendingApproval.workingCapacityChange).isEqualTo(0)
       assertThat(pendingApproval.certifiedNormalAccommodationChange).isEqualTo(0)
       assertThat(pendingApproval.maxCapacityChange).isEqualTo(0)
-      assertThat(pendingApproval.cellMark).isEqualTo("CM-001")
+      assertThat(pendingApproval.cellMark).isEqualTo(newMark)
       assertThat(pendingApproval.currentCellMark).isEqualTo("A-1")
       assertThat(pendingApproval.reasonForChange).isEqualTo("The door number is wrong")
       assertThat(pendingApproval.locations).isNotEmpty
       assertThat(pendingApproval.locations).hasSize(1)
-      assertThat(pendingApproval.locations!![0].cellMark).isEqualTo("CM-001")
+      assertThat(pendingApproval.locations!![0].cellMark).isEqualTo(newMark)
       assertThat(pendingApproval.locations[0].currentCellMark).isEqualTo("A-1")
 
       val approvedRequest = webTestClient.put().uri("/certification/location/approve")
@@ -2512,7 +2525,7 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .jsonPath("$.totalMaxCapacity").isEqualTo(12)
         .jsonPath("$.totalWorkingCapacity").isEqualTo(6)
         .jsonPath("$.totalCertifiedNormalAccommodation").isEqualTo(6)
-        .jsonPath("$.locations[0].subLocations[0].subLocations[0].cellMark").isEqualTo("CM-001")
+        .jsonPath("$.locations[0].subLocations[0].subLocations[0].cellMark").isEqualTo(newMark)
 
       val approvedLocation = webTestClient.get().uri("/locations/${cellToUpdate.id}")
         .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS"), scopes = listOf("read")))
@@ -2523,9 +2536,33 @@ class CertificationApprovalResourceTest : CommonDataTestBase() {
         .returnResult().responseBody!!
 
       assertThat(approvedLocation.status).isEqualTo(DerivedLocationStatus.ACTIVE)
-      assertThat(approvedLocation.cellMark).isEqualTo("CM-001")
+      assertThat(approvedLocation.cellMark).isEqualTo(newMark)
       assertThat(approvedLocation.pendingChanges).isNull()
       assertThat(approvedLocation.pendingApprovalRequestId).isNull()
+
+      webTestClient.get().uri("/locations/${cellToUpdate.prisonId}/cell-mark/$newMark")
+        .headers(setAuthorisation(roles = listOf("ROLE_VIEW_LOCATIONS")))
+        .exchange()
+        .expectStatus().isOk
+
+      val secondChange = webTestClient.put().uri("/locations/residential/${cellToUpdate.id}/cell-mark-change")
+        .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+        .header("Content-Type", "application/json")
+        .bodyValue(jsonString(CellMarkChangeRequest(cellMark = "P".repeat(30), reasonForChange = "The door number changed again")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<Location>()
+        .returnResult().responseBody!!
+
+      val secondApproval = webTestClient.get().uri("/certification/request-approvals/${secondChange.pendingApprovalRequestId}")
+        .headers(setAuthorisation(roles = listOf("ROLE_LOCATION_CERTIFICATION")))
+        .exchange()
+        .expectStatus().isOk
+        .expectBody<CertificationApprovalRequestDto>()
+        .returnResult().responseBody!!
+
+      assertThat(secondApproval.currentCellMark).isEqualTo(newMark)
+      assertThat(secondApproval.locations!![0].currentCellMark).isEqualTo(newMark)
     }
 
     @Test

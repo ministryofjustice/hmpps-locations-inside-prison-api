@@ -209,9 +209,9 @@ data class CellInformation(
   @field:Size(max = 12, message = "Code must be up to 12 characters")
   val code: String,
 
-  @param:Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1)
+  @param:Schema(description = "Cell mark of the location", required = false, example = "A1", minLength = 1, maxLength = 30)
   @field:Size(min = 1, message = "Mark cannot be blank")
-  @field:Size(max = 12, message = "Mark must be up to 12 characters")
+  @field:Size(max = 30, message = "Mark must be up to 30 characters")
   val cellMark: String? = null,
 
   @param:Schema(description = "CNA value", required = false, defaultValue = "0")
