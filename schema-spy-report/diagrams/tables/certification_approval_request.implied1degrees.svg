@@ -136,7 +136,7 @@
 <polygon fill="none" stroke="#000000" points="595.5,-477.2 595.5,-499.2 894.5,-499.2 894.5,-477.2 595.5,-477.2"/>
 <text text-anchor="start" x="615.5" y="-484.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">cell_mark</text>
 <polygon fill="none" stroke="#000000" points="894.5,-477.2 894.5,-499.2 988.5,-499.2 988.5,-477.2 894.5,-477.2"/>
-<text text-anchor="start" x="897.5" y="-484.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">varchar[12]</text>
+<text text-anchor="start" x="897.5" y="-484.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">varchar[30]</text>
 <polygon fill="none" stroke="#000000" points="595.5,-455.2 595.5,-477.2 894.5,-477.2 894.5,-455.2 595.5,-455.2"/>
 <text text-anchor="start" x="615.5" y="-462.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">deactivated_reason</text>
 <polygon fill="none" stroke="#000000" points="894.5,-455.2 894.5,-477.2 988.5,-477.2 988.5,-455.2 894.5,-455.2"/>
@@ -160,7 +160,7 @@
 <polygon fill="none" stroke="#000000" points="595.5,-345.2 595.5,-367.2 894.5,-367.2 894.5,-345.2 595.5,-345.2"/>
 <text text-anchor="start" x="615.5" y="-352.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">current_cell_mark</text>
 <polygon fill="none" stroke="#000000" points="894.5,-345.2 894.5,-367.2 988.5,-367.2 988.5,-345.2 894.5,-345.2"/>
-<text text-anchor="start" x="897.5" y="-352.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">varchar[12]</text>
+<text text-anchor="start" x="897.5" y="-352.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">varchar[30]</text>
 <polygon fill="none" stroke="#000000" points="595.5,-323.2 595.5,-345.2 894.5,-345.2 894.5,-323.2 595.5,-323.2"/>
 <text text-anchor="start" x="615.5" y="-330.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">current_in_cell_sanitation</text>
 <polygon fill="none" stroke="#000000" points="894.5,-323.2 894.5,-345.2 988.5,-345.2 988.5,-323.2 894.5,-323.2"/>

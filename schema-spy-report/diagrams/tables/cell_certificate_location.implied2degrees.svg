@@ -171,7 +171,7 @@
 <polygon fill="none" stroke="#000000" points="861,-213.2 861,-235.2 1105,-235.2 1105,-213.2 861,-213.2"/>
 <text text-anchor="start" x="881" y="-220.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">cell_mark</text>
 <polygon fill="none" stroke="#000000" points="1105,-213.2 1105,-235.2 1199,-235.2 1199,-213.2 1105,-213.2"/>
-<text text-anchor="start" x="1108" y="-220.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">varchar[12]</text>
+<text text-anchor="start" x="1108" y="-220.9" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">varchar[30]</text>
 <polygon fill="none" stroke="#000000" points="861,-191.2 861,-213.2 1105,-213.2 1105,-191.2 861,-191.2"/>
 <text text-anchor="start" x="881" y="-198.3" font-family="Helvetica,sans-Serif" font-size="11.00" fill="#000000">level</text>
 <polygon fill="none" stroke="#000000" points="1105,-191.2 1105,-213.2 1199,-213.2 1199,-191.2 1105,-191.2"/>
