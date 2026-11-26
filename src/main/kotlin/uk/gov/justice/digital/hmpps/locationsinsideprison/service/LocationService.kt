@@ -877,8 +877,15 @@ class LocationService(
     // The request matches the certificate but not what the cell holds, e.g. after an import certified lower values
     // than the cell kept (an import never moves a working capacity the cell already holds). The certificate already
     // records these values, so the cell is brought into line with it without an approval request.
+    // Each value is checked against the certificate itself: a temporary change works out its working capacity
+    // difference from the cell, so no difference above does not mean the working capacity matches the certificate.
+    // Inactive cells are left alone: they report a working capacity of 0 but keep the one they hold for reactivation.
     val matchesCertificateOnly = !certificateChangesRequested &&
       certificateValue != null &&
+      locCapChange.isActiveAndAllParentsActive() &&
+      maxCapacity == certificateValue.maxCapacity &&
+      workingCapacity == certificateValue.workingCapacity &&
+      cna == certificateValue.certifiedNormalAccommodation &&
       (
         maxCapacity != (locCapChange.capacity?.maxCapacity ?: 0) ||
           workingCapacity != (locCapChange.getCurrentlyHeldWorkingCapacity() ?: 0) ||
