@@ -39,8 +39,6 @@ generic-service:
     startup: '00 6 * * 1-5' # Start at 6.00am UTC (equivalent to 7am BST) Monday-Friday
     shutdown: '58 21 * * 1-5' # Stop at 9.58pm UTC Monday-Friday
 
-# CloudPlatform AlertManager receiver to route prometheus alerts to slack
-# See https://user-guide.cloud-platform.service.justice.gov.uk/documentation/monitoring-an-app/how-to-create-alarms.html#creating-your-own-custom-alerts
 generic-prometheus-alerts:
   businessHoursOnly: true
   rdsAlertsDatabases:
