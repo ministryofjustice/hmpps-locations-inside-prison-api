@@ -67,6 +67,7 @@ abstract class LocationCertificationApprovalRequest(
   override fun toDto(showLocations: Boolean, cellCertificateId: UUID?) = super.toDto(showLocations, cellCertificateId).copy(
     locationKey = locationKey,
     locationId = location.id!!,
+    locationType = location.getDerivedLocationType(),
     certifiedNormalAccommodationChange = certifiedNormalAccommodationChange,
     workingCapacityChange = workingCapacityChange,
     maxCapacityChange = maxCapacityChange,

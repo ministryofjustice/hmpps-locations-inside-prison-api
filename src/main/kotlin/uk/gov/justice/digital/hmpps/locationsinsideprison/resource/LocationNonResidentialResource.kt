@@ -935,7 +935,7 @@ class LocationNonResidentialResource(
   @GetMapping("/non-residential/summary/{prisonId}")
   @PreAuthorize("hasRole('ROLE_VIEW_LOCATIONS')")
   @Operation(
-    summary = "Get a paged list of non-residential locations for a prison (excluding RTU and property-only locations)",
+    summary = "Get a paged list of non-residential locations for a prison (excluding RTU and property storage)",
     description = "Requires role VIEW_LOCATIONS",
     responses = [
       ApiResponse(
@@ -997,14 +997,15 @@ class LocationNonResidentialResource(
     @RequestParam(required = false)
     filterParents: Boolean = false,
     @Schema(
-      description = "Include locations that can only store property (sole usage of PROPERTY). " +
-        "Locations used for property alongside another service are always returned.",
+      description = "Include property storage: locations that can only store property (sole usage of PROPERTY), " +
+        "and boxes and shelves with no usage or service at all, which are property stores that have lost their " +
+        "PROPERTY usage. Locations used for property alongside another service are always returned.",
       example = "false",
       required = false,
       defaultValue = "false",
     )
     @Parameter(
-      description = "Include property-only locations",
+      description = "Include property storage",
       example = "false",
     )
     @RequestParam(required = false)

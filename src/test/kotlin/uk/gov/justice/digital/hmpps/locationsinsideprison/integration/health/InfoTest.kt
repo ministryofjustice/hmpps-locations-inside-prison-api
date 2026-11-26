@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.locationsinsideprison.integration.health
 
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.info.BuildProperties
@@ -31,13 +30,12 @@ class InfoTest : SqsIntegrationTestBase() {
   }
 
   @Test
-  fun `Info page reports the service as active in all prisons`() {
+  fun `Info page no longer lists active agencies`() {
+    // Removed in MAPA-466 once Change someone's cell stopped reading it. Residential activation per prison is in
+    // prison configuration.
     webTestClient.get().uri("/info")
       .exchange()
       .expectStatus().isOk
-      .expectBody().jsonPath("activeAgencies").value<List<String>> {
-        assertThat(it).hasSize(1)
-        assertThat(it[0]).isEqualTo("***")
-      }
+      .expectBody().jsonPath("activeAgencies").doesNotExist()
   }
 }

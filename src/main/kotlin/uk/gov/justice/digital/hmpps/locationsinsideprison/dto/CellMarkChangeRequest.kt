@@ -7,9 +7,9 @@ import jakarta.validation.constraints.Size
 @Schema(description = "Request change of cell mark and add the reason for change is certification is required")
 @JsonInclude(JsonInclude.Include.NON_NULL)
 data class CellMarkChangeRequest(
-  @param:Schema(description = "Cell mark of the location", required = true, example = "A1", minLength = 1)
+  @param:Schema(description = "Cell mark of the location", required = true, example = "A1", minLength = 1, maxLength = 30)
   @field:Size(min = 1, message = "Mark cannot be blank")
-  @field:Size(max = 12, message = "Mark can be up to 12 characters")
+  @field:Size(max = 30, message = "Mark can be up to 30 characters")
   val cellMark: String,
   @param:Schema(description = "The reason why the approval was requested, mandatory if the cell change must be approved", example = "The door mark has been updated", required = false)
   val reasonForChange: String? = null,

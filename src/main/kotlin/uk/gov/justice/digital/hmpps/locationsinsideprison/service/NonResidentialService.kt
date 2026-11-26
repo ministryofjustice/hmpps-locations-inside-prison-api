@@ -34,7 +34,7 @@ import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.TransactionType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.LocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.repository.NonResidentialLocationRepository
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludeByCode
-import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludePropertyOnlyLocations
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.excludePropertyStorage
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByIsLeaf
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByLocalName
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.specification.filterByPrisonId
@@ -1036,7 +1036,7 @@ class NonResidentialService(
         }
         add(excludeByCode("RTU"))
         if (!includeProperty) {
-          add(excludePropertyOnlyLocations())
+          add(excludePropertyStorage())
         }
 
         searchByLocalName?.let {

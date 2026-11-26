@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.AccommodationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.ConvertedCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.DeactivatedReason
+import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.LocationType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.SpecialistCellType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.UsedForType
 import uk.gov.justice.digital.hmpps.locationsinsideprison.jpa.approvalrequest.ApprovalRequestStatus
@@ -31,6 +32,9 @@ data class CertificationApprovalRequestDto(
 
   @param:Schema(description = "Location key", example = "MDI-A-1-001", required = false)
   val locationKey: String? = null,
+
+  @param:Schema(description = "Type of the location this request is for", example = "CELL", required = false)
+  val locationType: LocationType? = null,
 
   @param:Schema(description = "Status of the approval request", example = "PENDING", required = true)
   val status: ApprovalRequestStatus,
