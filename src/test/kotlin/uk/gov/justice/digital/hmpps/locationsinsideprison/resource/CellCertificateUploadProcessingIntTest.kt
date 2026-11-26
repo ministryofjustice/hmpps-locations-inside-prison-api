@@ -634,6 +634,133 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
   }
 
   @Test
+  fun `a cell kept above lower certified capacities after an import can then be changed to match the certificate`() {
+    // The import certifies max 1 / working 1 on a cell holding 2 / 2. It keeps the working capacity of 2, so a max
+    // capacity of 1 cannot be applied either: only the CNA of 1 goes on, and the cell is left above its certificate.
+    TransactionTemplate(transactionManager).executeWithoutResult {
+      configurationRepository.findById("MDI").get().certificationApprovalRequired = true
+    }
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 1, workingCapacity = 1, certifiedNormalAccommodation = 1)),
+      reasonForChange = "Reimported certificate",
+    )
+    awaitUploadFinished()
+
+    withReloadedCell1 {
+      assertThat(getMaxCapacity()).isEqualTo(2)
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
+      assertThat(getCertifiedNormalAccommodation()).isEqualTo(1)
+    }
+    with(currentCertificateFor(cell1)) {
+      assertThat(maxCapacity).isEqualTo(1)
+      assertThat(workingCapacity).isEqualTo(1)
+      assertThat(certifiedNormalAccommodation).isEqualTo(1)
+    }
+    // the CNA change raises an amended event for the cell and its parents
+    getDomainEvents(3)
+
+    // The user then sets the cell to the certified values. Nothing on the certificate changes, so the cell is
+    // updated straight away with no approval request.
+    webTestClient.put().uri("/locations/${cell1.id}/capacity")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(jsonString(CapacityChangeRequest(maxCapacity = 1, workingCapacity = 1, certifiedNormalAccommodation = 1)))
+      .exchange()
+      .expectStatus().isOk
+
+    withReloadedCell1 {
+      assertThat(getMaxCapacity()).isEqualTo(1)
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(1)
+      assertThat(getCertifiedNormalAccommodation()).isEqualTo(1)
+      assertThat(hasPendingCertificationApproval()).isFalse()
+    }
+    with(currentCertificateFor(cell1)) {
+      assertThat(maxCapacity).isEqualTo(1)
+      assertThat(workingCapacity).isEqualTo(1)
+    }
+    getDomainEvents(3).let { events ->
+      assertThat(events.map { it.eventType to it.additionalInformation?.key }).containsExactlyInAnyOrder(
+        "location.inside.prison.amended" to cell1.getKey(),
+        *cell1.getParentLocations().map { "location.inside.prison.amended" to it.getKey() }.toTypedArray(),
+      )
+    }
+  }
+
+  @Test
+  fun `a temporary change to zero on an inactive cell certified at its own values keeps the working capacity it holds`() {
+    // An inactive cell reports a working capacity of 0, so a temporary request for 0 shows no difference from the
+    // cell and none from the certificate on max capacity or CNA. It does not match the certificate's working
+    // capacity of 2, so it must stay a no-op rather than overwrite the value the cell keeps for reactivation.
+    certifyInactiveCellB3001(workingCapacity = 2)
+
+    putCapacity(inactiveCellB3001, maxCapacity = 2, workingCapacity = 0, cna = 2, temporaryWorkingCapacityChange = true)
+
+    withReloadedCell(inactiveCellB3001) {
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
+      assertThat(hasPendingCertificationApproval()).isFalse()
+    }
+  }
+
+  @Test
+  fun `a change matching the certificate does not overwrite the working capacity an inactive cell holds`() {
+    // The certificate holds a working capacity of 0 for the inactive cell, which keeps 2 for when it is reactivated.
+    certifyInactiveCellB3001(workingCapacity = 0)
+
+    putCapacity(inactiveCellB3001, maxCapacity = 2, workingCapacity = 0, cna = 2, temporaryWorkingCapacityChange = false)
+
+    withReloadedCell(inactiveCellB3001) {
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
+      assertThat(hasPendingCertificationApproval()).isFalse()
+    }
+  }
+
+  /** Certifies the inactive cell (holding 2 / 2 / 2) at a prison that requires approval. */
+  private fun certifyInactiveCellB3001(workingCapacity: Int) {
+    TransactionTemplate(transactionManager).executeWithoutResult {
+      configurationRepository.findById("MDI").get().certificationApprovalRequired = true
+    }
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(inactiveCellB3001.getPathHierarchy()), false)
+    postCellCertificateUpdate(
+      mapOf(
+        inactiveCellB3001.getKey() to
+          CellCapacityUpdateDetail(maxCapacity = 2, workingCapacity = workingCapacity, certifiedNormalAccommodation = 2),
+      ),
+      reasonForChange = "Reimported certificate",
+    )
+    awaitUploadFinished()
+
+    with(currentCertificateFor(inactiveCellB3001)) {
+      assertThat(maxCapacity).isEqualTo(2)
+      assertThat(this.workingCapacity).isEqualTo(workingCapacity)
+      assertThat(certifiedNormalAccommodation).isEqualTo(2)
+    }
+    withReloadedCell(inactiveCellB3001) {
+      assertThat(isTemporarilyDeactivated()).isTrue()
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
+    }
+  }
+
+  private fun putCapacity(cell: Cell, maxCapacity: Int, workingCapacity: Int, cna: Int, temporaryWorkingCapacityChange: Boolean) {
+    webTestClient.put().uri("/locations/${cell.id}/capacity")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(
+        jsonString(
+          CapacityChangeRequest(
+            maxCapacity = maxCapacity,
+            workingCapacity = workingCapacity,
+            certifiedNormalAccommodation = cna,
+            temporaryWorkingCapacityChange = temporaryWorkingCapacityChange,
+          ),
+        ),
+      )
+      .exchange()
+      .expectStatus().isOk
+  }
+
+  @Test
   fun `the report records each cell's specialist cell types and whether it was inactive when the import ran`() {
     val specialistCell = saveCellHoldingNoPrisoners("Z-2-014")
     prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(specialistCell.getPathHierarchy(), cell1.getPathHierarchy()), false)
@@ -1062,11 +1189,11 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
   private fun currentCertificateFor(cell: Cell) = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(cell.prisonId)!!
     .findLocationInCertificate(cell.getPathHierarchy())!!
 
-  private fun postCellCertificateUpdate(locations: Map<String, CellCapacityUpdateDetail>) {
+  private fun postCellCertificateUpdate(locations: Map<String, CellCapacityUpdateDetail>, reasonForChange: String? = null) {
     webTestClient.post().uri("/locations/bulk/update-cell-certificate/MDI")
       .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
       .header("Content-Type", "application/json")
-      .bodyValue(jsonString(UpdateCapacityRequest(locations = locations)))
+      .bodyValue(jsonString(UpdateCapacityRequest(locations = locations, reasonForChange = reasonForChange)))
       .exchange()
       .expectStatus().isAccepted
   }
