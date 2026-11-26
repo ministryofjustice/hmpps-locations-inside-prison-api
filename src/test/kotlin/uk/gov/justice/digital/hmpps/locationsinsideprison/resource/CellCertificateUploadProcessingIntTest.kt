@@ -634,6 +634,61 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
   }
 
   @Test
+  fun `a cell kept above lower certified capacities after an import can then be changed to match the certificate`() {
+    // The import certifies max 1 / working 1 on a cell holding 2 / 2. It keeps the working capacity of 2, so a max
+    // capacity of 1 cannot be applied either: only the CNA of 1 goes on, and the cell is left above its certificate.
+    TransactionTemplate(transactionManager).executeWithoutResult {
+      configurationRepository.findById("MDI").get().certificationApprovalRequired = true
+    }
+    prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(cell1.getPathHierarchy()), false)
+
+    postCellCertificateUpdate(
+      mapOf(cell1.getKey() to CellCapacityUpdateDetail(maxCapacity = 1, workingCapacity = 1, certifiedNormalAccommodation = 1)),
+      reasonForChange = "Reimported certificate",
+    )
+    awaitUploadFinished()
+
+    withReloadedCell1 {
+      assertThat(getMaxCapacity()).isEqualTo(2)
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(2)
+      assertThat(getCertifiedNormalAccommodation()).isEqualTo(1)
+    }
+    with(currentCertificateFor(cell1)) {
+      assertThat(maxCapacity).isEqualTo(1)
+      assertThat(workingCapacity).isEqualTo(1)
+      assertThat(certifiedNormalAccommodation).isEqualTo(1)
+    }
+    // the CNA change raises an amended event for the cell and its parents
+    getDomainEvents(3)
+
+    // The user then sets the cell to the certified values. Nothing on the certificate changes, so the cell is
+    // updated straight away with no approval request.
+    webTestClient.put().uri("/locations/${cell1.id}/capacity")
+      .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
+      .header("Content-Type", "application/json")
+      .bodyValue(jsonString(CapacityChangeRequest(maxCapacity = 1, workingCapacity = 1, certifiedNormalAccommodation = 1)))
+      .exchange()
+      .expectStatus().isOk
+
+    withReloadedCell1 {
+      assertThat(getMaxCapacity()).isEqualTo(1)
+      assertThat(getCurrentlyHeldWorkingCapacity()).isEqualTo(1)
+      assertThat(getCertifiedNormalAccommodation()).isEqualTo(1)
+      assertThat(hasPendingCertificationApproval()).isFalse()
+    }
+    with(currentCertificateFor(cell1)) {
+      assertThat(maxCapacity).isEqualTo(1)
+      assertThat(workingCapacity).isEqualTo(1)
+    }
+    getDomainEvents(3).let { events ->
+      assertThat(events.map { it.eventType to it.additionalInformation?.key }).containsExactlyInAnyOrder(
+        "location.inside.prison.amended" to cell1.getKey(),
+        *cell1.getParentLocations().map { "location.inside.prison.amended" to it.getKey() }.toTypedArray(),
+      )
+    }
+  }
+
+  @Test
   fun `the report records each cell's specialist cell types and whether it was inactive when the import ran`() {
     val specialistCell = saveCellHoldingNoPrisoners("Z-2-014")
     prisonerSearchMockServer.stubSearchByLocations("MDI", listOf(specialistCell.getPathHierarchy(), cell1.getPathHierarchy()), false)
@@ -1062,11 +1117,11 @@ class CellCertificateUploadProcessingIntTest : CommonDataTestBase() {
   private fun currentCertificateFor(cell: Cell) = cellCertificateRepository.findByPrisonIdAndCurrentIsTrue(cell.prisonId)!!
     .findLocationInCertificate(cell.getPathHierarchy())!!
 
-  private fun postCellCertificateUpdate(locations: Map<String, CellCapacityUpdateDetail>) {
+  private fun postCellCertificateUpdate(locations: Map<String, CellCapacityUpdateDetail>, reasonForChange: String? = null) {
     webTestClient.post().uri("/locations/bulk/update-cell-certificate/MDI")
       .headers(setAuthorisation(roles = listOf("ROLE_MAINTAIN_LOCATIONS"), scopes = listOf("write")))
       .header("Content-Type", "application/json")
-      .bodyValue(jsonString(UpdateCapacityRequest(locations = locations)))
+      .bodyValue(jsonString(UpdateCapacityRequest(locations = locations, reasonForChange = reasonForChange)))
       .exchange()
       .expectStatus().isAccepted
   }
