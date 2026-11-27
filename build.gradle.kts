@@ -4,7 +4,7 @@ import uk.gov.justice.digital.hmpps.gradle.PortForwardRedisTask
 import uk.gov.justice.digital.hmpps.gradle.RevealSecretsTask
 
 plugins {
-  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.11"
+  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.1.2"
   kotlin("plugin.spring") version "2.4.20"
   kotlin("plugin.jpa") version "2.4.20"
   id("org.jetbrains.kotlinx.kover") version "0.9.9"
@@ -15,12 +15,12 @@ configurations {
   testImplementation { exclude(group = "org.junit.vintage") }
 }
 
-// CVE-2026-76183 - the hmpps gradle plugin pins 11.0.25; remove once it pins 11.0.26 or later
-extra["tomcat.version"] = "11.0.26"
+// CVE-2026-101356 / CVE-2026-101296 (fixed in 11.0.27) - spring boot 4.2.0 brings 11.0.27; pin to latest 11.0.29. Remove once the hmpps gradle plugin brings 11.0.29 or later
+extra["tomcat.version"] = "11.0.29"
 
 dependencies {
-  implementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter:3.0.3")
-  implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:7.4.1")
+  implementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter:3.1.0")
+  implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:7.6.0")
   implementation("org.springframework.boot:spring-boot-starter-webflux")
   implementation("org.springframework.boot:spring-boot-starter-data-jpa")
   implementation("org.springframework.boot:spring-boot-starter-flyway")
@@ -33,11 +33,14 @@ dependencies {
 
   runtimeOnly("org.flywaydb:flyway-database-postgresql")
   implementation("com.zaxxer:HikariCP:7.1.0")
-  runtimeOnly("org.postgresql:postgresql:42.7.13")
+  runtimeOnly("org.postgresql:postgresql:42.7.15")
   implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
-  implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
+  // springdoc 3.2.1+ moves to swagger-core 3 (jackson 3), which swagger-parser (used in OpenApiDocsTest) doesn't support yet
+  implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
+  // DOMPurify CVE-2026-109344/109345/116802/116803/116804 - fixed in dompurify 3.4.17; remove once springdoc brings swagger-ui 5.35.1 or later
+  implementation("org.webjars:swagger-ui:5.36.0")
 
-  testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:3.0.3")
+  testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:3.1.0")
   testImplementation("org.springframework.boot:spring-boot-starter-webclient-test")
   testImplementation("org.springframework.boot:spring-boot-starter-webflux-test")
   testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
