@@ -73,7 +73,7 @@ jobs:
             --tests uk.gov.justice.digital.hmpps.locationsinsideprison.integration.ExportReferenceData
 
       - name: Generate database schema report
-        uses: ministryofjustice/hmpps-github-shared-actions/.github/actions/database_schema_report@cd6fbead3223fc36e047987f45af2ffacfd41c70 # v1.1.6
+        uses: ministryofjustice/hmpps-github-shared-actions/.github/actions/database_schema_report@a72e9a2ee67d147544c72b40f576e27de7d1e0d3 # v1.1.11
         with:
           database_name: ${{ inputs.database_name }}
           schema: ${{ inputs.database_schema }}
